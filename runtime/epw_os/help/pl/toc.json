@@ -8,7 +8,8 @@
         {"id": "gs_startup", "title": "Uruchomienie programu"},
         {"id": "gs_layout", "title": "Układ ekranu: menu, pasek statusu, nawigacja"},
         {"id": "gs_file_menu", "title": "Menu Plik"},
-        {"id": "gs_project_menu", "title": "Menu Projekt"}
+        {"id": "gs_project_menu", "title": "Menu Projekt"},
+        {"id": "gs_load_synoptic", "title": "Wczytywanie ekranu synoptycznego (.epwsyn)"}
       ]
     },
     {
@@ -287,6 +288,9 @@
     {"term": "Menu Projekt", "topic": "gs_project_menu"},
     {"term": "Właściwości projektu", "topic": "gs_project_menu"},
     {"term": "Ostatnio otwierane", "topic": "gs_project_menu"},
+    {"term": "Ekran synoptyczny, wczytywanie", "topic": "gs_load_synoptic"},
+    {"term": "Rejestr aparatów (Synoptic Editor)", "topic": "gs_load_synoptic"},
+    {"term": "Plik .epwsyn", "topic": "gs_load_synoptic"},
     {"term": "Import projektu", "topic": "gs_file_menu"},
     {"term": "Eksport projektu", "topic": "gs_file_menu"},
     {"term": "Motywy wizualne", "topic": "set_theme"},

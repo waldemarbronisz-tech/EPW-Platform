@@ -462,43 +462,13 @@ def test_driver_single_start(db):
     core.shutdown()
     assert counting_driver.stop_count == 1
 
-@pytest.mark.slow
-@pytest.mark.gui
-def test_synoptic_loader():
-    # Task (refactor/test-suite-split): the one test in this otherwise
-    # headless file that needs a real QApplication (SynopticRuntimeAdapter
-    # constructs real Qt graphics items) - marked so `pytest epw_os/tests/
-    # -m "not slow"` can skip just this one, not the whole file.
-    import sys
-    from PySide6.QtWidgets import QApplication
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-    from epw_os.gui.widgets.synoptic_runtime import SynopticRuntimeAdapter
-    adapter = SynopticRuntimeAdapter()
-    
-    import json
-    with open("test_synoptic.epwsyn", "w") as f:
-        json.dump({
-            "format": "EPW_SYNOPTIC",
-            "schema_version": 1,
-            "objects": [
-                {
-                    "id": "lamp1",
-                    "type": "indicator",
-                    "bindings": {
-                        "value": "ELA01.DI01",
-                        "command": "ADA01.CLOSE"
-                    }
-                }
-            ]
-        }, f)
-        
-    assert adapter.load_synoptic_definition("test_synoptic.epwsyn") is True
-    assert adapter.ready is True
-    assert len(adapter.objects) == 1
-    
-    import os
-    os.remove("test_synoptic.epwsyn")
+# test_synoptic_loader (SynopticRuntimeAdapter) removed: that class was
+# 45-line scaffolding for a .epwsyn shape the real EPW Synoptic Editor
+# never produced (a flat "bindings" dict with "value"/"command" keys) -
+# confirmed unused anywhere in the GUI (grep), its only reference being
+# this test. Replaced by the real reader, built against the format as
+# actually verified in the editor's own source - see
+# epw_os/core/epwsyn_loader.py and epw_os/tests/test_epwsyn_loader.py.
 
 def test_true_timeout_fat(db):
     core = EPWCore()

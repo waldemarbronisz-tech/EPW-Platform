@@ -38,8 +38,12 @@ def test_polish_menu_nav_statusbar_after_rebuild(make_window):
              "Konfiguracja funkcji...", "MQTT...", "Retencja danych...", "", "Tryb ćwiczebny", "",
              "Tryb kiosku..."]
         pl_project = [a.menu() for a in w_pl.menuBar().actions() if a.text() == "Projekt"][0]
+        # "Wczytaj ekran synoptyczny..." (Engineer-gated, same
+        # visible-in-the-list-regardless-of-current-level pattern as
+        # Kiosk Mode/Training Mode above) sits between Properties and
+        # Recently Opened - see main_window.py's setup_menu().
         assert [a.text() for a in pl_project.actions() if not a.isSeparator()] == \
-            ["Właściwości projektu...", "Ostatnio otwierane"]
+            ["Właściwości projektu...", "Wczytaj ekran synoptyczny...", "Ostatnio otwierane"]
     finally:
         set_language("en")
 
