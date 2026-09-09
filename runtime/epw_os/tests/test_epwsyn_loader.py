@@ -175,20 +175,22 @@ def test_missing_required_field_is_rejected(tmp_path):
     assert "canvas" in result.error
 
 
-@pytest.mark.parametrize("canvas", [
-    {"height": 100, "background": "#FFFFFF"},          # width missing
-    {"width": 100, "background": "#FFFFFF"},            # height missing
-    {"width": "100", "height": 100, "background": "#FFFFFF"},   # width wrong type
-    {"width": 100, "height": None, "background": "#FFFFFF"},    # height wrong type
+@pytest.mark.parametrize("canvas,expected_field", [
+    ({"height": 100, "background": "#FFFFFF"}, "canvas.width"),           # width missing
+    ({"width": 100, "background": "#FFFFFF"}, "canvas.height"),           # height missing
+    ({"width": "100", "height": 100, "background": "#FFFFFF"}, "canvas.width"),   # width wrong type (string)
+    ({"width": 100, "height": None, "background": "#FFFFFF"}, "canvas.height"),   # height wrong type (null)
 ])
-def test_canvas_without_numeric_width_and_height_is_rejected(tmp_path, canvas):
+def test_canvas_without_numeric_width_and_height_is_rejected(tmp_path, canvas, expected_field):
     # The editor's own validator (ProjectSchema.ts's validateProjectSchema,
     # INVALID_CANVAS) already refuses a canvas missing either as invalid -
     # this reader must not be looser than the tool producing these files.
+    # DOWOD: check the MESSAGE CONTENT names the exact offending field
+    # (canvas.width vs canvas.height), not just that the file was refused.
     path = _write(tmp_path, "bad_canvas.epwsyn", _minimal_valid(canvas=canvas))
     result = load_epwsyn_file(path)
     assert not result.ok
-    assert "canvas" in result.error
+    assert expected_field in result.error, result.error
 
 
 # --- Object id rules -----------------------------------------------------
