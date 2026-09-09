@@ -1,0 +1,1923 @@
+{
+  "generated_at": "2026-09-09T20:34:13.889Z",
+  "generated_by": "shared/docs/generate_symbol_inventory.mjs (executes the real registry - see script header)",
+  "source": "studio/synoptic/src/symbols/SymbolRegistry.ts",
+  "totals": {
+    "symbol_count": 85,
+    "by_category": {
+      "Automation": 7,
+      "Electrical": 25,
+      "Graphics": 3,
+      "HVAC": 2,
+      "Instrumentation": 6,
+      "Measurements": 4,
+      "SCADA": 10,
+      "Water": 23,
+      "TEREN": 5
+    },
+    "hidden_from_library": 34,
+    "visible_in_library": 51,
+    "with_terminals": 48,
+    "with_connection_points_only": 19,
+    "with_neither_terminals_nor_connection_points": 18,
+    "is_line": 2,
+    "is_surface": 2,
+    "supports_dynamic_ports": 2,
+    "multi_state_symbols": 76,
+    "single_state_symbols": 9,
+    "distinct_states_seen": [
+      "A",
+      "ACTIVE",
+      "B",
+      "BLINK",
+      "BLOWN",
+      "CENTER",
+      "CLOSED",
+      "CLOSING",
+      "DEAD",
+      "DEENERGIZED",
+      "ENERGIZED",
+      "FAULT",
+      "HEATING",
+      "HIGH",
+      "LEFT",
+      "LIVE",
+      "LOW",
+      "NISKI",
+      "NORMAL",
+      "OFF",
+      "ON",
+      "OPEN",
+      "OPENING",
+      "OTWARTA",
+      "QUALITY",
+      "RIGHT",
+      "RUN",
+      "RUNNING",
+      "SREDNI",
+      "STOP",
+      "TRIPPED",
+      "WYLACZONY",
+      "WYSOKI",
+      "W_RUCHU",
+      "ZALACZONY",
+      "ZAMKNIETA",
+      "ZAMKNIETY"
+    ]
+  },
+  "usage_in_examples": {
+    "examples_checked": [
+      "GOSPODARKA_WODNA.epwsyn",
+      "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+      "LIBRARY_TEST.epwsyn",
+      "STATEFUL_SYMBOLS.epwsyn"
+    ],
+    "per_file": {
+      "GOSPODARKA_WODNA.epwsyn": {
+        "object_count": 15,
+        "distinct_types": 12
+      },
+      "ENTRY_GATE_LIBRARY_TEST.epwsyn": {
+        "object_count": 25,
+        "distinct_types": 22
+      },
+      "LIBRARY_TEST.epwsyn": {
+        "object_count": 13,
+        "distinct_types": 13
+      },
+      "STATEFUL_SYMBOLS.epwsyn": {
+        "object_count": 12,
+        "distinct_types": 11
+      }
+    },
+    "total_objects_across_examples": 65,
+    "distinct_types_referenced": 47,
+    "distinct_types_found_in_current_registry": 44,
+    "distinct_types_missing_from_current_registry": [
+      "electrical.cable",
+      "sensors.temperature",
+      "water.pipe"
+    ]
+  },
+  "symbols": [
+    {
+      "type": "automation.ada_outputs",
+      "label": "ADA Outputs",
+      "category": "Automation",
+      "default_width": 60,
+      "default_height": 80,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.ela_inputs",
+      "label": "ELA Inputs",
+      "category": "Automation",
+      "default_width": 60,
+      "default_height": 80,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.epm",
+      "label": "EPM",
+      "category": "Automation",
+      "default_width": 60,
+      "default_height": 80,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "RUNNING",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.epw_core",
+      "label": "EPW CORE",
+      "category": "Automation",
+      "default_width": 100,
+      "default_height": 80,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "RUNNING",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.plc",
+      "label": "PLC",
+      "category": "Automation",
+      "default_width": 120,
+      "default_height": 80,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.psu_24v",
+      "label": "24V PSU",
+      "category": "Automation",
+      "default_width": 60,
+      "default_height": 80,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "FAULT"
+      ],
+      "default_state": "ON",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "automation.remote_io",
+      "label": "Remote IO",
+      "category": "Automation",
+      "default_width": 80,
+      "default_height": 80,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.busbar",
+      "label": "Busbar",
+      "category": "Electrical",
+      "default_width": 200,
+      "default_height": 10,
+      "allowed_states": [
+        "DEENERGIZED",
+        "ENERGIZED",
+        "FAULT"
+      ],
+      "default_state": "DEENERGIZED",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": true,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": true,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.cable_tray",
+      "label": "Cable Tray",
+      "category": "Electrical",
+      "default_width": 100,
+      "default_height": 20,
+      "allowed_states": [
+        "NORMAL"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.circuit_breaker",
+      "label": "Circuit Breaker",
+      "category": "Electrical",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "OPEN",
+        "CLOSED",
+        "TRIPPED",
+        "FAULT"
+      ],
+      "default_state": "OPEN",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.contactor",
+      "label": "Contactor",
+      "category": "Electrical",
+      "default_width": 40,
+      "default_height": 40,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 3,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.disconnect_switch",
+      "label": "Disconnect Switch",
+      "category": "Electrical",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "OPEN",
+        "CLOSED",
+        "FAULT"
+      ],
+      "default_state": "OPEN",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.earth",
+      "label": "Earth",
+      "category": "Electrical",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.fuse",
+      "label": "Fuse",
+      "category": "Electrical",
+      "default_width": 20,
+      "default_height": 40,
+      "allowed_states": [
+        "NORMAL",
+        "BLOWN"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.generator",
+      "label": "Generator",
+      "category": "Electrical",
+      "default_width": 60,
+      "default_height": 60,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.generic_load",
+      "label": "Generic Load",
+      "category": "Electrical",
+      "default_width": 40,
+      "default_height": 40,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.grid_source",
+      "label": "Grid Source",
+      "category": "Electrical",
+      "default_width": 60,
+      "default_height": 60,
+      "allowed_states": [
+        "ENERGIZED",
+        "DEENERGIZED",
+        "FAULT"
+      ],
+      "default_state": "ENERGIZED",
+      "terminal_count": 0,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.indicator_lamp",
+      "label": "Indicator Lamp",
+      "category": "Electrical",
+      "default_width": 32,
+      "default_height": 32,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "BLINK",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 1,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.motor",
+      "label": "Motor",
+      "category": "Electrical",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 1,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.rcd",
+      "label": "RCD / RCCB",
+      "category": "Electrical",
+      "default_width": 60,
+      "default_height": 60,
+      "allowed_states": [
+        "CLOSED",
+        "OPEN",
+        "TRIPPED",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.relay",
+      "label": "Relay",
+      "category": "Electrical",
+      "default_width": 40,
+      "default_height": 40,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 3,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.selector_switch",
+      "label": "Selector Switch",
+      "category": "Electrical",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "LEFT",
+        "CENTER",
+        "RIGHT",
+        "FAULT"
+      ],
+      "default_state": "CENTER",
+      "terminal_count": 1,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.spd",
+      "label": "SPD",
+      "category": "Electrical",
+      "default_width": 40,
+      "default_height": 60,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "electrical.terminal",
+      "label": "Terminal",
+      "category": "Electrical",
+      "default_width": 20,
+      "default_height": 20,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "electrical.transformer",
+      "label": "Transformer",
+      "category": "Electrical",
+      "default_width": 60,
+      "default_height": 60,
+      "allowed_states": [
+        "NORMAL",
+        "ENERGIZED",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "graphics.circle",
+      "label": "Circle",
+      "category": "Graphics",
+      "default_width": 100,
+      "default_height": 100,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "graphics.rectangle",
+      "label": "Rectangle",
+      "category": "Graphics",
+      "default_width": 100,
+      "default_height": 100,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "graphics.text",
+      "label": "Text",
+      "category": "Graphics",
+      "default_width": 100,
+      "default_height": 30,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "hvac.fan",
+      "label": "Fan",
+      "category": "HVAC",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "hvac.heater",
+      "label": "Heater",
+      "category": "HVAC",
+      "default_width": 96,
+      "default_height": 64,
+      "allowed_states": [
+        "OFF",
+        "HEATING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "instrumentation.humidity_sensor",
+      "label": "Humidity Sensor",
+      "category": "Instrumentation",
+      "default_width": 32,
+      "default_height": 64,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "instrumentation.leak_sensor",
+      "label": "Leak Sensor",
+      "category": "Instrumentation",
+      "default_width": 64,
+      "default_height": 32,
+      "allowed_states": [
+        "NORMAL",
+        "ACTIVE",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "instrumentation.level_sensor",
+      "label": "Level Sensor",
+      "category": "Instrumentation",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "instrumentation.pressure_sensor",
+      "label": "Pressure Sensor",
+      "category": "Instrumentation",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "instrumentation.temperature_sensor",
+      "label": "Temp Sensor",
+      "category": "Instrumentation",
+      "default_width": 32,
+      "default_height": 64,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "measurements.current_display",
+      "label": "Current",
+      "category": "Measurements",
+      "default_width": 100,
+      "default_height": 50,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "measurements.generic_display",
+      "label": "Value Display",
+      "category": "Measurements",
+      "default_width": 100,
+      "default_height": 50,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "measurements.temperature_display",
+      "label": "Temperature",
+      "category": "Measurements",
+      "default_width": 100,
+      "default_height": 50,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "measurements.voltage_display",
+      "label": "Voltage",
+      "category": "Measurements",
+      "default_width": 100,
+      "default_height": 50,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "scada.boundary_point",
+      "label": "Boundary Point",
+      "category": "SCADA",
+      "default_width": 160,
+      "default_height": 64,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "scada.busbar",
+      "label": "Busbar (SCADA)",
+      "category": "SCADA",
+      "default_width": 200,
+      "default_height": 16,
+      "allowed_states": [
+        "LIVE",
+        "DEAD"
+      ],
+      "default_state": "DEAD",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": true,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": true,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.indicator_diode",
+      "label": "Indicator Diode",
+      "category": "SCADA",
+      "default_width": 160,
+      "default_height": 160,
+      "allowed_states": [
+        "ON",
+        "OFF",
+        "QUALITY"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.label_frame",
+      "label": "Label Frame",
+      "category": "SCADA",
+      "default_width": 160,
+      "default_height": 160,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 1,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.load_switch",
+      "label": "Load Switch",
+      "category": "SCADA",
+      "default_width": 150,
+      "default_height": 150,
+      "allowed_states": [
+        "CLOSED",
+        "OPEN",
+        "FAULT"
+      ],
+      "default_state": "OPEN",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.meter",
+      "label": "Meter (SCADA)",
+      "category": "SCADA",
+      "default_width": 160,
+      "default_height": 96,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.motor",
+      "label": "Motor (SCADA)",
+      "category": "SCADA",
+      "default_width": 150,
+      "default_height": 150,
+      "allowed_states": [
+        "RUN",
+        "STOP",
+        "FAULT"
+      ],
+      "default_state": "STOP",
+      "terminal_count": 0,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.pilot_lamp",
+      "label": "Pilot Lamp",
+      "category": "SCADA",
+      "default_width": 150,
+      "default_height": 150,
+      "allowed_states": [
+        "ON",
+        "OFF"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.socket",
+      "label": "Socket (SCADA)",
+      "category": "SCADA",
+      "default_width": 150,
+      "default_height": 150,
+      "allowed_states": [
+        "LIVE",
+        "DEAD"
+      ],
+      "default_state": "DEAD",
+      "terminal_count": 0,
+      "connection_point_count": 1,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "scada.wire_node",
+      "label": "Wire Node",
+      "category": "SCADA",
+      "default_width": 150,
+      "default_height": 150,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.alarm_beacon",
+      "label": "Kogut alarmowy",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.alarm_horn",
+      "label": "Glosnik alarmowy",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.cable_junction",
+      "label": "Zlacze kablowe",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.check_valve",
+      "label": "Zawor zwrotny",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.concrete_road",
+      "label": "Droga betonowa",
+      "category": "TEREN",
+      "default_width": 192,
+      "default_height": 96,
+      "allowed_states": [],
+      "default_state": "",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": true,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.drip_line",
+      "label": "Linia kroplujaca",
+      "category": "Water",
+      "default_width": 192,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.flow_meter",
+      "label": "Przeplywomierz",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.garden_light",
+      "label": "Slupek oswietleniowy ogrodowy",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.garden_sprinkler",
+      "label": "Slupek podlewania ogrodowego",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.grass",
+      "label": "Trawa",
+      "category": "TEREN",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 0,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": true,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.halogen",
+      "label": "Halogen",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.house",
+      "label": "Dom",
+      "category": "TEREN",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.hydrofor",
+      "label": "Hydrofor",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.lamp_post_double",
+      "label": "Slup oswietleniowy (2 oprawy)",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.lamp_post_single",
+      "label": "Slup oswietleniowy (1 oprawa)",
+      "category": "Electrical",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.pressure_switch",
+      "label": "Presostat",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.rain_sensor",
+      "label": "Czujnik deszczu",
+      "category": "Instrumentation",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.rain_tank",
+      "label": "Zbiornik na deszczowke",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.rainwater_tank2",
+      "label": "Zbiornik na deszczowke",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "NISKI",
+        "SREDNI",
+        "WYSOKI"
+      ],
+      "default_state": "NISKI",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.sewage_plant",
+      "label": "Oczyszczalnia sciekow",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.sliding_gate",
+      "label": "Brama przesuwna",
+      "category": "TEREN",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZAMKNIETA",
+        "W_RUCHU",
+        "OTWARTA"
+      ],
+      "default_state": "ZAMKNIETA",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.sprinkler_head",
+      "label": "Zraszacz",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.warehouse",
+      "label": "Magazyn",
+      "category": "TEREN",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.water_filter",
+      "label": "Filtr wody",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "site.water_manhole",
+      "label": "Studzienka przylacza wody",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 1,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.water_meter",
+      "label": "Wodomierz",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "ZALACZONY",
+        "WYLACZONY"
+      ],
+      "default_state": "WYLACZONY",
+      "terminal_count": 2,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.water_selector_valve_3pos",
+      "label": "Zawor trojdrogowy trojpolozeniowy",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "A",
+        "ZAMKNIETY",
+        "B"
+      ],
+      "default_state": "ZAMKNIETY",
+      "terminal_count": 3,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": []
+    },
+    {
+      "type": "site.water_selector_valve_switched",
+      "label": "Zawor trojdrogowy przelaczajacy",
+      "category": "Water",
+      "default_width": 128,
+      "default_height": 96,
+      "allowed_states": [
+        "A",
+        "B"
+      ],
+      "default_state": "A",
+      "terminal_count": 3,
+      "connection_point_count": 0,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn"
+      ]
+    },
+    {
+      "type": "water.ball_valve",
+      "label": "Ball Valve",
+      "category": "Water",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "CLOSED",
+        "OPENING",
+        "OPEN",
+        "CLOSING",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "GOSPODARKA_WODNA.epwsyn",
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "water.drain",
+      "label": "Drain",
+      "category": "Water",
+      "default_width": 64,
+      "default_height": 32,
+      "allowed_states": [
+        "NORMAL",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 1,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn",
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "water.drain_valve",
+      "label": "Drain Valve",
+      "category": "Water",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "CLOSED",
+        "OPEN",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "water.gate_valve",
+      "label": "Gate Valve",
+      "category": "Water",
+      "default_width": 50,
+      "default_height": 40,
+      "allowed_states": [
+        "CLOSED",
+        "OPENING",
+        "OPEN",
+        "CLOSING",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "water.pump",
+      "label": "Pump",
+      "category": "Water",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "default_state": "OFF",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "water.solenoid_valve",
+      "label": "Solenoid Valve",
+      "category": "Water",
+      "default_width": 64,
+      "default_height": 64,
+      "allowed_states": [
+        "CLOSED",
+        "OPENING",
+        "OPEN",
+        "CLOSING",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "ENTRY_GATE_LIBRARY_TEST.epwsyn"
+      ]
+    },
+    {
+      "type": "water.tank",
+      "label": "Tank",
+      "category": "Water",
+      "default_width": 96,
+      "default_height": 128,
+      "allowed_states": [
+        "NORMAL",
+        "LOW",
+        "HIGH",
+        "FAULT"
+      ],
+      "default_state": "NORMAL",
+      "terminal_count": 2,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": false,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    },
+    {
+      "type": "water.valve",
+      "label": "Valve",
+      "category": "Water",
+      "default_width": 50,
+      "default_height": 40,
+      "allowed_states": [
+        "CLOSED",
+        "OPENING",
+        "OPEN",
+        "CLOSING",
+        "FAULT"
+      ],
+      "default_state": "CLOSED",
+      "terminal_count": 0,
+      "connection_point_count": 2,
+      "is_line": false,
+      "is_surface": false,
+      "hidden_from_library": true,
+      "supports_dynamic_ports": false,
+      "designation_prefix": null,
+      "used_in_examples": [
+        "STATEFUL_SYMBOLS.epwsyn"
+      ]
+    }
+  ]
+}
