@@ -175,6 +175,22 @@ def test_missing_required_field_is_rejected(tmp_path):
     assert "canvas" in result.error
 
 
+@pytest.mark.parametrize("canvas", [
+    {"height": 100, "background": "#FFFFFF"},          # width missing
+    {"width": 100, "background": "#FFFFFF"},            # height missing
+    {"width": "100", "height": 100, "background": "#FFFFFF"},   # width wrong type
+    {"width": 100, "height": None, "background": "#FFFFFF"},    # height wrong type
+])
+def test_canvas_without_numeric_width_and_height_is_rejected(tmp_path, canvas):
+    # The editor's own validator (ProjectSchema.ts's validateProjectSchema,
+    # INVALID_CANVAS) already refuses a canvas missing either as invalid -
+    # this reader must not be looser than the tool producing these files.
+    path = _write(tmp_path, "bad_canvas.epwsyn", _minimal_valid(canvas=canvas))
+    result = load_epwsyn_file(path)
+    assert not result.ok
+    assert "canvas" in result.error
+
+
 # --- Object id rules -----------------------------------------------------
 
 def test_duplicate_object_id_is_rejected(tmp_path):
@@ -186,6 +202,30 @@ def test_duplicate_object_id_is_rejected(tmp_path):
     result = load_epwsyn_file(path)
     assert not result.ok
     assert "dup" in result.error
+
+
+# --- A present-but-wrong-typed optional field warns, never vanishes -----
+# silently. Not crashing is correct; silently discarding the entire
+# device registry (say) with no trace at all is not.
+
+def test_wrong_typed_devices_field_warns_and_is_treated_as_empty(tmp_path):
+    doc = _minimal_valid()
+    doc["devices"] = "oops"
+    path = _write(tmp_path, "devices_wrong_type.epwsyn", doc)
+    result = load_epwsyn_file(path)
+    assert result.ok
+    assert len(result.project.devices) == 0
+    assert any("devices" in w and "str" in w for w in result.warnings), result.warnings
+
+
+def test_wrong_typed_connections_field_warns_and_names_field_and_type(tmp_path):
+    doc = _minimal_valid()
+    doc["connections"] = 5
+    path = _write(tmp_path, "connections_wrong_type.epwsyn", doc)
+    result = load_epwsyn_file(path)
+    assert result.ok
+    assert result.project.connections == []
+    assert any("connections" in w and "int" in w for w in result.warnings), result.warnings
 
 
 # --- Device registry: the core of this task -----------------------------

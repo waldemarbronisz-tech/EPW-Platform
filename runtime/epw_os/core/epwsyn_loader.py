@@ -75,8 +75,6 @@ CURRENT_SCHEMA_VERSION = 2
 # treatment as an unresolved deviceId below.
 DEVICE_BEHAVIORS = ("SWITCHED", "SIGNAL", "MEASURED", "MODULATED", "SELECTOR")
 
-DEFAULT_CANVAS_WIDTH = 1920
-DEFAULT_CANVAS_HEIGHT = 1080
 DEFAULT_CANVAS_BACKGROUND = "#FFFFFF"
 DEFAULT_SCREEN_KIND = "SCHEMATIC"
 
@@ -87,14 +85,25 @@ DEFAULT_SCREEN_KIND = "SCHEMATIC"
 _LEGACY_SCREEN_KINDS = {"PLAN": DEFAULT_SCREEN_KIND}
 
 
-def _as_list(data: dict, key: str) -> list:
+def _as_list(data: dict, key: str, warnings: list) -> list:
     """`data[key]` if it's already a list, else [] - a corrupted file
-    with e.g. "devices": "oops" must not crash iteration downstream, and
-    an entirely absent optional key is exactly as valid as an empty one
-    (format spec: "KAZDE pole opcjonalne, ktorego brakuje, ma byc
-    traktowane jak pusta lista... Nigdy jako blad wczytania")."""
-    value = data.get(key)
-    return value if isinstance(value, list) else []
+    with e.g. "devices": "oops" must not crash iteration downstream. An
+    entirely ABSENT optional key is exactly as valid as an empty one and
+    produces no warning (format spec: "KAZDE pole opcjonalne, ktorego
+    brakuje, ma byc traktowane jak pusta lista... Nigdy jako blad
+    wczytania"). A key that IS present but the wrong type is a different
+    case - silently discarding it would mean the whole device registry
+    (say) can vanish with zero trace, so it's appended to `warnings`
+    (never a refusal - the rest of the file still loads)."""
+    if key not in data:
+        return []
+    value = data[key]
+    if isinstance(value, list):
+        return value
+    warnings.append(
+        f"'{key}' was present but not a list (got {type(value).__name__}) - treated as empty."
+    )
+    return []
 
 
 @dataclass(frozen=True)
@@ -266,6 +275,17 @@ def load_epwsyn_file(path: str) -> EpwsynLoadResult:
     canvas = data.get("canvas")
     if not isinstance(canvas, dict):
         return _fail(path, "Missing required field: canvas.")
+    # width/height are required NUMBERS - the editor's own validator
+    # (ProjectSchema.ts's validateProjectSchema, INVALID_CANVAS) refuses
+    # a canvas missing either as invalid; this reader must not be looser
+    # than the tool that produces these files. bool excluded, same
+    # reasoning as the schema_version check above.
+    canvas_width = canvas.get("width")
+    if not isinstance(canvas_width, (int, float)) or isinstance(canvas_width, bool):
+        return _fail(path, "Missing or invalid required field: canvas.width.")
+    canvas_height = canvas.get("height")
+    if not isinstance(canvas_height, (int, float)) or isinstance(canvas_height, bool):
+        return _fail(path, "Missing or invalid required field: canvas.height.")
 
     objects_raw = data.get("objects")
     if not isinstance(objects_raw, list):
@@ -291,7 +311,7 @@ def load_epwsyn_file(path: str) -> EpwsynLoadResult:
 
     devices = []
     seen_device_ids = set()
-    for entry in _as_list(data, "devices"):
+    for entry in _as_list(data, "devices", warnings):
         if not isinstance(entry, dict) or not entry.get("id"):
             warnings.append("A device entry is missing its required 'id' field and was skipped.")
             continue
@@ -338,22 +358,22 @@ def load_epwsyn_file(path: str) -> EpwsynLoadResult:
         created_at=project_meta.get("created_at"),
         modified_at=project_meta.get("modified_at"),
         canvas={
-            "width": canvas.get("width", DEFAULT_CANVAS_WIDTH),
-            "height": canvas.get("height", DEFAULT_CANVAS_HEIGHT),
+            "width": canvas_width,
+            "height": canvas_height,
             "background": canvas.get("background", DEFAULT_CANVAS_BACKGROUND),
             "gridSize": canvas.get("gridSize"),
         },
         kind=kind,
         help_language=data.get("helpLanguage"),
         objects=objects_raw,
-        connections=_as_list(data, "connections"),
-        locations=_as_list(data, "locations"),
-        cards=_as_list(data, "cards"),
-        meters=_as_list(data, "meters"),
-        signal_panels=_as_list(data, "signalPanels"),
-        frames=_as_list(data, "frames"),
-        group_commands=_as_list(data, "groupCommands"),
-        setpoint_panels=_as_list(data, "setpointPanels"),
+        connections=_as_list(data, "connections", warnings),
+        locations=_as_list(data, "locations", warnings),
+        cards=_as_list(data, "cards", warnings),
+        meters=_as_list(data, "meters", warnings),
+        signal_panels=_as_list(data, "signalPanels", warnings),
+        frames=_as_list(data, "frames", warnings),
+        group_commands=_as_list(data, "groupCommands", warnings),
+        setpoint_panels=_as_list(data, "setpointPanels", warnings),
         devices=registry,
     )
 
