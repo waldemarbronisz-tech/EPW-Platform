@@ -1,0 +1,21 @@
+{
+  "name": "Overload and Rising Current",
+  "description": "Current climbs gradually, not in one jump - open the Trends page first so the rise is actually visible on the chart. Crosses a warning threshold, then a trip threshold, raises an alarm, and the breaker opens - current drops back to zero.",
+  "steps": [
+    {"time_s": 0, "type": "tag", "tag": "Meas.I1", "value": 15.0, "quality": "SIMULATED", "description": "Normal load current"},
+    {"time_s": 2, "type": "tag", "tag": "Meas.I1", "value": 23.0, "quality": "SIMULATED", "description": "Current starts climbing"},
+    {"time_s": 4, "type": "tag", "tag": "Meas.I1", "value": 31.0, "quality": "SIMULATED"},
+    {"time_s": 6, "type": "tag", "tag": "Meas.I1", "value": 39.0, "quality": "SIMULATED"},
+    {"time_s": 8, "type": "tag", "tag": "Meas.I1", "value": 47.0, "quality": "SIMULATED"},
+    {"time_s": 10, "type": "tag", "tag": "Meas.I1", "value": 50.0, "quality": "SIMULATED", "description": "Crosses the '51 Time Overcurrent' Stage 1 warning threshold (50 A)"},
+    {"time_s": 10.5, "type": "alarm", "alarm_id": "DEMO_I1_OVERCURRENT_WARNING", "message": "Meas.I1 at 50.0 A - above the 51 Time Overcurrent Stage 1 warning threshold", "priority": 2, "source_tag": "Meas.I1", "description": "Warning alarm raised"},
+    {"time_s": 12, "type": "tag", "tag": "Meas.I1", "value": 55.0, "quality": "SIMULATED", "description": "Current keeps rising"},
+    {"time_s": 14, "type": "tag", "tag": "Meas.I1", "value": 61.0, "quality": "SIMULATED", "description": "Crosses the Stage 2 trip threshold (60 A)"},
+    {"time_s": 14.5, "type": "alarm", "alarm_id": "DEMO_I1_OVERCURRENT_TRIP", "message": "Meas.I1 at 61.0 A - exceeds the 51 Time Overcurrent Stage 2 trip threshold (60 A)", "priority": 3, "source_tag": "Meas.I1", "description": "Trip-level alarm raised"},
+    {"time_s": 15, "type": "command", "target": "DO03", "action": "OPEN", "description": "Protective trip: the feeder breaker (KM1 / DO03) opens"},
+    {"time_s": 16, "type": "tag", "tag": "Meas.I1", "value": 6.0, "quality": "SIMULATED", "description": "Current collapsing now that the load is disconnected"},
+    {"time_s": 17, "type": "tag", "tag": "Meas.I1", "value": 0.0, "quality": "SIMULATED", "description": "Current settled at zero"},
+    {"time_s": 19, "type": "alarm_clear", "alarm_id": "DEMO_I1_OVERCURRENT_TRIP", "description": "Trip alarm cleared"},
+    {"time_s": 19.5, "type": "alarm_clear", "alarm_id": "DEMO_I1_OVERCURRENT_WARNING", "description": "Warning alarm cleared"}
+  ]
+}

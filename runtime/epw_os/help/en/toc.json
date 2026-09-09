@@ -1,0 +1,345 @@
+{
+  "chapters": [
+    {
+      "id": "getting_started",
+      "title": "Getting Started",
+      "topics": [
+        {"id": "gs_what", "title": "What EPW OS Is"},
+        {"id": "gs_startup", "title": "Starting the Program"},
+        {"id": "gs_layout", "title": "Screen Layout: Menu, Status Bar, Navigation"},
+        {"id": "gs_file_menu", "title": "The File Menu"},
+        {"id": "gs_project_menu", "title": "The Project Menu"}
+      ]
+    },
+    {
+      "id": "access_levels",
+      "title": "Access Levels",
+      "topics": [
+        {"id": "al_three", "title": "Three Levels: User, Operator, Engineer"},
+        {"id": "al_matrix", "title": "What Each Level Can Do"},
+        {"id": "al_pin", "title": "Changing Level and Entering a PIN"},
+        {"id": "al_timeout", "title": "Automatic Logout"},
+        {"id": "al_change_pin", "title": "Changing a PIN"}
+      ]
+    },
+    {
+      "id": "digital_io",
+      "title": "Digital Inputs and Outputs",
+      "topics": [
+        {"id": "dio_purpose", "title": "What These Pages Are For"},
+        {"id": "dio_reading", "title": "Reading State, What the Colors Mean"},
+        {"id": "dio_descriptions", "title": "Setting Descriptions"},
+        {"id": "dio_force", "title": "Forcing an Output State (Force)"},
+        {"id": "dio_switching_counters", "title": "Switching Counter (Mechanical Device Lifespan)"},
+        {"id": "dio_service_notes", "title": "Service History (Notes)"}
+      ]
+    },
+    {
+      "id": "analog_points",
+      "title": "Analog Points",
+      "topics": [
+        {"id": "ap_what", "title": "What an Analog Point Is"},
+        {"id": "ap_add_remove", "title": "Adding and Removing Points"},
+        {"id": "ap_config", "title": "Configuration: Signal Type, Ranges, Unit"},
+        {"id": "ap_note", "title": "The Technical Note and What It's For"}
+      ]
+    },
+    {
+      "id": "main_view",
+      "title": "Main View",
+      "topics": [
+        {"id": "mv_synoptic", "title": "The One-Line Diagram"},
+        {"id": "mv_control", "title": "Controlling Devices and Required Permissions"},
+        {"id": "mv_device_status", "title": "Device Status Panel"},
+        {"id": "mv_measurements", "title": "The Measurement Panel"}
+      ]
+    },
+    {
+      "id": "alarms",
+      "title": "Alarms",
+      "topics": [
+        {"id": "alm_source", "title": "Where Alarms Come From"},
+        {"id": "alm_ack", "title": "Acknowledging and What It's For"},
+        {"id": "alm_states", "title": "Active vs. Unacknowledged Alarm"}
+      ]
+    },
+    {
+      "id": "intrusion",
+      "title": "Intrusion Alarm System",
+      "topics": [
+        {"id": "intr_what", "title": "What the Intrusion Alarm System Is"},
+        {"id": "intr_zones_lines", "title": "Zones and Supervision Lines"},
+        {"id": "intr_line_types", "title": "Line Types: Instant, Delayed, 24-Hour, Supervisory"},
+        {"id": "intr_arming", "title": "Arming, Disarming, and Entry/Exit Delays"},
+        {"id": "intr_bypass", "title": "Bypassing a Line"},
+        {"id": "intr_filters", "title": "False-Alarm Filtering"},
+        {"id": "intr_input_modes", "title": "Input Modes: Contact vs. Parametrized (EOL/DEOL)"},
+        {"id": "intr_power_supervision", "title": "Power Supervision"},
+        {"id": "intr_line_life", "title": "Line Life and Silence Detection"},
+        {"id": "intr_alarm_memory", "title": "First Cause and Alarm Memory"},
+        {"id": "intr_walk_test", "title": "Walk-Test Mode"},
+        {"id": "intr_history", "title": "Alarm Event History"},
+        {"id": "intr_tags", "title": "Signals for Logic (Security.* Tags)"}
+      ]
+    },
+    {
+      "id": "protection",
+      "title": "Protection Settings",
+      "topics": [
+        {"id": "prot_what", "title": "Electrical vs. Process Protections"},
+        {"id": "prot_electrical", "title": "Electrical Protections"},
+        {"id": "prot_process", "title": "Process Protections"}
+      ]
+    },
+    {
+      "id": "diagnostics_pages",
+      "title": "Diagnostics",
+      "topics": [
+        {"id": "pq_what", "title": "Power Quality: a Simulation Sandbox"},
+        {"id": "st_what", "title": "System Topology: What's Real, What's Not"},
+        {"id": "bus_diag_what", "title": "Bus Diagnostics"}
+      ]
+    },
+    {
+      "id": "events_audit",
+      "title": "Events and Audit",
+      "topics": [
+        {"id": "ea_recorder", "title": "The Event Log"},
+        {"id": "ea_audit_log", "title": "The Audit Log"},
+        {"id": "ea_export", "title": "Exporting to CSV"}
+      ]
+    },
+    {
+      "id": "historian",
+      "title": "Historical Data",
+      "topics": [
+        {"id": "hist_what", "title": "What Historian Records"},
+        {"id": "hist_export", "title": "Exporting Historical Data"},
+        {"id": "trends_page", "title": "The Trends Page"}
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Protection",
+      "topics": [
+        {"id": "saf_settings_page", "title": "The Settings Page"},
+        {"id": "saf_principle", "title": "The Governing Principle: the Screen Informs, the Hardware Protects"},
+        {"id": "saf_kernel", "title": "System Health Monitoring (safety_kernel)"},
+        {"id": "saf_engineer_mode", "title": "Engineer Mode (Protection Verification)"},
+        {"id": "saf_training_mode", "title": "Training Mode"},
+        {"id": "saf_presentation_mode", "title": "Presentation Mode"}
+      ]
+    },
+    {
+      "id": "rest_api",
+      "title": "REST API",
+      "topics": [
+        {"id": "api_what", "title": "The REST API: Endpoints, Authentication, Exposure"},
+        {"id": "tools_export_tag_list", "title": "Exporting the Signal List (Logic Studio/Synoptic Editor)"}
+      ]
+    },
+    {
+      "id": "integrations",
+      "title": "Integrations",
+      "topics": [
+        {"id": "mqtt_what", "title": "MQTT Integration"}
+      ]
+    },
+    {
+      "id": "kiosk",
+      "title": "Kiosk Mode",
+      "topics": [
+        {"id": "kiosk_what", "title": "What It Is and What It's For"},
+        {"id": "kiosk_enter_exit", "title": "Entering and Exiting"},
+        {"id": "kiosk_vs_fullscreen", "title": "Kiosk Mode vs. Fullscreen Mode"}
+      ]
+    },
+    {
+      "id": "keyboard",
+      "title": "On-Screen Keyboard",
+      "topics": [
+        {"id": "kb_enable", "title": "Turning It On"},
+        {"id": "kb_floating_embedded", "title": "Floating and Built-In Keyboards"},
+        {"id": "kb_polish", "title": "Polish Characters"}
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Settings",
+      "topics": [
+        {"id": "set_language", "title": "Language"},
+        {"id": "set_screen_sleep", "title": "Screen Sleep"},
+        {"id": "set_theme", "title": "Visual Themes"},
+        {"id": "set_feature_config", "title": "Feature Configuration"},
+        {"id": "set_data_retention", "title": "Data Retention"},
+        {"id": "set_other", "title": "Everything Else"}
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Troubleshooting",
+      "topics": [
+        {"id": "ts_access_denied", "title": "\"Access Denied\" — What to Do"},
+        {"id": "ts_time_sync", "title": "Time Sync Indicator Shows Red"},
+        {"id": "ts_device_offline", "title": "A Device Shows OFFLINE"},
+        {"id": "ts_control_blocked", "title": "Control Is Blocked"},
+        {"id": "ts_forgot_pin", "title": "Forgotten PIN"}
+      ]
+    }
+  ],
+  "index": [
+    {"term": "Access denied", "topic": "ts_access_denied"},
+    {"term": "Access level switch", "topic": "al_pin"},
+    {"term": "Access levels", "topic": "al_three"},
+    {"term": "PIN lockout (too many wrong attempts)", "topic": "al_pin"},
+    {"term": "Address (%IX0.N / %QX0.N)", "topic": "dio_purpose"},
+    {"term": "Alarm — acknowledging", "topic": "alm_ack"},
+    {"term": "Alarm — sources", "topic": "alm_source"},
+    {"term": "Alarm — states", "topic": "alm_states"},
+    {"term": "Audit Log", "topic": "ea_audit_log"},
+    {"term": "Automatic logout", "topic": "al_timeout"},
+    {"term": "Configure button", "topic": "ap_config"},
+    {"term": "Control Outputs", "topic": "dio_purpose"},
+    {"term": "Controlling devices", "topic": "mv_control"},
+    {"term": "Digital Inputs", "topic": "dio_purpose"},
+    {"term": "Engineer (level)", "topic": "al_three"},
+    {"term": "EMERGENCY STOP", "topic": "ts_control_blocked"},
+    {"term": "Event log", "topic": "ea_recorder"},
+    {"term": "Export CSV (events)", "topic": "ea_export"},
+    {"term": "Export historical data", "topic": "hist_export"},
+    {"term": "Force — Control Outputs", "topic": "dio_force"},
+    {"term": "Force — Digital Inputs (simulation)", "topic": "dio_force"},
+    {"term": "History (service notes)", "topic": "dio_service_notes"},
+    {"term": "Historian", "topic": "hist_what"},
+    {"term": "Trends (page)", "topic": "trends_page"},
+    {"term": "Trends — History mode", "topic": "trends_page"},
+    {"term": "Trends — Live mode", "topic": "trends_page"},
+    {"term": "Trends — axes and units", "topic": "trends_page"},
+    {"term": "Interlock", "topic": "mv_control"},
+    {"term": "Intrusion alarm system", "topic": "intr_what"},
+    {"term": "Zones (intrusion)", "topic": "intr_zones_lines"},
+    {"term": "Supervision lines", "topic": "intr_zones_lines"},
+    {"term": "Instant line", "topic": "intr_line_types"},
+    {"term": "Delayed line (entry/exit)", "topic": "intr_line_types"},
+    {"term": "24-Hour line", "topic": "intr_line_types"},
+    {"term": "Supervisory line", "topic": "intr_line_types"},
+    {"term": "Arming / disarming a zone", "topic": "intr_arming"},
+    {"term": "Entry delay / exit delay", "topic": "intr_arming"},
+    {"term": "Bypassing a supervision line", "topic": "intr_bypass"},
+    {"term": "Minimum violation time", "topic": "intr_filters"},
+    {"term": "Multiplicity (violations needed)", "topic": "intr_filters"},
+    {"term": "Auto-lock after repeated alarms", "topic": "intr_filters"},
+    {"term": "Alarm hold time", "topic": "intr_filters"},
+    {"term": "False-alarm filtering", "topic": "intr_filters"},
+    {"term": "Contact input mode (line)", "topic": "intr_input_modes"},
+    {"term": "Parametrized input mode (line)", "topic": "intr_input_modes"},
+    {"term": "EOL / DEOL (End-of-Line supervision)", "topic": "intr_input_modes"},
+    {"term": "Line fault (tamper/short/open/undetermined)", "topic": "intr_input_modes"},
+    {"term": "Value windows (analog line states)", "topic": "intr_input_modes"},
+    {"term": "Power supervision (mains/battery)", "topic": "intr_power_supervision"},
+    {"term": "Technical alarm", "topic": "intr_power_supervision"},
+    {"term": "Line life / silence detection", "topic": "intr_line_life"},
+    {"term": "Suspect line (silence timeout)", "topic": "intr_line_life"},
+    {"term": "Arming with a line in fault", "topic": "intr_arming"},
+    {"term": "First alarm cause", "topic": "intr_alarm_memory"},
+    {"term": "Alarm memory", "topic": "intr_alarm_memory"},
+    {"term": "Clearing alarm memory", "topic": "intr_alarm_memory"},
+    {"term": "Walk-test mode", "topic": "intr_walk_test"},
+    {"term": "Testing sensors without alarming", "topic": "intr_walk_test"},
+    {"term": "Alarm event history", "topic": "intr_history"},
+    {"term": "History retention (events/days)", "topic": "intr_history"},
+    {"term": "Security.* tags", "topic": "intr_tags"},
+    {"term": "Electrical protections (page)", "topic": "prot_electrical"},
+    {"term": "Process protections (page)", "topic": "prot_process"},
+    {"term": "Process protection threshold/hysteresis/delay", "topic": "prot_process"},
+    {"term": "Process.* tags", "topic": "prot_process"},
+    {"term": "Kiosk Mode", "topic": "kiosk_what"},
+    {"term": "LED indicator", "topic": "dio_reading"},
+    {"term": "Logic Studio / logic project", "topic": "mv_control"},
+    {"term": "Switching counter (device wear)", "topic": "dio_switching_counters"},
+    {"term": "Main View", "topic": "mv_synoptic"},
+    {"term": "On-screen keyboard", "topic": "kb_enable"},
+    {"term": "On-screen keyboard — floating and built-in", "topic": "kb_floating_embedded"},
+    {"term": "On-screen keyboard — Polish characters", "topic": "kb_polish"},
+    {"term": "Operator (level)", "topic": "al_three"},
+    {"term": "PIN — changing", "topic": "al_change_pin"},
+    {"term": "PIN — entering", "topic": "al_pin"},
+    {"term": "PIN — forgotten", "topic": "ts_forgot_pin"},
+    {"term": "Power Quality (page)", "topic": "pq_what"},
+    {"term": "Bus Diagnostics (page)", "topic": "bus_diag_what"},
+    {"term": "Frames sent/received", "topic": "bus_diag_what"},
+    {"term": "Response time (bus diagnostics)", "topic": "bus_diag_what"},
+    {"term": "Reset All Counters (Bus Diagnostics)", "topic": "bus_diag_what"},
+    {"term": "System Topology — CPU Load, Temperature, Frames RX/TX", "topic": "st_what"},
+    {"term": "SIMULATED (data quality)", "topic": "hist_what"},
+    {"term": "Permission table", "topic": "al_matrix"},
+    {"term": "Description — editing (DI/DO)", "topic": "dio_descriptions"},
+    {"term": "Device status panel", "topic": "mv_device_status"},
+    {"term": "Device offline", "topic": "ts_device_offline"},
+    {"term": "Measurement panel", "topic": "mv_measurements"},
+    {"term": "Analog point — adding", "topic": "ap_add_remove"},
+    {"term": "Analog point — configuration", "topic": "ap_config"},
+    {"term": "Protection Settings", "topic": "saf_settings_page"},
+    {"term": "Reset counter (switching device)", "topic": "dio_switching_counters"},
+    {"term": "Warning threshold (switching device)", "topic": "dio_switching_counters"},
+    {"term": "Safety kernel", "topic": "saf_kernel"},
+    {"term": "Engineer Mode (page)", "topic": "saf_engineer_mode"},
+    {"term": "Protection verification", "topic": "saf_engineer_mode"},
+    {"term": "File menu", "topic": "gs_file_menu"},
+    {"term": "Project menu", "topic": "gs_project_menu"},
+    {"term": "Project properties", "topic": "gs_project_menu"},
+    {"term": "Recently opened", "topic": "gs_project_menu"},
+    {"term": "Import project", "topic": "gs_file_menu"},
+    {"term": "Export project", "topic": "gs_file_menu"},
+    {"term": "Visual themes", "topic": "set_theme"},
+    {"term": "Theme", "topic": "set_theme"},
+    {"term": "Theme work mode (constant vs. automatic)", "topic": "set_theme"},
+    {"term": "Automatic day/night theme", "topic": "set_theme"},
+    {"term": "System.Theme tag", "topic": "set_theme"},
+    {"term": "Tooltips", "topic": "gs_layout"},
+    {"term": "Training Mode", "topic": "saf_training_mode"},
+    {"term": "Presentation Mode", "topic": "saf_presentation_mode"},
+    {"term": "Demo scenario", "topic": "saf_presentation_mode"},
+    {"term": "Tools > Presentation Mode", "topic": "saf_presentation_mode"},
+    {"term": "REST API", "topic": "api_what"},
+    {"term": "API token", "topic": "api_what"},
+    {"term": "api_host / api_port", "topic": "api_what"},
+    {"term": "Bearer token", "topic": "api_what"},
+    {"term": "api_tokens.local.json", "topic": "api_what"},
+    {"term": "Signal list export", "topic": "tools_export_tag_list"},
+    {"term": "Export Signal List... (menu)", "topic": "tools_export_tag_list"},
+    {"term": "GET /api/v1/tags/export", "topic": "tools_export_tag_list"},
+    {"term": "Logic Studio - signal list", "topic": "tools_export_tag_list"},
+    {"term": "Synoptic Editor - signal list", "topic": "tools_export_tag_list"},
+    {"term": "request_tags (reserved)", "topic": "tools_export_tag_list"},
+    {"term": "MQTT", "topic": "mqtt_what"},
+    {"term": "Home Assistant", "topic": "mqtt_what"},
+    {"term": "Link.* signals (incoming)", "topic": "mqtt_what"},
+    {"term": "mqtt.local.json", "topic": "mqtt_what"},
+    {"term": "Last Will and Testament (MQTT)", "topic": "mqtt_what"},
+    {"term": "Retained message (MQTT)", "topic": "mqtt_what"},
+    {"term": "Control blocked", "topic": "ts_control_blocked"},
+    {"term": "One-line diagram", "topic": "mv_synoptic"},
+    {"term": "Signal type (analog point)", "topic": "ap_config"},
+    {"term": "Simulation / Live mode", "topic": "gs_what"},
+    {"term": "Starting the program", "topic": "gs_startup"},
+    {"term": "Feature configuration", "topic": "set_feature_config"},
+    {"term": "Turning a controller function on or off", "topic": "set_feature_config"},
+    {"term": "Data retention", "topic": "set_data_retention"},
+    {"term": "Historian retention", "topic": "set_data_retention"},
+    {"term": "Audit log archiving", "topic": "set_data_retention"},
+    {"term": "Database size warning", "topic": "set_data_retention"},
+    {"term": "Navigation tree", "topic": "gs_layout"},
+    {"term": "Other settings", "topic": "set_other"},
+    {"term": "Screen sleep", "topic": "set_screen_sleep"},
+    {"term": "Service note - adding", "topic": "dio_service_notes"},
+    {"term": "The screen informs, the hardware protects", "topic": "saf_principle"},
+    {"term": "System health monitoring", "topic": "saf_kernel"},
+    {"term": "Events vs. Audit Log — difference", "topic": "ea_audit_log"},
+    {"term": "Time sync indicator", "topic": "ts_time_sync"},
+    {"term": "Language change", "topic": "set_language"},
+    {"term": "Technical note", "topic": "ap_note"},
+    {"term": "User (level)", "topic": "al_three"},
+    {"term": "Fullscreen mode vs. Kiosk Mode", "topic": "kiosk_vs_fullscreen"}
+  ]
+}

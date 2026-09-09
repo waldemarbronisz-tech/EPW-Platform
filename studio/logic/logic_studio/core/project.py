@@ -1,0 +1,784 @@
+import copy
+import json
+import re
+
+from logic_studio.core.grid import GRID_SIZE
+from logic_studio.core import state_diff
+
+
+class _HistoryEntry:
+    """One undo/redo stack slot. Exactly one of `full`/`diff` is set at
+    any time — see Project._stack_push()/_stack_pop() for the invariant
+    (topmost entry in a stack is always `full`; every entry below it is
+    a `diff` relative to its immediate neighbor above)."""
+    __slots__ = ("full", "diff")
+
+    def __init__(self, full: dict = None, diff: dict = None):
+        self.full = full
+        self.diff = diff
+
+# Bump when the on-disk .epwlogic schema changes in a way that requires migration.
+# Every bump needs a matching _migrate_vN_to_v(N+1)(data) function registered in
+# _MIGRATIONS below — see AUDIT_REPORT.md §2 "Wersjonowanie schematów".
+EPWLOGIC_SCHEMA_VERSION = 13
+
+# fix/wire-labels-and-project-integrity §B2.1: the ONE declaration of
+# "what are Project's own top-level CONTENT elements" — as opposed to
+# `format`/`schema_version`, which are metadata ABOUT the project, not
+# part of it. Derived from state_diff.py's own three registries
+# (SCALAR_KEYS/UUID_LIST_KEYS/DICT_KEYS — itself the single source of
+# truth `test_meta_every_top_level_serialize_key_is_known_to_state_diff`
+# checks against `Project().serialize().keys()`), never re-declared by
+# hand here — a fourth element added to state_diff.py's own registries
+# (which that test already forces to happen the moment
+# Project.serialize() itself changes shape) is picked up by
+# PROJECT_ELEMENTS automatically, with nothing to keep in sync twice.
+#
+# tests/test_project_element_coverage.py is what actually enforces the
+# thing this declaration exists FOR (§B2.2/§B2.3): every function that
+# swaps or copies project content — serialize/deserialize, state_diff,
+# clipboard, macro expansion, macro enter/exit, macro import/export,
+# schema migration — must have a documented, tested answer for what it
+# does with EACH of these three, even when the answer is "deliberately
+# left alone" (settings during macro enter/exit, e.g.). This is the
+# EIGHTH known instance of "element added to the model, one path never
+# learned about" (project.wires + core/macros.py, found writing this
+# same PR) — this file is the mechanism meant to make a ninth
+# impossible to ship unnoticed.
+PROJECT_ELEMENTS = state_diff.UUID_LIST_KEYS + state_diff.DICT_KEYS
+
+
+def _migrate_v1_to_v2(data: dict) -> dict:
+    """v1 -> v2 (see AUDIT_REPORT.md §2.1):
+    - settings.analog_points introduced. Default to [] when absent — v1
+      projects simply had none.
+    - "Force State" was, for a time, incorrectly persisted as a per-block
+      property (a runtime-only override that must never be saved — see the
+      previous PR's AUDIT_REPORT.md §5.1). It is stripped out of properties
+      here. An ACTIVE force (not "NO FORCE"/empty) is carried forward via a
+      transient "_legacy_force_state" key on the block's own dict; that key
+      is consumed exactly once, right after Project.deserialize() constructs
+      that block, and folded into its simulation_state (never re-serialized).
+      This keeps every v1 back-compat decision in this one function instead
+      of split across deserialize() and a separate helper.
+    """
+    settings = data.setdefault("settings", {})
+    settings.setdefault("analog_points", [])
+
+    for b_data in data.get("blocks", []):
+        properties = b_data.get("properties")
+        if isinstance(properties, dict) and "Force State" in properties:
+            value = properties.pop("Force State")
+            if value and value != "NO FORCE":
+                b_data["_legacy_force_state"] = value
+
+    data["schema_version"] = 2
+    return data
+
+
+_VIRTUAL_IO_TYPE_IDS = ("virtual.input", "virtual.output")
+
+# Same forbidden-character set as internal_bits.validate_internal_bit_name()
+# — duplicated as a raw pattern (not imported) to keep this migration usable
+# even if that module's validation rule ever changes shape; migrating old
+# data should stay stable independent of the CURRENT validation rule.
+_MIGRATION_FORBIDDEN_CHARS = re.compile(r'[\s/\\\'"ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]')
+
+
+def _migrate_v2_to_v3(data: dict) -> dict:
+    """v2 -> v3 (feat/internal-bits §8.2):
+    - settings.internal_bits introduced. Default to [] when absent.
+    - virtual.input/virtual.output blocks used a free-text "Tag" property
+      as their signal name — no registry, no uniqueness check, a typo
+      silently created a new signal instead of erroring (feat/internal-bits
+      §PROBLEM). For every such block with a non-empty Tag, this creates
+      (or reuses) a BOOL, non-retentive settings.internal_bits entry named
+      after that Tag, and rewrites the block's property from "Tag" to
+      "Bit" pointing at it. Two blocks with the same Tag (case-
+      insensitively) merge into ONE registry entry, exactly as
+      §2.1 requires — this never changes which blocks are logically wired
+      to which signal, only how that signal is named/validated going
+      forward. A Tag containing characters the new registry doesn't allow
+      (spaces, quotes, ...) is sanitized (replaced with "_") rather than
+      left to fail validation on the very first load.
+    """
+    settings = data.setdefault("settings", {})
+    internal_bits = settings.setdefault("internal_bits", [])
+    by_lower_name = {e["name"].lower(): e for e in internal_bits}
+
+    for b_data in data.get("blocks", []):
+        if b_data.get("type_id") not in _VIRTUAL_IO_TYPE_IDS:
+            continue
+        properties = b_data.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        tag = properties.pop("Tag", None)
+        if not tag:
+            properties.setdefault("Bit", "")
+            continue
+
+        name = _MIGRATION_FORBIDDEN_CHARS.sub("_", tag)
+        existing = by_lower_name.get(name.lower())
+        if existing is None:
+            entry = {
+                "name": name, "type": "BOOL", "retentive": False,
+                "description": "", "label": "", "category": "",
+            }
+            internal_bits.append(entry)
+            by_lower_name[name.lower()] = entry
+
+        properties["Bit"] = name
+
+    # system.signal used "Tag" to name a system signal too (overloading the
+    # SAME property key the generic Tag/Comment feature uses for an
+    # unrelated purpose — see PROBLEM in the audit) — carry that value
+    # forward as "Sygnał" (§3.4) rather than dropping it. Unlike virtual.*
+    # above, this does NOT create a registry entry — the system-signal
+    # catalog is a fixed platform contract, not project-defined — and the
+    # old value is NOT sanitized/validated here: if it doesn't match a
+    # current catalog id (e.g. the old default "SYS_READY" vs the
+    # catalog's "SYS.READY"), that's exactly the "sygnał spoza katalogu"
+    # case §4.4/§3.4's migration note says the validator must flag live,
+    # not something this migration should silently paper over.
+    for b_data in data.get("blocks", []):
+        if b_data.get("type_id") != "system.signal":
+            continue
+        properties = b_data.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        tag = properties.pop("Tag", None)
+        properties["Sygnał"] = tag or properties.get("Sygnał", "")
+
+    data["schema_version"] = 3
+    return data
+
+
+def _migrate_v3_to_v4(data: dict) -> dict:
+    """v3 -> v4 (feat/io-labels-and-ids §1.3):
+    - settings.io_labels introduced (address -> descriptive label, e.g.
+      "ELA01.DI01" -> "Wyłącznik Q1 zamknięty" — see core/device_model.py's
+      get_io_label()/set_io_label()). Default to {} when absent — no v3
+      project could have had any entries, since the feature didn't exist.
+    This step is otherwise a no-op (nothing to migrate FROM), but it still
+    needs to exist and bump schema_version, so a v3 file's version number
+    accurately reflects what the CURRENT format supports — see §1.3's own
+    reasoning: an empty migration is not a skipped one.
+    """
+    settings = data.setdefault("settings", {})
+    settings.setdefault("io_labels", {})
+    data["schema_version"] = 4
+    return data
+
+
+def _migrate_v4_to_v5(data: dict) -> dict:
+    """v4 -> v5 (feat/multi-device-io):
+    - settings.ela_devices/ada_devices introduced — the project-defined
+      list of ELA/ADA module names (core/device_model.py's
+      ELA_DEVICES/ADA_DEVICES class constants, previously fixed at
+      ["ELA01"]/["ADA01"] for every project). Defaults to exactly that
+      single-device list when absent, so every pre-v5 file — which could
+      only ever have addressed "ELA01.DI01".."ELA01.DI32"/"ADA01.DO01"..
+      "ADA01.DO32" in the first place — keeps validating and compiling
+      identically after this migration; nothing is actually being
+      migrated FROM, same "an empty migration is not a skipped one"
+      reasoning as v3->v4.
+    """
+    settings = data.setdefault("settings", {})
+    settings.setdefault("ela_devices", ["ELA01"])
+    settings.setdefault("ada_devices", ["ADA01"])
+    data["schema_version"] = 5
+    return data
+
+
+def _migrate_v5_to_v6(data: dict) -> dict:
+    """v5 -> v6 (feat/signal-watch): settings.watched_signals introduced —
+    the project-defined list of pinned signals for the Watch panel
+    (core/watch.py). Defaults to an empty list — no v5 file could have had
+    any entries, the feature didn't exist yet — same "an empty migration
+    is not a skipped one" reasoning as v3->v4's io_labels."""
+    settings = data.setdefault("settings", {})
+    settings.setdefault("watched_signals", [])
+    data["schema_version"] = 6
+    return data
+
+
+def _migrate_v6_to_v7(data: dict) -> dict:
+    """v6 -> v7 (feat/signal-watch, § "let the program save these runs"):
+    settings.watch_history introduced — recorded (t_ms, value) samples per
+    watched signal (core/watch.py), persisted so a simulation run survives
+    closing and reopening the project. Defaults to an empty dict — no v6
+    file could have had any entries, the feature didn't exist yet."""
+    settings = data.setdefault("settings", {})
+    settings.setdefault("watch_history", {})
+    data["schema_version"] = 7
+    return data
+
+
+def _migrate_v7_to_v8(data: dict) -> dict:
+    """v7 -> v8 (feat/macro-blocks): settings.macro_definitions introduced
+    — user-defined macro block definitions (core/macros.py). Defaults to
+    an empty dict — no v7 file could have had any entries, the feature
+    didn't exist yet."""
+    settings = data.setdefault("settings", {})
+    settings.setdefault("macro_definitions", {})
+    data["schema_version"] = 8
+    return data
+
+
+def _migrate_v8_to_v9(data: dict) -> dict:
+    """v8 -> v9 (fix/safety-block-semantics §2.4): analog.quality's "Max
+    Rate" property (max change PER SCAN) is renamed "Max Rate (/s)" (max
+    change per SECOND) — the old property silently changed physical
+    meaning whenever `cycle_time_ms` (a project-wide setting unrelated to
+    any individual safety threshold) was edited: "5 units per scan" means
+    a completely different real-world rate at a 100ms cycle than at a
+    50ms one. Every analog.quality block with a non-zero old "Max Rate"
+    is converted: new = old * 1000 / cycle_time_ms — the SAME physical
+    (per-second) threshold the project already had, so compiled/exported
+    behavior is unchanged by this migration. Each conversion is flagged
+    via a transient "_legacy_max_rate_migration" marker (same one-shot
+    pattern as "_legacy_force_state" in _migrate_v1_to_v2 above),
+    consumed once by Project.deserialize() below and surfaced by
+    Validator as a compiler warning on the first compile after loading —
+    the raw number on screen changed even though what it MEANS didn't,
+    and an engineer should see that, not just trust the migration
+    silently got it right."""
+    settings = data.setdefault("settings", {})
+    cycle_time_ms = settings.get("cycle_time_ms", 100) or 100
+    for b_data in data.get("blocks", []):
+        if b_data.get("type_id") != "analog.quality":
+            continue
+        properties = b_data.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        old_rate = properties.pop("Max Rate", None)
+        if old_rate:
+            new_rate = float(old_rate) * 1000.0 / float(cycle_time_ms)
+            properties["Max Rate (/s)"] = new_rate
+            b_data["_legacy_max_rate_migration"] = {"old": float(old_rate), "new": new_rate}
+        else:
+            properties.setdefault("Max Rate (/s)", 0.0)
+    data["schema_version"] = 9
+    return data
+
+
+def _migrate_v9_to_v10(data: dict) -> dict:
+    """v9 -> v10 (fix/safety-block-semantics §4, plus retroactively closing
+    a gap §1 left open): BaseLogicBlock.deserialize() replaces a block's
+    ENTIRE properties dict wholesale with whatever the file has (base.py:
+    `block.properties = data.get("properties", {}).copy()`) — a property
+    added to a block type's __init__ AFTER a project was last saved is
+    silently ABSENT from that project's own copy of the block forever
+    (evaluate()'s own properties.get(key, default) calls still behave
+    correctly, but the property grid — which iterates
+    block.properties.items() — never shows a row for it, so the engineer
+    can't even see, let alone change, the new setting on an existing
+    schematic). Backfills BOTH:
+    - "Range Source" (§4.1) — existing blocks get "Własny" explicitly,
+      NEVER the new default "Z punktu analogowego", which only makes
+      sense for a freshly-placed block reasoned about at placement time,
+      not an existing wired-up schematic Validator hasn't checked yet.
+    - "Stuck Tolerance" (§1.1) — shipped in an earlier commit on this same
+      branch WITHOUT this backfill; found while writing this exact
+      migration for Range Source. 0.0 is the correct default either way
+      (bit-exact, unchanged behavior), this migration only makes sure the
+      property grid actually shows the row on an existing project."""
+    for b_data in data.get("blocks", []):
+        if b_data.get("type_id") != "analog.quality":
+            continue
+        properties = b_data.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        properties.setdefault("Range Source", "Własny")
+        properties.setdefault("Stuck Tolerance", 0.0)
+    data["schema_version"] = 10
+    return data
+
+
+def _migrate_v10_to_v11(data: dict) -> dict:
+    """v10 -> v11 (fix/safety-block-semantics §5): same "backfill a
+    property __init__ added after this project was last saved" reasoning
+    as _migrate_v9_to_v10 above, for input.ai's two new properties. Both
+    defaults (0 = unlimited hold, "Zero" for the timeout value) are
+    IDENTICAL to this block's behavior before they existed — this
+    migration only makes them visible/editable in the property grid for
+    an existing project, same as v9->v10 did for analog.quality. The new
+    third output pin ("Hold Expired") needs no migration of its own:
+    Project.deserialize()'s pin-restore loop already only restores as
+    many output pins as the FILE has data for
+    (`if i < len(block.outputs)`), so a v10 file's 2-entry "outputs" list
+    simply leaves the freshly-constructed 3rd pin at its __init__
+    defaults untouched — exactly what's wanted."""
+    for b_data in data.get("blocks", []):
+        if b_data.get("type_id") != "input.ai":
+            continue
+        properties = b_data.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        properties.setdefault("Max Hold (ms)", 0)
+        properties.setdefault("Hold Timeout Value", "Zero")
+    data["schema_version"] = 11
+    return data
+
+
+def _migrate_v11_to_v12(data: dict) -> dict:
+    """v11 -> v12 (feat/wire-labels §2.3): introduces the top-level
+    "wires" list (core/wire.py) — schematic wire records for a wire
+    carrying a label and/or a free end. Empty migration in the fullest
+    sense: no file older than this feature could have anything to put
+    there (every wire in an existing project has both ends connected and
+    no label, so it needs no Wire record at all — see core/wire.py's own
+    docstring) — but the step still exists, so a v11 file's version
+    number accurately reflects what the CURRENT format supports, the
+    same "an empty migration is not a skipped one" reasoning as every
+    other purely-additive step in this chain (v3->v4, v5->v6, ...).
+    Deliberately at the TOP LEVEL of `data`, not inside `settings` —
+    "wires" is schematic content (Project.wires is a sibling list of
+    Project.blocks), not project configuration."""
+    data.setdefault("wires", [])
+    data["schema_version"] = 12
+    return data
+
+
+def _migrate_v12_to_v13(data: dict) -> dict:
+    """v12 -> v13 (fix/wire-labels-and-project-integrity §B1.1): a macro
+    DEFINITION now carries its own "wires" list too, mirroring its own
+    existing "blocks" list — a Wire naming a pin inside a macro's own
+    internal blocks is scoped to that macro (§B1.3: its label can never
+    merge with a top-level label, or another instance's), so it lives in
+    the definition, not the top-level project. No file older than this
+    feature could have anything to put there — same "an empty migration
+    is not a skipped one" reasoning as v11->v12 above — but every
+    existing definition still gets the key explicitly, so
+    core/macros.py's own _copy_definition() (which round-trips every
+    definition through get_definition()/set_definition() on every
+    access) never has to guess whether an old, unmigrated definition
+    dict is missing it."""
+    macro_defs = data.get("settings", {}).get("macro_definitions", {})
+    for definition in macro_defs.values():
+        definition.setdefault("wires", [])
+    data["schema_version"] = 13
+    return data
+
+
+# Keyed by the version a migration upgrades FROM. Project.deserialize() walks
+# this sequentially — apply the migration for the file's current version,
+# re-check, repeat — so a v1 file goes through v1->v2->...->v12->v13 in one load.
+_MIGRATIONS = {
+    1: _migrate_v1_to_v2,
+    2: _migrate_v2_to_v3,
+    3: _migrate_v3_to_v4,
+    4: _migrate_v4_to_v5,
+    5: _migrate_v5_to_v6,
+    6: _migrate_v6_to_v7,
+    7: _migrate_v7_to_v8,
+    8: _migrate_v8_to_v9,
+    9: _migrate_v9_to_v10,
+    10: _migrate_v10_to_v11,
+    11: _migrate_v11_to_v12,
+    12: _migrate_v12_to_v13,
+}
+
+
+class Project:
+    """Manages the full state of the Logic Studio engineering project."""
+
+    def __init__(self):
+        self.blocks = []
+        # feat/wire-labels §2: schematic wire records, a sibling list of
+        # `blocks` (live Wire objects naming pins by uuid — content, not
+        # configuration) — see core/wire.py's own docstring for why this
+        # is NOT nested under `settings` the way analog_points/
+        # internal_bits/io_labels are, and why it holds a record for only
+        # SOME wires, never every connection in the project.
+        self.wires = []
+        self.settings = {
+            "name": "New Project",
+            "version": "1.0",
+            "cycle_time_ms": 100,
+            # Analog points are fully project-defined (unlike DI/DO, which are
+            # fixed physical ELA/ADA channels) — see DeviceModel and
+            # AUDIT_REPORT.md §1. Each entry:
+            # {"address": str, "name": str, "unit": str, "min": float,
+            #  "max": float, "direction": "input" | "output"}
+            "analog_points": [],
+            # Internal signal registry (feat/internal-bits §1) — project-
+            # defined BOOL/REAL signals virtual.input/output and
+            # internal.reg_in/out reference by name. See
+            # core/internal_bits.py for the entry shape and
+            # internal_bit_id() (the derived M./MR./MW./MWR.<name> id).
+            "internal_bits": [],
+            # Descriptive labels for I/O addresses (feat/io-labels-and-ids
+            # §1) — address -> label, e.g. "ELA01.DI01" -> "Wyłącznik Q1
+            # zamknięty". Always read/written through DeviceModel.
+            # get_io_label()/set_io_label() (§1.4), never this dict
+            # directly. A short_id_counters entry (core/short_id.py, §4)
+            # is added here lazily by the first block ever added to the
+            # project — not seeded here, since an empty project needs none.
+            "io_labels": {},
+            # feat/multi-device-io: the ELA/ADA modules THIS project
+            # addresses — a new project starts with the same single-device
+            # default every project always had (DeviceModel.ELA_CHANNELS/
+            # ADA_CHANNELS fixed channels-per-device stays a platform
+            # constant, not project-defined — only the DEVICE COUNT is).
+            # Always read/written through DeviceModel.get_ela_devices()/
+            # get_ada_devices(), never this list directly.
+            "ela_devices": ["ELA01"],
+            "ada_devices": ["ADA01"],
+            # feat/signal-watch: signals an engineer pinned to the Watch
+            # panel for continuous monitoring during simulation, independent
+            # of canvas selection. Always read/written through
+            # core/watch.py's add_watch()/remove_watch()/get_watches(),
+            # never this list directly. Each entry: {"kind": one of
+            # core/crossref.py's KIND_* constants, "signal_id": str}.
+            "watched_signals": [],
+            # feat/signal-watch ("let the program save these runs"):
+            # recorded (t_ms, value) samples per watched signal, so a
+            # simulation run survives closing and reopening the project.
+            # "<kind>|<signal_id>" -> [[t_ms, value], ...], oldest first.
+            # Always read/written through core/watch.py's
+            # append_history_sample()/get_history()/clear_history()/
+            # clear_all_history(), never this dict directly.
+            "watch_history": {},
+            # feat/macro-blocks: user-defined macro block definitions —
+            # def_id -> {"name", "blocks", "input_pins", "output_pins"}.
+            # Always read/written through core/macros.py's
+            # get_definition()/set_definition()/delete_definition(), never
+            # this dict directly.
+            "macro_definitions": {},
+        }
+
+        self.undo_stack = []
+        self.redo_stack = []
+        self.is_recording = False
+
+    # ---- feat/undo-diff-storage: each stack's memory is proportional to
+    # the SIZE OF EACH EDIT, not to the size of the whole project — see
+    # AUDIT_REPORT.md §25 / §9.1 for the measured problem this replaces
+    # (a full JSON snapshot per entry, growing linearly with block count).
+    # Invariant maintained by _stack_push()/_stack_pop() on BOTH
+    # undo_stack and redo_stack: the topmost (most recently pushed) entry
+    # is always a FULL dict; every entry below it is a diff
+    # (core/state_diff.py) relative to its immediate neighbor above —
+    # i.e. "what to change on the entry one step newer to get this one".
+    # Since undo()/redo() only ever push/pop from the TOP of a stack,
+    # reconstructing the entry that becomes newly exposed on pop needs
+    # exactly one diff-apply against the value just popped — never a walk
+    # back through the whole stack.
+
+    def _stack_push(self, stack: list, state: dict):
+        """Push `state` (a full serialize()-shaped dict) onto `stack`,
+        converting the previous top (if any) from a full dict into a
+        diff first. `state` is deep-copied once here — the single
+        isolation point that keeps every stored history entry
+        independent of the live project's own mutable dicts/lists
+        (BaseLogicBlock.serialize()'s "properties" and Project.settings'
+        nested values are returned BY REFERENCE, not copied — without
+        this, a later in-place edit, e.g. DeviceModel.set_io_label(),
+        would silently rewrite already-pushed history through the
+        shared reference)."""
+        state = copy.deepcopy(state)
+        if stack:
+            old_top = stack[-1]
+            stack[-1] = _HistoryEntry(diff=state_diff.diff_project_state(base=state, target=old_top.full))
+        stack.append(_HistoryEntry(full=state))
+
+    def _stack_pop(self, stack: list) -> dict:
+        """Pop and return the topmost full state, re-materializing the
+        entry now exposed on top (previously stored as a diff relative
+        to the entry just popped) back into a full dict so the "top is
+        always full" invariant holds for the next push/pop."""
+        popped = stack.pop()
+        if stack:
+            new_top = stack[-1]
+            stack[-1] = _HistoryEntry(full=state_diff.apply_project_diff(base=popped.full, diff=new_top.diff))
+        return popped.full
+
+    def push_state(self, state: dict = None):
+        """Take a snapshot of the current project state for undo. Pass an
+        already-serialized `state` (feat/clipboard-and-align §3.1/§3.2) to
+        push a state captured BEFORE a since-applied live mutation instead
+        of the project's current (already-mutated) one — needed by
+        scene.py's block-drag and click-to-wire handling, both of which
+        apply their change live (via BlockItem.itemChange() / Pin.connect())
+        during the mouse gesture, before mouseReleaseEvent gets a chance to
+        call this; pushing self.serialize() at that point would push the
+        POST-change state, making undo() a no-op. Every other call site
+        keeps calling this with no argument, exactly as before."""
+        if self.is_recording:
+            return
+        if state is None:
+            state = self.serialize()
+        self._stack_push(self.undo_stack, state)
+        # Keep stack size manageable — dropping the oldest entry never
+        # needs to materialize it first (see _stack_push's docstring):
+        # nothing else in the chain depends on the entry being discarded.
+        if len(self.undo_stack) > 50:
+            self.undo_stack.pop(0)
+        self.redo_stack.clear()
+
+    def undo(self):
+        if not self.undo_stack:
+            return None
+        self._stack_push(self.redo_stack, self.serialize())
+        return self._stack_pop(self.undo_stack)
+
+    def redo(self):
+        if not self.redo_stack:
+            return None
+        self._stack_push(self.undo_stack, self.serialize())
+        return self._stack_pop(self.redo_stack)
+
+    def add_wire(self, wire):
+        """feat/wire-labels §2.1: a Wire with NEITHER end connected (both
+        source_pin and dest_pin None) is invalid — "przewód bez żadnego
+        podłączonego końca jest niedozwolony" — refused here rather than
+        left to some later validation pass, the same "catch it at the
+        single choke point" reasoning as add_block()'s short_id
+        assignment. Returns True if added, False if refused."""
+        if wire.source_pin is None and wire.dest_pin is None:
+            return False
+        if wire not in self.wires:
+            self.wires.append(wire)
+        return True
+
+    def remove_wire(self, wire):
+        if wire in self.wires:
+            self.wires.remove(wire)
+
+    def remove_wire_by_pins(self, source_pin_uuid, dest_pin_uuid):
+        """feat/wire-labels: removes the Wire record (if any) describing
+        EXACTLY this pin pair — the counterpart to Pin.disconnect(),
+        called at every site that disconnects one specific connection
+        (ui/canvas/scene.py's delete_selected_items()/
+        create_macro_from_selection()) so a Wire record never survives
+        the connection it describes. Matches BOTH orderings (source/dest
+        is which end the user happened to click first while drawing —
+        see ui/canvas/wire_item.py's own note on this — not a
+        logical/physical distinction) since a Wire's own source_pin/
+        dest_pin are assigned once, at creation, and the caller
+        disconnecting a pin pair may not know or care which was which."""
+        for wire in list(self.wires):
+            pins = {wire.source_pin, wire.dest_pin}
+            if pins == {source_pin_uuid, dest_pin_uuid}:
+                self.wires.remove(wire)
+
+    def remove_wires_touching_pins(self, pin_uuids) -> list:
+        """feat/wire-labels: removes every Wire record naming ANY of
+        `pin_uuids` on either end — used when a whole BLOCK is deleted
+        (every one of its own pins is about to disappear, so any Wire
+        naming one, including a free-end wire with no on-canvas WireItem
+        to be found by scene.py's own graphics cleanup, is left
+        describing a connection/attachment that no longer exists).
+        Returns the removed wires."""
+        pin_uuids = set(pin_uuids)
+        removed = [w for w in self.wires if w.source_pin in pin_uuids or w.dest_pin in pin_uuids]
+        for w in removed:
+            self.wires.remove(w)
+        return removed
+
+    def add_block(self, block):
+        if block not in self.blocks:
+            # feat/io-labels-and-ids §4.1/§4.2: assign a short_id the FIRST
+            # time a block joins a project — the single choke point every
+            # block passes through (library placement, paste/duplicate, and
+            # the project loader below, which calls this once per block in
+            # FILE ORDER — that's what makes loading an older project
+            # without short_id assign ids deterministically in file order
+            # with no separate migration pass). A block that already has
+            # one (restored from a save file via BaseLogicBlock.
+            # SERIALIZED_FIELDS) is left untouched.
+            if not getattr(block, 'short_id', None):
+                from logic_studio.core import short_id as short_id_module
+                short_id_module.assign_short_id(self, block)
+            self.blocks.append(block)
+
+    def remove_block(self, block):
+        if block in self.blocks:
+            self.blocks.remove(block)
+
+    def serialize(self) -> dict:
+        """Serialize full project for saving to .epwlogic file."""
+        return {
+            "format": "EPW_LOGIC",
+            "schema_version": EPWLOGIC_SCHEMA_VERSION,
+            "settings": self.settings,
+            "blocks": [b.serialize() for b in self.blocks],
+            # feat/wire-labels §2: schematic wire records — created ONLY
+            # for a wire that carries a label and/or a free end (see
+            # core/wire.py's own docstring for why an ordinary, fully-
+            # connected, unlabeled wire needs no entry here at all).
+            "wires": [w.serialize() for w in self.wires],
+        }
+
+    def save_to_file(self, filepath: str):
+        with open(filepath, 'w') as f:
+            json.dump(self.serialize(), f, indent=4)
+
+    @classmethod
+    def load_from_file(cls, filepath: str):
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        return cls.deserialize(data)
+
+    @classmethod
+    def deserialize(cls, data: dict):
+        """Loads project from JSON.
+
+        Raises ValueError if the format/schema is unrecognized, or if the file
+        references block type_ids this build does not know how to construct —
+        silently dropping blocks from a safety-logic project is not acceptable,
+        so a missing block type must fail loudly instead of losing logic quietly.
+        """
+        from logic_studio.blocks.registry import BlockRegistry
+
+        # Schema validation
+        fmt = data.get("format")
+        if fmt and fmt != "EPW_LOGIC":
+            raise ValueError(f"Unsupported format: {fmt}")
+
+        schema_version = data.get("schema_version", 0)
+        if schema_version > EPWLOGIC_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported schema version: {schema_version}. This build of "
+                f"EPW Logic Studio understands up to schema_version "
+                f"{EPWLOGIC_SCHEMA_VERSION}; open this file with a newer version "
+                f"of the application."
+            )
+
+        # Migrate forward sequentially: v1 -> v2 -> ... so a file from any
+        # older, still-recognized version reaches EPWLOGIC_SCHEMA_VERSION
+        # in-place before anything else looks at `data`.
+        while schema_version in _MIGRATIONS:
+            data = _MIGRATIONS[schema_version](data)
+            schema_version = data["schema_version"]
+
+        proj = cls()
+        proj.settings = data.get("settings", proj.settings)
+        # Defensive default even post-migration (e.g. a schema_version of 0 /
+        # missing entirely skips the migration chain above, same leniency as
+        # before schema versioning existed).
+        proj.settings.setdefault("analog_points", [])
+        proj.settings.setdefault("internal_bits", [])
+        proj.settings.setdefault("io_labels", {})
+        proj.settings.setdefault("ela_devices", ["ELA01"])
+        proj.settings.setdefault("ada_devices", ["ADA01"])
+        proj.settings.setdefault("macro_definitions", {})
+
+        block_data_list = data.get("blocks", [])
+
+        # feat/io-labels-and-ids §4.2: fast-forward the short_id counters
+        # (core/short_id.py) past every short_id already present in the
+        # FILE ITSELF before any block is constructed/added — so if some
+        # blocks in this file already carry one and others don't (e.g. a
+        # file hand-edited, or merged from two sources), a freshly assigned
+        # id in the loop below can never collide with one about to be
+        # restored a few blocks later. A no-op for the common case (a file
+        # either fully has short_ids or, pre-migration, fully doesn't).
+        from logic_studio.core import short_id as short_id_module
+        short_id_module.resync_counters_with_existing_ids(
+            proj, (b_data.get("short_id") for b_data in block_data_list)
+        )
+
+        # Instantiate blocks and wire up their pin UUIDs/connections. Connections
+        # are fully defined by the UUID lists already embedded in each pin, so no
+        # separate wiring pass is needed: GraphBuilder and the engine resolve
+        # connections by UUID lookup at compile/run time.
+        unknown_type_ids = []
+        for b_data in block_data_list:
+            type_id = b_data.get("type_id")
+            # BlockRegistry.get_block_class() resolves a macro instance's
+            # type_id ("macro.<def_id>") to MacroInstanceBlock itself
+            # (feat/macro-blocks) — this call site needs no special case.
+            block_class = BlockRegistry.get_block_class(type_id)
+
+            if not block_class:
+                label = type_id or f"(missing type_id, display_name={b_data.get('display_name')!r})"
+                unknown_type_ids.append(label)
+                continue
+
+            block = block_class.deserialize(b_data)
+
+            # One-time realignment (feat/block-rendering-library §4.6): a
+            # block saved before ports were grid-aligned may sit at an
+            # off-grid position. Its own ports are always placed at
+            # grid-multiple offsets from ITS origin (block_item.py), so the
+            # only thing that can put a port off-grid in scene coordinates
+            # is an off-grid block origin — round it here, once, on every
+            # load. A no-op for anything already on-grid.
+            #
+            # feat/editor-modes-and-geometry §1.6: this pass is UNCONDITIONAL
+            # (runs on every load, not gated by schema_version) and always
+            # rounds against whatever GRID_SIZE currently is — so when §1
+            # dropped GRID_SIZE from 20 to 10, every position already
+            # aligned to the old, coarser 20-grid stayed exactly where it
+            # was (20 is itself a multiple of 10) with no separate migration
+            # step needed. Verified empirically against all ten
+            # examples/*.epwlogic fixtures: zero position corrections.
+            block.set_position(
+                round(block.x / GRID_SIZE) * GRID_SIZE,
+                round(block.y / GRID_SIZE) * GRID_SIZE,
+            )
+
+            legacy_force = b_data.pop("_legacy_force_state", None)
+            if legacy_force:
+                block.simulation_state["force_state"] = legacy_force
+
+            # fix/safety-block-semantics §2.4: same one-shot marker pattern
+            # as _legacy_force_state above, via simulation_state — safe
+            # here because ExecutionEngine.start()/stop() only ever clear
+            # simulation_state on the COMPILED PROGRAM's own isolated block
+            # clones (self.program.blocks), never on the live project's
+            # blocks this loop is building. clone() (base.py) already
+            # copies simulation_state onto the isolated instance
+            # Compiler.compile() hands to Validator, so no separate
+            # carry-over mechanism is needed for this to survive
+            # compilation the same way _legacy_force_state's own entry
+            # already does.
+            legacy_max_rate = b_data.pop("_legacy_max_rate_migration", None)
+            if legacy_max_rate:
+                block.simulation_state["_max_rate_migration_notice"] = legacy_max_rate
+
+            # feat/wire-modes-and-labels §0.1: restore every SERIALIZED_
+            # FIELDS value (uuid, connections, disabled, safety_relevant,
+            # ...) via the one shared Pin.restore_fields() implementation,
+            # instead of this loop hand-copying a chosen few attributes by
+            # name — that hand-copying is exactly what silently dropped
+            # `disabled` (and, before that, aliased `connections` instead of
+            # copying it) the last two times a field was added to Pin. A
+            # field newly added to Pin.SERIALIZED_FIELDS is picked up here
+            # automatically, with no separate edit needed in this loop.
+            from logic_studio.blocks.pin import Pin
+            for i, pin_data in enumerate(b_data.get("inputs", [])):
+                if i < len(block.inputs):
+                    Pin.restore_fields(block.inputs[i], pin_data)
+
+            for i, pin_data in enumerate(b_data.get("outputs", [])):
+                if i < len(block.outputs):
+                    Pin.restore_fields(block.outputs[i], pin_data)
+
+            # fix/safety-block-semantics §6: give a block one last chance
+            # to reassert any pin metadata it considers INTRINSIC to a
+            # specific pin (not user/file data) now that restore_fields()
+            # above may have just overwritten it with a stale saved value
+            # — see BaseLogicBlock.resync_derived_pin_metadata()'s own
+            # docstring for the full reasoning. A no-op for every block
+            # that doesn't override it.
+            block.resync_derived_pin_metadata()
+
+            proj.add_block(block)
+
+        if unknown_type_ids:
+            raise ValueError(
+                "Project references unrecognized block type(s), refusing to load "
+                "and silently drop logic: " + ", ".join(unknown_type_ids)
+            )
+
+        # feat/wire-labels §2.2: restored directly (not through add_wire())
+        # — a file predating this feature simply has no "wires" key at
+        # all (migrated to an empty list, §2.3), and any wire a file DOES
+        # carry was, by construction, valid when it was saved.
+        from logic_studio.core.wire import Wire
+        proj.wires = [Wire.deserialize(w) for w in data.get("wires", [])]
+
+        return proj

@@ -1,0 +1,402 @@
+import uuid
+
+class BaseLogicBlock:
+    # feat/wire-modes-and-labels §0.1: the same structural fix as Pin's
+    # SERIALIZED_FIELDS, applied here because serialize()/deserialize()
+    # already had the identical fragile shape — a hand-written dict literal
+    # on one side, a hand-written set of assignments on the other, free to
+    # silently drift apart.
+    #
+    # Only the flat, directly-comparable fields live in this list — not
+    # every serialize() key. `type_id`/`category`/`description` are
+    # deliberately excluded: they're determined by the block's own CLASS
+    # (cls() already sets them correctly), and restoring them from a file
+    # would risk overwriting current code's definition with stale data
+    # instead of catching a mismatch. `position`/`size`/`properties`/
+    # `inputs`/`outputs` are structured, not flat scalars, and keep their
+    # own explicit handling in deserialize().
+    #
+    # feat/io-labels-and-ids §5.6 dead-property audit removed `visibility`
+    # and `execution_state` from here (and from __init__ entirely — see
+    # that section's report): neither was ever read by anything but the
+    # property grid's own display and this class's serialize()/
+    # deserialize(), so keeping them was exactly the "UI element showing a
+    # value nothing depends on" problem this project consistently cuts.
+    # `enabled` stays: validate() (below) genuinely branches on it, even
+    # though — also noted in that audit — nothing currently WRITES it
+    # False, so that branch is presently unreachable in practice pending a
+    # real UI toggle.
+    #
+    # §4.1/§4.2: `short_id` (a project-unique, human-readable "g12"-style
+    # id, replacing the UUID in every user-facing message) is assigned
+    # exactly once, by Project.add_block() — never here, and never
+    # copied by clone() below — so a pasted/duplicated block always gets a
+    # fresh one instead of colliding with its source (core/short_id.py).
+    SERIALIZED_FIELDS = ("uuid", "short_id", "display_name", "execution_priority", "color", "enabled")
+
+    # feat/signal-crossref §0: the field-round-trip AUDIT test
+    # (test_pin_serialization.py) only ever checked `Pin` — the exact class
+    # of bug it exists to prevent (a field silently never restored on load)
+    # has now bitten three times: Pin.connections (aliased, not copied),
+    # Pin.disabled (dropped outright), and BaseLogicBlock.visibility/
+    # execution_state (serialized but never read back — found and removed
+    # in feat/io-labels-and-ids §5.6, the same PR that introduced this
+    # class's own SERIALIZED_FIELDS). The audit test itself never followed
+    # it here. These two tuples are what closes that gap: every plain
+    # attribute a fresh block carries must appear in exactly one of
+    # SERIALIZED_FIELDS (round-tripped generically), _STRUCTURED_FIELDS
+    # (also persisted, but via its own explicit code in serialize()/
+    # deserialize() below — type_id/category/description are class-
+    # determined and never restored from a file, position/size/inputs/
+    # outputs/properties are nested structures, not flat scalars), or
+    # _TRANSIENT_FIELDS (never serialized at all, deliberately). A field
+    # added to __init__ without being classified into one of these three
+    # fails test_every_serializable_block_attribute_is_accounted_for()
+    # (tests/test_pin_serialization.py) immediately, instead of silently
+    # losing its persistence the way visibility/execution_state did.
+    _STRUCTURED_FIELDS = (
+        "type_id", "category", "description",
+        "x", "y", "width", "height",
+        "inputs", "outputs", "properties",
+    )
+    _TRANSIENT_FIELDS = ("simulation_state", "is_source", "aliases", "allows_disabled_inputs")
+
+    # fix/safety-block-semantics §1.3: a class-level (not per-instance —
+    # deliberately not in any of the three tuples above, exactly like
+    # SERIALIZED_FIELDS/_STRUCTURED_FIELDS/_TRANSIENT_FIELDS themselves)
+    # {property_key: tooltip_text} map a block subclass can override to
+    # put a warning or unit hint directly on that property's editor in the
+    # property grid (ui/panels/property_grid.py's _populate_parameters()).
+    # Empty by default; most blocks need none.
+    PROPERTY_TOOLTIPS: dict = {}
+
+    # feat/help-system §2.1: static, per-TYPE documentation for pins and
+    # properties — deliberately class-level dicts, NOT a Pin/property
+    # instance field, exactly like PROPERTY_TOOLTIPS above: what a pin or
+    # property MEANS is a fact about the block TYPE, identical for every
+    # instance of it, never edited per-project — putting it on the
+    # instance would mean either repeating the same text in every save
+    # file (SERIALIZED_FIELDS) or a schema migration for something that
+    # never actually varies. Looked up via the merged_*() classmethods
+    # below (NOT direct attribute access), which walk the whole MRO and
+    # merge each class's OWN entries — so a subclass only needs to
+    # declare its OWN pins/properties (LogicGateBase's generic "In1".."In4"/
+    # "Out" here covers every AND/OR/NAND/.../XNOR/BUFFER subclass without
+    # each repeating it) while still inheriting BaseLogicBlock's own
+    # Address/Tag/Comment entries below, rather than a subclass's dict
+    # SHADOWING the base's entirely as plain attribute lookup would.
+    #
+    # tests/test_help_catalog.py's own guardian test requires a non-empty
+    # entry for every pin NAME actually produced by every registered
+    # block's fresh instance — property descriptions/units are part of
+    # the generated catalog (§2.1) too, but not guardian-enforced to the
+    # same degree: not every property is equally worth a sentence (a
+    # handful of internal/legacy properties predate this system and are
+    # visible only in raw project files, never in the property grid).
+    PIN_DESCRIPTIONS: dict = {}
+    PROPERTY_DESCRIPTIONS: dict = {
+        "Address": "Adres sygnału I/O lub identyfikator sieciowy powiązany z tym blokiem — znaczenie zależy od typu bloku; puste, jeśli nieużywane przez ten blok.",
+        "Tag": "Oznaczenie schematowe bloku (np. \"C1\", \"Q_I>1\"), widoczne na eksportowanym schemacie i w komunikatach kompilatora.",
+        "Comment": "Krótki, dowolny opis przeznaczenia TEGO KONKRETNEGO bloku na schemacie — dokumentacja projektowa, nieużywana przez kompilator.",
+    }
+    PROPERTY_UNITS: dict = {}
+
+    @classmethod
+    def _merged_class_dict(cls, attr_name: str) -> dict:
+        """Walks cls.__mro__ from BaseLogicBlock down to the most-derived
+        class, merging each class's OWN entry for `attr_name` (via
+        __dict__, so an INHERITED dict is never double-counted) —
+        letting a subclass add its own pins/properties on top of a
+        shared base's without repeating them, and override a specific
+        entry if it genuinely needs different wording."""
+        merged = {}
+        for klass in reversed(cls.__mro__):
+            merged.update(klass.__dict__.get(attr_name, {}))
+        return merged
+
+    @classmethod
+    def merged_pin_descriptions(cls) -> dict:
+        return cls._merged_class_dict("PIN_DESCRIPTIONS")
+
+    @classmethod
+    def merged_property_descriptions(cls) -> dict:
+        return cls._merged_class_dict("PROPERTY_DESCRIPTIONS")
+
+    @classmethod
+    def merged_property_units(cls) -> dict:
+        return cls._merged_class_dict("PROPERTY_UNITS")
+
+    def pin_description(self, pin_name: str) -> str:
+        return self.merged_pin_descriptions().get(pin_name, "")
+
+    def property_description(self, key: str) -> str:
+        return self.merged_property_descriptions().get(key, "")
+
+    def property_unit(self, key: str) -> str:
+        return self.merged_property_units().get(key, "")
+
+    def __init__(self, type_id: str, default_name: str, category: str, description: str = ""):
+        self.uuid: str = str(uuid.uuid4())
+        # feat/io-labels-and-ids §4: human-readable id ("g12", "i3", ...),
+        # assigned once by Project.add_block() — see core/short_id.py and
+        # the SERIALIZED_FIELDS comment above. Empty until then; a block
+        # constructed directly (tests, a block not yet added to a project)
+        # simply has none yet, same as it has no project-assigned uuid
+        # collision-checking either.
+        self.short_id: str = ""
+        self.type_id: str = type_id
+        self.display_name: str = default_name # instance_name
+        self.category: str = category
+        self.description: str = description
+
+        # Position on canvas
+        self.x: float = 0.0
+        self.y: float = 0.0
+
+        # Size
+        self.width: float = 120.0
+        self.height: float = 80.0
+
+        # I/O Pins
+        self.inputs: list = []  # List of Pin objects
+        self.outputs: list = [] # List of Pin objects
+
+        # Basic properties
+        self.execution_priority: int = 1
+        self.color: str = "#C0C0C0"  # Classic Win98 grey
+        # §5.6: consumed by validate() below — a disabled block skips its
+        # own validation entirely. No UI writer sets this False yet (a
+        # future toggle would use update_property() the same way any other
+        # property does), so the branch is presently unreachable, but the
+        # field is a real, intentional consumer, unlike visibility/
+        # execution_state which this same audit removed outright.
+        self.enabled: bool = True
+
+        # Read-only UI display state. Blocks may WRITE their current value here for
+        # panels to show, but must never READ it back as their own logic state —
+        # own state belongs in plain instance fields (e.g. self._count, self._memory)
+        # so it survives ExecutionEngine.start()/stop() clearing this dict.
+        self.simulation_state: dict = {}
+
+        # True for blocks with no logic inputs (DI, constants, system signals, ...):
+        # the ExecutionEngine evaluates these before the rest of the graph, once per
+        # scan, so their output is available to every downstream block in that scan.
+        self.is_source: bool = False
+
+        # Search metadata only — never serialized, never edited by the user.
+        # Polish synonyms so the library search (ui/panels/library.py) finds a
+        # block by what an engineer actually types, not just its type_id/name.
+        self.aliases: list = []
+
+        # feat/editor-modes-and-geometry §2.4: whether this block permits
+        # disabling one of its own inputs (Pin.disabled) at all — False for
+        # everything except multi-input logic gates (LogicGateBase sets
+        # this to True for 2+ input gates specifically; see its __init__).
+        # Disabling an input on a block that doesn't allow it is a compile
+        # ERROR (compiler/validator.py), not silently accepted.
+        self.allows_disabled_inputs: bool = False
+
+        # Extensible properties mapped by string key. Every block gets "Tag"
+        # (its schematic designation, e.g. "C1", "Q_I>1") and "Comment" (a
+        # short description of what it does) — the first two fields an
+        # engineer fills in after placing a block (see feat/block-rendering-
+        # library §3.1). Some IO blocks (Virtual IN/OUT, system signals) also
+        # use "Tag" for their own HMI/network identifier — that predates this
+        # field and is left as-is; for every other block "Tag" starts empty.
+        self.properties: dict = {
+            "Address": "",
+            "Tag": "",
+            "Comment": ""
+        }
+
+    def update_property(self, key: str, value: str):
+        """Update property, casting to correct type if necessary."""
+        if key in self.properties:
+            # Simple type inference for Phase 4/5
+            if isinstance(self.properties[key], bool):
+                self.properties[key] = value.lower() in ["true", "1", "t", "yes", "y"]
+            elif isinstance(self.properties[key], int) and not isinstance(self.properties[key], bool):
+                try:
+                    self.properties[key] = int(value)
+                except ValueError:
+                    pass
+            elif isinstance(self.properties[key], float):
+                try:
+                    self.properties[key] = float(value)
+                except ValueError:
+                    pass
+            else:
+                self.properties[key] = value
+
+        elif key == "Name":
+            self.display_name = value
+        elif key == "Description":
+            self.description = value
+
+    def serialize(self) -> dict:
+        """Serialize block to a dictionary for JSON."""
+        data = {field: getattr(self, field) for field in self.SERIALIZED_FIELDS}
+        data.update({
+            "type_id": self.type_id,
+            "category": self.category,
+            "description": self.description,
+            "position": {"x": self.x, "y": self.y},
+            "size": {"width": self.width, "height": self.height},
+            "inputs": [pin.serialize() for pin in self.inputs],
+            "outputs": [pin.serialize() for pin in self.outputs],
+            "properties": self.properties,
+        })
+        return data
+
+    @classmethod
+    def deserialize(cls, data: dict):
+        """Reconstruct block from JSON dict. Overridden by subclasses."""
+        # type_id/category/description must match the class definition —
+        # cls() (Subclasses handle their own static type_id/category/
+        # description) already set them correctly; never overwritten from
+        # `data` here (see SERIALIZED_FIELDS' docstring above for why).
+        block = cls()
+
+        # §0.1: every flat SERIALIZED_FIELDS value present in `data` is
+        # restored generically. Absent -> whatever cls() already set (a
+        # freshly-generated uuid, short_id="" pending Project.add_block(),
+        # ...), same back-compat behavior as before this refactor.
+        for field in cls.SERIALIZED_FIELDS:
+            if field in data:
+                setattr(block, field, data[field])
+
+        pos = data.get("position", {"x": 0.0, "y": 0.0})
+        block.set_position(pos["x"], pos["y"])
+        size = data.get("size", {"width": 120.0, "height": 80.0})
+        block.width = size["width"]
+        block.height = size["height"]
+        block.properties = data.get("properties", {}).copy() # Ensure copy
+        # Pin deserialization is handled by the project loader
+        return block
+
+    def clone(self, preserve_uuid=False):
+        """Creates a copy of the block."""
+        new_block = self.__class__()
+        # §4.2: short_id is deliberately NOT copied — new_block already has
+        # "" from __init__ above, same as any newly constructed block, so a
+        # pasted/duplicated copy gets a fresh id from Project.add_block()
+        # instead of colliding with the block it was copied from.
+        if preserve_uuid:
+            new_block.uuid = self.uuid
+        new_block.display_name = self.display_name
+        new_block.width = self.width
+        new_block.height = self.height
+        new_block.color = self.color
+        new_block.properties = self.properties.copy()
+        new_block.type_id = self.type_id # MUST PRESERVE TYPE ID explicitly
+        # feat/macro-blocks: previously omitted here (this method predates
+        # any caller that needed full fidelity — paste/duplicate never
+        # minded a copy resetting to the defaults new_block already has
+        # from __init__ above). core/macros.py's expand_project() clones
+        # every top-level block to isolate the compiled copy from the live
+        # project, and DOES need these carried over: a disabled block that
+        # silently became enabled again after expansion would compile and
+        # run logic the engineer explicitly turned off, and a lost
+        # execution_priority can reorder round-0 tie-breaks in
+        # GraphBuilder, silently changing scan order.
+        new_block.execution_priority = self.execution_priority
+        new_block.enabled = self.enabled
+
+        from logic_studio.blocks.pin import Pin
+
+        # Pins are cloned into fresh objects (never shared) to avoid mutable-state
+        # aliasing between the original and the copy. When preserve_uuid is set
+        # (isolating a CompiledProgram from the UI project), pin UUIDs and their
+        # `connections` lists — which reference OTHER pins' UUIDs — are copied
+        # verbatim, because GraphBuilder's execution_order is keyed by those UUIDs.
+        #
+        # test/clone-field-coverage: every OTHER non-identity Pin.SERIALIZED_
+        # FIELDS entry (disabled, safety_relevant, ...) is configuration of
+        # the pin ITSELF, not tied to a specific wire — copied unconditionally,
+        # unlike uuid/connections which only make sense to preserve for the
+        # isolated-CompiledProgram case. Derived from Pin.SERIALIZED_FIELDS
+        # itself, the same declarative pattern ui/canvas/scene.py's own
+        # paste_clipboard() already uses for its own pin copy (pin_copy_
+        # fields) — NOT hand-enumerated field-by-field the way this used to
+        # be written as two separate loops. That original shape is exactly
+        # what let `disabled` get copied for inputs but not outputs, and
+        # `safety_relevant` (fix/safety-block-semantics §6) get copied for
+        # NEITHER — two independently-written loops, free to drift from each
+        # other exactly like the two hand-written serialize()/deserialize()
+        # enumerations this whole SERIALIZED_FIELDS mechanism was built to
+        # replace. One shared helper now instead of two loops that could
+        # silently stop agreeing again the next time a field is added.
+        clone_pin_fields = tuple(
+            f for f in Pin.SERIALIZED_FIELDS
+            if f not in Pin._IDENTITY_FIELDS and f not in ("uuid", "connections")
+        )
+
+        def _clone_pin(p):
+            new_p = Pin(p.name, p.direction, p.data_type)
+            for field in clone_pin_fields:
+                setattr(new_p, field, getattr(p, field))
+            if preserve_uuid:
+                new_p.uuid = p.uuid
+                new_p.connections = list(p.connections)
+            return new_p
+
+        new_block.inputs = [_clone_pin(p) for p in self.inputs]
+        new_block.outputs = [_clone_pin(p) for p in self.outputs]
+
+        new_block.simulation_state = self.simulation_state.copy()
+
+        return new_block
+
+    def evaluate(self, engine=None):
+        """Execute block logic. Overridden by subclasses."""
+        pass
+
+    def _active_inputs(self) -> list:
+        """Input pins participating in evaluate() — every input EXCEPT one
+        explicitly disabled (feat/editor-modes-and-geometry §2). A disabled
+        input is excluded from the block's own logic entirely, not fed an
+        implicit default value; blocks that allow disabling (multi-input
+        logic gates, see LogicGateBase) should loop over this instead of
+        self.inputs directly."""
+        return [p for p in self.inputs if not p.disabled]
+
+    def reset_runtime_state(self):
+        """Reset block to cold deterministic state. Overridden by subclasses."""
+        pass
+
+    def resync_derived_pin_metadata(self):
+        """fix/safety-block-semantics §6: called by Project.deserialize()
+        right after a block's pins have been FULLY restored from a save
+        file (Pin.restore_fields() — which restores safety_relevant like
+        any other Pin.SERIALIZED_FIELDS entry). A no-op by default;
+        overridden by a block whose safety_relevant on a given output is
+        an INTRINSIC fact about that specific pin on that specific block
+        type (e.g. QualityBlock's Good, analog_processing.py) rather than
+        something a save file should be trusted to have gotten right —
+        an OLD file saved before that output was marked safety-relevant
+        at all would otherwise silently restore `False` forever, exactly
+        undoing what __init__ just set and permanently hiding the new
+        compiler warning (§6.2) on every EXISTING project. This is the
+        general form of the exact gap ARCHITECTURE.md §22 left open for
+        system.signal's own safety_relevant sync ("§19.2... POZOSTAJE
+        OTWARTE") — closed here because §6 is what makes safety_relevant
+        functionally load-bearing for the first time (previously pure
+        ElementPreviewPanel UI decoration, per that section's own
+        reasoning for leaving it be)."""
+        pass
+
+    def validate(self) -> list:
+        """Validate block configuration. Returns list of errors."""
+        errors = []
+        if not self.enabled:
+            return errors
+
+        for pin in self.inputs:
+            # Depending on strictness, check if connected
+            pass
+
+        return errors
+
+    def set_position(self, x: float, y: float):
+        self.x = x
+        self.y = y

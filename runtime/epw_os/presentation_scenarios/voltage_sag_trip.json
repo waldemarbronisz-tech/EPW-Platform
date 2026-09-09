@@ -1,0 +1,59 @@
+{
+  "name": "Voltage Sag and Protective Trip",
+  "description": "Normal operation, a voltage sag on L1 triggers an undervoltage alarm and a protective trip of the generator contactor (KMG), then recovery. Sample scenario shipped with EPW OS - see Help > Presentation Mode for the file format.",
+  "steps": [
+    {
+      "time_s": 0,
+      "type": "command",
+      "target": "DO02",
+      "action": "CLOSE",
+      "description": "Normal operation: generator contactor (KMG) closes"
+    },
+    {
+      "time_s": 3,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 230.1,
+      "quality": "SIMULATED",
+      "description": "L1 at nominal voltage"
+    },
+    {
+      "time_s": 6,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 178.5,
+      "quality": "SIMULATED",
+      "description": "Voltage sag begins on L1"
+    },
+    {
+      "time_s": 8,
+      "type": "alarm",
+      "alarm_id": "DEMO_L1_UNDERVOLTAGE",
+      "message": "L1 undervoltage detected (178.5 V, below 195 V threshold)",
+      "priority": 3,
+      "source_tag": "Meas.L1",
+      "description": "Undervoltage alarm raised"
+    },
+    {
+      "time_s": 11,
+      "type": "command",
+      "target": "DO02",
+      "action": "OPEN",
+      "description": "Protective trip: generator contactor (KMG) opens"
+    },
+    {
+      "time_s": 15,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 230.1,
+      "quality": "SIMULATED",
+      "description": "Voltage recovers to nominal"
+    },
+    {
+      "time_s": 17,
+      "type": "alarm_clear",
+      "alarm_id": "DEMO_L1_UNDERVOLTAGE",
+      "description": "Undervoltage alarm cleared - system normal"
+    }
+  ]
+}

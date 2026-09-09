@@ -1,0 +1,255 @@
+
+/* Classic Windows NT/98 Industrial Style */
+
+QWidget {
+    background-color: #C0C0C0;
+    color: black;
+    font-family: "Tahoma", "MS Sans Serif", sans-serif;
+    font-size: 11px;
+}
+
+QMainWindow, QDialog, QPanel {
+    background-color: #C0C0C0;
+}
+
+/* 3D Borders for frames and panels */
+QFrame {
+    background-color: #D4D0C8;
+    border: 2px solid;
+    border-top-color: #FFFFFF;
+    border-left-color: #FFFFFF;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+}
+
+QFrame#SunkenFrame {
+    border-top-color: #808080;
+    border-left-color: #808080;
+    border-right-color: #FFFFFF;
+    border-bottom-color: #FFFFFF;
+}
+
+/* Data Tables */
+QTableWidget, QTreeWidget {
+    background-color: #FFFFFF;
+    color: black;
+    border: 2px solid;
+    border-top-color: #808080;
+    border-left-color: #808080;
+    border-right-color: #FFFFFF;
+    border-bottom-color: #FFFFFF;
+    gridline-color: #808080;
+    selection-background-color: #000080;
+    selection-color: white;
+    font-family: "Tahoma", "MS Sans Serif", sans-serif;
+    font-size: 11px;
+}
+
+QTableWidget::item, QTreeWidget::item {
+    border-bottom: 1px solid #808080;
+    border-right: 1px solid #808080;
+    padding: 2px;
+}
+
+QTableWidget::item:selected, QTreeWidget::item:selected {
+    background-color: #000080;
+    color: white;
+}
+
+QHeaderView::section {
+    background-color: #D4D0C8;
+    border: 2px outset;
+    border-top-color: #FFFFFF;
+    border-left-color: #FFFFFF;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    padding: 2px;
+    font-weight: bold;
+}
+
+/* Event Recorder Specialized Table */
+QTableWidget#EventTable {
+    gridline-color: #000080;
+    background-color: #000080;
+    color: #00FFFF;
+    font-family: 'Consolas', 'Courier New';
+    font-size: 12px;
+    border: 2px solid #00FFFF;
+}
+QTableWidget#EventTable QHeaderView::section {
+    background-color: #000080;
+    color: #FFFF00;
+    border: 1px solid #00FFFF;
+}
+
+/* 3D Buttons */
+QPushButton {
+    background-color: #D4D0C8;
+    border: 2px solid;
+    border-top-color: #FFFFFF;
+    border-left-color: #FFFFFF;
+    border-right-color: #404040;
+    border-bottom-color: #404040;
+    padding: 4px;
+    color: black;
+}
+
+QPushButton:pressed {
+    border-top-color: #404040;
+    border-left-color: #404040;
+    border-right-color: #FFFFFF;
+    border-bottom-color: #FFFFFF;
+    padding-top: 5px;
+    padding-left: 5px;
+}
+
+QPushButton:disabled {
+    color: #808080;
+}
+
+/* Menus and Toolbars */
+QMenuBar {
+    background-color: #D4D0C8;
+    border-bottom: 2px outset #FFFFFF;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    padding: 2px 6px;
+}
+
+QMenuBar::item:selected {
+    background-color: #000080;
+    color: white;
+}
+
+QMenu {
+    background-color: #D4D0C8;
+    border: 2px outset #FFFFFF;
+}
+
+QMenu::item:selected {
+    background-color: #000080;
+    color: white;
+}
+
+QToolBar {
+    background-color: #D4D0C8;
+    border-bottom: 2px solid;
+    border-bottom-color: #808080;
+    padding: 2px;
+}
+
+/* Status Bar */
+QStatusBar {
+    background-color: #D4D0C8;
+    border-top: 2px solid;
+    border-top-color: #FFFFFF;
+}
+
+QStatusBar::item {
+    border: 1px inset #808080;
+    padding: 2px;
+}
+
+/* Text boxes/LCDs for industrial look */
+QLabel#LCD {
+    background-color: black;
+    color: #00FF00;
+    border: 2px inset #808080;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Common Page and Section Headers */
+QLabel#PageHeader {
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #000080;
+    color: white;
+    padding: 5px;
+}
+
+QLabel#SectionHeader {
+    font-size: 12px;
+    font-weight: bold;
+    background-color: #000080;
+    color: white;
+    padding: 2px;
+}
+
+/* Custom Standard Dialogs */
+QDialog#IndustrialDialog {
+    border: 2px solid black;
+    background-color: #D4D0C8;
+    font-family: "Tahoma", "MS Sans Serif", sans-serif;
+}
+
+/* Standardized Editors */
+QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit {
+    background-color: #FFFFFF;
+    color: black;
+    border: 2px inset #808080;
+    padding: 2px;
+    min-height: 20px;
+}
+
+/* Remove QComboBox::drop-down overrides to restore native/classic OS arrows that might have been hidden */
+
+/* QSpinBox/QDoubleSpinBox lose their native up/down buttons once a custom
+   border/background is applied above, so they must be redrawn explicitly
+   as classic 3D-beveled stepper buttons with visible triangle arrows. */
+QSpinBox, QDoubleSpinBox {
+    padding-right: 2px;
+}
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 15px;
+    height: 10px;
+    background-color: #D4D0C8;
+    border: 1px outset #FFFFFF;
+    border-right: none;
+    border-top: none;
+}
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 15px;
+    height: 10px;
+    background-color: #D4D0C8;
+    border: 1px outset #FFFFFF;
+    border-right: none;
+    border-bottom: none;
+}
+QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed,
+QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {
+    background-color: #A0A0A0;
+}
+QSpinBox::up-button:disabled, QDoubleSpinBox::up-button:disabled,
+QSpinBox::down-button:disabled, QDoubleSpinBox::down-button:disabled {
+    background-color: #C0C0C0;
+}
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(D:/BroniszLabs/EPW_Platform/EPW-OS/epw_os/tests/fixtures/assets/spin_up.png);
+    width: 9px;
+    height: 5px;
+}
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(D:/BroniszLabs/EPW_Platform/EPW-OS/epw_os/tests/fixtures/assets/spin_down.png);
+    width: 9px;
+    height: 5px;
+}
+QSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:disabled {
+    image: url(D:/BroniszLabs/EPW_Platform/EPW-OS/epw_os/tests/fixtures/assets/spin_up_disabled.png);
+}
+QSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {
+    image: url(D:/BroniszLabs/EPW_Platform/EPW-OS/epw_os/tests/fixtures/assets/spin_down_disabled.png);
+}
+
+/* Alarm List */
+QListWidget#AlarmBar {
+    background-color: #FFFFFF;
+    color: black;
+    border: 2px inset #808080;
+}

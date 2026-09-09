@@ -1,0 +1,346 @@
+{
+  "chapters": [
+    {
+      "id": "getting_started",
+      "title": "Pierwsze kroki",
+      "topics": [
+        {"id": "gs_what", "title": "Czym jest EPW OS"},
+        {"id": "gs_startup", "title": "Uruchomienie programu"},
+        {"id": "gs_layout", "title": "Układ ekranu: menu, pasek statusu, nawigacja"},
+        {"id": "gs_file_menu", "title": "Menu Plik"},
+        {"id": "gs_project_menu", "title": "Menu Projekt"}
+      ]
+    },
+    {
+      "id": "access_levels",
+      "title": "Poziomy dostępu",
+      "topics": [
+        {"id": "al_three", "title": "Trzy poziomy: User, Operator, Engineer"},
+        {"id": "al_matrix", "title": "Co wolno na każdym poziomie"},
+        {"id": "al_pin", "title": "Zmiana poziomu i wprowadzanie PIN-u"},
+        {"id": "al_timeout", "title": "Automatyczne wylogowanie"},
+        {"id": "al_change_pin", "title": "Zmiana PIN-u"}
+      ]
+    },
+    {
+      "id": "digital_io",
+      "title": "Wejścia i wyjścia cyfrowe",
+      "topics": [
+        {"id": "dio_purpose", "title": "Do czego służą te strony"},
+        {"id": "dio_reading", "title": "Odczyt stanu, znaczenie kolorów"},
+        {"id": "dio_descriptions", "title": "Nadawanie opisów"},
+        {"id": "dio_force", "title": "Wymuszanie stanu wyjścia (Force)"},
+        {"id": "dio_switching_counters", "title": "Licznik przełączeń (trwałość mechaniczna aparatu)"},
+        {"id": "dio_service_notes", "title": "Historia serwisowa (notatki)"}
+      ]
+    },
+    {
+      "id": "analog_points",
+      "title": "Punkty analogowe",
+      "topics": [
+        {"id": "ap_what", "title": "Czym jest punkt analogowy"},
+        {"id": "ap_add_remove", "title": "Dodawanie i usuwanie punktów"},
+        {"id": "ap_config", "title": "Konfiguracja: typ sygnału, zakresy, jednostka"},
+        {"id": "ap_note", "title": "Nota techniczna i po co jest"}
+      ]
+    },
+    {
+      "id": "main_view",
+      "title": "Main View",
+      "topics": [
+        {"id": "mv_synoptic", "title": "Schemat synoptyczny"},
+        {"id": "mv_control", "title": "Sterowanie aparatami i wymagane uprawnienia"},
+        {"id": "mv_device_status", "title": "Panel statusu urządzeń"},
+        {"id": "mv_measurements", "title": "Panel pomiarów"}
+      ]
+    },
+    {
+      "id": "alarms",
+      "title": "Alarmy",
+      "topics": [
+        {"id": "alm_source", "title": "Skąd się biorą alarmy"},
+        {"id": "alm_ack", "title": "Kwitowanie i po co jest"},
+        {"id": "alm_states", "title": "Różnica między alarmem aktywnym a niepotwierdzonym"}
+      ]
+    },
+    {
+      "id": "intrusion",
+      "title": "System alarmowy",
+      "topics": [
+        {"id": "intr_what", "title": "Czym jest system alarmowy"},
+        {"id": "intr_zones_lines", "title": "Strefy i linie dozorowe"},
+        {"id": "intr_line_types", "title": "Typy linii: natychmiastowa, zwłoczna, całodobowa, dozorowa"},
+        {"id": "intr_arming", "title": "Uzbrajanie, rozbrajanie i czasy na wejście/wyjście"},
+        {"id": "intr_bypass", "title": "Wyłączanie linii (bypass)"},
+        {"id": "intr_filters", "title": "Filtrowanie fałszywych alarmów"},
+        {"id": "intr_input_modes", "title": "Tryby linii: stykowy vs. parametryzowany (EOL/DEOL)"},
+        {"id": "intr_power_supervision", "title": "Nadzór zasilania"},
+        {"id": "intr_line_life", "title": "Życie linii i wykrywanie ciszy"},
+        {"id": "intr_alarm_memory", "title": "Pierwsza przyczyna i pamięć alarmu"},
+        {"id": "intr_walk_test", "title": "Tryb chodzenia"},
+        {"id": "intr_history", "title": "Historia zdarzeń alarmowych"},
+        {"id": "intr_tags", "title": "Sygnały dla logiki (tagi Security.*)"}
+      ]
+    },
+    {
+      "id": "protection",
+      "title": "Nastawy zabezpieczeń",
+      "topics": [
+        {"id": "prot_what", "title": "Zabezpieczenia elektryczne a procesowe"},
+        {"id": "prot_electrical", "title": "Zabezpieczenia elektryczne"},
+        {"id": "prot_process", "title": "Zabezpieczenia procesowe"}
+      ]
+    },
+    {
+      "id": "diagnostics_pages",
+      "title": "Diagnostyka",
+      "topics": [
+        {"id": "pq_what", "title": "Jakość energii: narzędzie symulacyjne"},
+        {"id": "st_what", "title": "Topologia systemu: co jest realne, a co nie"},
+        {"id": "bus_diag_what", "title": "Diagnostyka magistrali"}
+      ]
+    },
+    {
+      "id": "events_audit",
+      "title": "Zdarzenia i audyt",
+      "topics": [
+        {"id": "ea_recorder", "title": "Rejestr zdarzeń"},
+        {"id": "ea_audit_log", "title": "Dziennik audytowy"},
+        {"id": "ea_export", "title": "Eksport do CSV"}
+      ]
+    },
+    {
+      "id": "historian",
+      "title": "Dane historyczne",
+      "topics": [
+        {"id": "hist_what", "title": "Co zapisuje Historian"},
+        {"id": "hist_export", "title": "Eksport danych historycznych"},
+        {"id": "trends_page", "title": "Strona Trendy"}
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Zabezpieczenia",
+      "topics": [
+        {"id": "saf_settings_page", "title": "Strona nastaw"},
+        {"id": "saf_principle", "title": "Zasada nadrzędna: ekran informuje, sprzęt chroni"},
+        {"id": "saf_kernel", "title": "Monitorowanie zdrowia systemu (safety_kernel)"},
+        {"id": "saf_engineer_mode", "title": "Engineer Mode (weryfikacja zabezpieczeń)"},
+        {"id": "saf_training_mode", "title": "Tryb ćwiczebny"},
+        {"id": "saf_presentation_mode", "title": "Tryb prezentacji"}
+      ]
+    },
+    {
+      "id": "rest_api",
+      "title": "REST API",
+      "topics": [
+        {"id": "api_what", "title": "REST API: endpointy, uwierzytelnianie, wystawienie do sieci"},
+        {"id": "tools_export_tag_list", "title": "Eksport listy sygnałów (Logic Studio/Synoptic Editor)"}
+      ]
+    },
+    {
+      "id": "integrations",
+      "title": "Integracje",
+      "topics": [
+        {"id": "mqtt_what", "title": "Integracja MQTT"}
+      ]
+    },
+    {
+      "id": "kiosk",
+      "title": "Tryb kiosku",
+      "topics": [
+        {"id": "kiosk_what", "title": "Czym jest i po co"},
+        {"id": "kiosk_enter_exit", "title": "Wejście i wyjście"},
+        {"id": "kiosk_vs_fullscreen", "title": "Tryb kiosku a tryb pełnoekranowy"}
+      ]
+    },
+    {
+      "id": "keyboard",
+      "title": "Klawiatura ekranowa",
+      "topics": [
+        {"id": "kb_enable", "title": "Włączanie"},
+        {"id": "kb_floating_embedded", "title": "Klawiatura pływająca i wbudowana w okno PIN"},
+        {"id": "kb_polish", "title": "Polskie znaki"}
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Ustawienia",
+      "topics": [
+        {"id": "set_language", "title": "Język"},
+        {"id": "set_screen_sleep", "title": "Wygaszanie ekranu"},
+        {"id": "set_theme", "title": "Motywy wizualne"},
+        {"id": "set_feature_config", "title": "Konfiguracja funkcji"},
+        {"id": "set_data_retention", "title": "Retencja danych"},
+        {"id": "set_other", "title": "Pozostałe"}
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Rozwiązywanie problemów",
+      "topics": [
+        {"id": "ts_access_denied", "title": "„Brak uprawnień” — co zrobić"},
+        {"id": "ts_time_sync", "title": "Wskaźnik synchronizacji czasu na czerwono"},
+        {"id": "ts_device_offline", "title": "Urządzenie pokazuje OFFLINE"},
+        {"id": "ts_control_blocked", "title": "Sterowanie zablokowane"},
+        {"id": "ts_forgot_pin", "title": "Zapomniany PIN"}
+      ]
+    }
+  ],
+  "index": [
+    {"term": "Adres (%IX0.N / %QX0.N)", "topic": "dio_purpose"},
+    {"term": "Alarm — kwitowanie", "topic": "alm_ack"},
+    {"term": "Alarm — stany", "topic": "alm_states"},
+    {"term": "Alarm — źródła", "topic": "alm_source"},
+    {"term": "Audit Log", "topic": "ea_audit_log"},
+    {"term": "Automatyczne wylogowanie", "topic": "al_timeout"},
+    {"term": "Configure (przycisk)", "topic": "ap_config"},
+    {"term": "Control Outputs", "topic": "dio_purpose"},
+    {"term": "Digital Inputs", "topic": "dio_purpose"},
+    {"term": "Dziennik audytowy", "topic": "ea_audit_log"},
+    {"term": "Engineer (poziom)", "topic": "al_three"},
+    {"term": "EMERGENCY STOP", "topic": "ts_control_blocked"},
+    {"term": "Eksport CSV (zdarzenia)", "topic": "ea_export"},
+    {"term": "Eksport danych historycznych", "topic": "hist_export"},
+    {"term": "Force — Control Outputs", "topic": "dio_force"},
+    {"term": "Force — Digital Inputs (symulacja)", "topic": "dio_force"},
+    {"term": "Historia serwisowa (notatki)", "topic": "dio_service_notes"},
+    {"term": "Historian", "topic": "hist_what"},
+    {"term": "Trendy (strona)", "topic": "trends_page"},
+    {"term": "Trendy — tryb Historia", "topic": "trends_page"},
+    {"term": "Trendy — tryb Na żywo", "topic": "trends_page"},
+    {"term": "Trendy — osie i jednostki", "topic": "trends_page"},
+    {"term": "Interlock", "topic": "mv_control"},
+    {"term": "System alarmowy", "topic": "intr_what"},
+    {"term": "Strefy (system alarmowy)", "topic": "intr_zones_lines"},
+    {"term": "Linie dozorowe", "topic": "intr_zones_lines"},
+    {"term": "Linia natychmiastowa", "topic": "intr_line_types"},
+    {"term": "Linia zwłoczna (wejście/wyjście)", "topic": "intr_line_types"},
+    {"term": "Linia całodobowa", "topic": "intr_line_types"},
+    {"term": "Linia dozorowa (typ)", "topic": "intr_line_types"},
+    {"term": "Uzbrajanie / rozbrajanie strefy", "topic": "intr_arming"},
+    {"term": "Czas na wejście / czas na wyjście", "topic": "intr_arming"},
+    {"term": "Bypass linii dozorowej", "topic": "intr_bypass"},
+    {"term": "Minimalny czas naruszenia", "topic": "intr_filters"},
+    {"term": "Krotność (liczba naruszeń)", "topic": "intr_filters"},
+    {"term": "Blokada po powtarzających się alarmach", "topic": "intr_filters"},
+    {"term": "Czas trwania alarmu", "topic": "intr_filters"},
+    {"term": "Filtrowanie fałszywych alarmów", "topic": "intr_filters"},
+    {"term": "Tryb stykowy linii", "topic": "intr_input_modes"},
+    {"term": "Tryb parametryzowany linii", "topic": "intr_input_modes"},
+    {"term": "EOL / DEOL (nadzór końca linii)", "topic": "intr_input_modes"},
+    {"term": "Awaria linii (sabotaż/zwarcie/przerwa/nieokreślony)", "topic": "intr_input_modes"},
+    {"term": "Okna wartości (stany linii analogowej)", "topic": "intr_input_modes"},
+    {"term": "Nadzór zasilania (sieć/akumulator)", "topic": "intr_power_supervision"},
+    {"term": "Alarm techniczny", "topic": "intr_power_supervision"},
+    {"term": "Życie linii / wykrywanie ciszy", "topic": "intr_line_life"},
+    {"term": "Linia podejrzana (przekroczona cisza)", "topic": "intr_line_life"},
+    {"term": "Uzbrajanie przy linii w awarii", "topic": "intr_arming"},
+    {"term": "Pierwsza przyczyna alarmu", "topic": "intr_alarm_memory"},
+    {"term": "Pamięć alarmu", "topic": "intr_alarm_memory"},
+    {"term": "Kasowanie pamięci alarmu", "topic": "intr_alarm_memory"},
+    {"term": "Tryb chodzenia", "topic": "intr_walk_test"},
+    {"term": "Testowanie czujek bez alarmowania", "topic": "intr_walk_test"},
+    {"term": "Historia zdarzeń alarmowych", "topic": "intr_history"},
+    {"term": "Retencja historii (zdarzenia/dni)", "topic": "intr_history"},
+    {"term": "Tagi Security.*", "topic": "intr_tags"},
+    {"term": "Zabezpieczenia elektryczne (strona)", "topic": "prot_electrical"},
+    {"term": "Zabezpieczenia procesowe (strona)", "topic": "prot_process"},
+    {"term": "Próg/histereza/zwłoka zabezpieczenia procesowego", "topic": "prot_process"},
+    {"term": "Tagi Process.*", "topic": "prot_process"},
+    {"term": "Jednostka (punkt analogowy)", "topic": "ap_config"},
+    {"term": "Kiosk — tryb", "topic": "kiosk_what"},
+    {"term": "Klawiatura ekranowa", "topic": "kb_enable"},
+    {"term": "Klawiatura — polskie znaki", "topic": "kb_polish"},
+    {"term": "Klawiatura — pływająca i wbudowana", "topic": "kb_floating_embedded"},
+    {"term": "Kwitowanie alarmu", "topic": "alm_ack"},
+    {"term": "LED (kontrolka)", "topic": "dio_reading"},
+    {"term": "Licznik przełączeń (trwałość aparatu)", "topic": "dio_switching_counters"},
+    {"term": "Logic Studio / projekt logiki", "topic": "mv_control"},
+    {"term": "Main View", "topic": "mv_synoptic"},
+    {"term": "Notatka techniczna", "topic": "ap_note"},
+    {"term": "Operator (poziom)", "topic": "al_three"},
+    {"term": "Opis — edycja (DI/DO)", "topic": "dio_descriptions"},
+    {"term": "Panel pomiarów", "topic": "mv_measurements"},
+    {"term": "Panel statusu urządzeń", "topic": "mv_device_status"},
+    {"term": "PIN — wprowadzanie", "topic": "al_pin"},
+    {"term": "PIN — blokada po zbyt wielu błędach", "topic": "al_pin"},
+    {"term": "PIN — zapomniany", "topic": "ts_forgot_pin"},
+    {"term": "Jakość energii (strona)", "topic": "pq_what"},
+    {"term": "Diagnostyka magistrali (strona)", "topic": "bus_diag_what"},
+    {"term": "Ramki wysłane/odebrane", "topic": "bus_diag_what"},
+    {"term": "Czas odpowiedzi (diagnostyka magistrali)", "topic": "bus_diag_what"},
+    {"term": "Zeruj wszystkie liczniki (Diagnostyka magistrali)", "topic": "bus_diag_what"},
+    {"term": "Topologia systemu — CPU Load, Temperature, Frames RX/TX", "topic": "st_what"},
+    {"term": "SIMULATED (jakość danych)", "topic": "hist_what"},
+    {"term": "PIN — zmiana", "topic": "al_change_pin"},
+    {"term": "Poziomy dostępu", "topic": "al_three"},
+    {"term": "Protection Settings", "topic": "saf_settings_page"},
+    {"term": "Próg ostrzegawczy (aparat)", "topic": "dio_switching_counters"},
+    {"term": "Punkt analogowy — dodawanie", "topic": "ap_add_remove"},
+    {"term": "Punkt analogowy — konfiguracja", "topic": "ap_config"},
+    {"term": "Rejestr zdarzeń (Events)", "topic": "ea_recorder"},
+    {"term": "Safety kernel", "topic": "saf_kernel"},
+    {"term": "Engineer Mode (strona)", "topic": "saf_engineer_mode"},
+    {"term": "Weryfikacja zabezpieczeń", "topic": "saf_engineer_mode"},
+    {"term": "Menu Plik", "topic": "gs_file_menu"},
+    {"term": "Menu Projekt", "topic": "gs_project_menu"},
+    {"term": "Właściwości projektu", "topic": "gs_project_menu"},
+    {"term": "Ostatnio otwierane", "topic": "gs_project_menu"},
+    {"term": "Import projektu", "topic": "gs_file_menu"},
+    {"term": "Eksport projektu", "topic": "gs_file_menu"},
+    {"term": "Motywy wizualne", "topic": "set_theme"},
+    {"term": "Motyw", "topic": "set_theme"},
+    {"term": "Tryb pracy motywu (stały vs. automatyczny)", "topic": "set_theme"},
+    {"term": "Automatyczny motyw dzień/noc", "topic": "set_theme"},
+    {"term": "Tag System.Theme", "topic": "set_theme"},
+    {"term": "Podpowiedzi (tooltips)", "topic": "gs_layout"},
+    {"term": "Tryb ćwiczebny", "topic": "saf_training_mode"},
+    {"term": "Tryb prezentacji", "topic": "saf_presentation_mode"},
+    {"term": "REST API", "topic": "api_what"},
+    {"term": "Token API", "topic": "api_what"},
+    {"term": "api_host / api_port", "topic": "api_what"},
+    {"term": "Bearer token", "topic": "api_what"},
+    {"term": "api_tokens.local.json", "topic": "api_what"},
+    {"term": "Eksport listy sygnałów", "topic": "tools_export_tag_list"},
+    {"term": "Eksportuj listę sygnałów... (menu)", "topic": "tools_export_tag_list"},
+    {"term": "GET /api/v1/tags/export", "topic": "tools_export_tag_list"},
+    {"term": "Logic Studio - lista sygnałów", "topic": "tools_export_tag_list"},
+    {"term": "Synoptic Editor - lista sygnałów", "topic": "tools_export_tag_list"},
+    {"term": "request_tags (zarezerwowane)", "topic": "tools_export_tag_list"},
+    {"term": "MQTT", "topic": "mqtt_what"},
+    {"term": "Home Assistant", "topic": "mqtt_what"},
+    {"term": "Sygnały Link.* (przychodzące)", "topic": "mqtt_what"},
+    {"term": "mqtt.local.json", "topic": "mqtt_what"},
+    {"term": "Testament MQTT (Last Will)", "topic": "mqtt_what"},
+    {"term": "Wiadomość zatrzymana (retained, MQTT)", "topic": "mqtt_what"},
+    {"term": "Scenariusz demonstracyjny", "topic": "saf_presentation_mode"},
+    {"term": "Narzędzia > Tryb prezentacji", "topic": "saf_presentation_mode"},
+    {"term": "Sterowanie — zablokowane", "topic": "ts_control_blocked"},
+    {"term": "Sterowanie aparatami", "topic": "mv_control"},
+    {"term": "Serwisowa notatka — dodawanie", "topic": "dio_service_notes"},
+    {"term": "Synoptyka — schemat", "topic": "mv_synoptic"},
+    {"term": "Tabela uprawnień", "topic": "al_matrix"},
+    {"term": "Tryb kiosku a pełnoekranowy", "topic": "kiosk_vs_fullscreen"},
+    {"term": "Tryb LIVE / SYMULACJA", "topic": "gs_what"},
+    {"term": "Typ sygnału (punkt analogowy)", "topic": "ap_config"},
+    {"term": "Urządzenie OFFLINE", "topic": "ts_device_offline"},
+    {"term": "User (poziom)", "topic": "al_three"},
+    {"term": "Uruchomienie programu", "topic": "gs_startup"},
+    {"term": "Konfiguracja funkcji", "topic": "set_feature_config"},
+    {"term": "Włączanie i wyłączanie funkcji sterownika", "topic": "set_feature_config"},
+    {"term": "Retencja danych", "topic": "set_data_retention"},
+    {"term": "Retencja Historiana", "topic": "set_data_retention"},
+    {"term": "Archiwizacja dziennika audytowego", "topic": "set_data_retention"},
+    {"term": "Ostrzeżenie o rozmiarze bazy danych", "topic": "set_data_retention"},
+    {"term": "Drzewo nawigacji", "topic": "gs_layout"},
+    {"term": "Ustawienia — inne", "topic": "set_other"},
+    {"term": "Wygaszanie ekranu", "topic": "set_screen_sleep"},
+    {"term": "Zasada „ekran informuje, sprzęt chroni”", "topic": "saf_principle"},
+    {"term": "Zdrowie systemu — monitorowanie", "topic": "saf_kernel"},
+    {"term": "Zdarzenia a Audit Log — różnica", "topic": "ea_audit_log"},
+    {"term": "Zegar synchronizacji czasu", "topic": "ts_time_sync"},
+    {"term": "Zerowanie licznika przełączeń", "topic": "dio_switching_counters"},
+    {"term": "Zmiana języka", "topic": "set_language"}
+  ]
+}

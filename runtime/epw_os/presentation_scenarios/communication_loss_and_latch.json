@@ -1,0 +1,36 @@
+{
+  "name": "Communication Loss and the Fault Latch",
+  "description": "The strongest of the five. A device stops answering; SafetyKernel only reacts after three consecutive missed cycles (a deliberate tolerance for one lost packet, not a bug) - watch that delay play out for real. Commands get blocked, then communication returns and the underlying condition clears, but the fault LATCH stays set: only a manual acknowledgement on the Alarms page clears it.",
+  "steps": [
+    {
+      "time_s": 0,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 230.1,
+      "quality": "SIMULATED",
+      "description": "Normal operation"
+    },
+    {
+      "time_s": 2,
+      "type": "device_comm",
+      "target": "Modbus",
+      "action": "SUSPEND",
+      "description": "The Modbus device stops answering. Nothing visibly reacts yet - SafetyKernel checks health once a second and only calls a device unhealthy after 3 consecutive missed cycles, deliberately tolerating one lost packet."
+    },
+    {
+      "time_s": 9,
+      "type": "device_comm",
+      "target": "Modbus",
+      "action": "RESUME",
+      "description": "By now SafetyKernel has genuinely detected the loss (Safety.Modbus.Healthy went false, an alarm was raised, and new commands to this device were blocked) - see the Alarms page. Communication resumes here."
+    },
+    {
+      "time_s": 30,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 230.1,
+      "quality": "SIMULATED",
+      "description": "Safety.Modbus.Healthy is back to true within the next health-check cycle - but Safety.Modbus.Fault (the latch) stays set. This scenario deliberately does not acknowledge it: only a manual acknowledgement of the DEVICE_HEALTH_Modbus alarm on the Alarms page clears it, and Presentation Mode never does that for you (nor does stopping the presentation - the latch is real system state, not demo data). That's the entire point of this scenario - show it live from the Alarms page whenever you're ready."
+    }
+  ]
+}

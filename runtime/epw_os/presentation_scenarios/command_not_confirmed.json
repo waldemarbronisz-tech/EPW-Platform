@@ -1,0 +1,46 @@
+{
+  "name": "Command Sent, Never Confirmed",
+  "description": "The point simple systems forget: a command is not the same thing as its execution. A close command goes out, feedback never comes back, the real command-supervision timeout elapses, and the system reports it - the device is never shown as closed.",
+  "command_definitions": {
+    "DEMO_JAMMED.CLOSE": {
+      "driver_id": "SIM_DRIVER",
+      "output_tag": "Demo.JammedBreaker.CmdSent",
+      "output_value": true,
+      "feedback_tag": "Demo.JammedBreaker.Feedback",
+      "feedback_value": true,
+      "timeout_ms": 2500
+    }
+  },
+  "steps": [
+    {
+      "time_s": 0,
+      "type": "tag",
+      "tag": "Meas.L1",
+      "value": 230.1,
+      "quality": "SIMULATED",
+      "description": "Normal operation"
+    },
+    {
+      "time_s": 2,
+      "type": "command",
+      "target": "DEMO_JAMMED",
+      "action": "CLOSE",
+      "description": "Close command issued for a demo breaker whose feedback never arrives - watch it sit in FEEDBACK_PENDING (command_status). Goes through the exact same real dispatch path as every other command step - nothing here is faked except that this one device's feedback is intentionally never wired up."
+    },
+    {
+      "time_s": 5,
+      "type": "alarm",
+      "alarm_id": "DEMO_NO_FEEDBACK",
+      "message": "Command supervision timeout: the breaker did not confirm its commanded state within 2.5 s",
+      "priority": 3,
+      "source_tag": "Demo.JammedBreaker.Feedback",
+      "description": "The real 2.5 s command-supervision timeout (CommandManager's own timeout_ms) has elapsed - command_status is TIMEOUT. The system reports the failure; at no point did the breaker's own displayed state show CLOSED, because it never actually confirmed."
+    },
+    {
+      "time_s": 30,
+      "type": "alarm_clear",
+      "alarm_id": "DEMO_NO_FEEDBACK",
+      "description": "Clears when you're done showing the point"
+    }
+  ]
+}

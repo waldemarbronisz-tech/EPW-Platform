@@ -1,0 +1,782 @@
+{
+    "format": "EPW_OS_PROJECT",
+    "schema_version": 1,
+    "project_id": "DEFAULT_PROJECT",
+    "synoptic_project": null,
+    "logic_project": null,
+    "output_descriptions": {},
+    "tag_descriptions": {},
+    "language": "en",
+    "analog_points": [
+        {
+            "tag": "AI1",
+            "description": "Analog Input Channel 1",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI2",
+            "description": "Analog Input Channel 2",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI3",
+            "description": "Analog Input Channel 3",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI4",
+            "description": "Analog Input Channel 4",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI5",
+            "description": "Analog Input Channel 5",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI6",
+            "description": "Analog Input Channel 6",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI7",
+            "description": "Analog Input Channel 7",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI8",
+            "description": "Analog Input Channel 8",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI9",
+            "description": "Analog Input Channel 9",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI10",
+            "description": "Analog Input Channel 10",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI11",
+            "description": "Analog Input Channel 11",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI12",
+            "description": "Analog Input Channel 12",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI13",
+            "description": "Analog Input Channel 13",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI14",
+            "description": "Analog Input Channel 14",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI15",
+            "description": "Analog Input Channel 15",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        },
+        {
+            "tag": "AI16",
+            "description": "Analog Input Channel 16",
+            "technical_note": "",
+            "signal_type": "Wartość gotowa (bez przeliczania)",
+            "raw_min": 0.0,
+            "raw_max": 100.0,
+            "eng_min": 0.0,
+            "eng_max": 100.0,
+            "unit": "",
+            "decimals": 1
+        }
+    ],
+    "switching_counters": {
+        "DI1": {
+            "closes": 1,
+            "opens": 0,
+            "closed_seconds": 82.64695644378662,
+            "closed_since": 1788254177.6343439,
+            "first_transition": 1788254177.6343439,
+            "last_transition": 1788254177.6343439,
+            "warning_threshold": null
+        },
+        "DI14": {
+            "closes": 2,
+            "opens": 1,
+            "closed_seconds": 66.87142729759216,
+            "closed_since": 1788254260.9059136,
+            "first_transition": 1788254178.0020747,
+            "last_transition": 1788254260.9059136,
+            "warning_threshold": null
+        },
+        "DI2": {
+            "closes": 1,
+            "opens": 0,
+            "closed_seconds": 76.8278820514679,
+            "closed_since": 1788254180.5438833,
+            "first_transition": 1788254180.5438833,
+            "last_transition": 1788254180.5438833,
+            "warning_threshold": null
+        },
+        "DI4": {
+            "closes": 1,
+            "opens": 0,
+            "closed_seconds": 71.68224120140076,
+            "closed_since": 1788254183.1167052,
+            "first_transition": 1788254183.1167052,
+            "last_transition": 1788254183.1167052,
+            "warning_threshold": null
+        },
+        "DI3": {
+            "closes": 1,
+            "opens": 0,
+            "closed_seconds": 65.64978122711182,
+            "closed_since": 1788254186.1329346,
+            "first_transition": 1788254186.1329346,
+            "last_transition": 1788254186.1329346,
+            "warning_threshold": null
+        },
+        "DI5": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI6": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI7": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI8": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI9": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI10": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI11": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI12": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI13": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI15": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI16": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI17": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI18": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI19": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI20": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI21": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI22": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI23": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI24": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI25": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI26": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI27": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI28": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI29": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI30": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI31": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI32": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI33": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI34": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI35": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI36": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI37": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI38": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI39": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI40": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI41": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI42": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI43": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI44": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI45": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI46": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI47": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI48": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI49": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI50": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI51": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI52": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI53": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI54": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI55": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI56": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI57": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI58": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI59": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI60": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI61": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI62": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI63": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        },
+        "DI64": {
+            "closes": 0,
+            "opens": 0,
+            "closed_seconds": 0.0,
+            "closed_since": null,
+            "first_transition": null,
+            "last_transition": null,
+            "warning_threshold": null
+        }
+    }
+}

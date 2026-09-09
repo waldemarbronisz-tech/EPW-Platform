@@ -1,0 +1,392 @@
+{
+  "format": "EPW_SYNOPTIC",
+  "schema_version": 2,
+  "project": {
+    "name": "GOSPODARKA WODNA - PRZYKLAD",
+    "description": "feat/water-management commit 6 - a ready-made demo project exercising all 12 new water-management objects together: a water-utility connection and a rainwater tank as two sources into a three-way selector valve, a filter, a hydrofor (pump), a check valve, a flow meter, a manifold splitting into three irrigation zones (two sprinkler zones and one drip-line zone), a rain sensor and a pressure switch, plus a meter and a signal panel reading the project's own device registry.",
+    "created_at": "2026-09-09T00:00:00.000Z",
+    "modified_at": "2026-09-09T00:00:00.000Z"
+  },
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "background": "#00CFCF",
+    "gridSize": 16
+  },
+  "kind": "SCHEMATIC",
+  "locations": [
+    { "code": "OGROD", "description": "Ogrod" },
+    { "code": "KOT", "description": "Kotlownia" }
+  ],
+  "cards": [
+    { "id": "DI1", "model": "ELA01", "channelKind": "DI", "channelCount": 32 },
+    { "id": "DO1", "model": "ELA01", "channelKind": "DO", "channelCount": 32 },
+    { "id": "AI1", "model": "ADA01", "channelKind": "AI", "channelCount": 16 }
+  ],
+  "devices": [
+    {
+      "id": "KOT_ZAW1",
+      "designation": "-Y1",
+      "name": "Zawor trojdrogowy wyboru zrodla wody",
+      "behavior": "SWITCHED",
+      "kind": "zawor trojdrogowy",
+      "publishToHa": false,
+      "feedback": { "mode": "DUAL", "diClosed": "DI1.DI.1", "diOpen": "DI1.DI.2" },
+      "command": { "outputCount": 2, "style": "MAINTAINED", "doClose": "DO1.DO.1", "doOpen": "DO1.DO.2" },
+      "supervision": { "confirmTimeoutMs": 3000, "discrepancyAlarm": true },
+      "safeState": { "onStartup": "NO_CHANGE", "onLinkLoss": "NO_CHANGE" },
+      "switchCounter": false
+    },
+    {
+      "id": "KOT_PMP1",
+      "designation": "-M1",
+      "name": "Pompa hydroforowa",
+      "behavior": "SWITCHED",
+      "kind": "pompa",
+      "publishToHa": true,
+      "feedback": { "mode": "SINGLE", "diClosed": "DI1.DI.3" },
+      "command": { "outputCount": 1, "style": "MAINTAINED", "doClose": "DO1.DO.3" },
+      "supervision": { "confirmTimeoutMs": 2000, "discrepancyAlarm": false },
+      "safeState": { "onStartup": "NO_CHANGE", "onLinkLoss": "NO_CHANGE" },
+      "switchCounter": true
+    },
+    {
+      "id": "OGROD_ZAW1",
+      "designation": "-Y2",
+      "name": "Zawor strefy 1 (zraszacze)",
+      "behavior": "SWITCHED",
+      "kind": "zawor",
+      "publishToHa": false,
+      "feedback": { "mode": "SINGLE", "diClosed": "DI1.DI.4" },
+      "command": { "outputCount": 1, "style": "MAINTAINED", "doClose": "DO1.DO.4" },
+      "supervision": { "confirmTimeoutMs": 2000, "discrepancyAlarm": false },
+      "safeState": { "onStartup": "NO_CHANGE", "onLinkLoss": "NO_CHANGE" },
+      "switchCounter": false
+    },
+    {
+      "id": "OGROD_ZAW2",
+      "designation": "-Y3",
+      "name": "Zawor strefy 2 (linia kroplujaca)",
+      "behavior": "SWITCHED",
+      "kind": "zawor",
+      "publishToHa": false,
+      "feedback": { "mode": "SINGLE", "diClosed": "DI1.DI.5" },
+      "command": { "outputCount": 1, "style": "MAINTAINED", "doClose": "DO1.DO.5" },
+      "supervision": { "confirmTimeoutMs": 2000, "discrepancyAlarm": false },
+      "safeState": { "onStartup": "NO_CHANGE", "onLinkLoss": "NO_CHANGE" },
+      "switchCounter": false
+    },
+    {
+      "id": "OGROD_ZAW3",
+      "designation": "-Y4",
+      "name": "Zawor strefy 3 (zraszacze)",
+      "behavior": "SWITCHED",
+      "kind": "zawor",
+      "publishToHa": false,
+      "feedback": { "mode": "SINGLE", "diClosed": "DI1.DI.6" },
+      "command": { "outputCount": 1, "style": "MAINTAINED", "doClose": "DO1.DO.6" },
+      "supervision": { "confirmTimeoutMs": 2000, "discrepancyAlarm": false },
+      "safeState": { "onStartup": "NO_CHANGE", "onLinkLoss": "NO_CHANGE" },
+      "switchCounter": false
+    },
+    {
+      "id": "OGROD_ZBIO1",
+      "designation": "-B1",
+      "name": "Poziom w zbiorniku na deszczowke",
+      "behavior": "MEASURED",
+      "kind": "poziomomierz",
+      "publishToHa": true,
+      "input": "AI1.AI.1",
+      "unit": "%",
+      "rangeMin": 0,
+      "rangeMax": 100,
+      "format": "0",
+      "deadband": 1
+    },
+    {
+      "id": "OGROD_PRZM1",
+      "designation": "-B2",
+      "name": "Przeplyw wody nawadniania",
+      "behavior": "MEASURED",
+      "kind": "przeplywomierz",
+      "publishToHa": true,
+      "input": "AI1.AI.2",
+      "unit": "l/min",
+      "rangeMin": 0,
+      "rangeMax": 50,
+      "format": "0.0",
+      "deadband": 0.5
+    },
+    {
+      "id": "OGROD_DESZ1",
+      "designation": "-B3",
+      "name": "Czujnik deszczu",
+      "behavior": "SIGNAL",
+      "kind": "czujnik deszczu",
+      "publishToHa": true,
+      "feedback": { "di": "DI1.DI.7", "invert": false },
+      "alarmState": "HIGH",
+      "debounceMs": 500
+    },
+    {
+      "id": "KOT_PSW1",
+      "designation": "-B4",
+      "name": "Presostat suchobiegu pompy",
+      "behavior": "SIGNAL",
+      "kind": "presostat",
+      "publishToHa": false,
+      "feedback": { "di": "DI1.DI.8", "invert": true },
+      "alarmState": "LOW",
+      "debounceMs": 200
+    }
+  ],
+  "objects": [
+    {
+      "id": "obj-bp-util",
+      "type": "scada.boundary_point",
+      "category": "SCADA",
+      "x": 960, "y": 608, "width": 96, "height": 51,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "SIEC WODOCIAGOWA", "description": "Przylacze wody",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "boundaryDirection": "SOURCE", "boundaryMedium": "WATER", "boundaryPortSide": "LEFT"
+    },
+    {
+      "id": "obj-valve3",
+      "type": "site.water_selector_valve_switched",
+      "category": "TEREN",
+      "x": 800, "y": 592, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "KOT_ZAW1",
+      "designation": "-Y1", "description": "Zawor wyboru zrodla wody",
+      "tag": "Y1", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "A" }
+    },
+    {
+      "id": "obj-tank1",
+      "type": "site.rainwater_tank2",
+      "category": "TEREN",
+      "x": 800, "y": 400, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_ZBIO1",
+      "designation": "-B1", "description": "Zbiornik na deszczowke",
+      "tag": "B1", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "SREDNI" }
+    },
+    {
+      "id": "obj-filter1",
+      "type": "site.water_filter",
+      "category": "TEREN",
+      "x": 608, "y": 592, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "", "description": "Filtr wody",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-checkvalve1",
+      "type": "site.check_valve",
+      "category": "TEREN",
+      "x": 416, "y": 592, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "", "description": "Zawor zwrotny",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-flowmeter1",
+      "type": "site.flow_meter",
+      "category": "TEREN",
+      "x": 96, "y": 592, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_PRZM1",
+      "designation": "-B2", "description": "Przeplywomierz nawadniania",
+      "tag": "B2", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-hydrofor1",
+      "type": "site.hydrofor",
+      "category": "TEREN",
+      "x": 320, "y": 736, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "KOT_PMP1",
+      "designation": "-M1", "description": "Hydrofor",
+      "tag": "M1", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-presswitch1",
+      "type": "site.pressure_switch",
+      "category": "TEREN",
+      "x": 480, "y": 736, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "KOT_PSW1",
+      "designation": "-B4", "description": "Presostat suchobiegu",
+      "tag": "B4", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "WYLACZONY" }
+    },
+    {
+      "id": "obj-ballvalve1",
+      "type": "water.ball_valve",
+      "category": "Water",
+      "x": 32, "y": 608, "width": 64, "height": 64,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_ZAW1",
+      "designation": "-Y2", "description": "Zawor strefy 1",
+      "tag": "Y2", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "OPEN" }
+    },
+    {
+      "id": "obj-sprinkler1",
+      "type": "site.sprinkler_head",
+      "category": "TEREN",
+      "x": 32, "y": 480, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "", "description": "Zraszacz strefy 1",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-ballvalve2",
+      "type": "water.ball_valve",
+      "category": "Water",
+      "x": 32, "y": 864, "width": 64, "height": 64,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_ZAW2",
+      "designation": "-Y3", "description": "Zawor strefy 2",
+      "tag": "Y3", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "CLOSED" }
+    },
+    {
+      "id": "obj-dripline2",
+      "type": "site.drip_line",
+      "category": "TEREN",
+      "x": 128, "y": 848, "width": 192, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "", "description": "Linia kroplujaca strefy 2",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "WYLACZONY" }
+    },
+    {
+      "id": "obj-ballvalve3",
+      "type": "water.ball_valve",
+      "category": "Water",
+      "x": 32, "y": 1120, "width": 64, "height": 64,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_ZAW3",
+      "designation": "-Y4", "description": "Zawor strefy 3",
+      "tag": "Y4", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "OPEN" }
+    },
+    {
+      "id": "obj-sprinkler3",
+      "type": "site.sprinkler_head",
+      "category": "TEREN",
+      "x": 32, "y": 992, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "designation": "", "description": "Zraszacz strefy 3",
+      "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    },
+    {
+      "id": "obj-rainsensor1",
+      "type": "site.rain_sensor",
+      "category": "TEREN",
+      "x": 400, "y": 480, "width": 128, "height": 96,
+      "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "visible": true, "locked": false, "layer": 1,
+      "deviceId": "OGROD_DESZ1",
+      "designation": "-B3", "description": "Czujnik deszczu",
+      "tag": "B3", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
+      "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
+      "customProperties": {},
+      "editor": { "preview_state": "ZALACZONY" }
+    }
+  ],
+  "connections": [
+    { "id": "conn-1", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 928, "y": 640 }, { "x": 960, "y": 640 } ] },
+    { "id": "conn-2", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 864, "y": 496 }, { "x": 864, "y": 688 } ] },
+    { "id": "conn-3", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 736, "y": 640 }, { "x": 800, "y": 640 } ] },
+    { "id": "conn-4", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 544, "y": 640 }, { "x": 608, "y": 640 } ] },
+    { "id": "conn-5", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 224, "y": 640 }, { "x": 416, "y": 640 } ] },
+    { "id": "conn-6", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 320, "y": 784 }, { "x": 320, "y": 640 } ] },
+    { "id": "conn-7", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 320, "y": 784 }, { "x": 480, "y": 784 } ] },
+    { "id": "conn-8", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 32, "y": 640 }, { "x": 96, "y": 640 } ] },
+    { "id": "conn-9", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 32, "y": 640 }, { "x": 32, "y": 1152 } ] },
+    { "id": "conn-10", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 96, "y": 576 }, { "x": 96, "y": 640 } ] },
+    { "id": "conn-11", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 96, "y": 896 }, { "x": 128, "y": 896 } ] },
+    { "id": "conn-12", "medium": "WATER", "style": "NORMAL", "points": [ { "x": 96, "y": 1088 }, { "x": 96, "y": 1152 } ] },
+    { "id": "conn-13", "medium": "ELECTRICAL", "style": "NORMAL", "points": [ { "x": 464, "y": 576 }, { "x": 464, "y": 608 } ] }
+  ],
+  "meters": [
+    {
+      "id": "meter-1",
+      "x": 100, "y": 1280, "width": 220,
+      "title": "Gospodarka wodna",
+      "fontSize": 13,
+      "rows": [
+        { "device": "OGROD_ZBIO1", "label": "", "manualValue": "", "manualUnit": "" },
+        { "device": "OGROD_PRZM1", "label": "", "manualValue": "", "manualUnit": "" }
+      ]
+    }
+  ],
+  "signalPanels": [
+    {
+      "id": "panel-1",
+      "x": 400, "y": 1280, "width": 260,
+      "title": "Sygnalizacja",
+      "fontSize": 13,
+      "rows": [
+        { "device": "KOT_ZAW1", "label": "", "manualState": "OFF" },
+        { "device": "OGROD_ZAW1", "label": "", "manualState": "OFF" },
+        { "device": "OGROD_ZAW2", "label": "", "manualState": "OFF" },
+        { "device": "OGROD_ZAW3", "label": "", "manualState": "OFF" },
+        { "device": "OGROD_DESZ1", "label": "", "manualState": "OFF" },
+        { "device": "KOT_PSW1", "label": "", "manualState": "OFF" }
+      ]
+    }
+  ]
+}

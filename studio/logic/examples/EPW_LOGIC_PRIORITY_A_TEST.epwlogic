@@ -1,0 +1,505 @@
+{
+    "format": "EPW_LOGIC",
+    "schema_version": 1,
+    "settings": {
+        "name": "New Project",
+        "version": "1.0",
+        "cycle_time_ms": 100
+    },
+    "blocks": [
+        {
+            "uuid": "e0652615-8936-4ad7-9b7d-ab678d8497fe",
+            "type_id": "virtual.input",
+            "display_name": "Virtual IN",
+            "category": "Wej\u015bcia / Wyj\u015bcia",
+            "description": "Virtual Boolean Input",
+            "position": {
+                "x": 0,
+                "y": 0
+            },
+            "size": {
+                "width": 100,
+                "height": 60
+            },
+            "inputs": [],
+            "outputs": [
+                {
+                    "uuid": "4a89b739-f79b-4afc-a8a9-9ca46dd102a5",
+                    "name": "State",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "3ce6cd27-2954-49ab-9e24-f37306954ffd"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#006400",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Tag": "VI.PULSE_REQUEST",
+                "Force State": "NO FORCE"
+            }
+        },
+        {
+            "uuid": "db2ae9f9-8bfa-4681-acd7-48028e23d319",
+            "type_id": "edge.rtrig",
+            "display_name": "R_TRIG",
+            "category": "Bramki logiczne",
+            "description": "Rising Edge Trigger",
+            "position": {
+                "x": 100.0,
+                "y": 0.0
+            },
+            "size": {
+                "width": 60,
+                "height": 60
+            },
+            "inputs": [
+                {
+                    "uuid": "3ce6cd27-2954-49ab-9e24-f37306954ffd",
+                    "name": "In",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "4a89b739-f79b-4afc-a8a9-9ca46dd102a5"
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "7537a422-eb2d-413e-b16e-e4b1ed794b55",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "e0695e26-dcfe-49bf-bdd9-edb67e6de941"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#8A2BE2",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": ""
+            }
+        },
+        {
+            "uuid": "65c9b862-001c-471a-8168-4b8dab7b14c0",
+            "type_id": "system.signal",
+            "display_name": "SYS SIG",
+            "category": "Inne",
+            "description": "System Boolean Signal",
+            "position": {
+                "x": 0.0,
+                "y": 100.0
+            },
+            "size": {
+                "width": 120.0,
+                "height": 80.0
+            },
+            "inputs": [],
+            "outputs": [
+                {
+                    "uuid": "4314ffa5-bce2-4d5a-9d44-f32fbd1b9374",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "7de664de-2a31-4e88-90df-5e3cf19033e2"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#800080",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Signal": "Sys.Ready",
+                "Tag": "SYSTEM.CORE_ONLINE"
+            }
+        },
+        {
+            "uuid": "0aaa09fa-ef00-43f8-bcf3-8085fb2e27e3",
+            "type_id": "logic.and",
+            "display_name": "AND",
+            "category": "Bramki logiczne",
+            "description": "Logical AND operator",
+            "position": {
+                "x": 200.0,
+                "y": 0.0
+            },
+            "size": {
+                "width": 60,
+                "height": 60
+            },
+            "inputs": [
+                {
+                    "uuid": "e0695e26-dcfe-49bf-bdd9-edb67e6de941",
+                    "name": "In1",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "7537a422-eb2d-413e-b16e-e4b1ed794b55"
+                    ]
+                },
+                {
+                    "uuid": "7de664de-2a31-4e88-90df-5e3cf19033e2",
+                    "name": "In2",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "4314ffa5-bce2-4d5a-9d44-f32fbd1b9374"
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "306402df-fd3e-4af4-a45b-fe30d0a6a3ee",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "503b792c-1d30-4a99-86d1-d2fa64fe5446"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#00557f",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": ""
+            }
+        },
+        {
+            "uuid": "b9fd3947-0444-4d17-816c-4a3628ba4df1",
+            "type_id": "virtual.output",
+            "display_name": "Virtual OUT",
+            "category": "Wej\u015bcia / Wyj\u015bcia",
+            "description": "Virtual Boolean Output",
+            "position": {
+                "x": 300.0,
+                "y": 0.0
+            },
+            "size": {
+                "width": 100,
+                "height": 60
+            },
+            "inputs": [
+                {
+                    "uuid": "503b792c-1d30-4a99-86d1-d2fa64fe5446",
+                    "name": "Cmd",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "306402df-fd3e-4af4-a45b-fe30d0a6a3ee"
+                    ]
+                }
+            ],
+            "outputs": [],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#8B0000",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Tag": "VO.NEW_OUTPUT_1"
+            }
+        },
+        {
+            "uuid": "7e6069d3-e211-4a24-b4a7-833ef5b78d27",
+            "type_id": "const.real",
+            "display_name": "REAL",
+            "category": "Inne",
+            "description": "Real Constant",
+            "position": {
+                "x": 0.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 60,
+                "height": 60
+            },
+            "inputs": [],
+            "outputs": [
+                {
+                    "uuid": "d30565a9-552f-4915-b34d-8c95bd35919c",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "REAL",
+                    "connections": [
+                        "04d46d95-0d7f-407e-9c05-a64e349260a2"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#555555",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Value": 5.0
+            }
+        },
+        {
+            "uuid": "deb35dc6-bda3-44d9-ac35-dc51fe2ef913",
+            "type_id": "analog.scale",
+            "display_name": "SCALE",
+            "category": "Elementy Analogowe",
+            "description": "Linear Scaling",
+            "position": {
+                "x": 100.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 100,
+                "height": 100
+            },
+            "inputs": [
+                {
+                    "uuid": "04d46d95-0d7f-407e-9c05-a64e349260a2",
+                    "name": "In",
+                    "direction": "input",
+                    "data_type": "REAL",
+                    "connections": [
+                        "d30565a9-552f-4915-b34d-8c95bd35919c"
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "474fedd4-4051-4095-a962-2d544f2982a8",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "REAL",
+                    "connections": [
+                        "dfc5cff5-c1e2-44ef-8d33-1f1813c05178"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#808000",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "In Min": 0.0,
+                "In Max": 10.0,
+                "Out Min": 0.0,
+                "Out Max": 100.0
+            }
+        },
+        {
+            "uuid": "0f85d871-d4e5-4710-b883-e8e928736498",
+            "type_id": "analog.mov_avg",
+            "display_name": "MOVING AVG",
+            "category": "Elementy Analogowe",
+            "description": "Moving Average Filter",
+            "position": {
+                "x": 200.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 100,
+                "height": 60
+            },
+            "inputs": [
+                {
+                    "uuid": "dfc5cff5-c1e2-44ef-8d33-1f1813c05178",
+                    "name": "In",
+                    "direction": "input",
+                    "data_type": "REAL",
+                    "connections": [
+                        "474fedd4-4051-4095-a962-2d544f2982a8"
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "783fdcae-b52e-4dc5-a626-f974ecff0ec0",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "REAL",
+                    "connections": [
+                        "c140e555-92ca-4008-a55e-366ada7b4ac6"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#808000",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Samples": 10
+            }
+        },
+        {
+            "uuid": "a4555dfc-a151-4412-80b1-e3cd92c2a7cc",
+            "type_id": "analog.hysteresis",
+            "display_name": "HYSTERESIS",
+            "category": "Elementy Analogowe",
+            "description": "Boolean Hysteresis",
+            "position": {
+                "x": 300.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 100,
+                "height": 80
+            },
+            "inputs": [
+                {
+                    "uuid": "c140e555-92ca-4008-a55e-366ada7b4ac6",
+                    "name": "In",
+                    "direction": "input",
+                    "data_type": "REAL",
+                    "connections": [
+                        "783fdcae-b52e-4dc5-a626-f974ecff0ec0"
+                    ]
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "0ea6528a-86d2-4054-9438-0b66e83b016a",
+                    "name": "Out",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "95d2c9cb-9f60-45e1-8822-aa42c6a9ade3"
+                    ]
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#808000",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "High Threshold": 40.0,
+                "Low Threshold": 10.0
+            }
+        },
+        {
+            "uuid": "2ff8c96d-1c70-4379-be6a-a190ab982e2b",
+            "type_id": "timer.ton",
+            "display_name": "TON",
+            "category": "Timery",
+            "description": "Timer On Delay",
+            "position": {
+                "x": 400.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 100,
+                "height": 100
+            },
+            "inputs": [
+                {
+                    "uuid": "95d2c9cb-9f60-45e1-8822-aa42c6a9ade3",
+                    "name": "IN",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "0ea6528a-86d2-4054-9438-0b66e83b016a"
+                    ]
+                },
+                {
+                    "uuid": "077d08c7-ca4e-4fac-8edf-b97aa956ff37",
+                    "name": "PT",
+                    "direction": "input",
+                    "data_type": "DINT",
+                    "connections": []
+                }
+            ],
+            "outputs": [
+                {
+                    "uuid": "8e1b6368-3684-46f6-906f-d3ba5abef09e",
+                    "name": "Q",
+                    "direction": "output",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "3d52217a-4931-4ac6-828c-0cc8aa3a74b3"
+                    ]
+                },
+                {
+                    "uuid": "272ea185-9ee1-4187-a78e-3be189791e5b",
+                    "name": "ET",
+                    "direction": "output",
+                    "data_type": "DINT",
+                    "connections": []
+                }
+            ],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#008080",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Preset (ms)": 200
+            }
+        },
+        {
+            "uuid": "9d37fb67-5a86-4998-b880-3ab175ec87ca",
+            "type_id": "virtual.output",
+            "display_name": "Virtual OUT",
+            "category": "Wej\u015bcia / Wyj\u015bcia",
+            "description": "Virtual Boolean Output",
+            "position": {
+                "x": 500.0,
+                "y": 200.0
+            },
+            "size": {
+                "width": 100,
+                "height": 60
+            },
+            "inputs": [
+                {
+                    "uuid": "3d52217a-4931-4ac6-828c-0cc8aa3a74b3",
+                    "name": "Cmd",
+                    "direction": "input",
+                    "data_type": "BOOL",
+                    "connections": [
+                        "8e1b6368-3684-46f6-906f-d3ba5abef09e"
+                    ]
+                }
+            ],
+            "outputs": [],
+            "execution_state": "Idle",
+            "execution_priority": 1,
+            "color": "#8B0000",
+            "visibility": true,
+            "enabled": true,
+            "properties": {
+                "Address": "",
+                "Comment": "",
+                "Tag": "VO.NEW_OUTPUT"
+            }
+        }
+    ]
+}

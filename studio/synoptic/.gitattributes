@@ -1,0 +1,12 @@
+# Ujednolicenie koncow linii w repozytorium.
+# Wszystko trzymane w repo z LF, niezaleznie od systemu deweloperskiego.
+* text=auto eol=lf
+
+# Skrypty Windows musza zachowac CRLF, inaczej cmd.exe ich nie wykona.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Pliki binarne - bez ingerencji.
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,72 @@
+# ============================================================
+# EPW Platform — wspólny .gitignore
+# Scalony z trzech repozytoriów źródłowych (2026-09-09)
+# ============================================================
+
+# ---------- Python (runtime + studio/logic + launcher synoptica) ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# ---------- Node / frontend (studio/synoptic) ----------
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Bazy danych (runtime) ----------
+*.db
+# SQLite trzyma pliki towarzyszące: -shm/-wal w trybie WAL,
+# -journal w trybie domyślnym. Wzorzec "*.db" ich NIE łapie.
+*.db-shm
+*.db-wal
+*.db-journal
+
+# ---------- SEKRETY — nigdy w repozytorium ----------
+# Skróty PIN-ów kontroli dostępu
+runtime/epw_os/config/access.local.json
+# Skróty tokenów REST API
+runtime/epw_os/config/api_tokens.local.json
+# Hasło do brokera MQTT — nie może być skrótem, bo musi trafić
+# do brokera jawnie przy każdym połączeniu
+runtime/epw_os/config/mqtt.local.json
+
+# ---------- Stan lokalny stacji roboczej ----------
+runtime/epw_os/config/window_state.local.json
+
+# ---------- Dane generowane w czasie pracy ----------
+# Archiwa retencji dziennika audytowego (datowane pliki CSV)
+/audit_archive/
+runtime/audit_archive/
+
+# ---------- Edytory i system ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---------- Notatki robocze — nigdy nie commitowane ----------
+raport.md
+audit-report-*.md
