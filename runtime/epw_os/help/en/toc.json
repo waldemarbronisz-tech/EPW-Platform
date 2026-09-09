@@ -8,7 +8,8 @@
         {"id": "gs_startup", "title": "Starting the Program"},
         {"id": "gs_layout", "title": "Screen Layout: Menu, Status Bar, Navigation"},
         {"id": "gs_file_menu", "title": "The File Menu"},
-        {"id": "gs_project_menu", "title": "The Project Menu"}
+        {"id": "gs_project_menu", "title": "The Project Menu"},
+        {"id": "gs_load_synoptic", "title": "Loading a Synoptic Screen (.epwsyn)"}
       ]
     },
     {
@@ -289,6 +290,9 @@
     {"term": "Project menu", "topic": "gs_project_menu"},
     {"term": "Project properties", "topic": "gs_project_menu"},
     {"term": "Recently opened", "topic": "gs_project_menu"},
+    {"term": "Synoptic screen, loading", "topic": "gs_load_synoptic"},
+    {"term": "Device registry (Synoptic Editor)", "topic": "gs_load_synoptic"},
+    {"term": ".epwsyn file", "topic": "gs_load_synoptic"},
     {"term": "Import project", "topic": "gs_file_menu"},
     {"term": "Export project", "topic": "gs_file_menu"},
     {"term": "Visual themes", "topic": "set_theme"},

@@ -664,6 +664,21 @@ class MainWindow(QMainWindow):
         act_project_properties = project_menu.addAction(tr("menu.project_properties"))
         act_project_properties.triggered.connect(self._open_project_properties_dialog)
 
+        # Task (epwsyn loader): "Wczytaj ekran synoptyczny..." - reads a
+        # .epwsyn file (epw_os.core.epwsyn_loader) and shows a summary of
+        # what it contains (object/device counts, warnings). Engineer-only,
+        # same hidden+disabled, re-checked-on-level-change AND re-checked-
+        # again-at-click pattern as every other Engineer-gated menu entry
+        # here (Presentation Mode/Feature Configuration/MQTT/Data
+        # Retention). Deliberately does not draw anything yet and does not
+        # touch project.json - see epwsyn_loader.py's own module docstring
+        # for why (rendering is a separate, future task).
+        project_menu.addSeparator()
+        self._act_load_synoptic = project_menu.addAction(tr("menu.project_load_synoptic"))
+        self._act_load_synoptic.triggered.connect(self._load_synoptic_screen)
+        self._refresh_load_synoptic_action_visibility()
+        self.access_manager.level_changed.connect(self._refresh_load_synoptic_action_visibility)
+
         project_menu.addSeparator()
         self._recent_projects_menu = project_menu.addMenu(tr("menu.project_recent"))
         # Rebuilt on demand right before it's shown, not kept in sync
@@ -1532,6 +1547,76 @@ class MainWindow(QMainWindow):
         )
         if dialog.exec():
             self._refresh_project_label()
+
+    def _refresh_load_synoptic_action_visibility(self, *_):
+        """Engineer-only, same belt-and-suspenders pattern as every other
+        Engineer-gated menu entry (Presentation Mode/Feature Configuration/
+        MQTT/Data Retention): hidden AND disabled below Engineer."""
+        is_engineer = self.access_manager.has_access(AccessLevel.ENGINEER)
+        self._act_load_synoptic.setVisible(is_engineer)
+        self._act_load_synoptic.setEnabled(is_engineer)
+
+    def _load_synoptic_screen(self):
+        """Task (epwsyn loader): reads a .epwsyn file and shows a summary
+        of what it contains - object count, device count broken down by
+        behavior, and any warnings (e.g. an object referencing a device
+        the registry doesn't have). Deliberately does not draw anything
+        (rendering is a separate, future task) and never touches
+        project.json - this is a read-only preview of the file's data,
+        not a project operation.
+
+        Re-verified at click time (access could have lapsed between the
+        menu opening and the click) - same re-verification pattern as
+        every other Engineer-gated action in this app, e.g.
+        _open_presentation_dialog()."""
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Load Synoptic Screen")
+            return
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("dialog.load_synoptic_title"), "", tr("dialog.synoptic_filter"))
+        if not path:
+            return
+
+        from epw_os.core.epwsyn_loader import load_epwsyn_file
+        result = load_epwsyn_file(path)
+
+        if not result.ok:
+            # DOWOD: "wczytanie zapisywane do dziennika audytowego" covers
+            # a refused load too, not just a successful one - an Engineer
+            # attempting (and failing) to load a bad file is exactly the
+            # kind of thing an audit trail exists to show.
+            if self.audit_logger is not None:
+                self.audit_logger.record(
+                    "SYNOPTIC_SCREEN_LOAD_FAILED", self.access_manager.level,
+                    f"Failed to load synoptic screen {path}: {result.error}",
+                    success=False,
+                )
+            self._warn(tr("dialog.synoptic_load_failed", error=result.error))
+            return
+
+        project = result.project
+        counts = project.devices.count_by_behavior()
+        warnings_text = ("\n".join(f"- {w}" for w in result.warnings)
+                          if result.warnings else tr("dialog.synoptic_no_warnings"))
+
+        if self.audit_logger is not None:
+            self.audit_logger.record(
+                "SYNOPTIC_SCREEN_LOADED", self.access_manager.level,
+                f"Loaded synoptic screen {path}: {project.object_count()} object(s), "
+                f"{len(project.devices)} device(s), {len(result.warnings)} warning(s).",
+                success=True,
+            )
+
+        self._info(tr(
+            "dialog.synoptic_summary",
+            name=project.name or os.path.basename(path),
+            objects=project.object_count(),
+            devices=len(project.devices),
+            switched=counts["SWITCHED"], signal=counts["SIGNAL"], measured=counts["MEASURED"],
+            modulated=counts["MODULATED"], selector=counts["SELECTOR"],
+            warnings=warnings_text,
+        ))
 
     def _refresh_recent_projects_menu(self):
         menu = self._recent_projects_menu
