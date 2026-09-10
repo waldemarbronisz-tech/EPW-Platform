@@ -183,6 +183,9 @@
     "cancel": "Cancel"
   },
   "about": {
+    "title": "About EPW Studio",
+    "version_label": "Version",
+    "btn_close": "Close",
     "studio_text": "EPW Studio\n\nThe EPW platform's shared design shell - the Synoptic Diagram (Synoptic Editor) and Logic (Logic Studio) in one window, one skin."
   },
   "project_info": {

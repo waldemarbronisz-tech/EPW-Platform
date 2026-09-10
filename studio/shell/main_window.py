@@ -28,7 +28,7 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QSettings, QSize, QTimer
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
     QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
@@ -121,6 +121,31 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
     _TREE_ITEM_HELP: "breadcrumb.help",
+}
+
+# Task point 5.3 - "Mapowanie gałąź drzewa -> temat pomocy." Tree keys
+# (left column) are this file's own _TREE_ITEM_* constants; help-topic
+# keys (right column) are generate_help.py's TOPICS keys (see that
+# file's own _manifest.py). Deliberately NOT the same string in every
+# row - e.g. _TREE_ITEM_DEVICES is "apparatus_registry" on the tree
+# side but "apparatus" on the help side, and _TREE_ITEM_INFO ("info")
+# happens to match both. _TREE_ITEM_HELP itself is omitted - F1 while
+# already on the Pomoc department has no "surrounding" topic to jump
+# to, so it's a no-op there (see _open_contextual_help's None guard).
+_HELP_TOPIC_BY_TREE_KEY = {
+    _TREE_ITEM_INFO: "info",
+    _TREE_ITEM_MODULES: "devices",
+    _TREE_ITEM_IO_CARDS: "io_cards",
+    _TREE_ITEM_LOCATIONS: "locations",
+    _TREE_ITEM_POINT_REGISTRY: "points",
+    _TREE_ITEM_DEVICES: "apparatus",
+    _TREE_ITEM_SCREENS: "screens",
+    _TREE_ITEM_LOGIC: "logic",
+    _TREE_ITEM_ZONES: "zones",
+    _TREE_ITEM_LINES: "lines",
+    _TREE_ITEM_ELECTRICAL_PROTECTION: "protection_electrical",
+    _TREE_ITEM_PROCESS_PROTECTION: "protection_process",
+    _TREE_ITEM_CONTROLLER: "controller",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -368,6 +393,14 @@ class StudioMainWindow(QMainWindow):
         self._state_timer.setInterval(400)
         self._state_timer.timeout.connect(self._refresh_shared_toolbar_state)
         self._state_timer.start()
+
+        # Task point 5.3 - "F1 otwiera temat DOTYCZĄCY aktywnego
+        # działu, nie spis treści." A window-wide shortcut (not per-
+        # panel) so it works no matter which widget inside the active
+        # aspect happens to have focus - see _HELP_TOPIC_BY_TREE_KEY
+        # and _open_contextual_help above for the actual mapping/logic.
+        self._help_shortcut = QShortcut(QKeySequence("F1"), self)
+        self._help_shortcut.activated.connect(self._open_contextual_help)
 
     # ------------------------------------------------------------------
     # Layout
@@ -848,8 +881,25 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Help Topics")
 
+    def _open_contextual_help(self):
+        """Task point 5.3 - F1 opens the help TOPIC for whatever
+        department is on screen, not the help table of contents (the
+        toolbar "?" button/_help_topics above still does the old
+        Logic/Synoptic-only thing - kept as-is, F1 is a new, separate
+        path that covers every department, not a rewrite of that one).
+        _HELP_TOPIC_BY_TREE_KEY is a real mapping (not an identity
+        function) because tree keys and help-topic keys genuinely
+        differ for several panels (e.g. "apparatus_registry" -> "apparatus")."""
+        topic_key = _HELP_TOPIC_BY_TREE_KEY.get(self._active)
+        if topic_key is None:
+            return
+        self.tree.setCurrentItem(self._item_help)
+        self._open_help()
+        self._help_panel.select_topic(topic_key)
+
     def _show_about_studio(self):
-        QMessageBox.about(self, tr("menu.help.about_studio"), tr("about.studio_text"))
+        from studio.shell.project_panels import AboutDialog
+        AboutDialog(self).exec()
 
     def _set_language(self, code):
         set_language(code)

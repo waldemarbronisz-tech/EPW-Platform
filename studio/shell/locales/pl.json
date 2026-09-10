@@ -183,6 +183,9 @@
     "cancel": "Anuluj"
   },
   "about": {
+    "title": "O programie EPW Studio",
+    "version_label": "Wersja",
+    "btn_close": "Zamknij",
     "studio_text": "EPW Studio\n\nWspólna powłoka projektowa platformy EPW — Schemat synoptyczny (Synoptic Editor) i Logika (Logic Studio) w jednym oknie, jednej szacie graficznej."
   },
   "project_info": {

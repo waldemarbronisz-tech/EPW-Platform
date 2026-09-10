@@ -18,6 +18,7 @@ from studio.shell.project_panels import (
     card_to_synoptic_dict,
     ensure_electrical_protection_seeded,
     find_point_owner,
+    load_help_topic_markdown,
     location_from_synoptic_dict,
     location_to_synoptic_dict,
     point_owner_map,
@@ -307,3 +308,28 @@ def test_module_has_data_false_for_modules_without_a_studio_panel():
     project = new_project("Test")
     for feature_id in ("trends", "power_quality", "engineer_mode", "service_notes"):
         assert _module_has_data(project, feature_id) is False
+
+
+# Task point 5.1/5.2 - load_help_topic_markdown() is the pure (non-Qt)
+# half of both HelpPanel and AboutDialog; AboutDialog itself, like
+# every other QWidget in this file, is exercised by main_window.py's
+# own smoke path (constructed, screenshotted), not unit-tested here -
+# see this file's own module docstring.
+def test_load_help_topic_markdown_substitutes_the_real_studio_version():
+    from studio.shell.version import STUDIO_VERSION
+
+    text = load_help_topic_markdown("about", "pl")
+    assert "{version}" not in text
+    assert STUDIO_VERSION in text
+
+
+def test_load_help_topic_markdown_both_languages_have_the_new_topics():
+    for key in ("devices", "about"):
+        for lang in ("pl", "en"):
+            text = load_help_topic_markdown(key, lang)
+            assert "brak pliku pomocy" not in text
+
+
+def test_load_help_topic_markdown_missing_topic_is_reported_not_raised():
+    text = load_help_topic_markdown("this_topic_does_not_exist", "pl")
+    assert "brak pliku pomocy" in text

@@ -57,7 +57,7 @@ import os
 import re
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -2313,14 +2313,110 @@ class HelpPanel(QWidget):
             self.viewer.setMarkdown("")
             return
         key, _title_pl, _title_en = self._topics[row]
-        help_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "help")
-        path = os.path.join(help_dir, self._lang, f"{key}.md")
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-        except OSError:
-            text = f"*(brak pliku pomocy: {path})*"
-        self.viewer.setMarkdown(text)
+        self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+
+    def select_topic(self, key: str):
+        """Task 5.3 (pomoc kontekstowa, F1) - jumps straight to `key`
+        instead of making the caller know this panel's own row-index
+        bookkeeping. A silent no-op for an unknown key (same "don't
+        crash over a lookup miss" stance _on_topic_selected() above
+        already has for a missing .md file) rather than raising -
+        _HELP_TOPIC_BY_TREE_KEY in main_window.py is a hand-maintained
+        map that could in principle name a topic not in TOPICS."""
+        for row, (topic_key, _pl, _en) in enumerate(self._topics):
+            if topic_key == key:
+                self.topic_list.setCurrentRow(row)
+                return
+
+
+def load_help_topic_markdown(key: str, lang: str) -> str:
+    """Shared by HelpPanel and AboutDialog (task 5.1's own "about" topic
+    needs the exact same load-a-.md-file mechanism, not a second one) -
+    reads studio/shell/help/<lang>/<key>.md and substitutes `{version}`
+    where present (runtime/epw_os/gui/widgets/about_dialog.py's own
+    HelpContentStore.load_topic_markdown() does the same for its "about"
+    topic - mirrored here, not reinvented). A stray brace in some future
+    topic's own prose would make str.format() raise - caught and
+    returned unformatted rather than crashing the whole panel over it."""
+    help_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "help")
+    path = os.path.join(help_dir, lang, f"{key}.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return f"*(brak pliku pomocy: {path})*"
+    try:
+        from studio.shell.version import STUDIO_VERSION
+        return text.format(version=STUDIO_VERSION)
+    except (KeyError, IndexError):
+        return text
+
+
+class AboutDialog(QDialog):
+    """"Pomoc → O programie" (task 5.1) - same structure as runtime/
+    epw_os/gui/widgets/about_dialog.py's own AboutDialog (read before
+    writing this one, per the task's own instruction): logo, bold app
+    name, version line, a scrollable Markdown body (the "about" help
+    topic - same load_help_topic_markdown() HelpPanel itself uses, not
+    a second mechanism), a Close button. Logo is the REAL, full
+    runtime/epw_os/resources/about_logo.png (read-only) at the same
+    scale-down-never-up, null-safe stance that dialog already
+    established - not the cropped "EPW" plaque studio/shell/identity/
+    uses for the app/file icons (those are small-size derivatives;
+    this dialog has room for the real thing, same as runtime's own)."""
+
+    _LOGO_MAX_WIDTH = 320
+    _LOGO_MAX_HEIGHT = 160
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("about.title"))
+        self.setModal(True)
+        self.setMinimumSize(420, 480)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
+
+        logo_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "runtime", "epw_os", "resources", "about_logo.png",
+        )
+        pixmap = QPixmap(logo_path) if os.path.isfile(logo_path) else None
+        if pixmap is not None and not pixmap.isNull():
+            logo_label = QLabel()
+            scaled = pixmap.scaled(
+                self._LOGO_MAX_WIDTH, self._LOGO_MAX_HEIGHT,
+                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation,
+            )
+            logo_label.setPixmap(scaled)
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(logo_label)
+        # else: no logo file (or unreadable) - the dialog still works,
+        # just without the image, same as runtime's own.
+
+        header = QLabel(tr("app.title"))
+        f = header.font()
+        f.setBold(True)
+        f.setPointSize(f.pointSize() + 4)
+        header.setFont(f)
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        from studio.shell.version import STUDIO_VERSION
+        version_label = QLabel(f"{tr('about.version_label')}: {STUDIO_VERSION}")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        from studio.shell.i18n import get_language
+        text_browser = QTextBrowser()
+        text_browser.setOpenExternalLinks(False)
+        text_browser.setMarkdown(load_help_topic_markdown("about", get_language()))
+        layout.addWidget(text_browser, 1)
+
+        close_button = QPushButton(tr("about.btn_close"))
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
 
 def _slug(text: str) -> str:
