@@ -131,6 +131,10 @@ export const TERMINAL_HOVER_MARGIN = TERMINAL_RADIUS * 3;   // padding around a 
 export const TERMINAL_HIGHLIGHT_COLOR = COLOR_LAMP_LIT;     // reused, not a new literal - high-contrast against the normal COLOR_WATER fill
 export const WIRE_NEARBY_TERMINAL_RADIUS = GRID_SIZE * 4;   // while drawing: terminals within this world distance stay visible without individual hover ("co najmniej cztery oczka")
 export const WIRE_TERMINAL_SNAP_DISTANCE = GRID_SIZE / 2;   // magnetism: a wire endpoint snaps to a terminal closer than this ("polowa oczka siatki")
+// feat/tank-language-and-media commit 1: a terminal of a medium
+// incompatible with the wire currently being drawn - reused, not a new
+// literal, same convention as TERMINAL_HIGHLIGHT_COLOR above.
+export const TERMINAL_DIMMED_COLOR = COLOR_DE_ENERGIZED;
 
 // ---- Wire collision / obstacle-avoidance routing (feat/wire-routing-
 // around-obstacles commit 1/2) ------------------------------------------
@@ -295,29 +299,29 @@ export const SITE_CONNECTOR_WIDTH = 6;         // halogen's own connecting bar
 // for the same reason the eleven above are: GRANICE's "every color
 // from ScadaTheme, never hand-written in the component" applies to
 // these exactly as much as to the named ones.
-export const SITE_BRICK_DIM: SiteShadeTriad = { base: '#8C6050', light: '#B08878', dark: '#5C3828' }; // dom's own roof, WYLACZONY
+export const SITE_BRICK_DIM: SiteShadeTriad = { base: '#8C6050', light: '#B08878', dark: '#5C3828' }; // dom's own roof, OFF
 export const SITE_WOOD: SiteShadeTriad = { base: '#8C6038', light: '#B08050', dark: '#5C3820' };      // dom's own door
 export const SITE_CHIMNEY: SiteShadeTriad = { base: '#909090', light: '#C0C0C0', dark: '#585858' };   // dom's own chimney
 export const SITE_METAL_TEXTURE = '#707070';   // magazyn's own corrugated-wall cladding lines
 export const SITE_PANEL_TEXTURE = '#404448';   // magazyn's own rolling-door panel lines
-export const SITE_WATER_DIM: SiteShadeTriad = { base: '#5C6470', light: '#8C94A0', dark: '#3C4450' }; // oczyszczalnia's own chamber, WYLACZONY
+export const SITE_WATER_DIM: SiteShadeTriad = { base: '#5C6470', light: '#8C94A0', dark: '#3C4450' }; // oczyszczalnia's own chamber, OFF
 export const SITE_RIB_LINE = '#606060';        // studzienka's own radial ribbing
 export const SITE_CROSSBAR_HIGHLIGHT = '#B0B0B0'; // slup's own crossbar highlight line
-export const SITE_RED_DIM: SiteShadeTriad = { base: '#8C3838', light: '#B06060', dark: '#5C2020' }; // kogut's own dome, WYLACZONY
-export const SITE_RED_DIM_HIGHLIGHT = '#A05858'; // kogut's own highlight arc, WYLACZONY
+export const SITE_RED_DIM: SiteShadeTriad = { base: '#8C3838', light: '#B06060', dark: '#5C2020' }; // kogut's own dome, OFF
+export const SITE_RED_DIM_HIGHLIGHT = '#A05858'; // kogut's own highlight arc, OFF
 export const SITE_ALARM_GLOW = '#FF3030';      // kogut's own glow tint (distinct from SITE_RED)
-export const SITE_ALARM_RAY = '#FF4040';       // kogut's own radiating alarm rays, ZALACZONY
-export const SITE_ALARM_RAY_WIDTH = 5;         // kogut's own radiating alarm rays, ZALACZONY
-export const SITE_HORN_LIT: SiteShadeTriad = { base: '#D8D8D0', light: '#F8F8F0', dark: '#A0A098' }; // tuba's own horn, ZALACZONY
+export const SITE_ALARM_RAY = '#FF4040';       // kogut's own radiating alarm rays, ON
+export const SITE_ALARM_RAY_WIDTH = 5;         // kogut's own radiating alarm rays, ON
+export const SITE_HORN_LIT: SiteShadeTriad = { base: '#D8D8D0', light: '#F8F8F0', dark: '#A0A098' }; // tuba's own horn, ON
 export const SITE_WATER_SPRAY = '#60A0FF';     // slupek_podl's own watering arcs
 
 // Commit 4 (trawa/droga - the two SURFACE objects): trawa's own
-// WYLACZONY (yellowed) grass triad - docs/EPW_rysunki_referencja.py's
+// OFF (yellowed) grass triad - docs/EPW_rysunki_referencja.py's
 // own trawa(on): `g = GRASS if on else sh('#8C9440','#B0B860','#5C6428')`.
 // droga has no bespoke color of its own at all - it reuses SITE_CONC
 // (Commit 1) for its slab surface and COLOR_WHITE (pre-existing) for
 // its lane-marking dashes, plus one new joint-line color below.
-export const SITE_GRASS_DIM: SiteShadeTriad = { base: '#8C9440', light: '#B0B860', dark: '#5C6428' }; // trawa's own texture+fill, WYLACZONY
+export const SITE_GRASS_DIM: SiteShadeTriad = { base: '#8C9440', light: '#B0B860', dark: '#5C6428' }; // trawa's own texture+fill, OFF
 export const SITE_ROAD_JOINT = '#A0A098';      // droga's own expansion-joint lines and center line
 
 // feat/water-management commit 4 - docs/EPW_gospodarka_wodna_

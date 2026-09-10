@@ -1,8 +1,8 @@
 // feat/site-objects-2d commit 2 - "3. Brama przesuwna" from
 // docs/EPW_rysunki_referencja.py's own brama(state). Rail, two posts,
 // a sliding leaf with vertical slats, a motor at one post, a status
-// lamp matching the leaf's own color. Three states: ZAMKNIETA (leaf
-// full width, red), W_RUCHU (half width, yellow), OTWARTA (almost no
+// lamp matching the leaf's own color. Three states: CLOSED (leaf
+// full width, red), MOVING (half width, yellow), OPEN (almost no
 // leaf visible, green) - the reference's own state names, used
 // verbatim as this object's own state strings (its dict keys are
 // exactly these three, not booleans the way every other site object's
@@ -19,15 +19,15 @@ import {
   SITE_BAND_WIDTH_NARROW, SITE_TEXTURE_LINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type GateState = 'ZAMKNIETA' | 'W_RUCHU' | 'OTWARTA';
+export type GateState = 'CLOSED' | 'MOVING' | 'OPEN';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const GATE_STATES: GateState[] = ['ZAMKNIETA', 'W_RUCHU', 'OTWARTA'];
+export const GATE_STATES: GateState[] = ['CLOSED', 'MOVING', 'OPEN'];
 
-const FRACTION_BY_STATE: Record<GateState, number> = { ZAMKNIETA: 1.0, W_RUCHU: 0.5, OTWARTA: 0.08 };
-const COLOR_BY_STATE: Record<GateState, SiteShadeTriad> = { ZAMKNIETA: SITE_RED, W_RUCHU: SITE_YELL, OTWARTA: SITE_GREEN };
+const FRACTION_BY_STATE: Record<GateState, number> = { CLOSED: 1.0, MOVING: 0.5, OPEN: 0.08 };
+const COLOR_BY_STATE: Record<GateState, SiteShadeTriad> = { CLOSED: SITE_RED, MOVING: SITE_YELL, OPEN: SITE_GREEN };
 
 export const SlidingGateSymbol: React.FC<SymbolProps> = ({ state: rawState }) => {
-  const state = resolveSiteState(rawState, GATE_STATES, 'ZAMKNIETA');
+  const state = resolveSiteState(rawState, GATE_STATES, 'CLOSED');
   const width = Math.floor(110 * FRACTION_BY_STATE[state]);
   const color = COLOR_BY_STATE[state];
 

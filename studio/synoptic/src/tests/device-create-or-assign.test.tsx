@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 // fix/inline-device-creation commit 3: double-clicking a device-less
 // symbol opens DeviceFormDialog's own "create or assign" mode -
-// UTWORZ NOWY (default, the ordinary add form with behavior/id/
+// CREATE NEW (default, the ordinary add form with behavior/id/
 // designation suggested from the symbol's own type) or PRZYPISZ
 // ISTNIEJACY (a searchable, pre-filtered list of project devices).
 // Mandatory tests 9-18.
@@ -40,21 +40,21 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
   };
 }
 
-// fix/device-form-polish commit 2: Zapisz is aria-disabled now, not
+// fix/device-form-polish commit 2: Save is aria-disabled now, not
 // natively disabled - see device-form-dialog-switched.test.tsx's own
 // copy of this helper for the full reasoning.
 function isSaveDisabled(): boolean {
-  return screen.getByRole('button', { name: 'Zapisz' }).getAttribute('aria-disabled') === 'true';
+  return screen.getByRole('button', { name: 'Save' }).getAttribute('aria-disabled') === 'true';
 }
 
 function resetStore() {
   useStore.setState({
-    objects: [], devices: [], messages: [], locations: [{ code: 'KOT', description: 'Kotlownia' }], cards: [],
+    objects: [], devices: [], messages: [], locations: [{ code: 'KOT', description: 'Boiler room' }], cards: [],
     deviceFormRequest: null, deviceCreateOrAssignRequest: null, isDrawingConnection: false
   });
 }
 
-describe('9. double-click on a device-less symbol opens UTWORZ NOWY mode by default', () => {
+describe('9. double-click on a device-less symbol opens CREATE NEW mode by default', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
@@ -68,22 +68,22 @@ describe('9. double-click on a device-less symbol opens UTWORZ NOWY mode by defa
     expect(useStore.getState().messages).toEqual([]);
   });
 
-  it('DeviceFormDialog renders in UTWORZ NOWY mode by default, with the mode switcher visible and the header showing where it was opened from', () => {
+  it('DeviceFormDialog renders in CREATE NEW mode by default, with the mode switcher visible and the header showing where it was opened from', () => {
     render(
       <DeviceFormDialog
         mode="add"
-        sourceContext="Schemat, symbol -Q1"
+        sourceContext="Diagram, symbol -Q1"
         creationContext={{ symbolType: 'electrical.disconnect_switch', onAssignExisting: () => {} }}
         onSave={() => {}}
         onCancel={() => {}}
       />
     );
-    expect(screen.getByText('Utworz nowy')).toBeTruthy();
-    expect(screen.getByText('Przypisz istniejacy')).toBeTruthy();
-    expect(screen.getByText('Schemat, symbol -Q1')).toBeTruthy();
-    // UTWORZ NOWY's own body (the ordinary form) is showing, not the
+    expect(screen.getByText('Create New')).toBeTruthy();
+    expect(screen.getByText('Assign Existing')).toBeTruthy();
+    expect(screen.getByText('Diagram, symbol -Q1')).toBeTruthy();
+    // CREATE NEW's own body (the ordinary form) is showing, not the
     // assign list's search box.
-    expect(screen.queryByPlaceholderText('Szukaj po id, oznaczeniu lub nazwie...')).toBeNull();
+    expect(screen.queryByPlaceholderText('Search by id, designation or name...')).toBeNull();
     expect(screen.getByPlaceholderText('-K1')).toBeTruthy();
   });
 });
@@ -99,7 +99,7 @@ describe('10/11/12. behavior suggestion from the symbol\'s own type (SymbolBehav
     expect(suggestBehaviorForSymbolType('instrumentation.temperature_sensor')).toBe('MEASURED');
   });
 
-  it('12: a symbol outside the mapping suggests nothing, and the form leaves Zachowanie unchosen (Save disabled) until the user picks one', () => {
+  it('12: a symbol outside the mapping suggests nothing, and the form leaves Behaviour unchosen (Save disabled) until the user picks one', () => {
     expect(suggestBehaviorForSymbolType('water.tank')).toBeUndefined();
 
     resetStore();
@@ -111,7 +111,7 @@ describe('10/11/12. behavior suggestion from the symbol\'s own type (SymbolBehav
         onCancel={() => {}}
       />
     );
-    expect(screen.getByText('-- wybierz --')).toBeTruthy();
+    expect(screen.getByText('-- select --')).toBeTruthy();
     expect(isSaveDisabled()).toBe(true);
   });
 });
@@ -140,7 +140,7 @@ describe('13/14. next-free-id suggestion (DeviceCreationSuggestions.ts)', () => 
   });
 });
 
-describe('15. saving in UTWORZ NOWY creates the device AND assigns it to the originating symbol', () => {
+describe('15. saving in CREATE NEW creates the device AND assigns it to the originating symbol', () => {
   it('createAndAssignDevice calls addDevice then updateObject then saveHistory, one Messages confirmation', () => {
     const calls: string[] = [];
     const store = {
@@ -160,7 +160,7 @@ describe('15. saving in UTWORZ NOWY creates the device AND assigns it to the ori
   });
 });
 
-describe('16. PRZYPISZ ISTNIEJACY assigns the chosen device without creating a new one', () => {
+describe('16. ASSIGN EXISTING assigns the chosen device without creating a new one', () => {
   it('assignExistingDeviceById never calls addDevice, only updateObject + saveHistory + a Messages confirmation', () => {
     const calls: string[] = [];
     const store = {
@@ -185,7 +185,7 @@ describe('16. PRZYPISZ ISTNIEJACY assigns the chosen device without creating a n
   });
 });
 
-describe('17. search in PRZYPISZ ISTNIEJACY filters by id, designation and name', () => {
+describe('17. search in ASSIGN EXISTING filters by id, designation and name', () => {
   afterEach(cleanup);
 
   it('typing a designation shows only the matching device', () => {
@@ -198,7 +198,7 @@ describe('17. search in PRZYPISZ ISTNIEJACY filters by id, designation and name'
     expect(screen.getByText('KOT_KMG1')).toBeTruthy();
     expect(screen.getByText('KOT_KMG2')).toBeTruthy();
 
-    fireEvent.change(screen.getByPlaceholderText('Szukaj po id, oznaczeniu lub nazwie...'), { target: { value: '-K2' } });
+    fireEvent.change(screen.getByPlaceholderText('Search by id, designation or name...'), { target: { value: '-K2' } });
 
     expect(screen.queryByText('KOT_KMG1')).toBeNull();
     expect(screen.getByText('KOT_KMG2')).toBeTruthy();

@@ -48,7 +48,7 @@ export const GroupCommandElementNode: React.FC<GroupCommandElementNodeProps> = (
     const buttonName = el.label || el.id;
     issues.forEach(issue => {
       useStore.getState().addMessage(
-        `[WARNING] Przycisk grupowy "${buttonName}": aparat "${issue.deviceId}" nie znaleziony lub nie jest typu SWITCHED`
+        `[WARNING] Group Command Button "${buttonName}": device "${issue.deviceId}" not found or not of SWITCHED kind`
       );
     });
   }, [el, devices]);
@@ -74,7 +74,7 @@ export const GroupCommandElementNode: React.FC<GroupCommandElementNodeProps> = (
         y={0}
         width={el.width}
         height={height}
-        text={el.label || '(brak opisu)'}
+        text={el.label || '(no description)'}
         fontSize={FONT_SIZE_BASE}
         fontFamily={FONT_UI}
         fill={COLOR_TEXT}

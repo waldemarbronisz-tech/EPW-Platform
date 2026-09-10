@@ -36,12 +36,12 @@ export const ScadaStylePreview: React.FC<ScadaStylePreviewProps> = ({ onClose })
   const cells: PreviewCell[] = [];
 
   LOAD_SWITCH_STATES.forEach(state => {
-    cells.push({ title: `Lacznik sterowany - ${state}`, render: () => <LoadSwitchSymbol state={state} /> });
+    cells.push({ title: `Controlled Switch - ${state}`, render: () => <LoadSwitchSymbol state={state} /> });
   });
 
   BUSBAR_STATES.forEach(state => {
     cells.push({
-      title: `Szyna zbiorcza - ${state}`,
+      title: `Busbar - ${state}`,
       render: () => (
         <Group y={60}>
           <BusbarSymbol width={140} state={state} />
@@ -50,33 +50,33 @@ export const ScadaStylePreview: React.FC<ScadaStylePreviewProps> = ({ onClose })
     });
   });
 
-  cells.push({ title: 'Wezel przewodu', render: () => <WireNodeSymbol /> });
+  cells.push({ title: 'Wire Node', render: () => <WireNodeSymbol /> });
 
   cells.push({
-    title: 'Ramka opisowa',
+    title: 'Label Frame',
     render: () => (
       <Group y={60}>
-        <LabelFrameSymbol title="ZASILANIE" description="230V AC" />
+        <LabelFrameSymbol title="POWER SUPPLY" description="230V AC" />
       </Group>
     )
   });
 
   MOTOR_STATES.forEach(state => {
-    cells.push({ title: `Silnik - ${state}`, render: () => <MotorSymbol state={state} /> });
+    cells.push({ title: `Motor - ${state}`, render: () => <MotorSymbol state={state} /> });
   });
 
   PILOT_LAMP_STATES.forEach(state => {
-    cells.push({ title: `Lampka - ${state}`, render: () => <PilotLampSymbol state={state} /> });
+    cells.push({ title: `Pilot Lamp - ${state}`, render: () => <PilotLampSymbol state={state} /> });
   });
 
   SOCKET_STATES.forEach(state => {
-    cells.push({ title: `Gniazdo - ${state}`, render: () => <SocketSymbol state={state} /> });
+    cells.push({ title: `Socket - ${state}`, render: () => <SocketSymbol state={state} /> });
   });
 
   (['small', 'large'] as IndicatorDiodeSize[]).forEach(size => {
     INDICATOR_DIODE_STATES.forEach(state => {
       cells.push({
-        title: `Dioda (${size}) - ${state}`,
+        title: `Diode (${size}) - ${state}`,
         render: () => (
           <Group y={60}>
             <IndicatorDiodeSymbol state={state} size={size} />
@@ -87,7 +87,7 @@ export const ScadaStylePreview: React.FC<ScadaStylePreviewProps> = ({ onClose })
   });
 
   cells.push({
-    title: 'Miernik',
+    title: 'Meter',
     render: () => (
       <Group y={30}>
         <MeterSymbol
@@ -118,7 +118,7 @@ export const ScadaStylePreview: React.FC<ScadaStylePreviewProps> = ({ onClose })
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: '#2c2c2c', color: COLOR_WHITE, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <span>SCADA Style Preview - 9 symboli, wszystkie stany</span>
+        <span>SCADA Style Preview - 9 symbols, all states</span>
         <button onClick={onClose}>Close</button>
       </div>
       <div style={{ flex: 1, overflow: 'auto', background: '#1a1a1a' }}>

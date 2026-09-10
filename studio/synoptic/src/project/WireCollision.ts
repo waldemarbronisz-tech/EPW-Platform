@@ -129,25 +129,25 @@ export function getObstacles(screen: Screen, excludeIds: string[] = []): Obstacl
 
   (screen.meters || []).forEach(m => {
     const height = computePanelHeight({ title: m.title, fontSize: m.fontSize, rowCount: m.rows.length });
-    pushShrunk(`meter:${m.id}`, m.title || 'Miernik', { x: m.x, y: m.y, width: m.width, height });
+    pushShrunk(`meter:${m.id}`, m.title || 'Meter', { x: m.x, y: m.y, width: m.width, height });
   });
 
   (screen.signalPanels || []).forEach(p => {
     const height = computePanelHeight({ title: p.title, fontSize: p.fontSize, rowCount: p.rows.length });
-    pushShrunk(`signalPanel:${p.id}`, p.title || 'Panel sygnalizacyjny', { x: p.x, y: p.y, width: p.width, height });
+    pushShrunk(`signalPanel:${p.id}`, p.title || 'Signal Panel', { x: p.x, y: p.y, width: p.width, height });
   });
 
   (screen.frames || []).forEach(f => {
-    pushShrunk(`frame:${f.id}`, f.title || (f.variant === 'BUILDING' ? 'Budynek' : 'Rama'), { x: f.x, y: f.y, width: f.width, height: f.height });
+    pushShrunk(`frame:${f.id}`, f.title || (f.variant === 'BUILDING' ? 'Building' : 'Frame'), { x: f.x, y: f.y, width: f.width, height: f.height });
   });
 
   (screen.groupCommands || []).forEach(g => {
-    pushShrunk(`groupCommand:${g.id}`, g.label || 'Przycisk komend grupowych', { x: g.x, y: g.y, width: g.width, height: computeGroupCommandHeight() });
+    pushShrunk(`groupCommand:${g.id}`, g.label || 'Group Command Button', { x: g.x, y: g.y, width: g.width, height: computeGroupCommandHeight() });
   });
 
   (screen.setpointPanels || []).forEach(p => {
     const height = computePanelHeight({ title: p.title, fontSize: p.fontSize, rowCount: p.rows.length });
-    pushShrunk(`setpointPanel:${p.id}`, p.title || 'Panel nastaw', { x: p.x, y: p.y, width: p.width, height });
+    pushShrunk(`setpointPanel:${p.id}`, p.title || 'Setpoint Panel', { x: p.x, y: p.y, width: p.width, height });
   });
 
   return obstacles;

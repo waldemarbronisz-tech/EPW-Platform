@@ -104,8 +104,8 @@ describe('30. a closed valve reads active on one side, inactive on the other', (
 });
 
 describe('31. a tank with a nonzero level is an active source on its own outflow', () => {
-  it('WYSOKI (88%) tank, wire on ODPLYW, nothing else feeding it - the net is still ACTIVE, purely from the tank itself', () => {
-    const t = tank('t1', 0, 'WYSOKI');
+  it('HIGH (88%) tank, wire on ODPLYW, nothing else feeding it - the net is still ACTIVE, purely from the tank itself', () => {
+    const t = tank('t1', 0, 'HIGH');
     const odplyw = terminalPos(t, 'ODPLYW');
     const wire = makeWire('w1', [odplyw, { x: odplyw.x + 32, y: odplyw.y }]);
     const nets = resolveNets([wire], [t]);
@@ -120,15 +120,15 @@ describe('32. a tank at level zero is not a source', () => {
   });
 
   it('every real, nonzero state IS live - the rule only ever gates on the water level actually being zero', () => {
-    for (const s of ['NISKI', 'SREDNI', 'WYSOKI']) {
+    for (const s of ['LOW', 'MEDIUM', 'HIGH']) {
       expect(isTankOutflowLive(tankPercentFromState(s))).toBe(true);
     }
   });
 });
 
 describe('33. the net downstream of a full tank is active - the most important test: the gap flagged after the previous task, now closed', () => {
-  it('a wire from a WYSOKI tank\'s ODPLYW to an ordinary valve\'s WLOT: the whole net (both terminals, the wire itself) reads ACTIVE', () => {
-    const t = tank('t1', 0, 'WYSOKI');
+  it('a wire from a HIGH tank\'s ODPLYW to an ordinary valve\'s WLOT: the whole net (both terminals, the wire itself) reads ACTIVE', () => {
+    const t = tank('t1', 0, 'HIGH');
     const valve = checkValve('v1', 400);
     const wire = makeWire('w1', elbowPath(terminalPos(t, 'ODPLYW'), terminalPos(valve, 'WLOT')));
     const nets = resolveNets([wire], [t, valve]);
@@ -141,8 +141,8 @@ describe('33. the net downstream of a full tank is active - the most important t
 });
 
 describe('34. the tank\'s own inflow takes its state from the inflow-side net, never from the water level', () => {
-  it('a full (WYSOKI) tank\'s DOPLYW, wired to nothing else active, still reads INACTIVE - it is never a source itself', () => {
-    const t = tank('t1', 0, 'WYSOKI');
+  it('a full (HIGH) tank\'s DOPLYW, wired to nothing else active, still reads INACTIVE - it is never a source itself', () => {
+    const t = tank('t1', 0, 'HIGH');
     const doplyw = terminalPos(t, 'DOPLYW');
     const wire = makeWire('w1', [doplyw, { x: doplyw.x - 32, y: doplyw.y }]); // a dangling wire, no other source touches it
     const states = getTerminalNetStates([wire], [t]);
@@ -150,7 +150,7 @@ describe('34. the tank\'s own inflow takes its state from the inflow-side net, n
   });
 
   it('but the SAME DOPLYW terminal reads ACTIVE once a real source feeds it - proving it genuinely reads the inflow net, not a hardcoded value', () => {
-    const t = tank('t1', 0, 'WYSOKI');
+    const t = tank('t1', 0, 'HIGH');
     const source = boundarySource('s1', -600);
     const wire = makeWire('w1', elbowPath(terminalPos(source, 'T1'), terminalPos(t, 'DOPLYW')));
     const states = getTerminalNetStates([wire], [t, source]);

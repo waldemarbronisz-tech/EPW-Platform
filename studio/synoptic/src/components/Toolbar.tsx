@@ -68,7 +68,7 @@ export const Toolbar: React.FC = () => {
           dragged into position right away, same as a pasted element. */}
       <div className="toolbar-group">
         <button
-          title="Dodaj Miernik"
+          title="Add Meter"
           onClick={() => {
             addMeter({ x: 160, y: 160, width: 200, fontSize: METER_DEFAULT_FONT_SIZE, rows: [] });
             const newest = useStore.getState().meters[useStore.getState().meters.length - 1];
@@ -83,7 +83,7 @@ export const Toolbar: React.FC = () => {
           same reasoning for having a toolbar button at all. */}
       <div className="toolbar-group">
         <button
-          title="Dodaj Panel Sygnalizacyjny"
+          title="Add Signal Panel"
           onClick={() => {
             addSignalPanel({ x: 160, y: 160, width: 160, fontSize: SIGNAL_PANEL_DEFAULT_FONT_SIZE, rows: [] });
             const newest = useStore.getState().signalPanels[useStore.getState().signalPanels.length - 1];
@@ -101,9 +101,9 @@ export const Toolbar: React.FC = () => {
           Properties. */}
       <div className="toolbar-group">
         <button
-          title="Dodaj Przycisk Grupowy"
+          title="Add Group Command Button"
           onClick={() => {
-            addGroupCommand({ x: 160, y: 160, width: GROUP_COMMAND_DEFAULT_WIDTH, label: 'Nowy przycisk', command: 'CLOSE', deviceIds: [] });
+            addGroupCommand({ x: 160, y: 160, width: GROUP_COMMAND_DEFAULT_WIDTH, label: 'New button', command: 'CLOSE', deviceIds: [] });
             const newest = useStore.getState().groupCommands[useStore.getState().groupCommands.length - 1];
             if (newest) selectGroupCommands([newest.id], false);
           }}
@@ -117,7 +117,7 @@ export const Toolbar: React.FC = () => {
           see elements/SetpointElement.ts. */}
       <div className="toolbar-group">
         <button
-          title="Dodaj Panel Nastaw"
+          title="Add Setpoint Panel"
           onClick={() => {
             addSetpointPanel({ x: 160, y: 160, width: 200, fontSize: SETPOINT_DEFAULT_FONT_SIZE, rows: [] });
             const newest = useStore.getState().setpointPanels[useStore.getState().setpointPanels.length - 1];
@@ -132,7 +132,7 @@ export const Toolbar: React.FC = () => {
 
       <div className="toolbar-group">
         <button
-          title="Rysuj połączenie"
+          title="Draw Wire"
           onClick={() => setDrawingMode(!isDrawingConnection)}
           style={{ backgroundColor: isDrawingConnection ? '#3498db' : 'transparent' }}
         >
@@ -159,14 +159,14 @@ export const Toolbar: React.FC = () => {
           variant without needing to turn the tool off first. */}
       <div className="toolbar-group">
         <button
-          title="Rysuj ramkę (Shift = tryb ciągły)"
+          title="Draw Frame (Shift = continuous mode)"
           onClick={(e) => setDrawingFrameMode(!(isDrawingFrame && drawingFrameVariant === 'PLAIN'), 'PLAIN', e.shiftKey)}
           style={{ backgroundColor: isDrawingFrame && drawingFrameVariant === 'PLAIN' ? COLOR_RUN : 'transparent', color: isDrawingFrame && drawingFrameVariant === 'PLAIN' ? COLOR_WHITE : undefined }}
         >
           <Square size={16} />
         </button>
         <button
-          title="Rysuj budynek (Shift = tryb ciągły)"
+          title="Draw Building (Shift = continuous mode)"
           onClick={(e) => setDrawingFrameMode(!(isDrawingFrame && drawingFrameVariant === 'BUILDING'), 'BUILDING', e.shiftKey)}
           style={{ backgroundColor: isDrawingFrame && drawingFrameVariant === 'BUILDING' ? COLOR_RUN : 'transparent', color: isDrawingFrame && drawingFrameVariant === 'BUILDING' ? COLOR_WHITE : undefined }}
         >
@@ -205,7 +205,7 @@ export const Toolbar: React.FC = () => {
           N
         </button>
         <button
-          title="Bus (szyna / kolektor)"
+          title="Bus (busbar / manifold)"
           onClick={() => setDrawingStyle('BUS')}
           style={{ backgroundColor: drawingStyle === 'BUS' ? COLOR_RUN : 'transparent', color: drawingStyle === 'BUS' ? COLOR_WHITE : undefined }}
         >
@@ -221,18 +221,18 @@ export const Toolbar: React.FC = () => {
           convention as the medium/style selectors right above. */}
       <div className="toolbar-group">
         <button
-          title="Prosto (uzytkownik sam stawia zalamania)"
+          title="Direct (the user places every bend by hand)"
           onClick={() => setWireRoutingMode('STRAIGHT')}
           style={{ backgroundColor: wireRoutingMode === 'STRAIGHT' ? COLOR_RUN : 'transparent', color: wireRoutingMode === 'STRAIGHT' ? COLOR_WHITE : undefined }}
         >
-          P
+          D
         </button>
         <button
-          title="Omijaj (trasa liczona automatycznie wokol przeszkod)"
+          title="Avoid (route computed automatically around obstacles)"
           onClick={() => setWireRoutingMode('AVOID')}
           style={{ backgroundColor: wireRoutingMode === 'AVOID' ? COLOR_RUN : 'transparent', color: wireRoutingMode === 'AVOID' ? COLOR_WHITE : undefined }}
         >
-          O
+          A
         </button>
       </div>
 

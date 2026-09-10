@@ -61,10 +61,15 @@ export function getNearbyTerminals(objects: SynopticObject[], cursor: { x: numbe
  * cell, this task's own spec) - strictly less than, per that spec's own
  * wording ("mniejsza niz polowa oczka siatki").
  */
-export function findNearestTerminal(objects: SynopticObject[], cursor: { x: number; y: number }, maxDistance: number = WIRE_TERMINAL_SNAP_DISTANCE): WorldTerminal | null {
+export function findNearestTerminal(objects: SynopticObject[], cursor: { x: number; y: number }, maxDistance: number = WIRE_TERMINAL_SNAP_DISTANCE, requiredMedium?: WorldTerminal['medium']): WorldTerminal | null {
   let best: WorldTerminal | null = null;
   let bestDist = Infinity;
   for (const t of getAllWorldTerminals(objects)) {
+    // feat/tank-language-and-media commit 1: excludes every terminal of
+    // a different medium from this search entirely - while a wire is
+    // being drawn, a terminal of another medium never highlights and
+    // never attracts the live preview/magnetism (usterka a).
+    if (requiredMedium && t.medium !== requiredMedium) continue;
     const d = distance(t, cursor);
     if (d < maxDistance && d < bestDist) {
       bestDist = d;
@@ -83,8 +88,15 @@ export function findNearestTerminal(objects: SynopticObject[], cursor: { x: numb
  * live preview) and this file's own tests - not two copies of the same
  * rule.
  */
-export function snapToTerminalOrGrid(worldX: number, worldY: number, objects: SynopticObject[]): WirePoint {
-  const nearest = findNearestTerminal(objects, { x: worldX, y: worldY });
+export function snapToTerminalOrGrid(worldX: number, worldY: number, objects: SynopticObject[], drawnMedium?: WorldTerminal['medium']): WirePoint {
+  // feat/tank-language-and-media commit 1: `drawnMedium`, passed only
+  // while the wire tool is actually armed, makes this magnetism
+  // medium-aware - see findNearestTerminal's own comment above. A
+  // terminal of a different medium still sits on a grid node like any
+  // other, so a precise-enough click can still land exactly on it
+  // (falling through to the plain grid-snap below); it simply never
+  // gets pulled toward one the way a same-medium terminal does.
+  const nearest = findNearestTerminal(objects, { x: worldX, y: worldY }, WIRE_TERMINAL_SNAP_DISTANCE, drawnMedium);
   if (nearest) return { x: nearest.x, y: nearest.y };
   return snapPointToGrid(worldX, worldY);
 }

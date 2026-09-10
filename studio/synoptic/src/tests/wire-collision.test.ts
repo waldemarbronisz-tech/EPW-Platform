@@ -21,7 +21,7 @@ function breaker(overrides: Partial<SynopticObject> = {}): SynopticObject {
 
 function grass(overrides: Partial<SynopticObject> = {}): SynopticObject {
   return {
-    id: 'g1', type: 'site.grass', category: 'TEREN',
+    id: 'g1', type: 'site.grass', category: 'SITE',
     x: 100, y: 100, rotation: 0, scaleX: 1, scaleY: 1,
     visible: true, locked: false, layer: 0,
     tag: '', description: '', color: '', fill: '', border: '', text: '', font: '', fontSize: 12,

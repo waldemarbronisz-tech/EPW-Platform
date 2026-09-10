@@ -89,7 +89,7 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
 
   const handleDelete = () => {
     if (!selectedId) return;
-    if (!confirm(`Usunac aparat '${selectedId}'?`)) return;
+    if (!confirm(`Delete device '${selectedId}'?`)) return;
     deleteDevice(selectedId);
     setSelectedId(null);
   };
@@ -150,29 +150,29 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
       <div style={backdropStyle} onClick={onClose} />
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <span>Lista aparatow</span>
-          <button onClick={onClose} title="Zamknij" style={closeButtonStyle}>x</button>
+          <span>Device List</span>
+          <button onClick={onClose} title="Close" style={closeButtonStyle}>x</button>
         </div>
 
         <div style={toolbarStyle}>
           <input
             value={filterText}
             onChange={e => setFilterText(e.target.value)}
-            placeholder="Szukaj..."
+            placeholder="Search..."
             style={{ flex: 1 }}
           />
           <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
-            <option value="">Wszystkie lokalizacje</option>
+            <option value="">All locations</option>
             {locations.map(l => <option key={l.code} value={l.code}>{l.code}</option>)}
           </select>
           <select value={filterBehavior} onChange={e => setFilterBehavior(e.target.value as DeviceBehavior | '')}>
-            <option value="">Wszystkie zachowania</option>
+            <option value="">All behaviours</option>
             {BEHAVIORS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <button onClick={() => setForm({ mode: 'add' })} disabled={locations.length === 0} title={locations.length === 0 ? 'Najpierw dodaj lokalizacje w Rejestrach projektu' : ''}>+ Dodaj</button>
-          <button onClick={handleEdit} disabled={!selectedId}>Edytuj</button>
-          <button onClick={handleDuplicate} disabled={!selectedId}>Duplikuj</button>
-          <button onClick={handleDelete} disabled={!selectedId}>Usun</button>
+          <button onClick={() => setForm({ mode: 'add' })} disabled={locations.length === 0} title={locations.length === 0 ? 'Add a location in Project Registers first' : ''}>+ Add</button>
+          <button onClick={handleEdit} disabled={!selectedId}>Edit</button>
+          <button onClick={handleDuplicate} disabled={!selectedId}>Duplicate</button>
+          <button onClick={handleDelete} disabled={!selectedId}>Delete</button>
         </div>
 
         <div style={bodyStyle}>
@@ -180,13 +180,13 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
             <thead>
               <tr>
                 <th style={thStyle} onClick={() => handleSort('id')}>Id{sortIndicator('id')}</th>
-                <th style={thStyle} onClick={() => handleSort('designation')}>Oznaczenie{sortIndicator('designation')}</th>
-                <th style={thStyle} onClick={() => handleSort('name')}>Nazwa{sortIndicator('name')}</th>
-                <th style={thStyle} onClick={() => handleSort('behavior')}>Zachowanie{sortIndicator('behavior')}</th>
-                <th style={thStyle} onClick={() => handleSort('kind')}>Rodzaj{sortIndicator('kind')}</th>
-                <th style={thStyle}>Wejscia</th>
-                <th style={thStyle}>Wyjscia</th>
-                <th style={thStyle}>Uzycia</th>
+                <th style={thStyle} onClick={() => handleSort('designation')}>Designation{sortIndicator('designation')}</th>
+                <th style={thStyle} onClick={() => handleSort('name')}>Name{sortIndicator('name')}</th>
+                <th style={thStyle} onClick={() => handleSort('behavior')}>Behaviour{sortIndicator('behavior')}</th>
+                <th style={thStyle} onClick={() => handleSort('kind')}>Kind{sortIndicator('kind')}</th>
+                <th style={thStyle}>Inputs</th>
+                <th style={thStyle}>Outputs</th>
+                <th style={thStyle}>Uses</th>
               </tr>
             </thead>
             <tbody>
@@ -206,7 +206,7 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
                       color: invalid ? COLOR_ALARM : undefined
                     }}
                   >
-                    <td style={tdStyle}>{device.id || '(bez id)'}</td>
+                    <td style={tdStyle}>{device.id || '(no id)'}</td>
                     <td style={tdStyle}>{device.designation}</td>
                     <td style={tdStyle}>{device.name}</td>
                     <td style={tdStyle}>{device.behavior}</td>
@@ -215,7 +215,7 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
                     <td style={tdStyle}>{outputs.map(f => f.addr).join(', ')}</td>
                     <td style={tdStyle}>
                       {usageCount > 0 ? (
-                        <button onClick={(e) => { e.stopPropagation(); handleNavigateToUsage(device.id); }} title="Przejdz do pierwszego wystapienia na ekranie">
+                        <button onClick={(e) => { e.stopPropagation(); handleNavigateToUsage(device.id); }} title="Go to first occurrence on screen">
                           {usageCount}
                         </button>
                       ) : 0}
@@ -224,7 +224,7 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
                 );
               })}
               {sorted.length === 0 && (
-                <tr><td style={tdStyle} colSpan={8}>Brak aparatow spelniajacych kryteria.</td></tr>
+                <tr><td style={tdStyle} colSpan={8}>No devices match these criteria.</td></tr>
               )}
             </tbody>
           </table>
@@ -232,9 +232,9 @@ export const DeviceListDialog: React.FC<DeviceListDialogProps> = ({ onClose }) =
 
         <div style={footerStyle}>
           <span style={{ fontSize: `${FONT_SIZE_SMALL}px` }}>
-            Aparaty: {devices.length} | Bledy: {errorDeviceCount} | Kanaly: {usedChannels}/{totalChannels}
+            Devices: {devices.length} | Errors: {errorDeviceCount} | Channels: {usedChannels}/{totalChannels}
           </span>
-          <button onClick={onClose}>Zamknij</button>
+          <button onClick={onClose}>Close</button>
         </div>
       </div>
 

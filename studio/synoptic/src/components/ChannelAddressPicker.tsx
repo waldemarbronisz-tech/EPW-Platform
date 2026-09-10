@@ -65,24 +65,24 @@ export const ChannelAddressPicker: React.FC<ChannelAddressPickerProps> = ({ valu
   };
 
   const addCardButton = (
-    <button type="button" onClick={() => setShowAddCard(true)} title={`Dodaj nowa karte ${expectedKind}`}>+ Karta</button>
+    <button type="button" onClick={() => setShowAddCard(true)} title={`Add a new ${expectedKind} card`}>+ Card</button>
   );
 
   const selects = (
     <>
       <select value={hasValue ? selectedCard : ''} onChange={e => emit(e.target.value, selectedChannel)} style={selectStyle}>
-        {matchingCards.length === 0 && <option value="">(brak kart {expectedKind})</option>}
-        {!hasValue && matchingCards.length > 0 && <option value="">-- wybierz --</option>}
+        {matchingCards.length === 0 && <option value="">(no {expectedKind} cards)</option>}
+        {!hasValue && matchingCards.length > 0 && <option value="">-- select --</option>}
         {matchingCards.map(c => <option key={c.id} value={c.id}>{c.id}</option>)}
       </select>
       <select value={hasValue ? selectedChannel : ''} onChange={e => emit(selectedCard, Number(e.target.value))} style={selectStyle} disabled={!card}>
-        {!hasValue && card && <option value="">-- wybierz --</option>}
+        {!hasValue && card && <option value="">-- select --</option>}
         {card && Array.from({ length: card.channelCount }, (_, i) => i + 1).map(n => {
           const key = `${selectedCard}.${expectedKind}.${n}`;
           const usedBy = occupied.get(key);
           return (
             <option key={n} value={n} disabled={!!usedBy}>
-              {n}{usedBy ? ` (zajety: ${usedBy.deviceId})` : ''}
+              {n}{usedBy ? ` (used by: ${usedBy.deviceId})` : ''}
             </option>
           );
         })}

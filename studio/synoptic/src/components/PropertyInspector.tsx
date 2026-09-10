@@ -328,8 +328,8 @@ export const PropertyInspector: React.FC = () => {
                 // device-bound row opens that device's own form, through
                 // the exact same shared function every other entry point
                 // uses - a manual row (no device) has nothing to open.
-                onDoubleClick={() => row.device && useStore.getState().openDeviceForm(row.device, 'Wiersz miernika')}
-                title={row.device ? 'Dwuklik: otworz formularz tego aparatu' : undefined}
+                onDoubleClick={() => row.device && useStore.getState().openDeviceForm(row.device, 'Meter Row')}
+                title={row.device ? "Double-click: open this device's form" : undefined}
               >
                 <button onClick={() => moveRow(idx, -1)} disabled={idx === 0} style={{ fontSize: UI_SMALL }}>up</button>
                 <button onClick={() => moveRow(idx, 1)} disabled={idx === selectedMeter.rows.length - 1} style={{ fontSize: UI_SMALL }}>down</button>
@@ -475,8 +475,8 @@ export const PropertyInspector: React.FC = () => {
                 style={{ gap: '2px', alignItems: 'center', cursor: row.device ? 'pointer' : undefined }}
                 // feat/device-form-from-canvas commit 2c: same shared
                 // openDeviceForm the meter row's own double-click uses.
-                onDoubleClick={() => row.device && useStore.getState().openDeviceForm(row.device, 'Wiersz panelu sygnalizacyjnego')}
-                title={row.device ? 'Dwuklik: otworz formularz tego aparatu' : undefined}
+                onDoubleClick={() => row.device && useStore.getState().openDeviceForm(row.device, 'Signal Panel Row')}
+                title={row.device ? "Double-click: open this device's form" : undefined}
               >
                 <button onClick={() => moveRow(idx, -1)} disabled={idx === 0} style={{ fontSize: UI_SMALL }}>up</button>
                 <button onClick={() => moveRow(idx, 1)} disabled={idx === selectedSignalPanel.rows.length - 1} style={{ fontSize: UI_SMALL }}>down</button>
@@ -606,25 +606,25 @@ export const PropertyInspector: React.FC = () => {
         <div className="inspector-header">Group Command Properties</div>
         <div className="inspector-content">
           <div className="property-group">
-            <div className="property-group-title">Przycisk grupowy</div>
+            <div className="property-group-title">Group Command Button</div>
             <div className="property-row">
-              <label>Opis (etykieta)</label>
+              <label>Description (label)</label>
               <input
                 type="text"
                 value={selectedGroupCommand.label}
                 onChange={(e) => updateGroupCommand(selectedGroupCommand.id, { label: e.target.value })}
                 onBlur={() => useStore.getState().saveHistory()}
-                placeholder="np. Start wentylatorow"
+                placeholder="e.g. Start fans"
               />
             </div>
             <div className="property-row">
-              <label>Polecenie</label>
+              <label>Command</label>
               <select
                 value={selectedGroupCommand.command}
                 onChange={(e) => { updateGroupCommand(selectedGroupCommand.id, { command: e.target.value as 'CLOSE' | 'OPEN' }); useStore.getState().saveHistory(); }}
               >
-                <option value="CLOSE">CLOSE (zalacz)</option>
-                <option value="OPEN">OPEN (wylacz)</option>
+                <option value="CLOSE">CLOSE (on)</option>
+                <option value="OPEN">OPEN (off)</option>
               </select>
             </div>
             <div className="property-row">
@@ -645,27 +645,27 @@ export const PropertyInspector: React.FC = () => {
 
           <div className="property-group">
             <div className="property-group-title">
-              Aparaty w grupie ({members.length})
+              Devices in Group ({members.length})
               <select
                 style={{ marginLeft: 'auto', fontSize: UI_SMALL }}
                 value=""
                 onChange={(e) => addMember(e.target.value)}
                 disabled={availableToAdd.length === 0}
               >
-                <option value="">+ Dodaj aparat...</option>
+                <option value="">+ Add device...</option>
                 {availableToAdd.map(d => <option key={d.id} value={d.id}>{d.id} ({d.designation})</option>)}
               </select>
             </div>
             {members.map(m => (
               <div className="property-row" key={m.deviceId} style={{ gap: '4px', alignItems: 'center' }}>
                 <span style={{ flex: 1, fontSize: UI_SMALL }}>
-                  {m.deviceId} {m.dangling ? <em>(brak / nie SWITCHED)</em> : `(${m.designation})`}
+                  {m.deviceId} {m.dangling ? <em>(missing / not SWITCHED)</em> : `(${m.designation})`}
                 </span>
                 <button onClick={() => removeMember(m.deviceId)} style={{ fontSize: UI_SMALL }}>x</button>
               </div>
             ))}
             {members.length === 0 && (
-              <div className="property-row"><em>Brak aparatow - uzyj listy powyzej, aby dodac.</em></div>
+              <div className="property-row"><em>No devices - use the list above to add one.</em></div>
             )}
           </div>
 
@@ -675,8 +675,8 @@ export const PropertyInspector: React.FC = () => {
                 const names = getGroupCommandTargetNames(selectedGroupCommand, devices);
                 useStore.getState().addMessage(
                   names.length > 0
-                    ? `[INFO] "${selectedGroupCommand.label || selectedGroupCommand.id}" wyslalby: ${names.join(', ')}`
-                    : `[WARNING] "${selectedGroupCommand.label || selectedGroupCommand.id}" nie ma zadnego prawidlowego aparatu do sterowania`
+                    ? `[INFO] "${selectedGroupCommand.label || selectedGroupCommand.id}" would send to: ${names.join(', ')}`
+                    : `[WARNING] "${selectedGroupCommand.label || selectedGroupCommand.id}" has no valid device to command`
                 );
               }}
             >
@@ -725,7 +725,7 @@ export const PropertyInspector: React.FC = () => {
         <div className="inspector-header">Setpoint Panel Properties</div>
         <div className="inspector-content">
           <div className="property-group">
-            <div className="property-group-title">Panel nastaw</div>
+            <div className="property-group-title">Setpoint Panel</div>
             <div className="property-row">
               <label>Title</label>
               <input
@@ -772,7 +772,7 @@ export const PropertyInspector: React.FC = () => {
                 onChange={(e) => addDeviceRow(e.target.value)}
                 disabled={availableToAdd.length === 0}
               >
-                <option value="">+ Dodaj aparat...</option>
+                <option value="">+ Add device...</option>
                 {availableToAdd.map(d => <option key={d.id} value={d.id}>{d.id} ({d.designation})</option>)}
               </select>
               <button onClick={addManualRow} style={{ fontSize: UI_SMALL }}>+ Manual row</button>
@@ -886,14 +886,14 @@ export const PropertyInspector: React.FC = () => {
             const deviceMissing = !!selectedObj.deviceId && !devices.some(d => d.id === selectedObj.deviceId);
             return (
               <div className="property-row">
-                <label>Aparat</label>
+                <label>Device</label>
                 <select
                   value={selectedObj.deviceId || ''}
                   onChange={handleDeviceChange}
                   style={deviceMissing ? { color: 'var(--scada-alarm)' } : undefined}
                 >
-                  <option value="">(brak)</option>
-                  {deviceMissing && <option value={selectedObj.deviceId}>{selectedObj.deviceId} (nie istnieje)</option>}
+                  <option value="">(none)</option>
+                  {deviceMissing && <option value={selectedObj.deviceId}>{selectedObj.deviceId} (does not exist)</option>}
                   {devices.map(d => <option key={d.id} value={d.id}>{d.id} - {d.designation}</option>)}
                 </select>
                 {/* feat/device-form-from-canvas commit 2a: same shared
@@ -902,10 +902,10 @@ export const PropertyInspector: React.FC = () => {
                 <button
                   onClick={() => useStore.getState().openDeviceForm(selectedObj.deviceId!, `Panel Properties, symbol ${describeObject(selectedObj)}`)}
                   disabled={!selectedObj.deviceId}
-                  title="Otworz formularz tego aparatu"
+                  title="Open this device's form"
                   style={{ fontSize: UI_SMALL }}
                 >
-                  Otworz...
+                  Open...
                 </button>
               </div>
             );

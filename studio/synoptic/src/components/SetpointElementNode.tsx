@@ -70,7 +70,7 @@ export const SetpointElementNode: React.FC<SetpointElementNodeProps> = ({ panel,
     const panelName = panel.title || panel.id;
     issues.forEach(issue => {
       useStore.getState().addMessage(
-        `[WARNING] Panel nastaw "${panelName}", row ${issue.rowIndex + 1}: device "${issue.deviceId}" not found`
+        `[WARNING] Setpoint Panel "${panelName}", row ${issue.rowIndex + 1}: device "${issue.deviceId}" not found`
       );
     });
   }, [panel, devices]);

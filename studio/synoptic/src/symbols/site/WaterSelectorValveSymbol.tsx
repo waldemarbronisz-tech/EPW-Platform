@@ -3,14 +3,14 @@
 // referencja.py's own zawor3sel(pos). Uses the existing SELECTOR
 // behavior unchanged (no contract change at all, per GRANICE) - three
 // positions, three LEDs, a red cross-shaped wedge shown in the body
-// when ZAMKNIETY (both outlet branches read inactive then).
+// when CLOSED (both outlet branches read inactive then).
 //
 // State name: the reference's own Python checks `pos=='ZAMK'` (an
 // abbreviation, purely for brevity in that pattern file) but this
 // task's own prose spells the middle position out in full -
-// "ZAMKNIETY" - matching the same full-word convention every other
-// site object's own states already use (e.g. sliding gate's ZAMKNIETA/
-// OTWARTA). The exposed state string here is 'ZAMKNIETY', not the
+// "CLOSED" - matching the same full-word convention every other
+// site object's own states already use (e.g. sliding gate's CLOSED/
+// OPEN). The exposed state string here is 'CLOSED', not the
 // reference's own shortened 'ZAMK'.
 
 import React from 'react';
@@ -23,9 +23,9 @@ import {
   SITE_LEVER_WIDTH, SITE_LEVER_ARROW_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM
 } from '../../theme/ScadaTheme';
 
-export type WaterSelectorValveState = 'A' | 'ZAMKNIETY' | 'B';
+export type WaterSelectorValveState = 'A' | 'CLOSED' | 'B';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const WATER_SELECTOR_VALVE_STATES: WaterSelectorValveState[] = ['A', 'ZAMKNIETY', 'B'];
+export const WATER_SELECTOR_VALVE_STATES: WaterSelectorValveState[] = ['A', 'CLOSED', 'B'];
 
 // fix/hydraulic-connections commit 5: was 58,54 - see WaterValveSymbol.tsx's
 // own comment on this identical change; every other coordinate here is
@@ -33,10 +33,10 @@ export const WATER_SELECTOR_VALVE_STATES: WaterSelectorValveState[] = ['A', 'ZAM
 const CX = 64, CY = 48;
 
 export const WaterSelectorValveSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const resolved = resolveSiteState(state, WATER_SELECTOR_VALVE_STATES, 'ZAMKNIETY');
+  const resolved = resolveSiteState(state, WATER_SELECTOR_VALVE_STATES, 'CLOSED');
   const isA = resolved === 'A';
   const isB = resolved === 'B';
-  const isClosed = resolved === 'ZAMKNIETY';
+  const isClosed = resolved === 'CLOSED';
   const netState = (id: string) => (terminalNetState?.(id) ?? 'INACTIVE') === 'ACTIVE';
 
   return (

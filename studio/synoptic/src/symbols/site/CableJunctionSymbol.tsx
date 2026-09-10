@@ -20,14 +20,14 @@ import {
   SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type CableJunctionState = 'ZALACZONY' | 'WYLACZONY';
+export type CableJunctionState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const CABLE_JUNCTION_STATES: CableJunctionState[] = ['ZALACZONY', 'WYLACZONY'];
+export const CABLE_JUNCTION_STATES: CableJunctionState[] = ['ON', 'OFF'];
 
 const ROW_Y = [38, 50, 62];
 
 export const CableJunctionSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, CABLE_JUNCTION_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, CABLE_JUNCTION_STATES, 'OFF') === 'ON';
 
   return (
     <Group scaleX={SITE_CANVAS_SCALE} scaleY={SITE_CANVAS_SCALE}>

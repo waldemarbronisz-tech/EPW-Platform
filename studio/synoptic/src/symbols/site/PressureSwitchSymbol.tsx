@@ -13,12 +13,12 @@ import { bandedVRect, bandedCircleLightOnly, statusLed, waterStub } from './Band
 import { resolveSiteState } from './SiteSymbolState';
 import { COLOR_OUTLINE, SITE_GREY, SITE_TANK_WINDOW_BG, SITE_GAUGE_NEEDLE } from '../../theme/ScadaTheme';
 
-export type PressureSwitchState = 'ZALACZONY' | 'WYLACZONY';
+export type PressureSwitchState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const PRESSURE_SWITCH_STATES: PressureSwitchState[] = ['ZALACZONY', 'WYLACZONY'];
+export const PRESSURE_SWITCH_STATES: PressureSwitchState[] = ['ON', 'OFF'];
 
 export const PressureSwitchSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, PRESSURE_SWITCH_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, PRESSURE_SWITCH_STATES, 'OFF') === 'ON';
   const netState = (id: string) => (terminalNetState?.(id) ?? 'INACTIVE') === 'ACTIVE';
   const angle = (on ? -40 : -140) * (Math.PI / 180);
   const needleX = 64 + 10 * Math.cos(angle);

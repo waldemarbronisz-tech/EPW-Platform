@@ -65,8 +65,8 @@ export const MeterWizardDialog: React.FC<MeterWizardDialogProps> = ({ devices, o
       <div style={backdropStyle} onClick={onCancel} />
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <span>Kreator wyboru pomiarow</span>
-          <button onClick={onCancel} title="Anuluj" style={closeButtonStyle}>x</button>
+          <span>Measurement Selection Wizard</span>
+          <button onClick={onCancel} title="Cancel" style={closeButtonStyle}>x</button>
         </div>
 
         <div style={bodyStyle}>
@@ -76,20 +76,20 @@ export const MeterWizardDialog: React.FC<MeterWizardDialogProps> = ({ devices, o
             // the one thing still useful here: a manual row.
             <div style={{ padding: '12px' }}>
               <p>
-                Brak aparatow o zachowaniu MEASURED w liscie aparatow projektu.
-                Najpierw zdefiniuj aparaty pomiarowe, albo dodaj wiersz reczny
-                i wypelnij go wartosciami samodzielnie.
+                No devices with MEASURED behaviour in the project's device list.
+                Define a measurement device first, or add a manual row
+                and fill in the values yourself.
               </p>
               <button onClick={() => { onAddManualRow(); onCancel(); }}>
-                + Dodaj wiersz reczny
+                + Add manual row
               </button>
             </div>
           ) : (
             <>
               <div style={{ padding: '4px 12px' }}>
-                <button onClick={selectAll}>Zaznacz wszystko</button>
+                <button onClick={selectAll}>Select all</button>
                 <span style={{ marginLeft: '8px', fontSize: `${FONT_SIZE_SMALL}px` }}>
-                  Zaznaczono: {selected.size}
+                  Selected: {selected.size}
                 </span>
               </div>
               {groups.map(group => (
@@ -127,8 +127,8 @@ export const MeterWizardDialog: React.FC<MeterWizardDialogProps> = ({ devices, o
                           </label>
                           <span
                             style={{ marginLeft: '6px', cursor: 'pointer' }}
-                            onDoubleClick={() => useStore.getState().openDeviceForm(device.id, 'Kreator wyboru pomiarow')}
-                            title="Dwuklik: otworz formularz tego aparatu"
+                            onDoubleClick={() => useStore.getState().openDeviceForm(device.id, 'Measurement Selection Wizard')}
+                            title="Double-click: open this device's form"
                           >
                             {device.designation} - {device.name}
                           </span>
@@ -144,9 +144,9 @@ export const MeterWizardDialog: React.FC<MeterWizardDialogProps> = ({ devices, o
 
         {groups.length > 0 && (
           <div style={footerStyle}>
-            <button onClick={onCancel}>Anuluj</button>
+            <button onClick={onCancel}>Cancel</button>
             <button onClick={handleConfirm} disabled={selected.size === 0}>
-              Dodaj {selected.size > 0 ? `(${selected.size})` : ''}
+              Add {selected.size > 0 ? `(${selected.size})` : ''}
             </button>
           </div>
         )}

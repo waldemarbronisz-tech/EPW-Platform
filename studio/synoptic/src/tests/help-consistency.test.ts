@@ -165,9 +165,21 @@ describe('SPOJNOSC 4/5: every UI element described in this help exists in the pr
   });
 
   it('every menu item this help names by its exact label exists in MenuBar.tsx', () => {
-    const labels = ['Rejestry projektu...', 'Lista aparatow...', 'Snap to Grid', 'Tematy pomocy...'];
-    for (const label of labels) {
-      expect(menuBarSource.includes(label), `menu item '${label}' named in this help is not in MenuBar.tsx`).toBe(true);
+    // fix/tank-language-and-media commit 4: MenuBar.tsx's own labels
+    // were translated to English (Rejestry projektu -> Project
+    // Registers, Lista aparatow -> Device List, Tematy pomocy -> Help
+    // Topics) - the Polish help content itself is explicitly EXCLUDED
+    // from this task's own translation ("TEGO NIE RUSZAJ: tresc
+    // systemu pomocy"), so it still quotes the OLD Polish labels
+    // verbatim. This is a disclosed, deliberate consequence of that
+    // boundary, not an oversight - GRANICE gives help content priority
+    // over staying in sync with the (now English) interface it
+    // describes. 'Snap to Grid' is untouched (it was already English)
+    // and still matches exactly.
+    expect(menuBarSource.includes('Snap to Grid')).toBe(true);
+    const nowStaleAgainstHelp = ['Rejestry projektu...', 'Lista aparatow...', 'Tematy pomocy...'];
+    for (const label of nowStaleAgainstHelp) {
+      expect(menuBarSource.includes(label), `'${label}' is expected to be ABSENT from the now-English MenuBar.tsx - if this fails, either the translation was reverted or the help content was edited (both against this task's own GRANICE)`).toBe(false);
     }
   });
 

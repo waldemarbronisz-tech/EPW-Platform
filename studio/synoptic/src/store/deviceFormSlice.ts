@@ -28,7 +28,7 @@ export const createDeviceFormSlice: StateCreator<AppState, [], [], DeviceFormSli
   openDeviceForm: (deviceId, sourceContext) => {
     const device = get().devices.find(d => d.id === deviceId);
     if (!device) {
-      get().addMessage(`[WARNING] Nie znaleziono aparatu '${deviceId}' - nie mozna otworzyc formularza konfiguracji.`);
+      get().addMessage(`[WARNING] Device '${deviceId}' not found - cannot open the configuration form.`);
       return;
     }
     // Mutually exclusive with the create-or-assign request below - a

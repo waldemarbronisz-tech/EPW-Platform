@@ -7,13 +7,15 @@ import { pathFromPoints, getConductorCoreColor } from './ConnectionLine';
 import type { WireSegmentCollision } from './ConnectionLine';
 import { findAllCollisions } from '../project/WireCollision';
 import { ObjectLabelRenderer } from './ObjectLabelRenderer';
-import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WATER, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI } from '../theme/ScadaTheme';
+import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WATER, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI, WIRE_TERMINAL_SNAP_DISTANCE } from '../theme/ScadaTheme';
 import { snapValue } from '../utils/GridSnap';
 import {
   snapPointToGrid, appendWirePoint, removeLastWirePoint,
   insertBendOnSegment, nearestPointOnPolyline, simplifyCollinearPoints
 } from '../utils/WireDrawing';
-import { resolveNets, getJunctionPoints } from '../project/NetResolver';
+import { resolveNets, getJunctionPoints, findMediaConflictAtPoint } from '../project/NetResolver';
+import type { MediaConflict } from '../project/NetResolver';
+import { MediaMismatchDialog, mediaConflictMessage } from './MediaMismatchDialog';
 import { getObstacles } from '../project/WireCollision';
 import { routeAround } from '../project/WireRouter';
 import { describeObject } from '../utils/ObjectDisplay';
@@ -109,6 +111,11 @@ export const Canvas: React.FC = () => {
   // canvas, not one per wire (ConnectionLine's own onCollisionHover
   // reports into this).
   const [collisionTooltip, setCollisionTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  // feat/tank-language-and-media commit 1: set the instant a wire
+  // endpoint would land on a terminal/wire of an incompatible medium -
+  // the connection is never created; closing the dialog just clears
+  // this, drawing stays exactly as armed as it was (usterka b/c/point 5).
+  const [mediaConflict, setMediaConflict] = useState<MediaConflict | null>(null);
   const drawingPointsRef = useRef<WirePoint[] | null>(null);
   useEffect(() => { drawingPointsRef.current = drawingPoints; }, [drawingPoints]);
 
@@ -211,7 +218,14 @@ export const Canvas: React.FC = () => {
     const scale = canvasState.zoom;
     const worldX = (stagePos.x - canvasState.panX) / scale;
     const worldY = (stagePos.y - canvasState.panY) / scale;
-    return snapToTerminalOrGrid(worldX, worldY, objects);
+    // feat/tank-language-and-media commit 1: medium-aware magnetism -
+    // only while the wire tool is actually armed (isDrawingConnection),
+    // reading the CURRENT drawingMedium straight from the store rather
+    // than this render's own closed-over value, same reasoning as
+    // every other useStore.getState() read in this file's own wire-
+    // drawing code.
+    const drawnMedium = isDrawingConnection ? useStore.getState().drawingMedium : undefined;
+    return snapToTerminalOrGrid(worldX, worldY, objects, drawnMedium);
   };
 
   // feat/wire-routing-around-obstacles commit 3, point (c): extracted
@@ -486,6 +500,22 @@ export const Canvas: React.FC = () => {
       if (!pos) return;
       const point = toWirePoint(pos);
 
+      // feat/tank-language-and-media commit 1, points (b)/(c): reject
+      // landing on - or touching the middle of - a terminal or wire of
+      // an incompatible medium, BEFORE placing anything. Checked on
+      // EVERY click (not only the final one that would finish the
+      // wire): starting a wire on the wrong medium's terminal is
+      // exactly as wrong as ending one there. The connection is never
+      // created and drawing stays armed - only this one click is
+      // refused (usterka b/e).
+      const drawnMedium = useStore.getState().drawingMedium;
+      const conflict = findMediaConflictAtPoint(point, objects, connections, drawnMedium);
+      if (conflict) {
+        setMediaConflict(conflict);
+        useStore.getState().addMessage(mediaConflictMessage(conflict));
+        return;
+      }
+
       // feat/wire-routing-around-obstacles commit 3, points (b)/(c): in
       // OMIJAJ mode a click places the WHOLE computed route from the
       // last point to here, not a single point - and finishes the wire
@@ -725,7 +755,12 @@ export const Canvas: React.FC = () => {
   // currently drawing a wire", not "drawing, but nothing nearby".
   const wireCursorPos = isDrawingConnection ? drawingPreview : null;
   const nearbyTerminalObjIds = wireCursorPos ? new Set(getNearbyTerminals(objects, wireCursorPos).map(t => t.objId)) : null;
-  const highlightedTerminal = wireCursorPos ? findNearestTerminal(objects, wireCursorPos) : null;
+  // feat/tank-language-and-media commit 1: medium-aware - the
+  // magnetism/highlight can only ever land on a terminal that shares
+  // the wire's own medium (usterka a). A terminal of a different
+  // medium is still SHOWN (nearbyTerminalObjIds above is unaffected),
+  // just dimmed and never this one.
+  const highlightedTerminal = wireCursorPos ? findNearestTerminal(objects, wireCursorPos, WIRE_TERMINAL_SNAP_DISTANCE, drawingMedium) : null;
 
   // feat/water-management commit 2: a wire's own color is now the
   // RESULT of its net's state (isSourceActive), never a per-connection
@@ -990,6 +1025,7 @@ export const Canvas: React.FC = () => {
               groupDrag={groupDrag}
               forceShowTerminals={!!nearbyTerminalObjIds?.has(obj.id)}
               highlightedTerminalId={highlightedTerminal?.objId === obj.id ? highlightedTerminal.terminalId : null}
+              drawingMedium={isDrawingConnection ? drawingMedium : null}
             />
           ))}
           {frames.map((frame) => (
@@ -1080,6 +1116,7 @@ export const Canvas: React.FC = () => {
               groupDrag={groupDrag}
               forceShowTerminals={!!nearbyTerminalObjIds?.has(obj.id)}
               highlightedTerminalId={highlightedTerminal?.objId === obj.id ? highlightedTerminal.terminalId : null}
+              drawingMedium={isDrawingConnection ? drawingMedium : null}
             />
           ))}
           {/* Topology junctions (layer 4 - deliberately ABOVE symbols,
@@ -1409,6 +1446,11 @@ export const Canvas: React.FC = () => {
           )}
         </Layer>
       </Stage>
+      {/* feat/tank-language-and-media commit 1, point (b): a plain HTML
+          overlay (not a Konva node - Canvas's own outer div, not the
+          Stage) so it renders exactly like every other modal in this
+          app (AddLocationDialog.tsx's own convention). */}
+      {mediaConflict && <MediaMismatchDialog conflict={mediaConflict} onClose={() => setMediaConflict(null)} />}
     </div>
   );
 };

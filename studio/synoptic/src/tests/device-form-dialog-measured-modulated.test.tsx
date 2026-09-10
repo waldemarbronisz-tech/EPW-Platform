@@ -14,11 +14,11 @@ function row(labelText: string): HTMLElement {
 function input(labelText: string): HTMLInputElement {
   return row(labelText).querySelector('input') as HTMLInputElement;
 }
-// fix/device-form-polish commit 2: Zapisz is aria-disabled now, not
+// fix/device-form-polish commit 2: Save is aria-disabled now, not
 // natively disabled - see device-form-dialog-switched.test.tsx's own
 // copy of this helper for the full reasoning.
 function isSaveDisabled(): boolean {
-  return screen.getByRole('button', { name: 'Zapisz' }).getAttribute('aria-disabled') === 'true';
+  return screen.getByRole('button', { name: 'Save' }).getAttribute('aria-disabled') === 'true';
 }
 
 function makeMeasured(overrides: Partial<MeasuredDevice> = {}): MeasuredDevice {
@@ -39,7 +39,7 @@ function makeModulated(overrides: Partial<ModulatedDevice> = {}): ModulatedDevic
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [
       { id: 'ELA1', model: 'ELA01', channelKind: 'AI', channelCount: 8 },
       { id: 'ADA1', model: 'ADA01', channelKind: 'AO', channelCount: 8 },
@@ -68,7 +68,7 @@ describe('DeviceFormDialog - MEASURED section', () => {
     // away), so this NEWLY introduced error is visible immediately,
     // touched or not - the blur below is not what reveals it here, just
     // documents the same interaction a real user would do regardless.
-    const rangeMinInput = input('Zakres min');
+    const rangeMinInput = input('Range Min');
     fireEvent.change(rangeMinInput, { target: { value: '200' } });
     fireEvent.blur(rangeMinInput);
     expect(isSaveDisabled()).toBe(true);
@@ -93,7 +93,7 @@ describe('DeviceFormDialog - MODULATED section', () => {
 
   it('test 13: startupValue outside rangeMin..rangeMax is rejected - Save disabled, field error shown', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeModulated()} onSave={() => {}} onCancel={() => {}} />);
-    const startupInput = input('Wartosc startowa');
+    const startupInput = input('Startup Value');
     fireEvent.change(startupInput, { target: { value: '150' } });
     fireEvent.blur(startupInput);
     expect(isSaveDisabled()).toBe(true);

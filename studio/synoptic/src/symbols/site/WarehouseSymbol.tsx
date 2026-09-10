@@ -1,7 +1,7 @@
 // feat/site-objects-2d commit 2 - "2. Magazyn" from
 // docs/EPW_rysunki_referencja.py's own magazyn(on). Side view: gable
 // roof, corrugated-metal cladding (vertical texture lines), a rolling
-// door in the middle, two windows. States ZALACZONY / WYLACZONY.
+// door in the middle, two windows. States ON / OFF.
 
 import React from 'react';
 import { Group, Line } from 'react-konva';
@@ -14,12 +14,12 @@ import {
   SITE_BAND_WIDTH_NARROW, SITE_OUTLINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM, SITE_OUTLINE_WIDTH_THINNEST, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type WarehouseState = 'ZALACZONY' | 'WYLACZONY';
+export type WarehouseState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const WAREHOUSE_STATES: WarehouseState[] = ['ZALACZONY', 'WYLACZONY'];
+export const WAREHOUSE_STATES: WarehouseState[] = ['ON', 'OFF'];
 
 export const WarehouseSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, WAREHOUSE_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, WAREHOUSE_STATES, 'OFF') === 'ON';
   const body = on ? SITE_GREY : SITE_DGREY;
   const windowColor = on ? SITE_BLUE : SITE_DGREY;
 

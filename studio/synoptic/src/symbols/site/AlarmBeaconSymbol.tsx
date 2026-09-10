@@ -18,9 +18,9 @@ import {
   SITE_OUTLINE_WIDTH, SITE_CROSSBAR_WIDTH, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type AlarmBeaconState = 'ZALACZONY' | 'WYLACZONY';
+export type AlarmBeaconState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const ALARM_BEACON_STATES: AlarmBeaconState[] = ['ZALACZONY', 'WYLACZONY'];
+export const ALARM_BEACON_STATES: AlarmBeaconState[] = ['ON', 'OFF'];
 
 // Three rays at -60/-90/-120 degrees from the dome's own center, radius
 // 34 to 48 - docs/EPW_rysunki_referencja.py's own `for a in
@@ -29,7 +29,7 @@ export const ALARM_BEACON_STATES: AlarmBeaconState[] = ['ZALACZONY', 'WYLACZONY'
 const RAY_ANGLES_DEG = [-60, -90, -120];
 
 export const AlarmBeaconSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, ALARM_BEACON_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, ALARM_BEACON_STATES, 'OFF') === 'ON';
   const dome = on ? SITE_RED : SITE_RED_DIM;
   const highlight = on ? SITE_RED.light : SITE_RED_DIM_HIGHLIGHT;
 

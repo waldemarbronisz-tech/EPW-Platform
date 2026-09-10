@@ -12,12 +12,12 @@ import {
   SITE_BAND_WIDTH_NARROW, SITE_BAND_WIDTH_NARROWEST, SITE_OUTLINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type GardenLightState = 'ZALACZONY' | 'WYLACZONY';
+export type GardenLightState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const GARDEN_LIGHT_STATES: GardenLightState[] = ['ZALACZONY', 'WYLACZONY'];
+export const GARDEN_LIGHT_STATES: GardenLightState[] = ['ON', 'OFF'];
 
 export const GardenLightSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, GARDEN_LIGHT_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, GARDEN_LIGHT_STATES, 'OFF') === 'ON';
   const fixture = on ? SITE_YELL : SITE_DARK;
 
   return (

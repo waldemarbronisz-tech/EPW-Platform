@@ -38,28 +38,28 @@ describe('Toolbar - every toolbar-inserted element (meter, signal panel) is actu
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('renders a "Dodaj Miernik" button', () => {
+  it('renders a "Add Meter" button', () => {
     render(<Toolbar />);
-    expect(screen.getByTitle('Dodaj Miernik')).toBeTruthy();
+    expect(screen.getByTitle('Add Meter')).toBeTruthy();
   });
 
-  it('renders a "Dodaj Panel Sygnalizacyjny" button - the exact bug this task reported', () => {
+  it('renders a "Add Signal Panel" button - the exact bug this task reported', () => {
     render(<Toolbar />);
-    expect(screen.getByTitle('Dodaj Panel Sygnalizacyjny')).toBeTruthy();
+    expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
   });
 
-  it('clicking "Dodaj Miernik" actually places a meter and selects it', () => {
+  it('clicking "Add Meter" actually places a meter and selects it', () => {
     render(<Toolbar />);
-    fireEvent.click(screen.getByTitle('Dodaj Miernik'));
+    fireEvent.click(screen.getByTitle('Add Meter'));
 
     const state = useStore.getState();
     expect(state.meters.length).toBe(1);
     expect(state.selectedMeterIds).toEqual([state.meters[0].id]);
   });
 
-  it('clicking "Dodaj Panel Sygnalizacyjny" actually places a signal panel and selects it - the same mechanism as the meter, not a different one', () => {
+  it('clicking "Add Signal Panel" actually places a signal panel and selects it - the same mechanism as the meter, not a different one', () => {
     render(<Toolbar />);
-    fireEvent.click(screen.getByTitle('Dodaj Panel Sygnalizacyjny'));
+    fireEvent.click(screen.getByTitle('Add Signal Panel'));
 
     const state = useStore.getState();
     expect(state.signalPanels.length).toBe(1);
@@ -68,8 +68,8 @@ describe('Toolbar - every toolbar-inserted element (meter, signal panel) is actu
 
   it('both buttons live in the toolbar side by side, so neither can go missing without the other being right there to notice', () => {
     render(<Toolbar />);
-    expect(screen.getByTitle('Dodaj Miernik')).toBeTruthy();
-    expect(screen.getByTitle('Dodaj Panel Sygnalizacyjny')).toBeTruthy();
+    expect(screen.getByTitle('Add Meter')).toBeTruthy();
+    expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
   });
 });
 

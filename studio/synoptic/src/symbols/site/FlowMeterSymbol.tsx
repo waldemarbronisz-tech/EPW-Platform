@@ -22,12 +22,12 @@ import { findDeviceById, getMeasuredPreviewValue, formatMeasuredValue } from '..
 import { colorForRow } from '../../components/MeterElementNode';
 import { COLOR_OUTLINE, COLOR_WHITE, SITE_GREY, SITE_LCD_BACKGROUND } from '../../theme/ScadaTheme';
 
-export type FlowMeterState = 'ZALACZONY' | 'WYLACZONY';
+export type FlowMeterState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const FLOW_METER_STATES: FlowMeterState[] = ['ZALACZONY', 'WYLACZONY'];
+export const FLOW_METER_STATES: FlowMeterState[] = ['ON', 'OFF'];
 
 export const FlowMeterSymbol: React.FC<SymbolProps> = ({ obj, state, terminalNetState }) => {
-  const on = resolveSiteState(state, FLOW_METER_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, FLOW_METER_STATES, 'OFF') === 'ON';
   const netState = (id: string) => (terminalNetState?.(id) ?? 'INACTIVE') === 'ACTIVE';
 
   const devices = useStore(s => s.devices);

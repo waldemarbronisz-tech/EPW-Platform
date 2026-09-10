@@ -29,8 +29,8 @@ describe('9. grass and concrete road lie in the background layer', () => {
     expect(getSymbolDefinition('site.concrete_road')?.isSurface).toBe(true);
   });
 
-  it('no other TEREN symbol is marked isSurface (only the two surfaces sit in the background layer)', () => {
-    const teren = getSymbolsByCategory()['TEREN'] || [];
+  it('no other SITE symbol is marked isSurface (only the two surfaces sit in the background layer)', () => {
+    const teren = getSymbolsByCategory()['SITE'] || [];
     const surfaces = teren.filter(def => def.isSurface);
     expect(surfaces.map(def => def.type).sort()).toEqual(['site.concrete_road', 'site.grass']);
   });

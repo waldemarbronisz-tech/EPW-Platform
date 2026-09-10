@@ -194,7 +194,7 @@ export interface HistorySnapshot {
 export interface DeviceFormRequest {
   deviceId: string;
   // Shown in DeviceFormDialog's own header when present (task 3a) - e.g.
-  // "Schemat, symbol -K1" - so the user knows where they opened the form
+  // "Diagram, symbol -K1" - so the user knows where they opened the form
   // from. Left undefined for Lista aparatow's own Edytuj button: that
   // path's header stays exactly what it always was, unchanged.
   sourceContext?: string;

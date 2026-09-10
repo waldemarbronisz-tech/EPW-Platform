@@ -29,7 +29,7 @@
       "designation": "-Y1",
       "name": "Zawor trojdrogowy wyboru zrodla wody",
       "behavior": "SWITCHED",
-      "kind": "zawor trojdrogowy",
+      "kind": "three-way valve",
       "publishToHa": false,
       "feedback": { "mode": "DUAL", "diClosed": "DI1.DI.1", "diOpen": "DI1.DI.2" },
       "command": { "outputCount": 2, "style": "MAINTAINED", "doClose": "DO1.DO.1", "doOpen": "DO1.DO.2" },
@@ -180,7 +180,7 @@
       "tag": "B1", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "SREDNI" }
+      "editor": { "preview_state": "MEDIUM" }
     },
     {
       "id": "obj-filter1",
@@ -193,7 +193,7 @@
       "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-checkvalve1",
@@ -206,7 +206,7 @@
       "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-flowmeter1",
@@ -220,7 +220,7 @@
       "tag": "B2", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-hydrofor1",
@@ -234,7 +234,7 @@
       "tag": "M1", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-presswitch1",
@@ -248,7 +248,7 @@
       "tag": "B4", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "WYLACZONY" }
+      "editor": { "preview_state": "OFF" }
     },
     {
       "id": "obj-ballvalve1",
@@ -275,7 +275,7 @@
       "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-ballvalve2",
@@ -302,7 +302,7 @@
       "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "WYLACZONY" }
+      "editor": { "preview_state": "OFF" }
     },
     {
       "id": "obj-ballvalve3",
@@ -329,7 +329,7 @@
       "tag": "", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     },
     {
       "id": "obj-rainsensor1",
@@ -343,7 +343,7 @@
       "tag": "B3", "color": "#000000", "fill": "#c0c0c0", "border": "#000000",
       "text": "", "font": "Arial", "fontSize": 12, "tooltip": "",
       "customProperties": {},
-      "editor": { "preview_state": "ZALACZONY" }
+      "editor": { "preview_state": "ON" }
     }
   ],
   "connections": [

@@ -84,7 +84,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({ onOpenScadaPreview, onOpenDevi
           <div className="dropdown-item" onClick={() => handleMenuClick(copySelected)}>Copy</div>
           <div className="dropdown-item" onClick={() => handleMenuClick(paste)}>Paste</div>
           <div className="dropdown-item" onClick={() => handleMenuClick(() => deleteObjects(selectedIds))}>Delete</div>
-          <div className="dropdown-item" onClick={() => handleMenuClick(() => recalculateConnectionRoutes(selectedConnectionIds))}>Przelicz trase</div>
+          <div className="dropdown-item" onClick={() => handleMenuClick(() => recalculateConnectionRoutes(selectedConnectionIds))}>Reroute</div>
         </div>
       </div>
       <div className="menu-item">
@@ -97,16 +97,16 @@ export const MenuBar: React.FC<MenuBarProps> = ({ onOpenScadaPreview, onOpenDevi
         </div>
       </div>
       <div className="menu-item">
-        <span>Aparaty</span>
+        <span>Devices</span>
         <div className="dropdown">
-          <div className="dropdown-item" onClick={() => onOpenDeviceRegistries?.()}>Rejestry projektu...</div>
-          <div className="dropdown-item" onClick={() => onOpenDeviceList?.()}>Lista aparatow...</div>
+          <div className="dropdown-item" onClick={() => onOpenDeviceRegistries?.()}>Project Registers...</div>
+          <div className="dropdown-item" onClick={() => onOpenDeviceList?.()}>Device List...</div>
         </div>
       </div>
       <div className="menu-item">
-        <span>Pomoc</span>
+        <span>Help</span>
         <div className="dropdown">
-          <div className="dropdown-item" onClick={() => onOpenHelp?.()}>Tematy pomocy...  F1</div>
+          <div className="dropdown-item" onClick={() => onOpenHelp?.()}>Help Topics...  F1</div>
         </div>
       </div>
     </div>

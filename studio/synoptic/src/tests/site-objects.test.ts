@@ -1,4 +1,4 @@
-// feat/site-objects-2d: mandatory tests for the TEREN (site object)
+// feat/site-objects-2d: mandatory tests for the SITE (site object)
 // category. Iterates the real registry (getSymbolsByCategory, same
 // "visible" filter the Object Library itself uses) rather than a
 // hand-picked list, so this file needs no changes as more objects get
@@ -24,30 +24,30 @@ const NO_STATE_TYPES = ['site.concrete_road']; // 4. droga betonowa has no state
 const THREE_STATE_TYPES = ['site.sliding_gate'];
 // fix/hydraulic-connections commit 7: site.water_selector_valve_3pos
 // and site.rainwater_tank2 (both also genuinely three-state, feat/
-// water-management commit 4) moved out of TEREN into Water this commit
+// water-management commit 4) moved out of SITE into Water this commit
 // - siteSymbols() below no longer returns them at all, so the
 // exemption this file used to need for test 5 is dead code now, not a
 // defect to route around.
 
 function siteSymbols() {
   const cats = getSymbolsByCategory();
-  return cats['TEREN'] || [];
+  return cats['SITE'] || [];
 }
 
-describe('TEREN category - registration (1)', () => {
-  it('sanity: at least one TEREN symbol is registered and visible in the library (a passing empty loop proves nothing)', () => {
+describe('SITE category - registration (1)', () => {
+  it('sanity: at least one SITE symbol is registered and visible in the library (a passing empty loop proves nothing)', () => {
     expect(siteSymbols().length).toBeGreaterThan(0);
   });
 
-  it('every registered TEREN symbol is resolvable back through getSymbolDefinition (the same lookup the canvas itself uses)', () => {
+  it('every registered SITE symbol is resolvable back through getSymbolDefinition (the same lookup the canvas itself uses)', () => {
     siteSymbols().forEach(def => {
       expect(getSymbolDefinition(def.type)).toBe(def);
     });
   });
 });
 
-describe('TEREN category - state counts (2, 3, 4, 5)', () => {
-  it('every TEREN symbol declares its own list of states (allowedStates), non-empty unless it is a surface', () => {
+describe('SITE category - state counts (2, 3, 4, 5)', () => {
+  it('every SITE symbol declares its own list of states (allowedStates), non-empty unless it is a surface', () => {
     siteSymbols().forEach(def => {
       expect(Array.isArray(def.allowedStates)).toBe(true);
       if (!NO_STATE_TYPES.includes(def.type)) {
@@ -56,11 +56,11 @@ describe('TEREN category - state counts (2, 3, 4, 5)', () => {
     });
   });
 
-  it('3. the sliding gate has exactly three states: ZAMKNIETA, W_RUCHU, OTWARTA', () => {
+  it('3. the sliding gate has exactly three states: CLOSED, MOVING, OPEN', () => {
     THREE_STATE_TYPES.forEach(type => {
       const def = getSymbolDefinition(type);
       expect(def).toBeTruthy();
-      expect(def!.allowedStates).toEqual(['ZAMKNIETA', 'W_RUCHU', 'OTWARTA']);
+      expect(def!.allowedStates).toEqual(['CLOSED', 'MOVING', 'OPEN']);
     });
   });
 
@@ -69,7 +69,7 @@ describe('TEREN category - state counts (2, 3, 4, 5)', () => {
     if (def) expect(def.allowedStates).toEqual([]);
   });
 
-  it('5. every other TEREN symbol (not the gate, not a surface) has exactly two states', () => {
+  it('5. every other SITE symbol (not the gate, not a surface) has exactly two states', () => {
     siteSymbols().forEach(def => {
       if (THREE_STATE_TYPES.includes(def.type) || NO_STATE_TYPES.includes(def.type)) return;
       expect(def.allowedStates.length).toBe(2);
@@ -77,8 +77,8 @@ describe('TEREN category - state counts (2, 3, 4, 5)', () => {
   });
 });
 
-describe('TEREN category - device binding (14)', () => {
-  it('every TEREN symbol is eligible for the Aparat (device) field - not a line, not graphics.*, not measurements.*', () => {
+describe('SITE category - device binding (14)', () => {
+  it('every SITE symbol is eligible for the Aparat (device) field - not a line, not graphics.*, not measurements.*', () => {
     siteSymbols().forEach(def => {
       expect(def.isLine).toBeFalsy();
       expect(def.type.startsWith('graphics.')).toBe(false);
@@ -87,7 +87,7 @@ describe('TEREN category - device binding (14)', () => {
   });
 });
 
-describe('TEREN category - surfaces have no terminals, everything else does (part of 6)', () => {
+describe('SITE category - surfaces have no terminals, everything else does (part of 6)', () => {
   it('a surface (grass, concrete road) has zero terminals', () => {
     siteSymbols().forEach(def => {
       if (SURFACE_TYPES.includes(def.type) || def.type === 'site.grass') {
@@ -96,7 +96,7 @@ describe('TEREN category - surfaces have no terminals, everything else does (par
     });
   });
 
-  it('every non-surface TEREN symbol has at least one terminal (grid-alignment/centering itself is covered by terminal-centering.test.ts, which already iterates this same registry)', () => {
+  it('every non-surface SITE symbol has at least one terminal (grid-alignment/centering itself is covered by terminal-centering.test.ts, which already iterates this same registry)', () => {
     siteSymbols().forEach(def => {
       if (SURFACE_TYPES.includes(def.type) || def.type === 'site.grass') return;
       expect((def.terminals || []).length).toBeGreaterThan(0);

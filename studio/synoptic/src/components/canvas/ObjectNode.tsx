@@ -9,10 +9,12 @@ import { Circle, Group, Rect } from 'react-konva';
 import { useStore } from '../../store';
 import type { SynopticObject } from '../../store';
 import { SymbolRenderer } from '../../symbols/SymbolRenderer';
-import { COLOR_OUTLINE, COLOR_WATER, TERMINAL_HIGHLIGHT_COLOR, TERMINAL_RADIUS, TERMINAL_RADIUS_HIGHLIGHTED } from '../../theme/ScadaTheme';
+import { COLOR_OUTLINE, COLOR_WATER, TERMINAL_DIMMED_COLOR, TERMINAL_HIGHLIGHT_COLOR, TERMINAL_RADIUS, TERMINAL_RADIUS_HIGHLIGHTED } from '../../theme/ScadaTheme';
 import { snapValue } from '../../utils/GridSnap';
 import { getObjectTerminals } from '../../utils/Terminals';
 import { getHoverHitRect } from '../../utils/TerminalReach';
+import { areMediaCompatible } from '../../project/NetResolver';
+import type { Medium } from '../../project/NetResolver';
 import { computeResizeFromAnchor, getActiveResizeAnchor, setActiveResizeAnchor } from '../../utils/ResizeHandles';
 import { isAltKeyDown } from '../../utils/CanvasInputState';
 import { describeObject } from '../../utils/ObjectDisplay';
@@ -45,17 +47,17 @@ export function handleSymbolDblClick(e: { cancelBubble: boolean }, obj: Synoptic
   if (useStore.getState().isDrawingConnection) return;
   e.cancelBubble = true;
   if (!obj.deviceId) {
-    useStore.getState().openDeviceCreateOrAssignForm(obj.id, obj.type, `Schemat, symbol ${describeObject(obj)}`);
+    useStore.getState().openDeviceCreateOrAssignForm(obj.id, obj.type, `Diagram, symbol ${describeObject(obj)}`);
     return;
   }
-  useStore.getState().openDeviceForm(obj.deviceId, `Schemat, symbol ${describeObject(obj)}`);
+  useStore.getState().openDeviceForm(obj.deviceId, `Diagram, symbol ${describeObject(obj)}`);
 }
 
 // isSelected is no longer a prop here (commit 5) - the Transformer that
 // used to read it moved out to its own top-level pass (
 // ObjectTransformerHandle, in TransformerHandles.tsx) and nothing else in
 // this component's own rendering depends on selection state.
-export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, groupDrag, forceShowTerminals, highlightedTerminalId }: {
+export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, groupDrag, forceShowTerminals, highlightedTerminalId, drawingMedium }: {
   gridSize: number,
   obj: SynopticObject,
   // Receives the raw Konva event (onClick={onSelect} forwards it
@@ -83,6 +85,13 @@ export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, grou
   // one the cursor/magnetism would actually hit right now - drawn
   // bigger, in a different color, so the user knows before clicking.
   highlightedTerminalId?: string | null,
+  // feat/tank-language-and-media commit 1: the medium of the wire
+  // currently being drawn, or undefined/null when the wire tool is not
+  // armed at all. Any of THIS object's own terminals whose medium
+  // differs draws dimmed instead - never highlighted, regardless of
+  // highlightedTerminalId (Canvas.tsx's own medium-aware search never
+  // picks one anyway, but this stays correct even if it somehow did).
+  drawingMedium?: Medium | null,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const shapeRef = useRef<any>(null);
@@ -252,16 +261,22 @@ export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, grou
             the cursor (usterka 1d). The one matching
             highlightedTerminalId (usterka 1e/1f - the terminal the
             cursor/magnetism would actually hit right now) draws bigger,
-            in a different color, than the rest. */}
+            in a different color, than the rest.
+            feat/tank-language-and-media commit 1: a terminal whose own
+            medium differs from the wire currently being drawn is
+            "wygaszony" - dimmed, and never eligible to be the
+            highlighted one (Canvas.tsx's own medium-aware search never
+            hands us its id anyway, but this stays correct regardless). */}
         {showTerminals && terminals.map((t) => {
-          const isHighlighted = !!highlightedTerminalId && t.id === highlightedTerminalId;
+          const incompatible = !!drawingMedium && !areMediaCompatible(t.medium, drawingMedium);
+          const isHighlighted = !incompatible && !!highlightedTerminalId && t.id === highlightedTerminalId;
           return (
             <Circle
               key={`term-${t.id}`}
               x={t.x}
               y={t.y}
               radius={isHighlighted ? TERMINAL_RADIUS_HIGHLIGHTED : TERMINAL_RADIUS}
-              fill={isHighlighted ? TERMINAL_HIGHLIGHT_COLOR : COLOR_WATER}
+              fill={incompatible ? TERMINAL_DIMMED_COLOR : (isHighlighted ? TERMINAL_HIGHLIGHT_COLOR : COLOR_WATER)}
               stroke={COLOR_OUTLINE}
               strokeWidth={1}
               listening={false}

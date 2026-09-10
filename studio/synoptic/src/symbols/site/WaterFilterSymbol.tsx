@@ -8,11 +8,11 @@ import type { SymbolProps } from '../SymbolRenderer';
 import { bandedRect, waterStub } from './BandedShading';
 import { COLOR_OUTLINE, SITE_GREY, SITE_DGREY, SITE_OUTLINE_WIDTH } from '../../theme/ScadaTheme';
 
-export type WaterFilterState = 'ZALACZONY' | 'WYLACZONY';
+export type WaterFilterState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const WATER_FILTER_STATES: WaterFilterState[] = ['ZALACZONY', 'WYLACZONY'];
+export const WATER_FILTER_STATES: WaterFilterState[] = ['ON', 'OFF'];
 
-// feat/wire-routing-around-obstacles commit 5: ZALACZONY/WYLACZONY used
+// feat/wire-routing-around-obstacles commit 5: ON/OFF used
 // to only ever affect this symbol's own krociec (nothing else in its
 // body reads `state` at all) - now that the krociec reads net state
 // instead, this object's own body draws identically regardless of its

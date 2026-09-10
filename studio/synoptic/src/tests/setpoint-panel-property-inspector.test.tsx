@@ -54,7 +54,7 @@ describe('PropertyInspector - setpoint panel', () => {
       selectedSetpointPanelIds: ['S1']
     });
     render(<PropertyInspector />);
-    const addSelect = screen.getByText('+ Dodaj aparat...').closest('select') as HTMLSelectElement;
+    const addSelect = screen.getByText('+ Add device...').closest('select') as HTMLSelectElement;
     const options = Array.from(addSelect.options).map(o => o.value).filter(v => v !== '');
     expect(options).toEqual(['KOT_TV2']);
   });
@@ -66,7 +66,7 @@ describe('PropertyInspector - setpoint panel', () => {
       selectedSetpointPanelIds: ['S1']
     });
     render(<PropertyInspector />);
-    const addSelect = screen.getByText('+ Dodaj aparat...').closest('select') as HTMLSelectElement;
+    const addSelect = screen.getByText('+ Add device...').closest('select') as HTMLSelectElement;
     fireEvent.change(addSelect, { target: { value: 'KOT_TV1' } });
     expect(useStore.getState().setpointPanels[0].rows).toEqual([{ device: 'KOT_TV1', label: '', manualValue: '', manualUnit: '' }]);
   });

@@ -13,9 +13,9 @@ import {
   SITE_BAND_WIDTH_NARROW, SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type GardenSprinklerState = 'ZALACZONY' | 'WYLACZONY';
+export type GardenSprinklerState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const GARDEN_SPRINKLER_STATES: GardenSprinklerState[] = ['ZALACZONY', 'WYLACZONY'];
+export const GARDEN_SPRINKLER_STATES: GardenSprinklerState[] = ['ON', 'OFF'];
 
 // Five water arcs fanning from the nozzle - docs/EPW_rysunki_referencja.py's
 // own `for dx in (-26,-13,0,13,26)` loop. Opacity (0.75) kept local, same
@@ -24,7 +24,7 @@ const SPRAY_DX = [-26, -13, 0, 13, 26];
 const SPRAY_OPACITY = 0.75;
 
 export const GardenSprinklerSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, GARDEN_SPRINKLER_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, GARDEN_SPRINKLER_STATES, 'OFF') === 'ON';
   const wodaLive = (terminalNetState?.('WODA') ?? 'INACTIVE') === 'ACTIVE';
 
   return (

@@ -11,9 +11,9 @@ import { bandedRect, bandedCircleLightOnly, statusLed, objectPipeSegment, waterS
 import { resolveSiteState } from './SiteSymbolState';
 import { COLOR_OUTLINE, SITE_GREY, SITE_BLUE, SITE_GREEN, SITE_RED, SITE_DARK, SITE_CONC, SITE_OUTLINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM } from '../../theme/ScadaTheme';
 
-export type HydroforState = 'ZALACZONY' | 'WYLACZONY';
+export type HydroforState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const HYDROFOR_STATES: HydroforState[] = ['ZALACZONY', 'WYLACZONY'];
+export const HYDROFOR_STATES: HydroforState[] = ['ON', 'OFF'];
 
 // fix/hydraulic-connections commit 5: everything shifted up by 7 (was
 // centered on y=55/56, the true WYLOT terminal height is 48) so the
@@ -22,7 +22,7 @@ export const HYDROFOR_STATES: HydroforState[] = ['ZALACZONY', 'WYLACZONY'];
 // internal pipe, x56-66, was purely a vessel-to-pump connector, never
 // reaching the canvas edge where WYLOT actually is).
 export const HydroforSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, HYDROFOR_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, HYDROFOR_STATES, 'OFF') === 'ON';
   const vessel = on ? SITE_BLUE : SITE_GREY;
   const wylotLive = (terminalNetState?.('WYLOT') ?? 'INACTIVE') === 'ACTIVE';
 

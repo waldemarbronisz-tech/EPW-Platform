@@ -27,7 +27,7 @@ export function getCommandableDevices(devices: Device[]): SwitchedDevice[] {
 
 export interface GroupCommandMemberDisplay {
   deviceId: string;
-  designation: string; // '(brak)' when dangling - see below
+  designation: string; // '(none)' when dangling - see below
   dangling: boolean;
 }
 
@@ -42,7 +42,7 @@ export function resolveGroupCommandMembers(el: Pick<GroupCommandElement, 'device
   return el.deviceIds.map(deviceId => {
     const device = findDeviceById(devices, deviceId);
     if (!device || device.behavior !== 'SWITCHED') {
-      return { deviceId, designation: '(brak)', dangling: true };
+      return { deviceId, designation: '(none)', dangling: true };
     }
     return { deviceId, designation: device.designation, dangling: false };
   });

@@ -19,7 +19,7 @@ describe('the 6 new objects are registered (Water category - fix/hydraulic-conne
     const def = getSymbolDefinition('site.rainwater_tank2')!;
     expect(def).toBeDefined();
     expect(def.category).toBe('Water');
-    expect(def.allowedStates).toEqual(['NISKI', 'SREDNI', 'WYSOKI']);
+    expect(def.allowedStates).toEqual(['LOW', 'MEDIUM', 'HIGH']);
     expect(def.terminals!.every(t => t.medium === 'WATER')).toBe(true);
   });
 
@@ -29,22 +29,22 @@ describe('the 6 new objects are registered (Water category - fix/hydraulic-conne
     expect(def.terminals!.length).toBe(3);
   });
 
-  it('site.water_selector_valve_3pos: states A/ZAMKNIETY/B (SELECTOR-backed)', () => {
+  it('site.water_selector_valve_3pos: states A/CLOSED/B (SELECTOR-backed)', () => {
     const def = getSymbolDefinition('site.water_selector_valve_3pos')!;
-    expect(def.allowedStates).toEqual(['A', 'ZAMKNIETY', 'B']);
+    expect(def.allowedStates).toEqual(['A', 'CLOSED', 'B']);
   });
 
   it('site.check_valve, site.water_filter: plain two-state graphics, two WATER terminals each', () => {
     for (const type of ['site.check_valve', 'site.water_filter']) {
       const def = getSymbolDefinition(type)!;
-      expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+      expect(def.allowedStates).toEqual(['ON', 'OFF']);
       expect(def.terminals!.length).toBe(2);
     }
   });
 
   it('site.hydrofor: two-state SWITCHED pump', () => {
     const def = getSymbolDefinition('site.hydrofor')!;
-    expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+    expect(def.allowedStates).toEqual(['ON', 'OFF']);
   });
 
   it('all 6 actually show up in the live Water category listing', () => {
@@ -76,7 +76,7 @@ describe('DOWOD point 5: the tank reads its value field through the EXACT SAME p
   });
 });
 
-describe('DeviceFormDialog - three-way valve relabels diClosed/diOpen to Pozycja A/Pozycja B', () => {
+describe('DeviceFormDialog - three-way valve relabels diClosed/diOpen to Position A/Position B', () => {
   function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
     return {
       id: 'OGROD_ZAW1', designation: '-Y1', name: 'Zawor', behavior: 'SWITCHED', kind: 'valve', publishToHa: false,
@@ -105,24 +105,24 @@ describe('DeviceFormDialog - three-way valve relabels diClosed/diOpen to Pozycja
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched({ kind: 'valve' })} onSave={() => {}} onCancel={() => {}} />);
     expect(screen.getByText('diClosed')).toBeTruthy();
     expect(screen.getByText('diOpen')).toBeTruthy();
-    expect(screen.queryByText('Pozycja A')).toBeNull();
+    expect(screen.queryByText('Position A')).toBeNull();
   });
 
-  it('kind "zawor trojdrogowy" relabels both fields to Pozycja A / Pozycja B', () => {
-    render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched({ kind: 'zawor trojdrogowy' })} onSave={() => {}} onCancel={() => {}} />);
-    expect(screen.getByText('Pozycja A')).toBeTruthy();
-    expect(screen.getByText('Pozycja B')).toBeTruthy();
+  it('kind "three-way valve" relabels both fields to Position A / Position B', () => {
+    render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched({ kind: 'three-way valve' })} onSave={() => {}} onCancel={() => {}} />);
+    expect(screen.getByText('Position A')).toBeTruthy();
+    expect(screen.getByText('Position B')).toBeTruthy();
     expect(screen.queryByText('diClosed')).toBeNull();
     expect(screen.queryByText('diOpen')).toBeNull();
   });
 
   it('the match is case-insensitive and trims whitespace (a real device typed by hand)', () => {
-    render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched({ kind: '  Zawor Trojdrogowy  ' })} onSave={() => {}} onCancel={() => {}} />);
-    expect(screen.getByText('Pozycja A')).toBeTruthy();
+    render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched({ kind: '  Three-Way Valve  ' })} onSave={() => {}} onCancel={() => {}} />);
+    expect(screen.getByText('Position A')).toBeTruthy();
   });
 
   it('the underlying SWITCHED contract itself is untouched: feedback.diClosed/diOpen still resolve and validate exactly as before, only the on-screen label changed', () => {
-    const device = makeSwitched({ kind: 'zawor trojdrogowy' });
+    const device = makeSwitched({ kind: 'three-way valve' });
     expect(device.feedback.diClosed).toBe('ELA1.DI.1');
     expect(device.feedback.diOpen).toBe('ELA1.DI.2');
   });

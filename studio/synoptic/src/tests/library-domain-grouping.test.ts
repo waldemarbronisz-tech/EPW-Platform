@@ -8,9 +8,9 @@
 import { describe, it, expect } from 'vitest';
 import { getSymbolsByCategory, getSymbolDefinition } from '../symbols/SymbolRegistry';
 
-describe('27. TEREN contains exactly five entries', () => {
+describe('27. SITE contains exactly five entries', () => {
   it('house, warehouse, sliding gate, grass, concrete road - nothing else', () => {
-    const teren = getSymbolsByCategory()['TEREN'] || [];
+    const teren = getSymbolsByCategory()['SITE'] || [];
     expect(teren.map(d => d.type).sort()).toEqual([
       'site.concrete_road', 'site.grass', 'site.house', 'site.sliding_gate', 'site.warehouse'
     ]);
@@ -22,19 +22,19 @@ describe('28. the rainwater tank is in Water', () => {
     expect(getSymbolDefinition('site.rainwater_tank2')?.category).toBe('Water');
   });
 
-  it('site.rain_tank (the original site-objects-2d tank, same label) is also in Water - not left behind in TEREN', () => {
+  it('site.rain_tank (the original site-objects-2d tank, same label) still carries category Water in its own definition - fix/tank-language-and-media commit 3 hides it from the library, it does not move it back to SITE or delete it', () => {
     expect(getSymbolDefinition('site.rain_tank')?.category).toBe('Water');
   });
 });
 
 describe('29. the alarm beacon is in Electrical', () => {
-  it('site.alarm_beacon (Kogut alarmowy) has category Electrical', () => {
+  it('site.alarm_beacon (Alarm Beacon) has category Electrical', () => {
     expect(getSymbolDefinition('site.alarm_beacon')?.category).toBe('Electrical');
   });
 });
 
 describe('30. the rain sensor is in Instrumentation', () => {
-  it('site.rain_sensor (Czujnik deszczu) has category Instrumentation', () => {
+  it('site.rain_sensor (Rain Sensor) has category Instrumentation', () => {
     expect(getSymbolDefinition('site.rain_sensor')?.category).toBe('Instrumentation');
   });
 });
@@ -47,8 +47,13 @@ describe('31. every symbol belongs to EXACTLY one group', () => {
   });
 
   it('every relocated object\'s own definition object is a single, unambiguous category - not present under two different registry keys', () => {
+    // site.rain_tank is deliberately NOT in this list any more -
+    // fix/tank-language-and-media commit 3 hides it from the library
+    // entirely, so it now has ZERO owners in getSymbolsByCategory's
+    // own output, not one - covered separately by test 14/15 in
+    // tank-duplicate-removed.test.ts, not by this "exactly one" check.
     const relocated = [
-      'site.rain_tank', 'site.sewage_plant', 'site.water_manhole', 'site.garden_sprinkler', 'site.rainwater_tank2',
+      'site.sewage_plant', 'site.water_manhole', 'site.garden_sprinkler', 'site.rainwater_tank2',
       'site.water_selector_valve_switched', 'site.water_selector_valve_3pos', 'site.check_valve', 'site.water_filter',
       'site.hydrofor', 'site.flow_meter', 'site.water_meter', 'site.pressure_switch', 'site.sprinkler_head', 'site.drip_line',
       'site.lamp_post_double', 'site.lamp_post_single', 'site.halogen', 'site.garden_light', 'site.cable_junction',
@@ -62,17 +67,17 @@ describe('31. every symbol belongs to EXACTLY one group', () => {
   });
 });
 
-describe('32. the total number of visible symbols is unchanged from before the regroup', () => {
-  it('51 visible symbols total - a pure category reassignment (no symbol added, removed, or hidden/unhidden) can never change this number', () => {
+describe('32. the total number of visible symbols reflects the library exactly as it stands', () => {
+  it('50 visible symbols total - fix/tank-language-and-media commit 3 hid the duplicate rainwater tank (site.rain_tank), the one deliberate hide since the 51-symbol count this test used to assert', () => {
     const total = Object.values(getSymbolsByCategory()).flat().length;
-    expect(total).toBe(51);
+    expect(total).toBe(50);
   });
 });
 
 describe('the library\'s own folder order matches this task\'s own requested sequence', () => {
-  it('Electrical, Water, HVAC, Instrumentation, TEREN, SCADA - in exactly that order (Automation has no visible entries today, so its own folder does not appear at all)', () => {
+  it('Electrical, Water, HVAC, Instrumentation, SITE, SCADA - in exactly that order (Automation has no visible entries today, so its own folder does not appear at all)', () => {
     const order = Object.keys(getSymbolsByCategory());
-    expect(order).toEqual(['Electrical', 'Water', 'HVAC', 'Instrumentation', 'TEREN', 'SCADA']);
+    expect(order).toEqual(['Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA']);
   });
 });
 
@@ -80,7 +85,7 @@ describe('the relocated objects kept their own type string, terminals and states
   it('site.hydrofor: same single WATER terminal, same two states, now category Water', () => {
     const def = getSymbolDefinition('site.hydrofor')!;
     expect(def.category).toBe('Water');
-    expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+    expect(def.allowedStates).toEqual(['ON', 'OFF']);
     expect(def.terminals).toEqual([{ id: 'WYLOT', side: 'LEFT', medium: 'WATER' }]);
   });
 
@@ -90,11 +95,9 @@ describe('the relocated objects kept their own type string, terminals and states
     expect(def.terminals).toEqual([{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]);
   });
 
-  it('site.rainwater_tank2: kept its commit-6 DOPLYW/ODPLYW terminals through the move, not reverted to the old single WYLOT', () => {
+  it('site.rainwater_tank2: kept its DOPLYW/ODPLYW terminals through the move, not reverted to the old single WYLOT (ODPLYW moved from RIGHT to BOTTOM in fix/tank-language-and-media commit 2 - see that task\'s own tests for the current shape)', () => {
     const def = getSymbolDefinition('site.rainwater_tank2')!;
-    expect(def.terminals).toEqual([
-      { id: 'DOPLYW', side: 'LEFT', medium: 'WATER' },
-      { id: 'ODPLYW', side: 'RIGHT', medium: 'WATER' }
-    ]);
+    expect(def.terminals!.map(t => t.id)).toEqual(['DOPLYW', 'ODPLYW']);
+    expect(def.terminals!.every(t => t.medium === 'WATER')).toBe(true);
   });
 });

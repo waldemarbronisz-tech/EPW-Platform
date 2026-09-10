@@ -254,22 +254,22 @@ export const electricalSymbols: Record<string, SymbolDefinition> = {
   // to every other file this commit moves an entry into.
   'site.lamp_post_double': {
     type: 'site.lamp_post_double',
-    label: 'Slup oswietleniowy (2 oprawy)',
+    label: 'Lamp Post (Double)',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.lamp_post_single': {
     type: 'site.lamp_post_single',
-    label: 'Slup oswietleniowy (1 oprawa)',
+    label: 'Lamp Post (Single)',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.halogen': {
@@ -278,48 +278,48 @@ export const electricalSymbols: Record<string, SymbolDefinition> = {
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.garden_light': {
     type: 'site.garden_light',
-    label: 'Slupek oswietleniowy ogrodowy',
+    label: 'Garden Light Post',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.cable_junction': {
     type: 'site.cable_junction',
-    label: 'Zlacze kablowe',
+    label: 'Cable Junction',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.alarm_beacon': {
     type: 'site.alarm_beacon',
-    label: 'Kogut alarmowy',
+    label: 'Alarm Beacon',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
   'site.alarm_horn': {
     type: 'site.alarm_horn',
-    label: 'Glosnik alarmowy',
+    label: 'Alarm Horn',
     category: 'Electrical',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
 };

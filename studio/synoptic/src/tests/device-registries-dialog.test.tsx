@@ -32,8 +32,8 @@ describe('DeviceRegistriesDialog (mandatory test 1)', () => {
   it('test 1: a location code saved in lowercase is rejected (validateDeviceRegistry\'s own LOCATION_INVALID_CODE rule)', () => {
     render(<DeviceRegistriesDialog onClose={() => {}} />);
     fireEvent.change(screen.getByPlaceholderText('KOT'), { target: { value: 'kot' } });
-    fireEvent.change(screen.getByPlaceholderText('Kotlownia'), { target: { value: 'Kotlownia' } });
-    fireEvent.click(screen.getByText('+ Dodaj'));
+    fireEvent.change(screen.getByPlaceholderText('Boiler room'), { target: { value: 'Boiler room' } });
+    fireEvent.click(screen.getByText('+ Add'));
 
     expect(useStore.getState().locations).toEqual([]);
     expect(screen.getByText(/must contain only A-Z and 0-9/)).toBeTruthy();
@@ -46,7 +46,7 @@ describe('DeviceRegistriesDialog (mandatory test 2)', () => {
 
   it('test 2: deleting a location still referenced by a device is blocked', () => {
     useStore.setState({
-      locations: [{ code: 'KOT', description: 'Kotlownia' }],
+      locations: [{ code: 'KOT', description: 'Boiler room' }],
       cards: [{ id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 }, { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }],
       devices: [makeSwitchedDevice()]
     });
@@ -56,9 +56,9 @@ describe('DeviceRegistriesDialog (mandatory test 2)', () => {
     // browser itself, not this component, suppresses it) - the deletion
     // is blocked at the button level, and the count is surfaced via its
     // title tooltip, so a click could never reach the delete action.
-    const deleteButton = screen.getByRole('button', { name: 'Usun' }) as HTMLButtonElement;
+    const deleteButton = screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement;
     expect(deleteButton.disabled).toBe(true);
-    expect(deleteButton.title).toMatch(/Uzywana przez 1 aparat/);
+    expect(deleteButton.title).toMatch(/Used by 1 device/);
     fireEvent.click(deleteButton);
 
     expect(useStore.getState().locations).toHaveLength(1);
@@ -71,19 +71,19 @@ describe('DeviceRegistriesDialog (mandatory test 3)', () => {
 
   it('test 3: deleting a card with a channel still used by a device is blocked', () => {
     useStore.setState({
-      locations: [{ code: 'KOT', description: 'Kotlownia' }],
+      locations: [{ code: 'KOT', description: 'Boiler room' }],
       cards: [{ id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 }, { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }],
       devices: [makeSwitchedDevice()]
     });
     render(<DeviceRegistriesDialog onClose={() => {}} />);
-    fireEvent.click(screen.getByText('Karty'));
+    fireEvent.click(screen.getByText('Cards'));
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Usun' }) as HTMLButtonElement[];
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete' }) as HTMLButtonElement[];
     // ELA1 is used (feedback.diClosed/diOpen), ADA1 is used (command.doClose) - both rows disabled.
     expect(deleteButtons).toHaveLength(2);
     for (const btn of deleteButtons) {
       expect(btn.disabled).toBe(true);
-      expect(btn.title).toMatch(/Uzywana przez 1 aparat/);
+      expect(btn.title).toMatch(/Used by 1 device/);
       fireEvent.click(btn);
     }
 
