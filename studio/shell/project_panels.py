@@ -537,6 +537,18 @@ class PointRegistryPanel(QWidget):
         kind_by_card = {c.id: c.kind for c in project.cards}
         owners = point_owner_map(project)
 
+        # User feedback (real screenshot, KARTA2.DO.* filtered): 7 grey,
+        # unusable analog columns dominating the screen when looking at
+        # one DI/DO card is noise, not "wyszarzone nie usunięte" (that
+        # rule is for a MIXED table, not a single-kind filtered view).
+        # Filtered to one card whose kind is digital -> hide them
+        # outright; filtered to an analog card, or "Wszystkie karty"
+        # (mixed kinds, can't pick one answer), keep them visible.
+        filtered_kind = kind_by_card.get(active_filter) if active_filter else None
+        hide_analog_cols = filtered_kind is not None and filtered_kind not in _ANALOG_KINDS
+        for col in range(4, 11):
+            self.table.setColumnHidden(col, hide_analog_cols)
+
         self.table.setRowCount(0)
         points = sorted(project.points, key=lambda p: p.address)
         for point in points:
