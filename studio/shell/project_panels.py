@@ -41,6 +41,17 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
     project_format.py's Zone/Line/PowerSupervision docstrings for the
     full field-by-field justification and the one known gap (Line.tag
     is a Point.address, not yet a runtime tag name).
+
+  - ElectricalProtectionPanel/ProcessProtectionPanel ("Zabezpieczenia:
+    podział elektryczne/procesowe, na maksa rozbudowujemy") - SPEC's
+    "Nastawy zabezpieczeń" section, split exactly the way runtime keeps
+    these two domains separate (protection_manager.py vs process_
+    protection_manager.py - see project_format.py's own docstring for
+    why). Both use the SAME master/detail shape (a list you toggle with
+    a switch on the left, a detail form for whatever's selected on the
+    right) even though Process's field count would fit inline - one
+    recognizable pattern across both, per the task's own "tu również"
+    (same treatment, not a smaller one because the domain is simpler).
 """
 import re
 
@@ -68,15 +79,17 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
-    Card, Device, Line, LineInputMode, LineParametrization, LineType,
-    Location, NORMAL_STATE_NC, NORMAL_STATE_NO, Point, PowerSupervision, Zone,
-    default_value_windows,
+    Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
+    LineInputMode, LineParametrization, LineType, Location, NORMAL_STATE_NC, NORMAL_STATE_NO,
+    Point, PowerSupervision, ProcessProtection, Zone, default_value_windows,
 )
 
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
@@ -92,6 +105,94 @@ _DEOL_STATES = ("SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN")
 
 _GREY_READONLY_BG = QColor("#E8E8E8")
 _LOCATION_CODE_RE = re.compile(r"^[A-Z0-9]+$")
+
+# "Zabezpieczenia elektryczne" - hand-copied from runtime/epw_os/core/
+# protection_manager.py's own ProtectionManager.init_defaults() (GRANICE
+# forbids importing runtime/ from studio/, so this is a COPY, not a
+# reference - re-check against that file if it ever changes). The
+# catalog itself (which functions/stages exist, their category/source/
+# unit, and their FACTORY defaults) is fixed - ADA01 hardware is what
+# actually implements these, a project can change a stage's VALUES
+# (setting/hysteresis/delay_ms/action/enabled) but not invent a 13th
+# function. Each entry: (category, function_id, source, unit,
+# [(stage_name, default_setting, default_hysteresis, default_delay_ms,
+# default_action), ...]).
+ELECTRICAL_PROTECTION_CATALOG = [
+    ("Voltage", "27 Under Voltage", "Voltage", "V", [
+        ("Stage 1", 200.0, 5.0, 5000, "Warning"),
+        ("Stage 2", 180.0, 5.0, 500, "Trip"),
+    ]),
+    ("Voltage", "59 Over Voltage", "Voltage", "V", [
+        ("Stage 1", 245.0, 5.0, 5000, "Warning"),
+        ("Stage 2", 255.0, 5.0, 100, "Trip"),
+    ]),
+    ("Voltage", "59N Neutral Overvoltage", "Voltage N", "V", [
+        ("Stage 1", 20.0, 2.0, 1000, "Trip"),
+    ]),
+    ("Voltage", "47 Phase Sequence / Phase Loss", "Sequence", "", [
+        ("Stage 1", 0.0, 0.0, 500, "Trip"),
+    ]),
+    ("Frequency", "81U Under Frequency", "Frequency", "Hz", [
+        ("Stage 1", 49.5, 0.1, 1000, "Warning"),
+        ("Stage 2", 48.5, 0.1, 200, "Trip"),
+    ]),
+    ("Frequency", "81O Over Frequency", "Frequency", "Hz", [
+        ("Stage 1", 50.5, 0.1, 1000, "Warning"),
+        ("Stage 2", 51.5, 0.1, 200, "Trip"),
+    ]),
+    ("Current", "50 Instantaneous Overcurrent", "Current", "A", [
+        ("Stage 1", 80.0, 5.0, 100, "Trip"),
+        ("Stage 2", 120.0, 5.0, 0, "Trip"),
+    ]),
+    ("Current", "51 Time Overcurrent", "Current", "A", [
+        ("Stage 1", 50.0, 2.0, 1000, "Warning"),
+        ("Stage 2", 60.0, 2.0, 500, "Trip"),
+    ]),
+    ("Current", "46 Negative Sequence Current", "Current Neg", "A", [
+        ("Stage 1", 10.0, 1.0, 1000, "Trip"),
+    ]),
+    ("Current", "49 Thermal Overload", "Thermal", "%", [
+        ("Stage 1", 90.0, 5.0, 5000, "Warning"),
+        ("Stage 2", 100.0, 2.0, 1000, "Trip"),
+    ]),
+    ("Current", "50N Earth Fault Instantaneous", "Current N", "A", [
+        ("Stage 1", 20.0, 1.0, 0, "Trip"),
+    ]),
+    ("Current", "51N Earth Fault Time", "Current N", "A", [
+        ("Stage 1", 10.0, 1.0, 1000, "Trip"),
+    ]),
+    ("Power/Supply", "Control Voltage Loss", "Control V", "V", [
+        ("Stage 1", 20.0, 1.0, 100, "Trip"),
+    ]),
+    ("Power/Supply", "Technical Supply Loss", "Tech V", "V", [
+        ("Stage 1", 200.0, 5.0, 500, "Warning"),
+    ]),
+    ("Power/Supply", "UPS Supply Loss", "UPS V", "V", [
+        ("Stage 1", 200.0, 5.0, 500, "Warning"),
+    ]),
+]
+
+
+def ensure_electrical_protection_seeded(project) -> bool:
+    """Materializes one ElectricalProtectionStage per catalog entry the
+    project doesn't already have (with the catalog's own factory
+    defaults) - called on every ElectricalProtectionPanel.refresh(),
+    same "the panel guarantees every row exists" role sync_points_for_
+    card() has for cards, except the "source" here is the fixed catalog
+    above, not a user-added card. Returns True if it changed anything
+    (caller's cue to touch()/mark dirty)."""
+    existing = {(s.function_id, s.stage_name) for s in project.electrical_protection_stages}
+    changed = False
+    for _category, function_id, _source, _unit, stages in ELECTRICAL_PROTECTION_CATALOG:
+        for stage_name, setting, hysteresis, delay_ms, action in stages:
+            if (function_id, stage_name) in existing:
+                continue
+            project.electrical_protection_stages.append(ElectricalProtectionStage(
+                function_id=function_id, stage_name=stage_name,
+                setting=setting, hysteresis=hysteresis, delay_ms=delay_ms, action=action,
+            ))
+            changed = True
+    return changed
 
 
 def _card_channel_addresses(card: Card):
@@ -1320,6 +1421,379 @@ class LinesPanel(QWidget):
             project.touch()
             self.refresh()
             self._studio_window._on_project_changed()
+
+
+class ElectricalProtectionPanel(QWidget):
+    """SPEC's "Nastawy zabezpieczeń" (electrical side). Left: a tree,
+    Category > Function > Stage, each Stage row carries the toggle
+    switch ("zaznaczamy które mają być aktywne przełącznikami" - a
+    checkbox IS that switch, same convention Qt trees already use for
+    this). Right: the selected stage's own detail form. The tree's
+    STRUCTURE is the fixed catalog above - never editable here, only
+    each stage's enabled/setting/hysteresis/delay_ms/action."""
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+        self._current_key = None  # (function_id, stage_name) or None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([tr("electrical.col_tree")])
+        self.tree.itemChanged.connect(self._on_tree_item_changed)
+        self.tree.currentItemChanged.connect(self._on_selection_changed)
+        splitter.addWidget(self.tree)
+
+        self.detail_box = QGroupBox(tr("electrical.detail_heading"))
+        form = QFormLayout(self.detail_box)
+        self.enabled_check = QCheckBox(tr("electrical.enabled"))
+        form.addRow(self.enabled_check)
+        self.source_label = QLabel()
+        form.addRow(tr("electrical.source"), self.source_label)
+        self.setting_spin = QDoubleSpinBox()
+        self.setting_spin.setRange(-1_000_000.0, 1_000_000.0)
+        self.setting_spin.setDecimals(2)
+        form.addRow(tr("electrical.setting"), self.setting_spin)
+        self.hysteresis_spin = QDoubleSpinBox()
+        self.hysteresis_spin.setRange(0.0, 1_000_000.0)
+        self.hysteresis_spin.setDecimals(2)
+        form.addRow(tr("electrical.hysteresis"), self.hysteresis_spin)
+        self.delay_spin = QSpinBox()
+        self.delay_spin.setRange(0, 3_600_000)
+        self.delay_spin.setSuffix(" ms")
+        form.addRow(tr("electrical.delay_ms"), self.delay_spin)
+        self.action_combo = QComboBox()
+        self.action_combo.addItems(ELECTRICAL_PROTECTION_ACTIONS)
+        form.addRow(tr("electrical.action"), self.action_combo)
+        self.detail_box.setEnabled(False)
+        splitter.addWidget(self.detail_box)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        layout.addWidget(splitter)
+
+        for widget, signal in (
+            (self.enabled_check, self.enabled_check.toggled),
+            (self.setting_spin, self.setting_spin.valueChanged),
+            (self.hysteresis_spin, self.hysteresis_spin.valueChanged),
+            (self.delay_spin, self.delay_spin.valueChanged),
+            (self.action_combo, self.action_combo.currentTextChanged),
+        ):
+            signal.connect(self._on_detail_changed)
+
+        self.refresh()
+
+    def refresh(self):
+        project = self._studio_window._project
+        if ensure_electrical_protection_seeded(project):
+            project.touch()
+            self._studio_window._on_project_changed()
+
+        self._loading = True
+        self.tree.clear()
+        by_key = {(s.function_id, s.stage_name): s for s in project.electrical_protection_stages}
+        category_items = {}
+        select_item = None
+        for category, function_id, _source, _unit, stage_defs in ELECTRICAL_PROTECTION_CATALOG:
+            cat_item = category_items.get(category)
+            if cat_item is None:
+                cat_item = QTreeWidgetItem([tr(f"electrical.category_{_slug(category)}")])
+                f = cat_item.font(0)
+                f.setBold(True)
+                cat_item.setFont(0, f)
+                cat_item.setFlags(cat_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+                self.tree.addTopLevelItem(cat_item)
+                category_items[category] = cat_item
+            func_item = QTreeWidgetItem([function_id])
+            func_item.setFlags(func_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+            cat_item.addChild(func_item)
+            for stage_name, *_defaults in stage_defs:
+                stage = by_key[(function_id, stage_name)]
+                stage_item = QTreeWidgetItem([stage_name])
+                stage_item.setFlags(stage_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                stage_item.setCheckState(
+                    0, Qt.CheckState.Checked if stage.enabled else Qt.CheckState.Unchecked
+                )
+                stage_item.setData(0, Qt.ItemDataRole.UserRole, (function_id, stage_name))
+                func_item.addChild(stage_item)
+                if (function_id, stage_name) == self._current_key:
+                    select_item = stage_item
+        self.tree.expandAll()
+        if select_item is not None:
+            self.tree.setCurrentItem(select_item)
+        else:
+            self.detail_box.setEnabled(False)
+            self._current_key = None
+        self._loading = False
+
+    def _find_stage(self, key):
+        project = self._studio_window._project
+        for stage in project.electrical_protection_stages:
+            if (stage.function_id, stage.stage_name) == key:
+                return stage
+        return None
+
+    def _catalog_entry(self, function_id):
+        for category, fid, source, unit, stage_defs in ELECTRICAL_PROTECTION_CATALOG:
+            if fid == function_id:
+                return category, source, unit
+        return "", "", ""
+
+    def _on_selection_changed(self, current, _previous):
+        if current is None:
+            return
+        key = current.data(0, Qt.ItemDataRole.UserRole)
+        if key is None:  # a Category or Function header, not a Stage
+            self.detail_box.setEnabled(False)
+            self._current_key = None
+            return
+        stage = self._find_stage(key)
+        if stage is None:
+            return
+        self._current_key = key
+        self.detail_box.setEnabled(True)
+        _category, source, unit = self._catalog_entry(stage.function_id)
+        self._loading = True
+        self.enabled_check.setChecked(stage.enabled)
+        self.source_label.setText(f"{source} [{unit}]" if unit else source)
+        self.setting_spin.setSuffix(f" {unit}" if unit else "")
+        self.setting_spin.setValue(stage.setting)
+        self.hysteresis_spin.setSuffix(f" {unit}" if unit else "")
+        self.hysteresis_spin.setValue(stage.hysteresis)
+        self.delay_spin.setValue(stage.delay_ms)
+        idx = self.action_combo.findText(stage.action)
+        self.action_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self._loading = False
+
+    def _on_tree_item_changed(self, item, column):
+        if self._loading or column != 0:
+            return
+        key = item.data(0, Qt.ItemDataRole.UserRole)
+        if key is None:
+            return
+        stage = self._find_stage(key)
+        if stage is None:
+            return
+        stage.enabled = item.checkState(0) == Qt.CheckState.Checked
+        if key == self._current_key:
+            self._loading = True
+            self.enabled_check.setChecked(stage.enabled)
+            self._loading = False
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_detail_changed(self, *_args):
+        if self._loading or self._current_key is None:
+            return
+        stage = self._find_stage(self._current_key)
+        if stage is None:
+            return
+        stage.enabled = self.enabled_check.isChecked()
+        stage.setting = self.setting_spin.value()
+        stage.hysteresis = self.hysteresis_spin.value()
+        stage.delay_ms = self.delay_spin.value()
+        stage.action = self.action_combo.currentText()
+        # Keep the tree's own checkbox in sync without recursing back
+        # into _on_tree_item_changed().
+        current_item = self.tree.currentItem()
+        if current_item is not None:
+            self._loading = True
+            current_item.setCheckState(
+                0, Qt.CheckState.Checked if stage.enabled else Qt.CheckState.Unchecked
+            )
+            self._loading = False
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+
+class ProcessProtectionPanel(QWidget):
+    """SPEC's "Nastawy zabezpieczeń" (process side) - a dynamic, user-
+    created list (unlike Electrical's fixed catalog), same master/
+    detail SHAPE anyway (task: "tu również... na maksa rozbudowujemy",
+    read as "the same treatment", not "a smaller one because there's
+    less to configure"). Left: table with an Enabled column acting as
+    the toggle switch. Right: the selected protection's own point +
+    thresholds, field-for-field match to process_protection_manager.
+    add_protection()/update_protection()."""
+
+    _COLS = ["enabled", "id", "name"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"process.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.table.itemChanged.connect(self._on_item_changed)
+        self.table.currentCellChanged.connect(self._on_selection_changed)
+        splitter.addWidget(self.table)
+
+        self.detail_box = QGroupBox(tr("process.detail_heading"))
+        form = QFormLayout(self.detail_box)
+        self.point_combo = QComboBox()
+        form.addRow(tr("process.point"), self.point_combo)
+        self.upper_spin = QDoubleSpinBox()
+        self.upper_spin.setRange(-1_000_000.0, 1_000_000.0)
+        self.upper_spin.setDecimals(2)
+        form.addRow(tr("process.upper_threshold"), self.upper_spin)
+        self.lower_spin = QDoubleSpinBox()
+        self.lower_spin.setRange(-1_000_000.0, 1_000_000.0)
+        self.lower_spin.setDecimals(2)
+        form.addRow(tr("process.lower_threshold"), self.lower_spin)
+        self.hysteresis_spin = QDoubleSpinBox()
+        self.hysteresis_spin.setRange(0.0, 1_000_000.0)
+        self.hysteresis_spin.setDecimals(2)
+        form.addRow(tr("process.hysteresis"), self.hysteresis_spin)
+        self.delay_spin = _seconds_spinbox()
+        form.addRow(tr("process.delay_seconds"), self.delay_spin)
+        self.detail_box.setEnabled(False)
+        splitter.addWidget(self.detail_box)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        layout.addWidget(splitter)
+
+        for widget, signal in (
+            (self.point_combo, self.point_combo.currentIndexChanged),
+            (self.upper_spin, self.upper_spin.valueChanged),
+            (self.lower_spin, self.lower_spin.valueChanged),
+            (self.hysteresis_spin, self.hysteresis_spin.valueChanged),
+            (self.delay_spin, self.delay_spin.valueChanged),
+        ):
+            signal.connect(self._on_detail_changed)
+
+        self.refresh()
+
+    def refresh(self):
+        self._loading = True
+        selected_id = self._current_protection_id()
+        self.table.setRowCount(0)
+        select_row = -1
+        for row, protection in enumerate(self._studio_window._project.process_protections):
+            self._append_row(protection)
+            if protection.id == selected_id:
+                select_row = row
+        if select_row >= 0:
+            self.table.setCurrentCell(select_row, 1)
+        else:
+            self.detail_box.setEnabled(False)
+        self._loading = False
+
+    def _append_row(self, protection: ProcessProtection):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        check_item = QTableWidgetItem()
+        check_item.setFlags((check_item.flags() | Qt.ItemFlag.ItemIsUserCheckable) & ~Qt.ItemFlag.ItemIsEditable)
+        check_item.setCheckState(Qt.CheckState.Checked if protection.enabled else Qt.CheckState.Unchecked)
+        self.table.setItem(row, 0, check_item)
+        id_item = QTableWidgetItem(protection.id)
+        id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.table.setItem(row, 1, id_item)
+        self.table.setItem(row, 2, QTableWidgetItem(protection.name))
+
+    def _current_protection_id(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return None
+        item = self.table.item(row, 1)
+        return item.text() if item is not None else None
+
+    def _find_protection(self, protection_id):
+        for protection in self._studio_window._project.process_protections:
+            if protection.id == protection_id:
+                return protection
+        return None
+
+    def add_protection(self):
+        project = self._studio_window._project
+        existing_ids = {p.id for p in project.process_protections}
+        new_id = _next_unique(existing_ids, "PP")
+        project.process_protections.append(ProcessProtection(id=new_id, name=tr("process.default_name", id=new_id)))
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def remove_selected_protection(self):
+        protection_id = self._current_protection_id()
+        if protection_id is None:
+            return
+        project = self._studio_window._project
+        project.process_protections = [p for p in project.process_protections if p.id != protection_id]
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def _on_item_changed(self, item):
+        if self._loading:
+            return
+        row = item.row()
+        id_item = self.table.item(row, 1)
+        if id_item is None:
+            return
+        protection = self._find_protection(id_item.text())
+        if protection is None:
+            return
+        if item.column() == 0:
+            protection.enabled = item.checkState() == Qt.CheckState.Checked
+            if protection.id == self._current_protection_id():
+                self._loading = True
+                self.detail_box.setEnabled(True)
+                self._loading = False
+        elif item.column() == 2:
+            protection.name = item.text()
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_selection_changed(self, current_row, _current_col, _prev_row, _prev_col):
+        if self._loading or current_row < 0:
+            return
+        protection_id = self._current_protection_id()
+        protection = self._find_protection(protection_id)
+        if protection is None:
+            self.detail_box.setEnabled(False)
+            return
+        self.detail_box.setEnabled(True)
+        ai_points = points_of_kind(self._studio_window._project, "AI")
+        self._loading = True
+        self.point_combo.clear()
+        for point in ai_points:
+            label = point.address if not point.description else f"{point.address} — {point.description}"
+            self.point_combo.addItem(label, point.address)
+        idx = self.point_combo.findData(protection.analog_tag)
+        self.point_combo.setCurrentIndex(idx if idx >= 0 else -1)
+        self.upper_spin.setValue(protection.upper_threshold)
+        self.lower_spin.setValue(protection.lower_threshold)
+        self.hysteresis_spin.setValue(protection.hysteresis)
+        self.delay_spin.setValue(protection.delay_seconds)
+        self._loading = False
+
+    def _on_detail_changed(self, *_args):
+        if self._loading:
+            return
+        protection_id = self._current_protection_id()
+        protection = self._find_protection(protection_id)
+        if protection is None:
+            return
+        protection.analog_tag = self.point_combo.currentData() or ""
+        protection.upper_threshold = self.upper_spin.value()
+        protection.lower_threshold = self.lower_spin.value()
+        protection.hysteresis = self.hysteresis_spin.value()
+        protection.delay_seconds = self.delay_spin.value()
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
 # -- shared helpers -------------------------------------------------------

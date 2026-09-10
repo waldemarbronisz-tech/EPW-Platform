@@ -5,13 +5,32 @@ restate it from memory, so the two don't quietly drift apart.
 
 Scope of THIS module, deliberately: the "structural" fields the contract
 itself groups under Studio's exclusive editing layer (Nagłówek, Skład
-urządzenia, Sprzęt, Punkty, Aparaty, Alarmówka) - not yet `screens`/
-`logic` (embedding the Synoptic/Logic Studio editors' own content into
-this file is a separate, much larger integration - SynopticPanel/
-LogicPanel keep their own .epwsyn/.epwlogic save flow entirely
-unchanged until that lands, so nothing about how Ekrany/Logika save
-today is touched by this module), and not yet `protection` (its own
-later step in the contract's own "Kolejność wdrożenia").
+urządzenia, Sprzęt, Punkty, Aparaty, Alarmówka, Nastawy zabezpieczeń) -
+not yet `screens`/`logic` (embedding the Synoptic/Logic Studio editors'
+own content into this file is a separate, much larger integration -
+SynopticPanel/LogicPanel keep their own .epwsyn/.epwlogic save flow
+entirely unchanged until that lands, so nothing about how Ekrany/Logika
+save today is touched by this module).
+
+ElectricalProtectionStage/ProcessProtection ("Zabezpieczenia: na maksa
+dużo opcji") are TWO DIFFERENT real domains, kept separate here exactly
+as runtime/epw_os/core/protection_manager.py (electrical) and
+process_protection_manager.py (process) keep them:
+  - Electrical: a FIXED catalog of ANSI-coded relay functions (27/59/
+    50/51/...), delegated to ADA01 hardware, never evaluated by
+    software - Studio stores per-STAGE VALUES (enabled/setting/
+    hysteresis/delay_ms/action) against project_panels.py's own
+    ELECTRICAL_PROTECTION_CATALOG constant (a hand-copy of
+    protection_manager.py's init_defaults() - GRANICE forbids a
+    runtime/ import here), never new functions/stages - the catalog
+    itself is what the hardware implements, not something a project
+    can invent.
+  - Process: a dynamic, user-created list, evaluated LIVE in software
+    against a real analog point - field-for-field match to
+    process_protection_manager.add_protection()/update_protection().
+Both share the same runtime-tag-name gap already documented for
+Line.tag: `analog_tag` here is a Point.address, not yet a resolvable
+runtime tag.
 
 Zone/Line/PowerSupervision below intentionally carry MORE fields than
 the contract's own terse "Alarmówka" section spells out (`lines typ
@@ -267,6 +286,42 @@ class PowerSupervision:
     battery_ok_state: bool = True
 
 
+ELECTRICAL_PROTECTION_ACTIONS = ("Disabled", "Information", "Warning", "Trip", "Custom Logic")
+
+
+@dataclass
+class ElectricalProtectionStage:
+    """SPEC_PROJEKT_EPW.md, "Nastawy zabezpieczeń" (electrical side) -
+    see this module's own docstring for why the CATALOG (which function/
+    stage ids exist at all) is fixed, hand-copied from protection_
+    manager.py's init_defaults() as project_panels.
+    ELECTRICAL_PROTECTION_CATALOG - only VALUES live here, per stage."""
+
+    function_id: str   # e.g. "50 Instantaneous Overcurrent" - catalog key
+    stage_name: str     # e.g. "Stage 1" - catalog key, together with function_id
+    enabled: bool = True
+    setting: float = 0.0
+    hysteresis: float = 0.0
+    delay_ms: int = 0
+    action: str = "Trip"  # one of ELECTRICAL_PROTECTION_ACTIONS
+
+
+@dataclass
+class ProcessProtection:
+    """SPEC_PROJEKT_EPW.md, "Nastawy zabezpieczeń" (process side) -
+    field-for-field match to process_protection_manager.py's own
+    add_protection()/update_protection() parameters."""
+
+    id: str
+    name: str
+    analog_tag: str = ""  # a Point.address (see this module's own docstring)
+    upper_threshold: float = 100.0
+    lower_threshold: float = 0.0
+    hysteresis: float = 0.0
+    delay_seconds: float = 0.0
+    enabled: bool = True
+
+
 @dataclass
 class Project:
     """The whole of `projekt.epw`'s in-memory representation - only the
@@ -282,6 +337,8 @@ class Project:
     zones: list = field(default_factory=list)  # list[Zone]
     lines: list = field(default_factory=list)  # list[Line]
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
+    electrical_protection_stages: list = field(default_factory=list)  # list[ElectricalProtectionStage]
+    process_protections: list = field(default_factory=list)  # list[ProcessProtection]
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
     # day one even though the "reject an older revision on upload"
@@ -362,6 +419,15 @@ def _to_json_dict(project: Project) -> dict:
         if power_configured:
             intrusion["power_supervision"] = asdict(ps)
         data["intrusion"] = intrusion
+    # SPEC_PROJEKT_EPW.md, "Nastawy zabezpieczeń" - nested under
+    # "protection", same "absent = module not present" reading.
+    if project.electrical_protection_stages or project.process_protections:
+        protection = {}
+        if project.electrical_protection_stages:
+            protection["electrical"] = [asdict(s) for s in project.electrical_protection_stages]
+        if project.process_protections:
+            protection["process"] = [asdict(p) for p in project.process_protections]
+        data["protection"] = protection
     return data
 
 
@@ -454,5 +520,10 @@ def load_project(path) -> Project:
     project.lines = [Line(**l) for l in intrusion.get("lines", [])]
     if "power_supervision" in intrusion:
         project.power_supervision = PowerSupervision(**intrusion["power_supervision"])
+    protection = data.get("protection", {})
+    project.electrical_protection_stages = [
+        ElectricalProtectionStage(**s) for s in protection.get("electrical", [])
+    ]
+    project.process_protections = [ProcessProtection(**p) for p in protection.get("process", [])]
     project.is_dirty = False
     return project

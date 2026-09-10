@@ -9,8 +9,10 @@ task's own chat report), not unit-tested here.
 """
 from studio.shell.project_format import Card, Device, Location, Point, new_project
 from studio.shell.project_panels import (
+    ELECTRICAL_PROTECTION_CATALOG,
     card_from_synoptic_dict,
     card_to_synoptic_dict,
+    ensure_electrical_protection_seeded,
     find_point_owner,
     location_from_synoptic_dict,
     location_to_synoptic_dict,
@@ -206,3 +208,24 @@ def test_points_of_kind_filters_by_the_owning_cards_kind():
 def test_points_of_kind_empty_when_no_matching_card():
     project = _project()
     assert points_of_kind(project, "AI") == []
+
+
+def _catalog_stage_count():
+    return sum(len(stages) for *_rest, stages in ELECTRICAL_PROTECTION_CATALOG)
+
+
+def test_ensure_electrical_protection_seeded_creates_one_per_catalog_stage():
+    project = _project()
+    changed = ensure_electrical_protection_seeded(project)
+    assert changed is True
+    assert len(project.electrical_protection_stages) == _catalog_stage_count()
+
+
+def test_ensure_electrical_protection_seeded_is_idempotent():
+    project = _project()
+    ensure_electrical_protection_seeded(project)
+    project.electrical_protection_stages[0].setting = 12345.0
+    changed_again = ensure_electrical_protection_seeded(project)
+    assert changed_again is False
+    assert len(project.electrical_protection_stages) == _catalog_stage_count()
+    assert project.electrical_protection_stages[0].setting == 12345.0

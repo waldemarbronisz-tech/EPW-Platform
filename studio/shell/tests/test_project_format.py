@@ -12,6 +12,7 @@ import pytest
 from studio.shell.project_format import (
     Card,
     Device,
+    ElectricalProtectionStage,
     Line,
     LineInputMode,
     LineParametrization,
@@ -20,6 +21,7 @@ from studio.shell.project_format import (
     NORMAL_STATE_NC,
     Point,
     PowerSupervision,
+    ProcessProtection,
     Project,
     ProjectFormatError,
     SCHEMA_VERSION,
@@ -262,6 +264,50 @@ def test_default_value_windows_eol_has_three_states():
 def test_default_value_windows_deol_has_five_states():
     windows = default_value_windows(LineParametrization.DEOL)
     assert set(windows.keys()) == {"SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN"}
+
+
+# -- Zabezpieczenia (ElectricalProtectionStage/ProcessProtection) --------
+# Task "Zabezpieczenia: podział elektryczne/procesowe, na maksa
+# rozbudowujemy" - field-for-field match to runtime/epw_os/core/
+# protection_manager.py and process_protection_manager.py respectively
+# (see both dataclasses' own docstrings).
+
+def test_protection_section_omitted_when_nothing_configured():
+    p = new_project("Test")
+    data = json.loads(_decompress_saved(p))
+    assert "protection" not in data
+
+
+def test_electrical_and_process_protection_round_trip(tmp_path):
+    p = new_project("Test")
+    stage = ElectricalProtectionStage(
+        function_id="50 Instantaneous Overcurrent", stage_name="Stage 1",
+        enabled=False, setting=80.0, hysteresis=5.0, delay_ms=100, action="Warning",
+    )
+    p.electrical_protection_stages.append(stage)
+    protection = ProcessProtection(
+        id="PP1", name="Temperatura kotła", analog_tag="ELA1.AI.1",
+        upper_threshold=90.0, lower_threshold=5.0, hysteresis=2.0, delay_seconds=10.0, enabled=True,
+    )
+    p.process_protections.append(protection)
+
+    path = tmp_path / "projekt.epw"
+    save_project(p, path)
+    loaded = load_project(path)
+
+    assert loaded.electrical_protection_stages == [stage]
+    assert loaded.process_protections == [protection]
+
+
+def test_protection_section_present_with_only_electrical_configured():
+    p = new_project("Test")
+    p.electrical_protection_stages.append(
+        ElectricalProtectionStage(function_id="27 Under Voltage", stage_name="Stage 1")
+    )
+    data = json.loads(_decompress_saved(p))
+    assert "protection" in data
+    assert "electrical" in data["protection"]
+    assert "process" not in data["protection"]
 
 
 def _decompress_saved(project) -> str:

@@ -26,7 +26,8 @@
     "logic": "Logic",
     "security_zones": "Zones",
     "security_lines": "Supervised Lines",
-    "protection_settings": "Setpoints",
+    "protection_electrical": "Electrical Protection",
+    "protection_process": "Process Protection",
     "controller_connection": "Connection and Live View"
   },
   "breadcrumb": {
@@ -40,13 +41,13 @@
     "apparatus_registry": "Project → Configuration → Apparatus Registry",
     "security_zones": "Project → Intrusion Alarm → Zones",
     "security_lines": "Project → Intrusion Alarm → Supervised Lines",
-    "protection_settings": "Project → Protection → Setpoints",
+    "protection_electrical": "Project → Protection → Electrical Protection",
+    "protection_process": "Project → Protection → Process Protection",
     "controller_connection": "Project → Controller → Connection and Live View"
   },
   "placeholder": {
     "devices": "The list of field devices (ELA/ADA/EPM) that make up the installation (project/devices.json) - not built yet.",
     "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - edited today together with I/O Cards (one \"Sprzęt\" section in SPEC_PROJEKT_EPW.md); this separate branch not built yet.",
-    "protection_settings": "Electrical and process protection setpoints (protection/electrical.json, process.json) - not built yet.",
     "controller_connection": "A live connection to a real EPW-OS controller and a view of its current state - not built yet."
   },
   "statusbar": {
@@ -324,5 +325,33 @@
     "off": "off",
     "group_supervision": "Line Supervision",
     "silence_threshold_seconds": "Silence Time Before Suspect:"
+  },
+  "electrical": {
+    "col_tree": "Function / Stage",
+    "detail_heading": "Stage Configuration",
+    "enabled": "Enabled",
+    "source": "Quantity:",
+    "setting": "Setting:",
+    "hysteresis": "Hysteresis:",
+    "delay_ms": "Delay:",
+    "action": "Action:",
+    "category_voltage": "Voltage",
+    "category_frequency": "Frequency",
+    "category_current": "Current",
+    "category_power_supply": "Power Supply"
+  },
+  "process": {
+    "col_enabled": "En.",
+    "col_id": "Id",
+    "col_name": "Name",
+    "detail_heading": "Protection Configuration",
+    "point": "Point:",
+    "upper_threshold": "Upper Threshold:",
+    "lower_threshold": "Lower Threshold:",
+    "hysteresis": "Hysteresis:",
+    "delay_seconds": "Delay:",
+    "default_name": "Protection {id}",
+    "add_protection": "Add Protection",
+    "remove_protection": "Remove Protection"
   }
 }

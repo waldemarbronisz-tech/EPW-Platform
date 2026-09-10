@@ -26,7 +26,8 @@
     "logic": "Logika",
     "security_zones": "Strefy",
     "security_lines": "Linie dozorowe",
-    "protection_settings": "Nastawy",
+    "protection_electrical": "Zabezpieczenia elektryczne",
+    "protection_process": "Zabezpieczenia procesowe",
     "controller_connection": "Połączenie i podgląd"
   },
   "breadcrumb": {
@@ -40,13 +41,13 @@
     "apparatus_registry": "Projekt → Konfiguracja → Rejestr aparatów",
     "security_zones": "Projekt → Alarmówka → Strefy",
     "security_lines": "Projekt → Alarmówka → Linie dozorowe",
-    "protection_settings": "Projekt → Zabezpieczenia → Nastawy",
+    "protection_electrical": "Projekt → Zabezpieczenia → Zabezpieczenia elektryczne",
+    "protection_process": "Projekt → Zabezpieczenia → Zabezpieczenia procesowe",
     "controller_connection": "Projekt → Sterownik → Połączenie i podgląd"
   },
   "placeholder": {
     "devices": "Lista urządzeń polowych ELA/ADA/EPM wchodzących w skład instalacji (project/devices.json) — jeszcze nie zbudowane.",
     "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — edytowana dziś razem z Kartami wejść/wyjść (jedna sekcja \"Sprzęt\" w SPEC_PROJEKT_EPW.md); ta osobna gałąź jeszcze nie zbudowana.",
-    "protection_settings": "Nastawy zabezpieczeń elektrycznych i procesowych (protection/electrical.json, process.json) — jeszcze nie zbudowane.",
     "controller_connection": "Żywe połączenie ze sterownikiem EPW-OS i podgląd jego bieżącego stanu — jeszcze nie zbudowane."
   },
   "statusbar": {
@@ -324,5 +325,33 @@
     "off": "wyłączone",
     "group_supervision": "Nadzór linii",
     "silence_threshold_seconds": "Czas ciszy do podejrzenia awarii:"
+  },
+  "electrical": {
+    "col_tree": "Funkcja / stopień",
+    "detail_heading": "Konfiguracja stopnia",
+    "enabled": "Aktywne",
+    "source": "Wielkość:",
+    "setting": "Nastawa:",
+    "hysteresis": "Histereza:",
+    "delay_ms": "Zwłoka:",
+    "action": "Typ działania:",
+    "category_voltage": "Napięcie",
+    "category_frequency": "Częstotliwość",
+    "category_current": "Prąd",
+    "category_power_supply": "Zasilanie"
+  },
+  "process": {
+    "col_enabled": "Akt.",
+    "col_id": "Id",
+    "col_name": "Nazwa",
+    "detail_heading": "Konfiguracja zabezpieczenia",
+    "point": "Punkt:",
+    "upper_threshold": "Próg górny:",
+    "lower_threshold": "Próg dolny:",
+    "hysteresis": "Histereza:",
+    "delay_seconds": "Zwłoka:",
+    "default_name": "Zabezpieczenie {id}",
+    "add_protection": "Dodaj zabezpieczenie",
+    "remove_protection": "Usuń zabezpieczenie"
   }
 }

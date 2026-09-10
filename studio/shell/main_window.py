@@ -38,8 +38,9 @@ from PySide6.QtWidgets import (
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
-    build_cards_toolbar, build_devices_toolbar, build_fixed_menu, build_lines_toolbar,
-    build_logic_context_toolbar, build_point_registry_toolbar, build_project_info_toolbar,
+    build_cards_toolbar, build_devices_toolbar, build_electrical_protection_toolbar,
+    build_fixed_menu, build_lines_toolbar, build_logic_context_toolbar,
+    build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
     build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
@@ -82,7 +83,12 @@ _INACTIVE_CONFIG_CHILDREN = [
 # same way io_cards/point_registry/apparatus_registry already were.
 _TREE_ITEM_ZONES = "security_zones"
 _TREE_ITEM_LINES = "security_lines"
-_INACTIVE_PROTECTION_CHILDREN = [("protection_settings", "tree.protection_settings")]
+# "Zabezpieczenia: podział elektryczne/procesowe" - promoted the same
+# way, replacing the single "Nastawy" placeholder with the two real
+# domains runtime itself keeps separate (protection_manager.py vs
+# process_protection_manager.py).
+_TREE_ITEM_ELECTRICAL_PROTECTION = "protection_electrical"
+_TREE_ITEM_PROCESS_PROTECTION = "protection_process"
 _INACTIVE_CONTROLLER_CHILDREN = [("controller_connection", "tree.controller_connection")]
 
 _BREADCRUMB_KEYS = {
@@ -94,6 +100,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
     _TREE_ITEM_ZONES: "breadcrumb.security_zones",
     _TREE_ITEM_LINES: "breadcrumb.security_lines",
+    _TREE_ITEM_ELECTRICAL_PROTECTION: "breadcrumb.protection_electrical",
+    _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -299,6 +307,8 @@ class StudioMainWindow(QMainWindow):
         self._devices_panel = None
         self._zones_panel = None
         self._lines_panel = None
+        self._electrical_protection_panel = None
+        self._process_protection_panel = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -427,6 +437,12 @@ class StudioMainWindow(QMainWindow):
         # set rather than drawing two more single-purpose icons.
         icon_zones = icons.icon("lock")
         icon_lines = icons.icon("draw_wire")
+        # "Zabezpieczenia" - "medium_electrical" (the yellow lightning
+        # bolt) already means electrical current elsewhere in this same
+        # set; "add_meter" (a gauge/dial) reads as "a measured process
+        # value", the actual subject of process protection.
+        icon_electrical = icons.icon("medium_electrical")
+        icon_process = icons.icon("add_meter")
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -495,8 +511,12 @@ class StudioMainWindow(QMainWindow):
         self._item_lines = add_active_leaf(alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines)
 
         protection = add_group(root, "tree.group_protection")
-        for key, label_key in _INACTIVE_PROTECTION_CHILDREN:
-            add_inactive_leaf(protection, key, label_key)
+        self._item_electrical_protection = add_active_leaf(
+            protection, _TREE_ITEM_ELECTRICAL_PROTECTION, "tree.protection_electrical", icon_electrical
+        )
+        self._item_process_protection = add_active_leaf(
+            protection, _TREE_ITEM_PROCESS_PROTECTION, "tree.protection_process", icon_process
+        )
 
         controller = add_group(root, "tree.group_controller")
         for key, label_key in _INACTIVE_CONTROLLER_CHILDREN:
@@ -843,6 +863,10 @@ class StudioMainWindow(QMainWindow):
                 self._open_zones()
             elif key == _TREE_ITEM_LINES:
                 self._open_lines()
+            elif key == _TREE_ITEM_ELECTRICAL_PROTECTION:
+                self._open_electrical_protection()
+            elif key == _TREE_ITEM_PROCESS_PROTECTION:
+                self._open_process_protection()
         elif kind == "inactive":
             self._open_inactive(key)
 
@@ -1015,6 +1039,36 @@ class StudioMainWindow(QMainWindow):
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
+    def _open_electrical_protection(self):
+        if self._electrical_protection_panel is None:
+            from studio.shell.project_panels import ElectricalProtectionPanel
+            self._electrical_protection_panel = ElectricalProtectionPanel(self)
+        else:
+            self._electrical_protection_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_ELECTRICAL_PROTECTION, self._electrical_protection_panel,
+            build_electrical_protection_toolbar, self._electrical_protection_panel,
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_ELECTRICAL_PROTECTION
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_process_protection(self):
+        if self._process_protection_panel is None:
+            from studio.shell.project_panels import ProcessProtectionPanel
+            self._process_protection_panel = ProcessProtectionPanel(self)
+        else:
+            self._process_protection_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_PROCESS_PROTECTION, self._process_protection_panel,
+            build_process_protection_toolbar, self._process_protection_panel,
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_PROCESS_PROTECTION
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
     # ------------------------------------------------------------------
     # Project lifecycle (Informacje o projekcie's own toolbar) - separate
     # from _shared_new/_shared_open/etc above, see project_panels.py's
@@ -1065,6 +1119,10 @@ class StudioMainWindow(QMainWindow):
             self._zones_panel.refresh()
         if self._lines_panel is not None:
             self._lines_panel.refresh()
+        if self._electrical_protection_panel is not None:
+            self._electrical_protection_panel.refresh()
+        if self._process_protection_panel is not None:
+            self._process_protection_panel.refresh()
 
     def _open_project(self):
         if not self._confirm_discard_project():
@@ -1094,6 +1152,10 @@ class StudioMainWindow(QMainWindow):
             self._zones_panel.refresh()
         if self._lines_panel is not None:
             self._lines_panel.refresh()
+        if self._electrical_protection_panel is not None:
+            self._electrical_protection_panel.refresh()
+        if self._process_protection_panel is not None:
+            self._process_protection_panel.refresh()
 
     def _save_project(self) -> bool:
         if self._project_path is None:

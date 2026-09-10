@@ -373,6 +373,21 @@ def build_lines_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("lines.remove_line"), panel.remove_selected_line, icon_name="remove_row")
 
 
+def build_electrical_protection_toolbar(toolbar, _panel, _studio_window):
+    """No add/remove - the catalog (which functions/stages exist) is
+    fixed (ADA01 hardware), same "no add/remove" stance
+    build_point_registry_toolbar() already has for the same reason."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
+def build_process_protection_toolbar(toolbar, panel, _studio_window):
+    """Dodaj/Usuń zabezpieczenie procesowe - a dynamic, user-created
+    list, unlike Electrical's fixed catalog."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("process.add_protection"), panel.add_protection, icon_name="add_row")
+    _add(toolbar, tr("process.remove_protection"), panel.remove_selected_protection, icon_name="remove_row")
+
+
 def build_point_registry_toolbar(toolbar, _panel, _studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's
