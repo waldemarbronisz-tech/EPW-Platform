@@ -23,5 +23,83 @@
     "loading": "Loading the screen editor...",
     "build_failed": "Could not build the screen editor (npm run build). Check that Node.js/npm is installed, and see the terminal for details.",
     "load_failed": "Could not load the screen editor in this window."
+  },
+  "menu": {
+    "titles": {
+      "file": "File",
+      "edit": "Edit",
+      "view": "View",
+      "project": "Project",
+      "logic": "Logic",
+      "simulation": "Simulation",
+      "devices": "Devices",
+      "help": "Help"
+    },
+    "file": {
+      "new": "New",
+      "open": "Open...",
+      "save": "Save",
+      "save_as": "Save As...",
+      "exit": "Exit",
+      "compare_saved": "Compare with Saved File...",
+      "compare_files": "Compare Two Projects..."
+    },
+    "edit": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "delete": "Delete",
+      "align": "Align",
+      "disable_selected": "Disable Selected Blocks",
+      "enable_selected": "Enable Selected Blocks",
+      "reroute": "Reroute"
+    },
+    "view": {
+      "zoom_in": "Zoom In",
+      "zoom_out": "Zoom Out",
+      "reset_zoom": "Reset Zoom",
+      "grid": "Grid",
+      "snap": "Snap to Grid",
+      "toolbar": "Toolbar",
+      "toolbar_icons": "Icons",
+      "toolbar_icons_text": "Icons and Text",
+      "toolbar_text": "Text",
+      "scada_preview": "SCADA Style Preview..."
+    },
+    "project": {
+      "settings": "Project Settings...",
+      "export_signals": "Export Signal List...",
+      "export_pdf": "Export to PDF..."
+    },
+    "logic": {
+      "compile": "Compile",
+      "export_runtime": "Export Runtime"
+    },
+    "simulation": {
+      "start": "Start",
+      "pause": "Pause",
+      "stop": "Stop"
+    },
+    "devices": {
+      "project_registers": "Project Registers...",
+      "device_list": "Device List..."
+    },
+    "help": {
+      "topics": "Help Topics",
+      "catalog": "Block Catalog",
+      "shortcuts": "Keyboard Shortcuts",
+      "export_catalog": "Export Block Catalog...",
+      "about": "About"
+    },
+    "neutral_hint": "Select Screens or Logic in the tree"
+  },
+  "toolbar": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "undo": "Undo",
+    "redo": "Redo"
   }
 }

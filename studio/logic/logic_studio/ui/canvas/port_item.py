@@ -3,6 +3,7 @@ from PySide6.QtGui import QPainter, QPen, QBrush, QFont, QFontMetricsF, QCursor
 from PySide6.QtCore import Qt, QRectF, QPointF
 
 from logic_studio.ui.canvas import style
+from logic_studio.ui.window_lookup import logic_main_window
 
 class PortItem(QGraphicsItem):
     def __init__(self, pin, parent=None):
@@ -123,7 +124,7 @@ class PortItem(QGraphicsItem):
 
     def _push_state_if_possible(self):
         if self.scene() and self.scene().views():
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             project = getattr(window, 'project', None)
             if project:
                 project.push_state()
@@ -197,7 +198,7 @@ class PortItem(QGraphicsItem):
         stub, the SAME label dialog every wire-label action uses."""
         window = None
         if self.scene() and self.scene().views():
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
         project = getattr(window, 'project', None) if window is not None else None
         if project is None:
             return

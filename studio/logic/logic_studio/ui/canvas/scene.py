@@ -3,6 +3,7 @@ from PySide6.QtGui import QPen, QCursor
 from PySide6.QtCore import Qt, QLineF, QPointF, Signal
 
 from logic_studio.ui.canvas import style
+from logic_studio.ui.window_lookup import logic_main_window
 
 class LogicScene(QGraphicsScene):
     # Emitted whenever a block is placed via the library (drag or double-click)
@@ -81,7 +82,7 @@ class LogicScene(QGraphicsScene):
         from logic_studio.ui.canvas.block_item import BlockItem
         from logic_studio.ui.canvas.wire_item import WireItem
 
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
 
         if project and len(self.selectedItems()) > 0:
@@ -179,7 +180,7 @@ class LogicScene(QGraphicsScene):
         # the selection makes the whole record ineligible, the same
         # "silently drop what doesn't fully fit" rule already applied to
         # pin_data["connections"] above.
-        window = self.views()[0].window() if self.views() else None
+        window = logic_main_window(self.views()[0]) if self.views() else None
         project = getattr(window, 'project', None)
         wires_data = []
         if project is not None:
@@ -221,7 +222,7 @@ class LogicScene(QGraphicsScene):
         from logic_studio.blocks.pin import Pin
         from logic_studio.ui.canvas.block_item import BlockItem
 
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
         if project is None:
             return
@@ -476,7 +477,7 @@ class LogicScene(QGraphicsScene):
         if not block:
             return # Invalid drop
 
-        window = self.views()[0].window() if self.views() else None
+        window = logic_main_window(self.views()[0]) if self.views() else None
         project = getattr(window, 'project', None) if window is not None else None
 
         # feat/macro-blocks: BlockRegistry.create_block() hands back a
@@ -534,7 +535,7 @@ class LogicScene(QGraphicsScene):
 
         if not self.views():
             return False
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
         if project is None:
             return False
@@ -708,7 +709,7 @@ class LogicScene(QGraphicsScene):
         # pre-drag/pre-connect state. Left-button only, matching the same
         # gesture the release side already restricts itself to.
         if event.button() == Qt.LeftButton:
-            window = self.views()[0].window()
+            window = logic_main_window(self.views()[0])
             project = getattr(window, 'project', None)
             self._press_state_snapshot = project.serialize() if project else None
         else:
@@ -773,7 +774,7 @@ class LogicScene(QGraphicsScene):
         # (comment used to read "for MVP forcing state on release if
         # selected works"), flooding the undo stack with a no-op entry on
         # every plain click. _press_positions is set in mousePressEvent.
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
 
         from logic_studio.ui.canvas.block_item import BlockItem
@@ -867,7 +868,7 @@ class LogicScene(QGraphicsScene):
         still "performed")."""
         if not self.views():
             return
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
         if project is None:
             return
@@ -978,7 +979,7 @@ class LogicScene(QGraphicsScene):
         block_items = list(block_items)
         if not block_items or not self.views():
             return
-        window = self.views()[0].window()
+        window = logic_main_window(self.views()[0])
         project = getattr(window, 'project', None)
         if project is None:
             return

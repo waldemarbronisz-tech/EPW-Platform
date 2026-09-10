@@ -1,0 +1,67 @@
+{
+  "screens_menu": [
+    {
+      "title": "Plik",
+      "item_count": 6
+    },
+    {
+      "title": "Edycja",
+      "item_count": 7
+    },
+    {
+      "title": "Widok",
+      "item_count": 2
+    },
+    {
+      "title": "Urządzenia",
+      "item_count": 2
+    },
+    {
+      "title": "Pomoc",
+      "item_count": 1
+    }
+  ],
+  "screens_active_value": "screens",
+  "logic_menu": [
+    {
+      "title": "Plik",
+      "item_count": 9
+    },
+    {
+      "title": "Edycja",
+      "item_count": 12
+    },
+    {
+      "title": "Widok",
+      "item_count": 8
+    },
+    {
+      "title": "Projekt",
+      "item_count": 3
+    },
+    {
+      "title": "Logika",
+      "item_count": 2
+    },
+    {
+      "title": "Symulacja",
+      "item_count": 3
+    },
+    {
+      "title": "Pomoc",
+      "item_count": 6
+    }
+  ],
+  "logic_active_value": "logic",
+  "logic_undo_enabled_before_edit": false,
+  "logic_undo_stack_len_before": 0,
+  "logic_undo_stack_len_after": 1,
+  "logic_undo_enabled_after_edit": true,
+  "logic_save_enabled_after_edit": true,
+  "synoptic_bridge_state_fresh_project": {
+    "canUndo": false,
+    "canRedo": false,
+    "isDirty": false,
+    "hasSelection": false
+  }
+}

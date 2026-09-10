@@ -23,5 +23,83 @@
     "loading": "Wczytywanie edytora ekranów...",
     "build_failed": "Nie udało się zbudować edytora ekranów (npm run build). Sprawdź, czy Node.js/npm jest zainstalowany, i zobacz terminal po szczegóły.",
     "load_failed": "Nie udało się wczytać edytora ekranów w tym oknie."
+  },
+  "menu": {
+    "titles": {
+      "file": "Plik",
+      "edit": "Edycja",
+      "view": "Widok",
+      "project": "Projekt",
+      "logic": "Logika",
+      "simulation": "Symulacja",
+      "devices": "Urządzenia",
+      "help": "Pomoc"
+    },
+    "file": {
+      "new": "Nowy",
+      "open": "Otwórz...",
+      "save": "Zapisz",
+      "save_as": "Zapisz jako...",
+      "exit": "Zamknij",
+      "compare_saved": "Porównaj z zapisanym plikiem...",
+      "compare_files": "Porównaj dwa projekty..."
+    },
+    "edit": {
+      "undo": "Cofnij",
+      "redo": "Ponów",
+      "cut": "Wytnij",
+      "copy": "Kopiuj",
+      "paste": "Wklej",
+      "delete": "Usuń",
+      "align": "Wyrównaj",
+      "disable_selected": "Wyłącz zaznaczone bloki",
+      "enable_selected": "Włącz zaznaczone bloki",
+      "reroute": "Przetrasuj"
+    },
+    "view": {
+      "zoom_in": "Powiększ",
+      "zoom_out": "Pomniejsz",
+      "reset_zoom": "Przywróć powiększenie",
+      "grid": "Siatka",
+      "snap": "Przyciągaj do siatki",
+      "toolbar": "Pasek narzędzi",
+      "toolbar_icons": "Ikony",
+      "toolbar_icons_text": "Ikony i tekst",
+      "toolbar_text": "Tekst",
+      "scada_preview": "Podgląd stylu SCADA..."
+    },
+    "project": {
+      "settings": "Ustawienia projektu...",
+      "export_signals": "Eksportuj listę sygnałów...",
+      "export_pdf": "Eksportuj do PDF..."
+    },
+    "logic": {
+      "compile": "Kompiluj",
+      "export_runtime": "Eksportuj do runtime"
+    },
+    "simulation": {
+      "start": "Start",
+      "pause": "Pauza",
+      "stop": "Stop"
+    },
+    "devices": {
+      "project_registers": "Rejestry projektu...",
+      "device_list": "Lista urządzeń..."
+    },
+    "help": {
+      "topics": "Pomoc",
+      "catalog": "Katalog bloków",
+      "shortcuts": "Skróty klawiszowe",
+      "export_catalog": "Eksportuj katalog bloków...",
+      "about": "O programie"
+    },
+    "neutral_hint": "Wybierz Ekrany lub Logikę w drzewie"
+  },
+  "toolbar": {
+    "new": "Nowy",
+    "open": "Otwórz",
+    "save": "Zapisz",
+    "undo": "Cofnij",
+    "redo": "Ponów"
   }
 }

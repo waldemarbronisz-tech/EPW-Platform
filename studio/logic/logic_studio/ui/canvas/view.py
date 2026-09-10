@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QGraphicsView
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QWheelEvent, QMouseEvent
 
+from logic_studio.ui.window_lookup import logic_main_window
+
 class LogicView(QGraphicsView):
     # Emitted on every mouse move over the viewport, in scene coordinates.
     cursor_moved = Signal(float, float)
@@ -107,7 +109,7 @@ class LogicView(QGraphicsView):
         if new_value == int(current):
             return  # already at the clamped end -- nothing to push/undo
 
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'project'):
             window.project.push_state()
             if hasattr(window, 'set_dirty'):

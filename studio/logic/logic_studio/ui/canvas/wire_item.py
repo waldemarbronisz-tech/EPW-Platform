@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QPointF, QRectF
 
 from logic_studio.ui.canvas import style
 from logic_studio.ui.canvas import routing
+from logic_studio.ui.window_lookup import logic_main_window
 
 
 def _port_facing(port) -> int:
@@ -442,7 +443,7 @@ class WireItem(QGraphicsPathItem):
 
     def _current_window(self):
         try:
-            return self.scene().views()[0].window()
+            return logic_main_window(self.scene().views()[0])
         except Exception:
             return None
 

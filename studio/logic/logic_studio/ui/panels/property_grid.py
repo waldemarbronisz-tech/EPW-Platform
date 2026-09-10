@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QSettings
 from logic_studio.core.device_model import DeviceModel
+from logic_studio.ui.window_lookup import logic_main_window
 
 # feat/internal-bits §6.1: SignalPickerDialog opens for these (type_id,
 # property key) pairs — value_type/sections tell the dialog what to show.
@@ -429,7 +430,7 @@ class PropertyGridPanel(QWidget):
         from logic_studio.core import macros as macros_module
         from logic_studio.ui.macro_parameter_dialog import BindParameterDialog
 
-        window = self.window()
+        window = logic_main_window(self)
         project = getattr(window, 'project', None) or self.current_project
         if project is None:
             return
@@ -462,7 +463,7 @@ class PropertyGridPanel(QWidget):
     def _unbind_parameter(self, def_id, block, property_name):
         from logic_studio.core import macros as macros_module
 
-        window = self.window()
+        window = logic_main_window(self)
         project = getattr(window, 'project', None) or self.current_project
         if project is None:
             return
@@ -607,7 +608,7 @@ class PropertyGridPanel(QWidget):
         if str(old_value) == str(new_value):
             return
 
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'project'):
             window.project.push_state()
             window.set_dirty()
@@ -655,7 +656,7 @@ class PropertyGridPanel(QWidget):
             elif isinstance(editor, QLineEdit):
                 editor.setText(str(old_value))
             editor.blockSignals(False)
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'statusBar'):
             window.statusBar().showMessage(message, 4000)
 
@@ -664,7 +665,7 @@ class PropertyGridPanel(QWidget):
             return
         if self.current_block.execution_priority == new_value:
             return
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'project'):
             window.project.push_state()
             window.set_dirty()
@@ -680,7 +681,7 @@ class PropertyGridPanel(QWidget):
         if not self.current_block:
             return
         self.current_block.simulation_state["force_state"] = text
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'scene'):
             window.scene.update()
 
@@ -698,7 +699,7 @@ class PropertyGridPanel(QWidget):
         value_type, sections = target[0], target[1]
         system_source_filter = target[2] if len(target) > 2 else None
 
-        window = self.window()
+        window = logic_main_window(self)
         project = getattr(window, 'project', None) or self.current_project
         if project is None:
             return

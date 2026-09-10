@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QAbstractItemView,
     QHeaderView, QLabel,
 )
+
+from logic_studio.ui.window_lookup import logic_main_window
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QSettings, Signal
 
@@ -159,7 +161,7 @@ class LabelsPanel(QWidget):
         if not source_block_uuid:
             return
         from logic_studio.ui.canvas.navigation import jump_to_block
-        window = self.window()
+        window = logic_main_window(self)
         scene = getattr(window, "scene", None)
         view = getattr(window, "view", None)
         jump_to_block(scene, view, source_block_uuid)
@@ -175,7 +177,7 @@ class LabelsPanel(QWidget):
         matching_wires = [w for w in self.project.wires if (w.label or "").strip().lower() == key]
         if not matching_wires:
             return
-        window = self.window()
+        window = logic_main_window(self)
         text, similar = prompt_for_label(window, self.project, initial=matching_wires[0].label, title="Zmień nazwę etykiety")
         if text is None or text == matching_wires[0].label:
             return
