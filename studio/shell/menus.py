@@ -338,14 +338,20 @@ def build_project_info_toolbar(toolbar, _panel, studio_window):
 
 
 def build_cards_toolbar(toolbar, panel, _studio_window):
-    """Dodaj/Usuń kartę, Dodaj/Usuń lokalizację - table-row actions, not
-    document actions, hence the new add_row/remove_row icons instead of
-    reusing Copy/Paste/Delete's own (those mean something else: acting
-    on a drawing-canvas SELECTION, not a table row)."""
+    """"Skład urządzenia" - Dodaj/Usuń kartę (ELA/ADA module), table-row
+    actions, not document actions, hence the new add_row/remove_row
+    icons instead of reusing Copy/Paste/Delete's own (those mean
+    something else: acting on a drawing-canvas SELECTION, not a table
+    row)."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     _add(toolbar, tr("cards.add_card"), panel.add_card, icon_name="add_row")
     _add(toolbar, tr("cards.remove_card"), panel.remove_selected_card, icon_name="remove_row")
-    toolbar.addSeparator()
+
+
+def build_locations_toolbar(toolbar, panel, _studio_window):
+    """"Lokalizacje" - its own toolbar now (task "ostatnie dwa działy"),
+    Locations having moved out of CardsPanel into its own tree branch."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     _add(toolbar, tr("cards.add_location"), panel.add_location, icon_name="add_row")
     _add(toolbar, tr("cards.remove_location"), panel.remove_selected_location, icon_name="remove_row")
 

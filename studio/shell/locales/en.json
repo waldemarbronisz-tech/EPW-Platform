@@ -18,7 +18,6 @@
     "group_controller": "CONTROLLER",
     "info": "Project Information",
     "devices": "Device Composition",
-    "io_cards": "I/O Cards",
     "locations": "Locations",
     "point_registry": "Point Registry",
     "apparatus_registry": "Apparatus Registry",
@@ -35,7 +34,6 @@
     "logic": "Project → Configuration → Logic",
     "info": "Project → Project Information",
     "devices": "Project → Configuration → Device Composition",
-    "io_cards": "Project → Configuration → I/O Cards",
     "locations": "Project → Configuration → Locations",
     "point_registry": "Project → Configuration → Point Registry",
     "apparatus_registry": "Project → Configuration → Apparatus Registry",
@@ -46,8 +44,6 @@
     "controller_connection": "Project → Controller → Connection and Live View"
   },
   "placeholder": {
-    "devices": "The list of field devices (ELA/ADA/EPM) that make up the installation (project/devices.json) - not built yet.",
-    "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - edited today together with I/O Cards (one \"Sprzęt\" section in SPEC_PROJEKT_EPW.md); this separate branch not built yet.",
     "controller_connection": "A live connection to a real EPW-OS controller and a view of its current state - not built yet."
   },
   "statusbar": {
@@ -208,8 +204,6 @@
     "save_failed_title": "Could Not Save Project"
   },
   "cards": {
-    "cards_heading": "Cards",
-    "locations_heading": "Locations",
     "col_id": "Id",
     "col_model": "Model",
     "col_kind": "Kind",

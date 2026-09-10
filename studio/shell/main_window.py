@@ -39,7 +39,7 @@ from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
     build_cards_toolbar, build_devices_toolbar, build_electrical_protection_toolbar,
-    build_fixed_menu, build_lines_toolbar, build_logic_context_toolbar,
+    build_fixed_menu, build_lines_toolbar, build_locations_toolbar, build_logic_context_toolbar,
     build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
     build_synoptic_context_toolbar, build_zones_toolbar,
 )
@@ -54,31 +54,29 @@ _TREE_ITEM_LOGIC = "logic"
 # _INACTIVE_CONFIG_CHILDREN below, same "active" leaf pattern as
 # Screens/Logic above - real panels, not another placeholder sentence.
 _TREE_ITEM_INFO = "info"
+# Task "ostatnie dwa działy" - "io_cards" now surfaces under the
+# "devices"/"Skład urządzenia" label (see _BREADCRUMB_KEYS below): the
+# user's own description of what belongs there - "ustawianie adresów
+# ELA/ADA, opisywanie ich, określanie wejść/wyjść" - IS CardsPanel's own
+# id/model/kind/channels, not a second, separate registry. The internal
+# key stays "io_cards" (no behavior tied to the string itself), only the
+# LABEL changes - this decision is flagged, not silently made: SPEC's
+# OWN "Skład urządzenia" meaning ("modules: lista nazw modułów... NIE
+# JEST lista przełączników") is a different, narrower concept (which
+# functional subsystems this controller has) that this does NOT build -
+# still open, unrelated to the ELA/ADA registry now living at this leaf.
 _TREE_ITEM_IO_CARDS = "io_cards"
+_TREE_ITEM_LOCATIONS = "locations"
 _TREE_ITEM_POINT_REGISTRY = "point_registry"
 # "Co jeszcze możemy dorobić" follow-up - SPEC's next section, Aparaty
 # (a device's feedback/command point lists), same "active" leaf pattern.
 _TREE_ITEM_DEVICES = "apparatus_registry"
 
-# The remaining project-structure branches shared/docs/SPEC_FORMAT_EPW.md
-# describes but nothing in this platform builds yet (task 1.4) - each
-# tuple is (key, tree label tr() key). GRANICE for THESE: still build
-# NONE as real panels - a click shows one explanatory sentence
-# (placeholder.<key> in locales/*.json), never an empty or fake form.
-# "locations" stays here deliberately even though CardsPanel now edits
-# Locations too (SPEC_PROJEKT_EPW.md groups cards+locations under one
-# "Sprzęt" heading) - this tree's OWN branch list still comes from the
-# older, now-superseded SPEC_FORMAT_EPW.md, and reconciling the tree's
-# own granularity with the newer spec is a separate task, not implied
-# by "let me name DI/DO/AI points". Flagged, not silently restructured.
-# "devices"/tree.devices ("Skład urządzenia") is a DIFFERENT thing from
-# apparatus_registry above - SPEC's "which runtime modules this
-# controller has", not "which apparatus consumes which point" - stays
-# inactive, unrelated to this follow-up.
-_INACTIVE_CONFIG_CHILDREN = [
-    ("devices", "tree.devices"),
-    ("locations", "tree.locations"),
-]
+# Every branch that used to live under KONFIGURACJA as a placeholder
+# (task 1.4's own "a click shows one explanatory sentence" GRANICE) is
+# now active - "devices"/"locations" promoted just above, "io_cards"/
+# "point_registry"/"apparatus_registry" in earlier tasks. Nothing left
+# in this group's own inactive-children list.
 # "Alarmówka: na maksa dużo opcji" - SPEC's next section, promoted the
 # same way io_cards/point_registry/apparatus_registry already were.
 _TREE_ITEM_ZONES = "security_zones"
@@ -95,7 +93,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_SCREENS: "breadcrumb.screens",
     _TREE_ITEM_LOGIC: "breadcrumb.logic",
     _TREE_ITEM_INFO: "breadcrumb.info",
-    _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
+    _TREE_ITEM_IO_CARDS: "breadcrumb.devices",
+    _TREE_ITEM_LOCATIONS: "breadcrumb.locations",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
     _TREE_ITEM_ZONES: "breadcrumb.security_zones",
@@ -303,6 +302,7 @@ class StudioMainWindow(QMainWindow):
         self._logic_panel = None
         self._project_info_panel = None
         self._cards_panel = None
+        self._locations_panel = None
         self._point_registry_panel = None
         self._devices_panel = None
         self._zones_panel = None
@@ -428,6 +428,9 @@ class StudioMainWindow(QMainWindow):
         icon_info = icons.icon("about")
         icon_io_cards = icons.icon("device_list")
         icon_point_registry = icons.icon("project_registers")
+        # "draw_building" (a house) reads plainly as "a place" - reused
+        # from Synoptic's own tool set for "Lokalizacje".
+        icon_locations = icons.icon("draw_building")
         # "settings" (a gear) reads plainly as "a mechanism/apparatus" -
         # closer to "Aparaty" than any other icon already in the set.
         icon_devices = icons.icon("settings")
@@ -484,15 +487,14 @@ class StudioMainWindow(QMainWindow):
         self._item_info = add_active_leaf(root, _TREE_ITEM_INFO, "tree.info", icon_info)
 
         config = add_group(root, "tree.group_config")
-        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
+        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.devices", icon_io_cards)
+        self._item_locations = add_active_leaf(config, _TREE_ITEM_LOCATIONS, "tree.locations", icon_locations)
         self._item_point_registry = add_active_leaf(
             config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
         )
         self._item_devices = add_active_leaf(
             config, _TREE_ITEM_DEVICES, "tree.apparatus_registry", icon_devices
         )
-        for key, label_key in _INACTIVE_CONFIG_CHILDREN:
-            add_inactive_leaf(config, key, label_key)
 
         self._item_screens = QTreeWidgetItem([tr("tree.screens")])
         self._item_screens.setIcon(0, icon_screens)
@@ -855,6 +857,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_info()
             elif key == _TREE_ITEM_IO_CARDS:
                 self._open_io_cards()
+            elif key == _TREE_ITEM_LOCATIONS:
+                self._open_locations()
             elif key == _TREE_ITEM_POINT_REGISTRY:
                 self._open_point_registry()
             elif key == _TREE_ITEM_DEVICES:
@@ -979,6 +983,20 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_IO_CARDS
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_locations(self):
+        if self._locations_panel is None:
+            from studio.shell.project_panels import LocationsPanel
+            self._locations_panel = LocationsPanel(self)
+        else:
+            self._locations_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_LOCATIONS, self._locations_panel, build_locations_toolbar, self._locations_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_LOCATIONS
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
@@ -1111,6 +1129,8 @@ class StudioMainWindow(QMainWindow):
         self._on_project_changed()
         if self._cards_panel is not None:
             self._cards_panel.refresh()
+        if self._locations_panel is not None:
+            self._locations_panel.refresh()
         if self._point_registry_panel is not None:
             self._point_registry_panel.refresh()
         if self._devices_panel is not None:
@@ -1144,6 +1164,8 @@ class StudioMainWindow(QMainWindow):
         self._on_project_changed()
         if self._cards_panel is not None:
             self._cards_panel.refresh()
+        if self._locations_panel is not None:
+            self._locations_panel.refresh()
         if self._point_registry_panel is not None:
             self._point_registry_panel.refresh()
         if self._devices_panel is not None:

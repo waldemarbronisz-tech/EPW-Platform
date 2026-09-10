@@ -18,7 +18,6 @@
     "group_controller": "STEROWNIK",
     "info": "Informacje o projekcie",
     "devices": "Skład urządzenia",
-    "io_cards": "Karty wejść/wyjść",
     "locations": "Lokalizacje",
     "point_registry": "Rejestr punktów",
     "apparatus_registry": "Rejestr aparatów",
@@ -35,7 +34,6 @@
     "logic": "Projekt → Konfiguracja → Logika",
     "info": "Projekt → Informacje o projekcie",
     "devices": "Projekt → Konfiguracja → Skład urządzenia",
-    "io_cards": "Projekt → Konfiguracja → Karty wejść/wyjść",
     "locations": "Projekt → Konfiguracja → Lokalizacje",
     "point_registry": "Projekt → Konfiguracja → Rejestr punktów",
     "apparatus_registry": "Projekt → Konfiguracja → Rejestr aparatów",
@@ -46,8 +44,6 @@
     "controller_connection": "Projekt → Sterownik → Połączenie i podgląd"
   },
   "placeholder": {
-    "devices": "Lista urządzeń polowych ELA/ADA/EPM wchodzących w skład instalacji (project/devices.json) — jeszcze nie zbudowane.",
-    "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — edytowana dziś razem z Kartami wejść/wyjść (jedna sekcja \"Sprzęt\" w SPEC_PROJEKT_EPW.md); ta osobna gałąź jeszcze nie zbudowana.",
     "controller_connection": "Żywe połączenie ze sterownikiem EPW-OS i podgląd jego bieżącego stanu — jeszcze nie zbudowane."
   },
   "statusbar": {
@@ -208,8 +204,6 @@
     "save_failed_title": "Nie udało się zapisać projektu"
   },
   "cards": {
-    "cards_heading": "Karty",
-    "locations_heading": "Lokalizacje",
     "col_id": "Id",
     "col_model": "Model",
     "col_kind": "Rodzaj",

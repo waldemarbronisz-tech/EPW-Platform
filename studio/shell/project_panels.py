@@ -384,14 +384,17 @@ class ProjectInfoPanel(QWidget):
 
 
 class CardsPanel(QWidget):
-    """SPEC's "Sprzęt": Cards (id/model/kind/channels) and Locations
-    (code/description) together, same heading the spec itself uses.
-    Editing a card's kind/channels re-runs sync_points_for_card() -
-    "karty rodzą punkty" happens HERE, not in the point registry panel,
-    which only ever shows what cards already produced."""
+    """"Skład urządzenia" - the physical ELA/ADA I/O module registry:
+    address (id), model, channel kind (DI/DO/AI/AO), channel count -
+    SPEC's own "Sprzęt" section. Locations moved out to their own
+    LocationsPanel/tree branch (task "ostatnie dwa działy" - the tree's
+    own SPEC_FORMAT_EPW.md-derived structure always kept them separate;
+    this un-merges the Phase-2 shortcut that combined them under one
+    screen). Editing a card's kind/channels re-runs sync_points_for_
+    card() - "karty rodzą punkty" happens HERE, not in the point
+    registry panel, which only ever shows what cards already produced."""
 
     _CARD_COLS = ["id", "model", "kind", "channels"]
-    _LOCATION_COLS = ["code", "description"]
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -402,36 +405,15 @@ class CardsPanel(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        splitter = QSplitter(Qt.Orientation.Vertical)
-
-        cards_box = QWidget()
-        cards_layout = QVBoxLayout(cards_box)
-        cards_layout.setContentsMargins(0, 0, 0, 0)
-        cards_layout.addWidget(_section_label(tr("cards.cards_heading")))
         self.cards_table = QTableWidget(0, len(self._CARD_COLS))
         self.cards_table.setHorizontalHeaderLabels([
             tr("cards.col_id"), tr("cards.col_model"), tr("cards.col_kind"), tr("cards.col_channels"),
         ])
         _prep_table(self.cards_table)
-        self.cards_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        cards_layout.addWidget(self.cards_table)
-        splitter.addWidget(cards_box)
-
-        locations_box = QWidget()
-        locations_layout = QVBoxLayout(locations_box)
-        locations_layout.setContentsMargins(0, 0, 0, 0)
-        locations_layout.addWidget(_section_label(tr("cards.locations_heading")))
-        self.locations_table = QTableWidget(0, len(self._LOCATION_COLS))
-        self.locations_table.setHorizontalHeaderLabels([tr("cards.col_code"), tr("cards.col_description")])
-        _prep_table(self.locations_table)
-        self.locations_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        locations_layout.addWidget(self.locations_table)
-        splitter.addWidget(locations_box)
-
-        layout.addWidget(splitter)
+        _make_column_resizable(self.cards_table, 1, 220)
+        layout.addWidget(self.cards_table)
 
         self.cards_table.itemChanged.connect(self._on_card_item_changed)
-        self.locations_table.itemChanged.connect(self._on_location_item_changed)
 
         self.refresh()
 
@@ -443,9 +425,6 @@ class CardsPanel(QWidget):
         self.cards_table.setRowCount(0)
         for card in project.cards:
             self._append_card_row(card)
-        self.locations_table.setRowCount(0)
-        for location in project.locations:
-            self._append_location_row(location)
         self._loading = False
 
     def _append_card_row(self, card: Card):
@@ -459,12 +438,6 @@ class CardsPanel(QWidget):
         kind_combo.currentTextChanged.connect(lambda _text, r=row: self._on_card_kind_changed(r))
         self.cards_table.setCellWidget(row, 2, kind_combo)
         self.cards_table.setItem(row, 3, QTableWidgetItem(str(card.channels)))
-
-    def _append_location_row(self, location: Location):
-        row = self.locations_table.rowCount()
-        self.locations_table.insertRow(row)
-        self.locations_table.setItem(row, 0, QTableWidgetItem(location.code))
-        self.locations_table.setItem(row, 1, QTableWidgetItem(location.description))
 
     # -- row add/remove (called by menus.py's build_cards_toolbar) -----
 
@@ -493,25 +466,6 @@ class CardsPanel(QWidget):
             return
         remove_points_for_card(project, card)
         del project.cards[row]
-        project.touch()
-        self.refresh()
-        self._studio_window._on_project_changed()
-
-    def add_location(self):
-        project = self._studio_window._project
-        existing_codes = {l.code for l in project.locations}
-        new_code = _next_unique(existing_codes, "LOK")
-        project.locations.append(Location(code=new_code))
-        project.touch()
-        self.refresh()
-        self._studio_window._on_project_changed()
-
-    def remove_selected_location(self):
-        row = self.locations_table.currentRow()
-        if row < 0:
-            return
-        project = self._studio_window._project
-        del project.locations[row]
         project.touch()
         self.refresh()
         self._studio_window._on_project_changed()
@@ -568,30 +522,85 @@ class CardsPanel(QWidget):
         project.touch()
         self._studio_window._on_project_changed()
 
-    def _on_location_item_changed(self, item):
+
+class LocationsPanel(QWidget):
+    """"Lokalizacje" - its own tree branch again (task "ostatnie dwa
+    działy"), same data (project.locations) CardsPanel used to also
+    show inline. code/description, SPEC's own "Sprzęt" fields."""
+
+    _COLS = ["code", "description"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr("cards.col_code"), tr("cards.col_description")])
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 1, 320)
+        layout.addWidget(self.table)
+
+        self.table.itemChanged.connect(self._on_item_changed)
+
+        self.refresh()
+
+    def refresh(self):
+        self._loading = True
+        self.table.setRowCount(0)
+        for location in self._studio_window._project.locations:
+            self._append_row(location)
+        self._loading = False
+
+    def _append_row(self, location: Location):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(location.code))
+        self.table.setItem(row, 1, QTableWidgetItem(location.description))
+
+    def add_location(self):
+        project = self._studio_window._project
+        existing_codes = {l.code for l in project.locations}
+        new_code = _next_unique(existing_codes, "LOK")
+        project.locations.append(Location(code=new_code))
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def remove_selected_location(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return
+        project = self._studio_window._project
+        del project.locations[row]
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def _on_item_changed(self, item):
         if self._loading:
             return
         row = item.row()
         project = self._studio_window._project
         location = project.locations[row]
 
-        new_code = self.locations_table.item(row, 0).text().strip().upper()
+        new_code = self.table.item(row, 0).text().strip().upper()
         if new_code and new_code != location.code:
-            # Synoptic's own LocationEntry convention (DeviceSchema.ts:
-            # "A-Z and 0-9 only") - kept identical here so a code this
-            # panel accepts is never rejected once the Synoptic bridge
-            # (_sync_device_registry_with_synoptic) pushes it across.
             invalid = not _LOCATION_CODE_RE.match(new_code)
             duplicate = any(l.code == new_code for l in project.locations if l is not location)
             if invalid or duplicate:
                 key = "cards.invalid_location_code_text" if invalid else "cards.duplicate_location_code_text"
                 QMessageBox.warning(self, tr("cards.invalid_location_code_title"), tr(key, code=new_code))
                 self._loading = True
-                self.locations_table.item(row, 0).setText(location.code)
+                self.table.item(row, 0).setText(location.code)
                 self._loading = False
                 new_code = location.code
         location.code = new_code or location.code
-        location.description = self.locations_table.item(row, 1).text()
+        location.description = self.table.item(row, 1).text()
         project.touch()
         self._studio_window._on_project_changed()
 
@@ -632,7 +641,7 @@ class PointRegistryPanel(QWidget):
         self.table.setHorizontalHeaderLabels([tr(f"points.col_{c}") for c in self._COLS])
         _prep_table(self.table)
         self.table.resizeColumnsToContents()
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        _make_column_resizable(self.table, 1, 260)
         self.table.setColumnWidth(0, 90)
         self.table.setColumnWidth(3, 160)
         layout.addWidget(self.table)
@@ -848,7 +857,7 @@ class DevicesPanel(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"devices.col_{c}") for c in self._COLS])
         _prep_table(self.table)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        _make_column_resizable(self.table, 2, 260)
         layout.addWidget(self.table)
 
         self.table.itemChanged.connect(self._on_item_changed)
@@ -990,7 +999,7 @@ class ZonesPanel(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"zones.col_{c}") for c in self._COLS])
         _prep_table(self.table)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        _make_column_resizable(self.table, 1, 260)
         layout.addWidget(self.table)
 
         self.table.itemChanged.connect(self._on_item_changed)
@@ -1305,7 +1314,7 @@ class LinesPanel(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"lines.col_{c}") for c in self._COLS])
         _prep_table(self.table)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        _make_column_resizable(self.table, 1, 220)
         layout.addWidget(self.table)
 
         self.table.itemChanged.connect(self._on_item_changed)
@@ -1633,7 +1642,7 @@ class ProcessProtectionPanel(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"process.col_{c}") for c in self._COLS])
         _prep_table(self.table)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        _make_column_resizable(self.table, 2, 220)
         self.table.itemChanged.connect(self._on_item_changed)
         self.table.currentCellChanged.connect(self._on_selection_changed)
         splitter.addWidget(self.table)
@@ -1810,10 +1819,24 @@ def _prep_table(table: QTableWidget):
     table.verticalHeader().setVisible(False)
     table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
     table.setAlternatingRowColors(True)
-    # No blanket setStretchLastSection() - each table below stretches
-    # its own ONE genuinely free-text column explicitly instead. Two
-    # stretch columns (last section on the blanket + a chosen explicit
-    # one) would each get half the free space, both cramped.
+    # No setSectionResizeMode(..., Stretch) anywhere in this module
+    # (fixed live bug, real screenshot: user could not drag-resize a
+    # Stretch column at all - Qt's own ResizeMode.Stretch docs: "the
+    # section is not user-resizable", not merely "auto-sized"). Every
+    # table's one naturally-wide column instead gets a sensible INITIAL
+    # width via _make_column_resizable() below, staying fully draggable
+    # afterward - task's own "każda tabela musi mieć możliwość regulacji
+    # szerokości kolumny [...] mowa tu o wszystkich działach".
+
+
+def _make_column_resizable(table: QTableWidget, column: int, initial_width: int):
+    """Interactive (Qt's own default) is what actually allows the user
+    to drag a column's border - explicitly re-asserted here (not just
+    left at the default) so a future column added to one of these
+    tables doesn't silently inherit some other resize mode from a
+    stylesheet or a Qt version's own changed default."""
+    table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+    table.setColumnWidth(column, initial_width)
 
 
 def _next_unique(existing, prefix):
