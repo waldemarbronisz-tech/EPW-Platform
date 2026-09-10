@@ -55,6 +55,7 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
 """
 import os
 import re
+from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QPixmap
@@ -307,6 +308,17 @@ class ModuleCompositionPanel(QWidget):
         label.setText(tr("modules.active_yes") if value else tr("modules.active_no"))
         project.touch()
         self._studio_window._on_project_changed()
+
+    def select_module(self, feature_id: str):
+        """Task point 6 - validation report navigation target (the
+        "moduł ma dane, ale nie jest w składzie" warning). Row order is
+        always MODULE_CATALOG's own fixed order - see refresh() above -
+        so no text lookup is needed, unlike the other panels' tables."""
+        if feature_id in MODULE_IDS:
+            row = MODULE_IDS.index(feature_id)
+            if row < self.table.rowCount():
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(self.table.item(row, 0))
 
 # "Alarmówka" - state sets per parametrization, same source of truth as
 # project_format.default_value_windows() (which state names exist at
@@ -1041,6 +1053,23 @@ class PointRegistryPanel(QWidget):
             device_item.setToolTip(owner_id)
         self.table.setItem(row, 11, device_item)
 
+    def select_address(self, address: str):
+        """Task point 6 - "klik przenosi do miejsca problemu": the
+        validation report's own navigation target for every point-
+        registry-related issue. Clears the card filter first (the
+        offending point might belong to a card the filter is currently
+        hiding), then finds the row by address - same string this
+        panel's own column 0 always holds, see _append_point_row above."""
+        idx = self.card_filter.findData(None)
+        if idx >= 0:
+            self.card_filter.setCurrentIndex(idx)
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == address:
+                self.table.setCurrentCell(row, 1)
+                self.table.scrollToItem(item)
+                return
+
     def _on_location_changed(self, row):
         if self._loading:
             return
@@ -1197,6 +1226,15 @@ class DevicesPanel(QWidget):
         if not addresses:
             return tr("devices.none")
         return tr("devices.n_points", n=len(addresses))
+
+    def select_device(self, device_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == device_id:
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(item)
+                return
 
     def add_device(self):
         project = self._studio_window._project
@@ -1663,6 +1701,15 @@ class LinesPanel(QWidget):
             return f"{line.parametrization} — {point}"
         return f"{tr(mode_key)} — {point}"
 
+    def select_line(self, line_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == line_id:
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(item)
+                return
+
     def add_line(self):
         project = self._studio_window._project
         if not project.zones:
@@ -2021,6 +2068,15 @@ class ProcessProtectionPanel(QWidget):
             if protection.id == protection_id:
                 return protection
         return None
+
+    def select_protection(self, protection_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 1)
+            if item is not None and item.text() == protection_id:
+                self.table.setCurrentCell(row, 1)
+                self.table.scrollToItem(item)
+                return
 
     def add_protection(self):
         project = self._studio_window._project
@@ -2417,6 +2473,191 @@ class AboutDialog(QDialog):
         close_button = QPushButton(tr("about.btn_close"))
         close_button.clicked.connect(self.accept)
         layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+
+@dataclass
+class ValidationIssue:
+    """Task point 6 ("Sprawdź projekt") - one row of validate_project()'s
+    report. `target`/`selector`/`arg` are how "klik przenosi do miejsca
+    problemu" (not a one-sentence modal) actually works: `target` is a
+    small, main_window-independent kind string (see validate_project()'s
+    own docstring for the full list) that main_window.py's own
+    _navigate_to_validation_issue() maps to one of its own _TREE_ITEM_*
+    constants + panel - project_panels.py itself never imports
+    main_window (keeps this module importable standalone, same
+    "no upward import" stance every panel class here already keeps by
+    only ever reaching `self._studio_window`, never the module itself)."""
+
+    severity: str  # "error" | "warning"
+    message: str
+    target: str = ""
+    selector: str = ""
+    arg: str = ""
+
+
+def validate_project(project) -> list:
+    """Task point 6 - the seven checks verbatim from the task text,
+    each producing zero or more ValidationIssue rows instead of a
+    single modal sentence. ERROR = the project is not internally
+    consistent (a reference points at nothing, or two things claim the
+    same resource); WARNING = the project still hangs together but has
+    an omission worth a human's attention (a location typo, orphaned-
+    but-not-deleted module data) - the same "warn, never delete" stance
+    _module_has_data()/ModuleCompositionPanel._on_toggled() already
+    take for the module case is exactly check 7 below, reused, not
+    reimplemented.
+
+    `target` values, matched by main_window._navigate_to_validation_
+    issue(): "devices", "points", "lines", "process_protection",
+    "modules"."""
+    issues = []
+    point_addresses = {p.address for p in project.points}
+    card_ids = {c.id for c in project.cards}
+    location_codes = {loc.code for loc in project.locations}
+
+    def _card_id_of(address):
+        return address.split(".", 1)[0] if "." in address else address
+
+    # 1) "aparat wskazuje punkt, który nie istnieje"
+    # 2) "aparat wskazuje punkt z karty, która została usunięta"
+    # 3) "dwa aparaty na tym samym punkcie"
+    address_owners = {}
+    for device in project.devices:
+        for address in list(device.feedback) + list(device.command):
+            address_owners.setdefault(address, []).append(device.id)
+            if address not in point_addresses:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr("validation.msg_device_missing_point", device=device.id, address=address),
+                    "devices", "select_device", device.id,
+                ))
+            elif _card_id_of(address) not in card_ids:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr(
+                        "validation.msg_device_point_deleted_card",
+                        device=device.id, address=address, card=_card_id_of(address),
+                    ),
+                    "devices", "select_device", device.id,
+                ))
+    for address, owners in address_owners.items():
+        unique_owners = sorted(set(owners))
+        if len(unique_owners) > 1:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_point_double_owned", address=address, devices=", ".join(unique_owners)),
+                "devices", "select_device", unique_owners[0],
+            ))
+
+    # 4) "punkt z lokalizacją, której nie ma na liście"
+    for point in project.points:
+        if point.location and point.location not in location_codes:
+            issues.append(ValidationIssue(
+                "warning",
+                tr("validation.msg_point_unknown_location", address=point.address, location=point.location),
+                "points", "select_address", point.address,
+            ))
+
+    # 5) "linia dozorowa wskazująca nieistniejący punkt"
+    for line in project.lines:
+        if line.tag and line.tag not in point_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_line_missing_point", line=line.id, address=line.tag),
+                "lines", "select_line", line.id,
+            ))
+
+    # 6) "zabezpieczenie procesowe wskazujące nieistniejący punkt AI" -
+    # covers BOTH "nie istnieje" (missing outright) and "istnieje, ale
+    # to nie jest AI" (wrong kind) - points_of_kind() is the same
+    # DI/AI-only lookup LineConfigDialog's own point picker already uses.
+    ai_addresses = {p.address for p in points_of_kind(project, "AI")}
+    for pp in project.process_protections:
+        if not pp.analog_tag:
+            continue
+        if pp.analog_tag not in point_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_process_missing_point", protection=pp.id, address=pp.analog_tag),
+                "process_protection", "select_protection", pp.id,
+            ))
+        elif pp.analog_tag not in ai_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_process_not_ai_point", protection=pp.id, address=pp.analog_tag),
+                "process_protection", "select_protection", pp.id,
+            ))
+
+    # 7) "moduł ma dane, ale nie jest w składzie urządzenia"
+    for feature_id in MODULE_IDS:
+        if feature_id not in project.modules and _module_has_data(project, feature_id):
+            entry = _module_entry(feature_id)
+            from studio.shell.i18n import get_language
+            name = (entry[1] if get_language() == "pl" else entry[2]) if entry else feature_id
+            issues.append(ValidationIssue(
+                "warning",
+                tr("validation.msg_module_has_orphan_data", module=name),
+                "modules", "select_module", feature_id,
+            ))
+
+    return issues
+
+
+class ValidationReportDialog(QDialog):
+    """Task point 6 - "Wynik: lista z podziałem BŁĄD/OSTRZEŻENIE, klik
+    przenosi do miejsca problemu. Nie modalne okno z jednym zdaniem."
+    Two always-visible sections (not tabs - the task's own complaint is
+    about a single terse sentence, not about section count), non-modal
+    (setModal(False)) so it can stay open while the user fixes things
+    in the panel underneath and re-runs "Sprawdź projekt" to check."""
+
+    def __init__(self, issues, on_navigate, parent=None):
+        super().__init__(parent)
+        self._on_navigate = on_navigate
+        self.setWindowTitle(tr("validation.dialog_title"))
+        self.setModal(False)
+        self.resize(720, 480)
+
+        errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
+
+        layout = QVBoxLayout(self)
+
+        summary = QLabel(tr("validation.summary", errors=len(errors), warnings=len(warnings)))
+        bold_font = summary.font()
+        bold_font.setBold(True)
+        summary.setFont(bold_font)
+        layout.addWidget(summary)
+
+        if not issues:
+            layout.addWidget(QLabel(tr("validation.none_found")))
+        else:
+            layout.addWidget(QLabel(tr("validation.hint_double_click")))
+            if errors:
+                layout.addWidget(self._build_section(tr("validation.section_errors"), errors), 1)
+            if warnings:
+                layout.addWidget(self._build_section(tr("validation.section_warnings"), warnings), 1)
+
+        close_button = QPushButton(tr("validation.close"))
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignRight)
+
+    def _build_section(self, title: str, section_issues) -> QGroupBox:
+        box = QGroupBox(f"{title} ({len(section_issues)})")
+        box_layout = QVBoxLayout(box)
+        listing = QListWidget()
+        for issue in section_issues:
+            item = QListWidgetItem(issue.message)
+            item.setData(Qt.ItemDataRole.UserRole, issue)
+            listing.addItem(item)
+        listing.itemDoubleClicked.connect(self._on_item_double_clicked)
+        box_layout.addWidget(listing)
+        return box
+
+    def _on_item_double_clicked(self, item):
+        issue = item.data(Qt.ItemDataRole.UserRole)
+        if issue is not None and self._on_navigate is not None:
+            self._on_navigate(issue)
 
 
 def _slug(text: str) -> str:

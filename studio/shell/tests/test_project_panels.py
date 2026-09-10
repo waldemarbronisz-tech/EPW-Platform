@@ -26,6 +26,7 @@ from studio.shell.project_panels import (
     points_of_kind,
     remove_points_for_card,
     sync_points_for_card,
+    validate_project,
     _module_has_data,
     _module_entry,
 )
@@ -333,3 +334,99 @@ def test_load_help_topic_markdown_both_languages_have_the_new_topics():
 def test_load_help_topic_markdown_missing_topic_is_reported_not_raised():
     text = load_help_topic_markdown("this_topic_does_not_exist", "pl")
     assert "brak pliku pomocy" in text
+
+
+# Task point 6 - "Sprawdź projekt": validate_project()'s seven checks,
+# each proven with a REAL inconsistency (not just "returns something"),
+# per this session's own "a generic mechanism is proven by a synthetic
+# failing case" habit (see test_project_format_field_survival.py's own
+# _Forgetful class). A clean, brand-new project must report nothing.
+def test_validate_project_reports_nothing_for_a_fresh_project():
+    assert validate_project(new_project("Test")) == []
+
+
+def test_validate_project_flags_device_pointing_at_a_missing_point():
+    project = new_project("Test")
+    project.devices.append(Device(id="D1", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
+    issues = validate_project(project)
+    assert len(issues) == 1
+    assert issues[0].severity == "error"
+    assert issues[0].target == "devices" and issues[0].selector == "select_device" and issues[0].arg == "D1"
+
+
+def test_validate_project_flags_device_point_whose_card_was_deleted():
+    project = new_project("Test")
+    project.points.append(Point(address="ELA1.DI.1"))  # point survives, card does not
+    project.devices.append(Device(id="D1", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
+    issues = validate_project(project)
+    assert len(issues) == 1 and issues[0].severity == "error"
+    assert "ELA1" in issues[0].message
+
+
+def test_validate_project_flags_two_devices_on_the_same_point():
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=4))
+    project.points.append(Point(address="ELA1.DI.1"))
+    project.devices.append(Device(id="D1", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
+    project.devices.append(Device(id="D2", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
+    issues = validate_project(project)
+    double_owned = [i for i in issues if "D1" in i.message and "D2" in i.message]
+    assert len(double_owned) == 1 and double_owned[0].severity == "error"
+
+
+def test_validate_project_flags_point_with_unknown_location_as_a_warning():
+    project = new_project("Test")
+    project.points.append(Point(address="ELA1.DI.1", location="NO_SUCH_LOCATION"))
+    issues = validate_project(project)
+    assert len(issues) == 1
+    assert issues[0].severity == "warning"
+    assert issues[0].target == "points" and issues[0].selector == "select_address"
+
+
+def test_validate_project_flags_line_pointing_at_a_missing_point():
+    # "intrusion" already in composition - isolates this test to the
+    # ONE check under test, not also the (separately, correctly)
+    # co-triggered check-7 orphan-data warning (own test below).
+    project = new_project("Test")
+    project.modules.append("intrusion")
+    project.zones.append(Zone(id="Z1", name="Parter"))
+    project.lines.append(Line(id="L1", name="Czujka", zone_id="Z1", tag="ELA1.DI.1"))
+    issues = validate_project(project)
+    assert len(issues) == 1 and issues[0].severity == "error"
+    assert issues[0].target == "lines" and issues[0].selector == "select_line" and issues[0].arg == "L1"
+
+
+def test_validate_project_flags_process_protection_missing_point():
+    project = new_project("Test")
+    project.modules.append("protection_process")
+    project.process_protections.append(ProcessProtection(id="PP1", name="Temp", analog_tag="ADA1.AI.1"))
+    issues = validate_project(project)
+    assert len(issues) == 1 and issues[0].severity == "error"
+    assert issues[0].target == "process_protection" and issues[0].arg == "PP1"
+
+
+def test_validate_project_flags_process_protection_pointing_at_a_non_ai_point():
+    project = new_project("Test")
+    project.modules.append("protection_process")
+    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=4))
+    project.points.append(Point(address="ELA1.DI.1"))
+    project.process_protections.append(ProcessProtection(id="PP1", name="Temp", analog_tag="ELA1.DI.1"))
+    issues = validate_project(project)
+    assert len(issues) == 1 and issues[0].severity == "error"
+    assert "AI" in issues[0].message
+
+
+def test_validate_project_flags_module_with_orphaned_data_as_a_warning():
+    project = new_project("Test")
+    project.zones.append(Zone(id="Z1", name="Parter"))  # intrusion data, "intrusion" not in modules
+    issues = validate_project(project)
+    assert len(issues) == 1
+    assert issues[0].severity == "warning"
+    assert issues[0].target == "modules" and issues[0].selector == "select_module" and issues[0].arg == "intrusion"
+
+
+def test_validate_project_no_orphan_warning_once_the_module_is_in_composition():
+    project = new_project("Test")
+    project.modules.append("intrusion")
+    project.zones.append(Zone(id="Z1", name="Parter"))
+    assert validate_project(project) == []

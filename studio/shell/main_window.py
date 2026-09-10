@@ -357,6 +357,7 @@ class StudioMainWindow(QMainWindow):
         self._process_protection_panel = None
         self._controller_panel = None
         self._help_panel = None
+        self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -900,6 +901,46 @@ class StudioMainWindow(QMainWindow):
     def _show_about_studio(self):
         from studio.shell.project_panels import AboutDialog
         AboutDialog(self).exec()
+
+    # Task point 6 - "Sprawdź projekt": target string -> (tree item to
+    # open, the open_* method that lazily constructs/shows that panel,
+    # the panel attribute to call the issue's own `selector` on). Kept
+    # here (not in project_panels.py) precisely because it's the one
+    # place that legitimately knows both this file's _TREE_ITEM_*
+    # constants and project_panels.ValidationIssue's own `target`
+    # strings - see ValidationIssue's own docstring for why that module
+    # doesn't (and shouldn't) know this mapping itself.
+    _VALIDATION_TARGETS = {
+        "devices": ("_devices_panel", "_open_devices"),
+        "points": ("_point_registry_panel", "_open_point_registry"),
+        "lines": ("_lines_panel", "_open_lines"),
+        "process_protection": ("_process_protection_panel", "_open_process_protection"),
+        "modules": ("_modules_panel", "_open_modules"),
+    }
+
+    def _check_project(self):
+        from studio.shell.project_panels import ValidationReportDialog, validate_project
+        issues = validate_project(self._project)
+        dialog = ValidationReportDialog(issues, self._navigate_to_validation_issue, parent=self)
+        dialog.show()
+        # Kept alive past this method's return (a non-modal dialog with
+        # no other reference would otherwise be garbage-collected the
+        # instant Python's GC runs) - re-running "Sprawdź projekt"
+        # simply replaces this reference, closing the previous window's
+        # Python object but not its already-shown, already-closed self.
+        self._validation_dialog = dialog
+
+    def _navigate_to_validation_issue(self, issue):
+        target = self._VALIDATION_TARGETS.get(issue.target)
+        if target is None:
+            return
+        panel_attr, open_method_name = target
+        getattr(self, open_method_name)()
+        panel = getattr(self, panel_attr, None)
+        if panel is not None and issue.selector:
+            selector = getattr(panel, issue.selector, None)
+            if selector is not None:
+                selector(issue.arg)
 
     def _set_language(self, code):
         set_language(code)

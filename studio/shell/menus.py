@@ -146,6 +146,14 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     studio_window.act_menu_save = _add(file_menu, tr("menu.file.save"), studio_window._shared_save)
     studio_window.act_menu_save_as = _add(file_menu, tr("menu.file.save_as"), studio_window._shared_save_as)
     file_menu.addSeparator()
+    # Task "fix/project-format-integrity" point 6 - "Sprawdź projekt":
+    # not tied to any one aspect (unlike New/Open/Save above), so no
+    # act_* enabled-state juggling needed - it operates on
+    # studio_window._project directly, always available.
+    studio_window.act_menu_check_project = _add(
+        file_menu, tr("menu.file.check_project"), studio_window._check_project
+    )
+    file_menu.addSeparator()
     _add_exit(studio_window, file_menu)
 
     view_menu = menubar.addMenu(tr("menu.titles.view"))

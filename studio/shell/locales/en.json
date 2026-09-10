@@ -74,6 +74,7 @@
       "open": "Open...",
       "save": "Save",
       "save_as": "Save As...",
+      "check_project": "Check Project",
       "exit": "Exit",
       "compare_saved": "Compare with Saved File...",
       "compare_files": "Compare Two Projects..."
@@ -398,5 +399,22 @@
     "active_no": "NO",
     "confirm_disable_title": "Remove Module From Composition?",
     "confirm_disable_text": "Module \"{name}\" already has data in this project. Disabling it will remove its branch from the tree, but the data will NOT be deleted - re-enabling the module restores it. Disable anyway?"
+  },
+  "validation": {
+    "dialog_title": "Check Project",
+    "section_errors": "Errors",
+    "section_warnings": "Warnings",
+    "none_found": "No inconsistencies found.",
+    "summary": "Errors: {errors} - Warnings: {warnings}",
+    "close": "Close",
+    "hint_double_click": "Double-click an entry to jump to the problem.",
+    "msg_device_missing_point": "Apparatus \"{device}\" points to point {address}, which is not in the point registry.",
+    "msg_device_point_deleted_card": "Apparatus \"{device}\" points to point {address} on card \"{card}\", which is no longer in the hardware composition.",
+    "msg_point_double_owned": "Point {address} is assigned to more than one apparatus at once: {devices}.",
+    "msg_point_unknown_location": "Point {address} has location \"{location}\" assigned, which is not on the location list.",
+    "msg_line_missing_point": "Supervised line \"{line}\" points to point {address}, which is not in the point registry.",
+    "msg_process_missing_point": "Process protection \"{protection}\" points to point {address}, which is not in the point registry.",
+    "msg_process_not_ai_point": "Process protection \"{protection}\" points to point {address}, which is not an analog input (AI).",
+    "msg_module_has_orphan_data": "Module \"{module}\" has data saved in the project but is not in the device composition - its branch is hidden, the data was not deleted."
   }
 }

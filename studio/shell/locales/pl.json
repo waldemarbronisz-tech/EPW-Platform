@@ -74,6 +74,7 @@
       "open": "Otwórz...",
       "save": "Zapisz",
       "save_as": "Zapisz jako...",
+      "check_project": "Sprawdź projekt",
       "exit": "Zamknij",
       "compare_saved": "Porównaj z zapisanym plikiem...",
       "compare_files": "Porównaj dwa projekty..."
@@ -398,5 +399,22 @@
     "active_no": "NIE",
     "confirm_disable_title": "Usunąć moduł ze składu?",
     "confirm_disable_text": "Moduł \"{name}\" ma już dane w tym projekcie. Po wyłączeniu jego gałąź zniknie z drzewa, ale dane NIE zostaną skasowane — ponowne włączenie modułu przywróci je. Wyłączyć mimo to?"
+  },
+  "validation": {
+    "dialog_title": "Sprawdź projekt",
+    "section_errors": "Błędy",
+    "section_warnings": "Ostrzeżenia",
+    "none_found": "Nie znaleziono żadnych niespójności.",
+    "summary": "Błędy: {errors} · Ostrzeżenia: {warnings}",
+    "close": "Zamknij",
+    "hint_double_click": "Kliknij dwukrotnie pozycję, żeby przejść do miejsca problemu.",
+    "msg_device_missing_point": "Aparat \"{device}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_device_point_deleted_card": "Aparat \"{device}\" wskazuje punkt {address} z karty \"{card}\", której nie ma już w składzie sprzętu.",
+    "msg_point_double_owned": "Punkt {address} jest przypisany do więcej niż jednego aparatu naraz: {devices}.",
+    "msg_point_unknown_location": "Punkt {address} ma przypisaną lokalizację \"{location}\", której nie ma na liście lokalizacji.",
+    "msg_line_missing_point": "Linia dozorowa \"{line}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_process_missing_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_process_not_ai_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, który nie jest wejściem analogowym (AI).",
+    "msg_module_has_orphan_data": "Moduł \"{module}\" ma zapisane dane w projekcie, ale nie jest w składzie urządzenia — jego gałąź jest ukryta, dane nie zostały skasowane."
   }
 }
