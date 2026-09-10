@@ -16,6 +16,7 @@ from studio.shell.project_panels import (
     location_to_synoptic_dict,
     point_owner_map,
     points_for_card,
+    points_of_kind,
     remove_points_for_card,
     sync_points_for_card,
 )
@@ -180,3 +181,28 @@ def test_location_synoptic_dict_round_trip():
     assert data == {"code": "KOT", "description": "Kotlownia"}
     restored = location_from_synoptic_dict(data)
     assert restored == location
+
+
+def test_points_of_kind_filters_by_the_owning_cards_kind():
+    """LineConfigDialog's own point picker (Task "Alarmówka: na maksa
+    dużo opcji") relies on this to offer only DI points for a CONTACT
+    line and only AI points for a PARAMETRIZED one - the same
+    impossible-to-assign-the-wrong-type stance
+    intrusion_manager.py's own picker has on the runtime side."""
+    project = _project()
+    di_card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
+    ai_card = Card(id="ELA1B", model="ELA01B", kind="AI", channels=2)
+    project.cards.extend([di_card, ai_card])
+    sync_points_for_card(project, di_card)
+    sync_points_for_card(project, ai_card)
+
+    di_points = points_of_kind(project, "DI")
+    ai_points = points_of_kind(project, "AI")
+
+    assert {p.address for p in di_points} == {"ELA1.DI.1", "ELA1.DI.2"}
+    assert {p.address for p in ai_points} == {"ELA1B.AI.1", "ELA1B.AI.2"}
+
+
+def test_points_of_kind_empty_when_no_matching_card():
+    project = _project()
+    assert points_of_kind(project, "AI") == []

@@ -12,11 +12,19 @@ import pytest
 from studio.shell.project_format import (
     Card,
     Device,
+    Line,
+    LineInputMode,
+    LineParametrization,
+    LineType,
     Location,
+    NORMAL_STATE_NC,
     Point,
+    PowerSupervision,
     Project,
     ProjectFormatError,
     SCHEMA_VERSION,
+    Zone,
+    default_value_windows,
     load_project,
     new_project,
     save_project,
@@ -193,3 +201,77 @@ def test_touch_does_not_bump_revision():
     p.touch()
     assert p.revision == 0
     assert p.is_dirty is True
+
+
+# -- Alarmówka (Zone/Line/PowerSupervision) --------------------------------
+# Task "Alarmówka: na maksa dużo opcji" - field-for-field match to
+# runtime/epw_os/core/intrusion_manager.py's own real parameter set (see
+# Zone/Line/PowerSupervision's own docstrings).
+
+def test_intrusion_section_omitted_when_module_not_in_composition():
+    """"Sterownik podlewania nie ma alarmówki" - a project with no
+    zones, no lines, and unconfigured power supervision writes no
+    "intrusion" key at all, same "absent section = module not present"
+    reading every other collection already gets."""
+    p = new_project("Test")
+    data = json.loads(_decompress_saved(p))
+    assert "intrusion" not in data
+
+
+def test_zone_line_power_supervision_round_trip(tmp_path):
+    p = new_project("Test")
+    p.zones.append(Zone(id="Z1", name="Parter", exit_delay_seconds=45.0, entry_delay_seconds=30.0))
+    line = Line(
+        id="L1", name="Kontaktron 2EOL okno", zone_id="Z1", tag="ELA1.AI.1",
+        normal_state=NORMAL_STATE_NC, line_type=LineType.INSTANT,
+        input_mode=LineInputMode.PARAMETRIZED, parametrization=LineParametrization.DEOL,
+        value_windows=default_value_windows(LineParametrization.DEOL),
+        min_violation_seconds=0.5, multiplicity_count=2, multiplicity_window_seconds=5.0,
+        lockout_after_count=3, alarm_hold_seconds=10.0, silence_threshold_seconds=3600.0,
+    )
+    p.lines.append(line)
+    p.power_supervision = PowerSupervision(mains_tag="ELA1.AI.2", battery_tag="ELA1.AI.3", battery_ok_state=False)
+
+    path = tmp_path / "projekt.epw"
+    save_project(p, path)
+    loaded = load_project(path)
+
+    assert loaded.zones == [Zone(id="Z1", name="Parter", exit_delay_seconds=45.0, entry_delay_seconds=30.0)]
+    assert loaded.lines == [line]
+    assert loaded.power_supervision == PowerSupervision(
+        mains_tag="ELA1.AI.2", battery_tag="ELA1.AI.3", battery_ok_state=False
+    )
+
+
+def test_intrusion_section_present_with_only_power_supervision_configured():
+    """Power supervision is system-wide, not per-zone/line - configuring
+    ONLY it (no zones/lines at all yet) must still round-trip, not get
+    silently dropped by the "omit when empty" rule above."""
+    p = new_project("Test")
+    p.power_supervision = PowerSupervision(mains_tag="ELA1.AI.1")
+    data = json.loads(_decompress_saved(p))
+    assert "intrusion" in data
+    assert data["intrusion"]["power_supervision"]["mains_tag"] == "ELA1.AI.1"
+
+
+def test_default_value_windows_eol_has_three_states():
+    windows = default_value_windows(LineParametrization.EOL)
+    assert set(windows.keys()) == {"VIOLATED", "SECURE", "FAULT_OPEN"}
+
+
+def test_default_value_windows_deol_has_five_states():
+    windows = default_value_windows(LineParametrization.DEOL)
+    assert set(windows.keys()) == {"SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN"}
+
+
+def _decompress_saved(project) -> str:
+    """Saves `project` to a throwaway in-memory-ish path and returns the
+    raw JSON text - a lighter-weight check than a full load_project()
+    round trip for tests that only care about the WRITTEN shape."""
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "p.epw"
+        save_project(project, path)
+        with gzip.open(path, "rb") as f:
+            return f.read().decode("utf-8")

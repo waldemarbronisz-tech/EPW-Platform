@@ -5,13 +5,45 @@ restate it from memory, so the two don't quietly drift apart.
 
 Scope of THIS module, deliberately: the "structural" fields the contract
 itself groups under Studio's exclusive editing layer (Nagłówek, Skład
-urządzenia, Sprzęt, Punkty, Aparaty) - not yet `screens`/`logic`
-(embedding the Synoptic/Logic Studio editors' own content into this file
-is a separate, much larger integration - SynopticPanel/LogicPanel keep
-their own .epwsyn/.epwlogic save flow entirely unchanged until that
-lands, so nothing about how Ekrany/Logika save today is touched by this
-module), and not yet `intrusion`/`protection` (each is its own later
-step in the contract's own "Kolejność wdrożenia"). Adding a field here
+urządzenia, Sprzęt, Punkty, Aparaty, Alarmówka) - not yet `screens`/
+`logic` (embedding the Synoptic/Logic Studio editors' own content into
+this file is a separate, much larger integration - SynopticPanel/
+LogicPanel keep their own .epwsyn/.epwlogic save flow entirely
+unchanged until that lands, so nothing about how Ekrany/Logika save
+today is touched by this module), and not yet `protection` (its own
+later step in the contract's own "Kolejność wdrożenia").
+
+Zone/Line/PowerSupervision below intentionally carry MORE fields than
+the contract's own terse "Alarmówka" section spells out (`lines typ
+linii (EOL/DEOL), punkt, opóźnienia`) - runtime/epw_os/core/
+intrusion_manager.py already implements a considerably richer, real,
+tested parameter set (multiplicity/lockout/alarm_hold/silence_threshold
+per line, mains/battery power supervision system-wide) that predates
+this module. Task "Alarmówka: na maksa dużo opcji" chose to expose
+runtime's REAL ceiling, not just the contract's minimal illustrative
+subset - every field here has a concrete, already-executing meaning on
+the runtime side, named identically, so a future "Migracja adresacji"-
+style wiring step has a field-for-field match to work from rather than
+a second design pass. The one field intrusion_manager.py's own contract
+DOESN'T have a Studio equivalent for yet: its `tag` is a flat
+TagManager name ("DI5", "ELA01.DI05") - a DIFFERENT address grammar
+from this module's own card-relative Point.address ("ELA1.DI.5"), the
+same unresolved gap project_panels.py's own module docstring already
+flags for Logic Studio. Line.tag below stores a Point.address (Studio's
+own consistent address space) - translating that to a real runtime tag
+name is deferred with everything else in that gap, not solved here.
+
+The contract's own "timings: czas na wyjście, czas na wejście, czas
+sygnalizacji" doesn't fully match runtime either: exit/entry delay are
+real, per-ZONE fields (Zone.exit_delay_seconds/entry_delay_seconds) -
+but no "czas sygnalizacji" (a zone-wide siren/signaling duration)
+exists in intrusion_manager.py at all. The closest real thing is
+Line.alarm_hold_seconds - per-LINE, how long a raised alarm auto-holds
+before clearing - a different concept under a different name. No
+"signaling duration" field is invented here to paper over that gap;
+alarm_hold_seconds is exposed under its own, real name.
+
+Adding a field here
 is safe and additive - `load_project()` tolerates every field's absence
 (the contract's own rule for the old multi-file archive - "katalogi
 nieużywane mogą nie istnieć, czytnik ma to znieść bez błędu" - applied
@@ -132,6 +164,110 @@ class Device:
 
 
 @dataclass
+class Zone:
+    """SPEC_PROJEKT_EPW.md, "Alarmówka": a named group of lines,
+    armed/disarmed as a unit (runtime/epw_os/core/intrusion_manager.py's
+    own Zone dict - IntrusionManager.add_zone()'s exact three
+    parameters, plus id). exit_delay_seconds/entry_delay_seconds are the
+    contract's own "czas na wyjście"/"czas na wejście" - real, per-zone
+    fields on the runtime side, not a separate global "timings" struct
+    (see this module's own docstring)."""
+
+    id: str
+    name: str
+    exit_delay_seconds: float = 30.0
+    entry_delay_seconds: float = 30.0
+
+
+class LineType:
+    """NATYCHMIASTOWA / ZWŁOCZNA / CAŁODOBOWA / DOZOROWA - copied as
+    plain string constants (not imported) so this module stays free of
+    any runtime/ dependency, same GRANICE every other studio/ module
+    already follows; the four values themselves are intrusion_manager.
+    LineType._ALL, verbatim."""
+    INSTANT = "INSTANT"
+    DELAYED = "DELAYED"
+    TWENTY_FOUR_HOUR = "24H"
+    SUPERVISORY = "SUPERVISORY"
+    ALL = (INSTANT, DELAYED, TWENTY_FOUR_HOUR, SUPERVISORY)
+
+
+class LineInputMode:
+    """CONTACT (a DI Point + NC/NO) or PARAMETRIZED (an AI Point +
+    EOL/DEOL value windows) - intrusion_manager.LineInputMode._ALL."""
+    CONTACT = "CONTACT"
+    PARAMETRIZED = "PARAMETRIZED"
+    ALL = (CONTACT, PARAMETRIZED)
+
+
+class LineParametrization:
+    """EOL (single end-of-line resistor) or DEOL (double) - only
+    meaningful when input_mode is PARAMETRIZED.
+    intrusion_manager.LineParametrization._ALL."""
+    EOL = "EOL"
+    DEOL = "DEOL"
+    ALL = (EOL, DEOL)
+
+
+NORMAL_STATE_NC = "NC"
+NORMAL_STATE_NO = "NO"
+
+
+def default_value_windows(parametrization: str) -> dict:
+    """Verbatim copy of intrusion_manager.default_value_windows() -
+    sensible placeholder [lo, hi] engineering-unit windows per
+    classified state, deliberately not tied to a specific resistor
+    network (that module's own docstring: "NIE zaszywaj konkretnych
+    rezystancji ani pradow"). Kept in sync by hand (no runtime/
+    dependency, GRANICE) - the two are cross-referenced in each other's
+    docstring so a change to one prompts checking the other."""
+    if parametrization == LineParametrization.DEOL:
+        return {
+            "SHORT": [0.0, 10.0], "VIOLATED": [20.0, 30.0], "SECURE": [45.0, 55.0],
+            "TAMPER": [70.0, 80.0], "FAULT_OPEN": [90.0, 100.0],
+        }
+    return {"VIOLATED": [0.0, 20.0], "SECURE": [45.0, 55.0], "FAULT_OPEN": [90.0, 100.0]}
+
+
+@dataclass
+class Line:
+    """SPEC_PROJEKT_EPW.md, "Alarmówka": one supervised input, bound to
+    a zone. Field-for-field match to intrusion_manager.add_line()'s own
+    parameters (see this module's own docstring for the one real gap:
+    `tag` here is a Point.address, not yet a runtime tag name)."""
+
+    id: str
+    name: str
+    zone_id: str
+    tag: str = ""  # a Point.address (DI for CONTACT, AI for PARAMETRIZED)
+    normal_state: str = NORMAL_STATE_NC
+    line_type: str = LineType.INSTANT
+    input_mode: str = LineInputMode.CONTACT
+    parametrization: Optional[str] = None  # EOL | DEOL, only when input_mode == PARAMETRIZED
+    value_windows: dict = field(default_factory=dict)  # state -> [lo, hi], only when PARAMETRIZED
+    min_violation_seconds: float = 0.0       # debounce - 0 = off
+    multiplicity_count: int = 1              # violations required - 1 = off ("dwukrotność" = 2)
+    multiplicity_window_seconds: float = 10.0  # only consulted when multiplicity_count > 1
+    lockout_after_count: int = 0             # auto-lock after N alarms this arm cycle - 0 = off
+    alarm_hold_seconds: float = 0.0          # auto-clear alarm after N seconds - 0 = holds until disarm
+    silence_threshold_seconds: float = 0.0   # mark SUSPECT if no violation for this long - 0 = off
+
+
+@dataclass
+class PowerSupervision:
+    """SPEC_PROJEKT_EPW.md, "Alarmówka" (system-wide, not per-zone/line)
+    - intrusion_manager.py's own single mains/battery config
+    (get_intrusion_power_supervision()/configure_power_supervision()).
+    `None` tag means "not supervised" - intrusion_manager.py's own rule,
+    "brak konfiguracji oznacza brak nadzoru, bez błędów"."""
+
+    mains_tag: Optional[str] = None
+    mains_ok_state: bool = True
+    battery_tag: Optional[str] = None
+    battery_ok_state: bool = True
+
+
+@dataclass
 class Project:
     """The whole of `projekt.epw`'s in-memory representation - only the
     fields this module currently implements (see module docstring for
@@ -143,6 +279,9 @@ class Project:
     locations: list = field(default_factory=list)  # list[Location]
     points: list = field(default_factory=list)  # list[Point]
     devices: list = field(default_factory=list)  # list[Device]
+    zones: list = field(default_factory=list)  # list[Zone]
+    lines: list = field(default_factory=list)  # list[Line]
+    power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
     # day one even though the "reject an older revision on upload"
@@ -206,6 +345,23 @@ def _to_json_dict(project: Project) -> dict:
             }
             for d in project.devices
         ]
+    # SPEC_PROJEKT_EPW.md, "Alarmówka" - nested under one "intrusion" key
+    # (the contract's own section name), omitted entirely when the
+    # module isn't in this project's composition at all (empty zones AND
+    # lines AND an unconfigured power_supervision - the same "absent
+    # section = module not present" reading modules/cards/etc. already
+    # use, just checked across three fields instead of one list).
+    ps = project.power_supervision
+    power_configured = ps.mains_tag is not None or ps.battery_tag is not None
+    if project.zones or project.lines or power_configured:
+        intrusion = {}
+        if project.zones:
+            intrusion["zones"] = [asdict(z) for z in project.zones]
+        if project.lines:
+            intrusion["lines"] = [asdict(l) for l in project.lines]
+        if power_configured:
+            intrusion["power_supervision"] = asdict(ps)
+        data["intrusion"] = intrusion
     return data
 
 
@@ -293,5 +449,10 @@ def load_project(path) -> Project:
         revision=data.get("revision", 0),
         modified_by=data.get("modified_by", "studio"),
     )
+    intrusion = data.get("intrusion", {})
+    project.zones = [Zone(**z) for z in intrusion.get("zones", [])]
+    project.lines = [Line(**l) for l in intrusion.get("lines", [])]
+    if "power_supervision" in intrusion:
+        project.power_supervision = PowerSupervision(**intrusion["power_supervision"])
     project.is_dirty = False
     return project

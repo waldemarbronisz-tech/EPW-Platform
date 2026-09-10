@@ -33,6 +33,14 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
     A-Z0-9 charset Synoptic's own LocationEntry already assumes) - so a
     value this panel accepts is never later rejected once the bridge
     above pushes it across.
+
+  - ZonesPanel/LinesPanel/LineConfigDialog ("Alarmówka: na maksa dużo
+    opcji") - SPEC's own next section, built to runtime/epw_os/core/
+    intrusion_manager.py's REAL, already-executing parameter set (not
+    just the contract's terse illustrative subset) - see
+    project_format.py's Zone/Line/PowerSupervision docstrings for the
+    full field-by-field justification and the one known gap (Line.tag
+    is a Point.address, not yet a runtime tag name).
 """
 import re
 
@@ -40,9 +48,11 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -54,6 +64,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -62,11 +73,22 @@ from PySide6.QtWidgets import (
 )
 
 from studio.shell.i18n import tr
-from studio.shell.project_format import Card, Device, Location, Point
+from studio.shell.project_format import (
+    Card, Device, Line, LineInputMode, LineParametrization, LineType,
+    Location, NORMAL_STATE_NC, NORMAL_STATE_NO, Point, PowerSupervision, Zone,
+    default_value_windows,
+)
 
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
 _ANALOG_KINDS = {"AI", "AO"}
 DEVICE_BEHAVIORS = ["SWITCHED", "SIGNAL", "MEASURED", "MODULATED", "SELECTOR"]
+
+# "Alarmówka" - state sets per parametrization, same source of truth as
+# project_format.default_value_windows() (which state names exist at
+# all for EOL vs DEOL) - used to build LineConfigDialog's value-windows
+# sub-table with the right ROWS, not just the right default numbers.
+_EOL_STATES = ("VIOLATED", "SECURE", "FAULT_OPEN")
+_DEOL_STATES = ("SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN")
 
 _GREY_READONLY_BG = QColor("#E8E8E8")
 _LOCATION_CODE_RE = re.compile(r"^[A-Z0-9]+$")
@@ -825,6 +847,479 @@ class DevicesPanel(QWidget):
             self._studio_window._on_project_changed()
             if self._studio_window._point_registry_panel is not None:
                 self._studio_window._point_registry_panel.refresh()
+
+
+def points_of_kind(project, kind: str):
+    """Every point whose card has channel kind `kind` - the same
+    DI-only / AI-only restriction intrusion_manager.py's own
+    list_digital_input_candidates()/list_analog_input_candidates()
+    enforce on the runtime side (CONTACT lines only ever get a BOOL/DI
+    tag, PARAMETRIZED lines only ever get a REAL/AI tag) - mirrored
+    here so LineConfigDialog's own point picker can't offer the wrong
+    kind in the first place, same "impossible to assign the wrong type"
+    stance as that module's own picker."""
+    kind_by_card = {c.id: c.kind for c in project.cards}
+    result = []
+    for point in sorted(project.points, key=lambda p: p.address):
+        card_id = point.address.split(".", 1)[0] if "." in point.address else point.address
+        if kind_by_card.get(card_id) == kind:
+            result.append(point)
+    return result
+
+
+class ZonesPanel(QWidget):
+    """SPEC's "Alarmówka": a zone (strefa) - name + exit/entry delay,
+    both real fields on intrusion_manager.IntrusionManager.add_zone().
+    Removal refused (with a message) while lines still reference the
+    zone - same "don't silently orphan a reference" stance
+    IntrusionManager.remove_zone() itself already has on the runtime
+    side, enforced here too since Studio has no other check for it."""
+
+    _COLS = ["id", "name", "exit_delay", "entry_delay"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"zones.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self.table)
+
+        self.table.itemChanged.connect(self._on_item_changed)
+
+        layout.addWidget(_section_label(tr("zones.power_heading")))
+        power_form = QFormLayout()
+        self.mains_tag_combo = QComboBox()
+        self.mains_ok_check = QCheckBox(tr("zones.ok_state_high"))
+        self.battery_tag_combo = QComboBox()
+        self.battery_ok_check = QCheckBox(tr("zones.ok_state_high"))
+        mains_row = QHBoxLayout()
+        mains_row.addWidget(self.mains_tag_combo, 1)
+        mains_row.addWidget(self.mains_ok_check)
+        battery_row = QHBoxLayout()
+        battery_row.addWidget(self.battery_tag_combo, 1)
+        battery_row.addWidget(self.battery_ok_check)
+        power_form.addRow(tr("zones.mains_tag"), mains_row)
+        power_form.addRow(tr("zones.battery_tag"), battery_row)
+        layout.addLayout(power_form)
+        layout.addStretch(1)
+
+        self.mains_tag_combo.currentIndexChanged.connect(self._on_power_changed)
+        self.mains_ok_check.toggled.connect(self._on_power_changed)
+        self.battery_tag_combo.currentIndexChanged.connect(self._on_power_changed)
+        self.battery_ok_check.toggled.connect(self._on_power_changed)
+
+        self.refresh()
+
+    def refresh(self):
+        self._loading = True
+        project = self._studio_window._project
+        self.table.setRowCount(0)
+        for zone in project.zones:
+            self._append_row(zone)
+
+        ai_points = points_of_kind(project, "AI")
+        ps = project.power_supervision
+        for combo, tag in ((self.mains_tag_combo, ps.mains_tag), (self.battery_tag_combo, ps.battery_tag)):
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItem(tr("zones.not_supervised"), None)
+            for point in ai_points:
+                label = point.address if not point.description else f"{point.address} — {point.description}"
+                combo.addItem(label, point.address)
+            idx = combo.findData(tag)
+            combo.setCurrentIndex(idx if idx >= 0 else 0)
+            combo.blockSignals(False)
+        self.mains_ok_check.blockSignals(True)
+        self.mains_ok_check.setChecked(ps.mains_ok_state)
+        self.mains_ok_check.blockSignals(False)
+        self.battery_ok_check.blockSignals(True)
+        self.battery_ok_check.setChecked(ps.battery_ok_state)
+        self.battery_ok_check.blockSignals(False)
+        self._loading = False
+
+    def _append_row(self, zone: Zone):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(zone.id))
+        self.table.setItem(row, 1, QTableWidgetItem(zone.name))
+        self.table.setItem(row, 2, QTableWidgetItem(_fmt(zone.exit_delay_seconds)))
+        self.table.setItem(row, 3, QTableWidgetItem(_fmt(zone.entry_delay_seconds)))
+
+    def add_zone(self):
+        project = self._studio_window._project
+        existing_ids = {z.id for z in project.zones}
+        new_id = _next_unique(existing_ids, "Z")
+        project.zones.append(Zone(id=new_id, name=tr("zones.default_name", id=new_id)))
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def remove_selected_zone(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return
+        project = self._studio_window._project
+        zone = project.zones[row]
+        if any(l.zone_id == zone.id for l in project.lines):
+            QMessageBox.warning(self, tr("zones.in_use_title"), tr("zones.in_use_text", id=zone.id))
+            return
+        del project.zones[row]
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def _on_item_changed(self, item):
+        if self._loading:
+            return
+        row = item.row()
+        project = self._studio_window._project
+        zone = project.zones[row]
+        new_id = self.table.item(row, 0).text().strip()
+        if new_id and new_id != zone.id:
+            if any(z.id == new_id for z in project.zones if z is not zone):
+                QMessageBox.warning(self, tr("zones.duplicate_id_title"), tr("zones.duplicate_id_text", id=new_id))
+                self._loading = True
+                self.table.item(row, 0).setText(zone.id)
+                self._loading = False
+                new_id = zone.id
+            else:
+                for line in project.lines:
+                    if line.zone_id == zone.id:
+                        line.zone_id = new_id
+        zone.id = new_id or zone.id
+        zone.name = self.table.item(row, 1).text()
+        zone.exit_delay_seconds = _parse_float(self.table.item(row, 2).text()) or 0.0
+        zone.entry_delay_seconds = _parse_float(self.table.item(row, 3).text()) or 0.0
+        project.touch()
+        self._studio_window._on_project_changed()
+        if self._studio_window._lines_panel is not None:
+            self._studio_window._lines_panel.refresh()
+
+    def _on_power_changed(self):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        project.power_supervision = PowerSupervision(
+            mains_tag=self.mains_tag_combo.currentData(),
+            mains_ok_state=self.mains_ok_check.isChecked(),
+            battery_tag=self.battery_tag_combo.currentData(),
+            battery_ok_state=self.battery_ok_check.isChecked(),
+        )
+        project.touch()
+        self._studio_window._on_project_changed()
+
+
+class LineConfigDialog(QDialog):
+    """The full, real intrusion_manager.add_line()/update_line()
+    parameter set (see project_format.Line's own docstring) - kept out
+    of LinesPanel's table (14 fields is not a table row) the same way
+    PointAssignDialog keeps Devices' point lists out of DevicesPanel's
+    table."""
+
+    def __init__(self, project, line: Line, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("lines.dialog_title", id=line.id))
+        self._project = project
+        self._line = line
+        self.resize(480, 640)
+
+        outer = QVBoxLayout(self)
+
+        input_box = QGroupBox(tr("lines.group_input"))
+        input_form = QFormLayout(input_box)
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem(tr("lines.mode_contact"), LineInputMode.CONTACT)
+        self.mode_combo.addItem(tr("lines.mode_parametrized"), LineInputMode.PARAMETRIZED)
+        input_form.addRow(tr("lines.input_mode"), self.mode_combo)
+
+        self.point_combo = QComboBox()
+        input_form.addRow(tr("lines.point"), self.point_combo)
+
+        self.normal_state_combo = QComboBox()
+        self.normal_state_combo.addItem(tr("lines.normal_state_nc"), NORMAL_STATE_NC)
+        self.normal_state_combo.addItem(tr("lines.normal_state_no"), NORMAL_STATE_NO)
+        input_form.addRow(tr("lines.normal_state"), self.normal_state_combo)
+
+        self.parametrization_combo = QComboBox()
+        self.parametrization_combo.addItem(tr("lines.parametrization_eol"), LineParametrization.EOL)
+        self.parametrization_combo.addItem(tr("lines.parametrization_deol"), LineParametrization.DEOL)
+        input_form.addRow(tr("lines.parametrization"), self.parametrization_combo)
+        outer.addWidget(input_box)
+
+        self.windows_box = QGroupBox(tr("lines.group_windows"))
+        windows_layout = QVBoxLayout(self.windows_box)
+        self.windows_table = QTableWidget(0, 2)
+        self.windows_table.setHorizontalHeaderLabels([tr("lines.col_min"), tr("lines.col_max")])
+        _prep_table(self.windows_table)
+        windows_layout.addWidget(self.windows_table)
+        outer.addWidget(self.windows_box)
+
+        filter_box = QGroupBox(tr("lines.group_filtering"))
+        filter_form = QFormLayout(filter_box)
+        self.debounce_spin = _seconds_spinbox()
+        filter_form.addRow(tr("lines.min_violation_seconds"), self.debounce_spin)
+        self.multiplicity_spin = QSpinBox()
+        self.multiplicity_spin.setRange(1, 99)
+        filter_form.addRow(tr("lines.multiplicity_count"), self.multiplicity_spin)
+        self.multiplicity_window_spin = _seconds_spinbox()
+        filter_form.addRow(tr("lines.multiplicity_window_seconds"), self.multiplicity_window_spin)
+        self.lockout_spin = QSpinBox()
+        self.lockout_spin.setRange(0, 99)
+        self.lockout_spin.setSpecialValueText(tr("lines.off"))
+        filter_form.addRow(tr("lines.lockout_after_count"), self.lockout_spin)
+        self.alarm_hold_spin = _seconds_spinbox()
+        filter_form.addRow(tr("lines.alarm_hold_seconds"), self.alarm_hold_spin)
+        outer.addWidget(filter_box)
+
+        supervision_box = QGroupBox(tr("lines.group_supervision"))
+        supervision_form = QFormLayout(supervision_box)
+        self.silence_spin = _seconds_spinbox()
+        self.silence_spin.setSpecialValueText(tr("lines.off"))
+        supervision_form.addRow(tr("lines.silence_threshold_seconds"), self.silence_spin)
+        outer.addWidget(supervision_box)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        outer.addWidget(buttons)
+
+        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        self.parametrization_combo.currentIndexChanged.connect(self._on_parametrization_changed)
+
+        self._load_from_line()
+
+    def _load_from_line(self):
+        line = self._line
+        idx = self.mode_combo.findData(line.input_mode)
+        self.mode_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self._refresh_point_choices()
+        point_idx = self.point_combo.findData(line.tag)
+        self.point_combo.setCurrentIndex(point_idx if point_idx >= 0 else -1)
+        self.normal_state_combo.setCurrentIndex(self.normal_state_combo.findData(line.normal_state))
+        param_idx = self.parametrization_combo.findData(line.parametrization or LineParametrization.EOL)
+        self.parametrization_combo.setCurrentIndex(param_idx if param_idx >= 0 else 0)
+        self._populate_windows_table(line.value_windows or default_value_windows(
+            line.parametrization or LineParametrization.EOL
+        ))
+        self.debounce_spin.setValue(line.min_violation_seconds)
+        self.multiplicity_spin.setValue(max(1, line.multiplicity_count))
+        self.multiplicity_window_spin.setValue(line.multiplicity_window_seconds)
+        self.lockout_spin.setValue(line.lockout_after_count)
+        self.alarm_hold_spin.setValue(line.alarm_hold_seconds)
+        self.silence_spin.setValue(line.silence_threshold_seconds)
+        self._on_mode_changed()
+
+    def _refresh_point_choices(self):
+        mode = self.mode_combo.currentData()
+        kind = "AI" if mode == LineInputMode.PARAMETRIZED else "DI"
+        current = self.point_combo.currentData()
+        self.point_combo.blockSignals(True)
+        self.point_combo.clear()
+        for point in points_of_kind(self._project, kind):
+            label = point.address if not point.description else f"{point.address} — {point.description}"
+            self.point_combo.addItem(label, point.address)
+        idx = self.point_combo.findData(current)
+        self.point_combo.setCurrentIndex(idx if idx >= 0 else -1)
+        self.point_combo.blockSignals(False)
+
+    def _populate_windows_table(self, windows: dict):
+        states = _DEOL_STATES if self.parametrization_combo.currentData() == LineParametrization.DEOL else _EOL_STATES
+        self.windows_table.setRowCount(0)
+        for state in states:
+            row = self.windows_table.rowCount()
+            self.windows_table.insertRow(row)
+            self.windows_table.setVerticalHeaderItem(row, QTableWidgetItem(tr(f"lines.state_{state.lower()}")))
+            lo, hi = (windows.get(state) or [0.0, 0.0])[:2]
+            self.windows_table.setItem(row, 0, QTableWidgetItem(_fmt(lo)))
+            self.windows_table.setItem(row, 1, QTableWidgetItem(_fmt(hi)))
+        self.windows_table.verticalHeader().setVisible(True)
+
+    def _on_mode_changed(self):
+        is_parametrized = self.mode_combo.currentData() == LineInputMode.PARAMETRIZED
+        self._refresh_point_choices()
+        self.parametrization_combo.setEnabled(is_parametrized)
+        self.windows_box.setEnabled(is_parametrized)
+
+    def _on_parametrization_changed(self):
+        self._populate_windows_table(default_value_windows(self.parametrization_combo.currentData()))
+
+    def apply_to_line(self):
+        line = self._line
+        line.input_mode = self.mode_combo.currentData()
+        line.tag = self.point_combo.currentData() or ""
+        line.normal_state = self.normal_state_combo.currentData()
+        if line.input_mode == LineInputMode.PARAMETRIZED:
+            line.parametrization = self.parametrization_combo.currentData()
+            windows = {}
+            states = _DEOL_STATES if line.parametrization == LineParametrization.DEOL else _EOL_STATES
+            for row, state in enumerate(states):
+                lo = _parse_float(self.windows_table.item(row, 0).text()) or 0.0
+                hi = _parse_float(self.windows_table.item(row, 1).text()) or 0.0
+                windows[state] = [lo, hi]
+            line.value_windows = windows
+        else:
+            line.parametrization = None
+            line.value_windows = {}
+        line.min_violation_seconds = self.debounce_spin.value()
+        line.multiplicity_count = self.multiplicity_spin.value()
+        line.multiplicity_window_seconds = self.multiplicity_window_spin.value()
+        line.lockout_after_count = self.lockout_spin.value()
+        line.alarm_hold_seconds = self.alarm_hold_spin.value()
+        line.silence_threshold_seconds = self.silence_spin.value()
+
+
+def _seconds_spinbox():
+    spin = QDoubleSpinBox()
+    spin.setRange(0.0, 3600.0)
+    spin.setDecimals(1)
+    spin.setSuffix(" s")
+    return spin
+
+
+class LinesPanel(QWidget):
+    """SPEC's "Alarmówka": one row per line (id/name/zone/type), a
+    "Konfiguruj..." button opening LineConfigDialog for everything else
+    (see that dialog's own docstring for why it isn't inline table
+    columns)."""
+
+    _COLS = ["id", "name", "zone", "line_type", "config"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"lines.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        layout.addWidget(self.table)
+
+        self.table.itemChanged.connect(self._on_item_changed)
+
+        self.refresh()
+
+    def refresh(self):
+        self._loading = True
+        self.table.setRowCount(0)
+        for line in self._studio_window._project.lines:
+            self._append_row(line)
+        self._loading = False
+
+    def _append_row(self, line: Line):
+        project = self._studio_window._project
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(line.id))
+        self.table.setItem(row, 1, QTableWidgetItem(line.name))
+
+        zone_combo = QComboBox()
+        for zone in project.zones:
+            zone_combo.addItem(f"{zone.name} ({zone.id})", zone.id)
+        idx = zone_combo.findData(line.zone_id)
+        zone_combo.setCurrentIndex(idx if idx >= 0 else -1)
+        zone_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_zone_changed(r))
+        self.table.setCellWidget(row, 2, zone_combo)
+
+        type_combo = QComboBox()
+        for line_type in LineType.ALL:
+            type_combo.addItem(tr(f"lines.type_{line_type.lower()}"), line_type)
+        idx = type_combo.findData(line.line_type)
+        type_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        type_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_type_changed(r))
+        self.table.setCellWidget(row, 3, type_combo)
+
+        config_btn = QPushButton(self._summary(line))
+        config_btn.clicked.connect(lambda _c=False, r=row: self._configure(r))
+        self.table.setCellWidget(row, 4, config_btn)
+
+    @staticmethod
+    def _summary(line: Line):
+        mode_key = "lines.mode_parametrized" if line.input_mode == LineInputMode.PARAMETRIZED else "lines.mode_contact"
+        point = line.tag or tr("lines.no_point")
+        if line.input_mode == LineInputMode.PARAMETRIZED and line.parametrization:
+            return f"{line.parametrization} — {point}"
+        return f"{tr(mode_key)} — {point}"
+
+    def add_line(self):
+        project = self._studio_window._project
+        if not project.zones:
+            QMessageBox.warning(self, tr("lines.no_zones_title"), tr("lines.no_zones_text"))
+            return
+        existing_ids = {l.id for l in project.lines}
+        new_id = _next_unique(existing_ids, "L")
+        project.lines.append(Line(id=new_id, name=tr("lines.default_name", id=new_id), zone_id=project.zones[0].id))
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def remove_selected_line(self):
+        row = self.table.currentRow()
+        if row < 0:
+            return
+        project = self._studio_window._project
+        del project.lines[row]
+        project.touch()
+        self.refresh()
+        self._studio_window._on_project_changed()
+
+    def _on_item_changed(self, item):
+        if self._loading:
+            return
+        row = item.row()
+        project = self._studio_window._project
+        line = project.lines[row]
+        if item.column() == 0:
+            new_id = self.table.item(row, 0).text().strip()
+            if new_id and new_id != line.id and any(l.id == new_id for l in project.lines if l is not line):
+                QMessageBox.warning(self, tr("lines.duplicate_id_title"), tr("lines.duplicate_id_text", id=new_id))
+                self._loading = True
+                self.table.item(row, 0).setText(line.id)
+                self._loading = False
+                return
+            line.id = new_id or line.id
+        elif item.column() == 1:
+            line.name = self.table.item(row, 1).text()
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_zone_changed(self, row):
+        project = self._studio_window._project
+        line = project.lines[row]
+        combo = self.table.cellWidget(row, 2)
+        line.zone_id = combo.currentData()
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_type_changed(self, row):
+        project = self._studio_window._project
+        line = project.lines[row]
+        combo = self.table.cellWidget(row, 3)
+        line.line_type = combo.currentData()
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def _configure(self, row):
+        project = self._studio_window._project
+        line = project.lines[row]
+        dialog = LineConfigDialog(project, line, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            dialog.apply_to_line()
+            project.touch()
+            self.refresh()
+            self._studio_window._on_project_changed()
 
 
 # -- shared helpers -------------------------------------------------------

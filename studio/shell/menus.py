@@ -359,6 +359,20 @@ def build_devices_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("devices.remove_device"), panel.remove_selected_device, icon_name="remove_row")
 
 
+def build_zones_toolbar(toolbar, panel, _studio_window):
+    """SPEC's "Alarmówka" - Dodaj/Usuń strefę."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("zones.add_zone"), panel.add_zone, icon_name="add_row")
+    _add(toolbar, tr("zones.remove_zone"), panel.remove_selected_zone, icon_name="remove_row")
+
+
+def build_lines_toolbar(toolbar, panel, _studio_window):
+    """SPEC's "Alarmówka" - Dodaj/Usuń linię dozorową."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("lines.add_line"), panel.add_line, icon_name="add_row")
+    _add(toolbar, tr("lines.remove_line"), panel.remove_selected_line, icon_name="remove_row")
+
+
 def build_point_registry_toolbar(toolbar, _panel, _studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's

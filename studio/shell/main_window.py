@@ -38,8 +38,9 @@ from PySide6.QtWidgets import (
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
-    build_cards_toolbar, build_devices_toolbar, build_fixed_menu, build_logic_context_toolbar,
-    build_point_registry_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
+    build_cards_toolbar, build_devices_toolbar, build_fixed_menu, build_lines_toolbar,
+    build_logic_context_toolbar, build_point_registry_toolbar, build_project_info_toolbar,
+    build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -77,10 +78,10 @@ _INACTIVE_CONFIG_CHILDREN = [
     ("devices", "tree.devices"),
     ("locations", "tree.locations"),
 ]
-_INACTIVE_ALARM_CHILDREN = [
-    ("security_zones", "tree.security_zones"),
-    ("security_lines", "tree.security_lines"),
-]
+# "Alarmówka: na maksa dużo opcji" - SPEC's next section, promoted the
+# same way io_cards/point_registry/apparatus_registry already were.
+_TREE_ITEM_ZONES = "security_zones"
+_TREE_ITEM_LINES = "security_lines"
 _INACTIVE_PROTECTION_CHILDREN = [("protection_settings", "tree.protection_settings")]
 _INACTIVE_CONTROLLER_CHILDREN = [("controller_connection", "tree.controller_connection")]
 
@@ -91,6 +92,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
+    _TREE_ITEM_ZONES: "breadcrumb.security_zones",
+    _TREE_ITEM_LINES: "breadcrumb.security_lines",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -294,6 +297,8 @@ class StudioMainWindow(QMainWindow):
         self._cards_panel = None
         self._point_registry_panel = None
         self._devices_panel = None
+        self._zones_panel = None
+        self._lines_panel = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -416,6 +421,12 @@ class StudioMainWindow(QMainWindow):
         # "settings" (a gear) reads plainly as "a mechanism/apparatus" -
         # closer to "Aparaty" than any other icon already in the set.
         icon_devices = icons.icon("settings")
+        # "Alarmówka" - "lock" (a zone is armed/disarmed, the same
+        # concept a padlock already conveys) and "draw_wire" (a
+        # supervised LINE, literally) - both reused from the existing
+        # set rather than drawing two more single-purpose icons.
+        icon_zones = icons.icon("lock")
+        icon_lines = icons.icon("draw_wire")
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -480,8 +491,8 @@ class StudioMainWindow(QMainWindow):
         self._tree_label_refs.append((self._item_logic, "tree.logic"))
 
         alarm = add_group(root, "tree.group_alarm")
-        for key, label_key in _INACTIVE_ALARM_CHILDREN:
-            add_inactive_leaf(alarm, key, label_key)
+        self._item_zones = add_active_leaf(alarm, _TREE_ITEM_ZONES, "tree.security_zones", icon_zones)
+        self._item_lines = add_active_leaf(alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines)
 
         protection = add_group(root, "tree.group_protection")
         for key, label_key in _INACTIVE_PROTECTION_CHILDREN:
@@ -828,6 +839,10 @@ class StudioMainWindow(QMainWindow):
                 self._open_point_registry()
             elif key == _TREE_ITEM_DEVICES:
                 self._open_devices()
+            elif key == _TREE_ITEM_ZONES:
+                self._open_zones()
+            elif key == _TREE_ITEM_LINES:
+                self._open_lines()
         elif kind == "inactive":
             self._open_inactive(key)
 
@@ -972,6 +987,34 @@ class StudioMainWindow(QMainWindow):
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
+    def _open_zones(self):
+        if self._zones_panel is None:
+            from studio.shell.project_panels import ZonesPanel
+            self._zones_panel = ZonesPanel(self)
+        else:
+            self._zones_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_ZONES, self._zones_panel, build_zones_toolbar, self._zones_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_ZONES
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_lines(self):
+        if self._lines_panel is None:
+            from studio.shell.project_panels import LinesPanel
+            self._lines_panel = LinesPanel(self)
+        else:
+            self._lines_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_LINES, self._lines_panel, build_lines_toolbar, self._lines_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_LINES
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
     # ------------------------------------------------------------------
     # Project lifecycle (Informacje o projekcie's own toolbar) - separate
     # from _shared_new/_shared_open/etc above, see project_panels.py's
@@ -1018,6 +1061,10 @@ class StudioMainWindow(QMainWindow):
             self._point_registry_panel.refresh()
         if self._devices_panel is not None:
             self._devices_panel.refresh()
+        if self._zones_panel is not None:
+            self._zones_panel.refresh()
+        if self._lines_panel is not None:
+            self._lines_panel.refresh()
 
     def _open_project(self):
         if not self._confirm_discard_project():
@@ -1043,6 +1090,10 @@ class StudioMainWindow(QMainWindow):
             self._point_registry_panel.refresh()
         if self._devices_panel is not None:
             self._devices_panel.refresh()
+        if self._zones_panel is not None:
+            self._zones_panel.refresh()
+        if self._lines_panel is not None:
+            self._lines_panel.refresh()
 
     def _save_project(self) -> bool:
         if self._project_path is None:
