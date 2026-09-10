@@ -18,5 +18,10 @@
     "no_project": "No project open",
     "active_editor": "Active editor: {name}",
     "no_editor": "No editor open"
+  },
+  "synoptic": {
+    "loading": "Loading the screen editor...",
+    "build_failed": "Could not build the screen editor (npm run build). Check that Node.js/npm is installed, and see the terminal for details.",
+    "load_failed": "Could not load the screen editor in this window."
   }
 }

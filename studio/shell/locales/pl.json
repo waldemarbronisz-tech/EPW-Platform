@@ -18,5 +18,10 @@
     "no_project": "Brak otwartego projektu",
     "active_editor": "Aktywny edytor: {name}",
     "no_editor": "Brak otwartego edytora"
+  },
+  "synoptic": {
+    "loading": "Wczytywanie edytora ekranów...",
+    "build_failed": "Nie udało się zbudować edytora ekranów (npm run build). Sprawdź, czy Node.js/npm jest zainstalowany, i zobacz terminal po szczegóły.",
+    "load_failed": "Nie udało się wczytać edytora ekranów w tym oknie."
   }
 }
