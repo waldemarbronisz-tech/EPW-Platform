@@ -40,9 +40,9 @@ from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
-    build_locations_toolbar, build_logic_context_toolbar, build_point_registry_toolbar,
-    build_process_protection_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
-    build_zones_toolbar,
+    build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
+    build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
+    build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -55,23 +55,33 @@ _TREE_ITEM_LOGIC = "logic"
 # _INACTIVE_CONFIG_CHILDREN below, same "active" leaf pattern as
 # Screens/Logic above - real panels, not another placeholder sentence.
 _TREE_ITEM_INFO = "info"
-# Task "ostatnie dwa działy" - "io_cards" now surfaces under the
-# "devices"/"Skład urządzenia" label (see _BREADCRUMB_KEYS below): the
-# user's own description of what belongs there - "ustawianie adresów
-# ELA/ADA, opisywanie ich, określanie wejść/wyjść" - IS CardsPanel's own
-# id/model/kind/channels, not a second, separate registry. The internal
-# key stays "io_cards" (no behavior tied to the string itself), only the
-# LABEL changes - this decision is flagged, not silently made: SPEC's
-# OWN "Skład urządzenia" meaning ("modules: lista nazw modułów... NIE
-# JEST lista przełączników") is a different, narrower concept (which
-# functional subsystems this controller has) that this does NOT build -
-# still open, unrelated to the ELA/ADA registry now living at this leaf.
+# Task "fix/project-format-integrity" point 2.1 - REVERTED the previous
+# session's rename: this leaf is "Karty wejść/wyjść" again ("tree.
+# io_cards"), freeing "Skład urządzenia"/"devices" for its OWN,
+# different, real meaning - the contract's own one (SPEC_PROJEKT_EPW.md:
+# "modules: lista nazw modułów... TO NIE JEST lista przełączników" -
+# which FUNCTIONAL subsystems this controller has, not which physical
+# ELA/ADA cards). The previous rename conflated the two because nothing
+# used `modules` yet; now something does (_TREE_ITEM_MODULES below).
+# "Karty wejść/wyjść" over the task's other offered option ("Moduły
+# sprzętowe"): it matches project_format.Card's own field names/SPEC
+# wording directly, and "moduły" would collide in READER'S HEAD with
+# the new "Skład urządzenia" - which is exactly about "moduły" in the
+# functional sense. Two different "moduły" one screen apart is the
+# confusion this rename exists to remove, not reintroduce.
 _TREE_ITEM_IO_CARDS = "io_cards"
 _TREE_ITEM_LOCATIONS = "locations"
 _TREE_ITEM_POINT_REGISTRY = "point_registry"
 # "Co jeszcze możemy dorobić" follow-up - SPEC's next section, Aparaty
 # (a device's feedback/command point lists), same "active" leaf pattern.
 _TREE_ITEM_DEVICES = "apparatus_registry"
+# Task "fix/project-format-integrity" point 2/3 - "Skład urządzenia":
+# the REAL contract concept, mirrored from runtime/epw_os/core/
+# feature_config.py's own ALWAYS_ON_FEATURES/TOGGLABLE_FEATURES (see
+# project_panels.MODULE_CATALOG's own docstring) - which FUNCTIONAL
+# subsystems (Alarmówka, Zabezpieczenia...) this controller has at all.
+# First leaf under PROJEKT, above KONFIGURACJA (task's own placement).
+_TREE_ITEM_MODULES = "devices"
 
 # Every branch that used to live under KONFIGURACJA as a placeholder
 # (task 1.4's own "a click shows one explanatory sentence" GRANICE) is
@@ -100,7 +110,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_SCREENS: "breadcrumb.screens",
     _TREE_ITEM_LOGIC: "breadcrumb.logic",
     _TREE_ITEM_INFO: "breadcrumb.info",
-    _TREE_ITEM_IO_CARDS: "breadcrumb.devices",
+    _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
+    _TREE_ITEM_MODULES: "breadcrumb.devices",
     _TREE_ITEM_LOCATIONS: "breadcrumb.locations",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
@@ -310,6 +321,7 @@ class StudioMainWindow(QMainWindow):
         self._synoptic_panel = None
         self._logic_panel = None
         self._project_info_panel = None
+        self._modules_panel = None
         self._cards_panel = None
         self._locations_panel = None
         self._point_registry_panel = None
@@ -437,6 +449,10 @@ class StudioMainWindow(QMainWindow):
         # exist for exactly "a list of hardware" / "a table of
         # registers", no new icon needed.
         icon_info = icons.icon("about")
+        # "add_group_command" (cascading overlapping squares - "a group
+        # of things") reads as "a set of installed modules", distinct
+        # from "device_list" (a flat list - the physical card registry).
+        icon_modules = icons.icon("add_group_command")
         icon_io_cards = icons.icon("device_list")
         icon_point_registry = icons.icon("project_registers")
         # "draw_building" (a house) reads plainly as "a place" - reused
@@ -501,9 +517,11 @@ class StudioMainWindow(QMainWindow):
         self._tree_label_refs.append((root, "tree.root"))
 
         self._item_info = add_active_leaf(root, _TREE_ITEM_INFO, "tree.info", icon_info)
+        # "Pierwszy pod PROJEKT, nad Konfiguracją" (task's own placement).
+        self._item_modules = add_active_leaf(root, _TREE_ITEM_MODULES, "tree.devices", icon_modules)
 
         config = add_group(root, "tree.group_config")
-        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.devices", icon_io_cards)
+        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
         self._item_locations = add_active_leaf(config, _TREE_ITEM_LOCATIONS, "tree.locations", icon_locations)
         self._item_point_registry = add_active_leaf(
             config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
@@ -524,16 +542,25 @@ class StudioMainWindow(QMainWindow):
         config.addChild(self._item_logic)
         self._tree_label_refs.append((self._item_logic, "tree.logic"))
 
-        alarm = add_group(root, "tree.group_alarm")
-        self._item_zones = add_active_leaf(alarm, _TREE_ITEM_ZONES, "tree.security_zones", icon_zones)
-        self._item_lines = add_active_leaf(alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines)
+        # Task "fix/project-format-integrity" point 2.3 - these two
+        # groups' own children are shown/hidden by _refresh_module_
+        # visibility() below, based on self._project.modules - kept as
+        # instance attrs (not local vars) so that method can reach them
+        # after _build_tree() returns.
+        self._group_alarm = add_group(root, "tree.group_alarm")
+        self._item_zones = add_active_leaf(
+            self._group_alarm, _TREE_ITEM_ZONES, "tree.security_zones", icon_zones
+        )
+        self._item_lines = add_active_leaf(
+            self._group_alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines
+        )
 
-        protection = add_group(root, "tree.group_protection")
+        self._group_protection = add_group(root, "tree.group_protection")
         self._item_electrical_protection = add_active_leaf(
-            protection, _TREE_ITEM_ELECTRICAL_PROTECTION, "tree.protection_electrical", icon_electrical
+            self._group_protection, _TREE_ITEM_ELECTRICAL_PROTECTION, "tree.protection_electrical", icon_electrical
         )
         self._item_process_protection = add_active_leaf(
-            protection, _TREE_ITEM_PROCESS_PROTECTION, "tree.protection_process", icon_process
+            self._group_protection, _TREE_ITEM_PROCESS_PROTECTION, "tree.protection_process", icon_process
         )
 
         controller = add_group(root, "tree.group_controller")
@@ -874,6 +901,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_logic()
             elif key == _TREE_ITEM_INFO:
                 self._open_info()
+            elif key == _TREE_ITEM_MODULES:
+                self._open_modules()
             elif key == _TREE_ITEM_IO_CARDS:
                 self._open_io_cards()
             elif key == _TREE_ITEM_LOCATIONS:
@@ -992,6 +1021,20 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_INFO
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_modules(self):
+        if self._modules_panel is None:
+            from studio.shell.project_panels import ModuleCompositionPanel
+            self._modules_panel = ModuleCompositionPanel(self)
+        else:
+            self._modules_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_MODULES, self._modules_panel, build_modules_toolbar, self._modules_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_MODULES
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
@@ -1155,6 +1198,61 @@ class StudioMainWindow(QMainWindow):
         self._status_project.setText(f"{name}{marker}")
         if self._project_info_panel is not None:
             self._project_info_panel.refresh()
+        self._refresh_module_visibility()
+
+    def _refresh_module_visibility(self):
+        """Task "fix/project-format-integrity" point 2.3 - "Moduł spoza
+        składu NIE ISTNIEJE" (a module outside the composition doesn't
+        exist - not merely disabled): a branch whose module isn't in
+        self._project.modules is REMOVED from the tree outright (not
+        just hidden/grayed - that convention is reserved for "this
+        editor doesn't have it", a different situation from "this
+        controller doesn't have this module at all"). Runs on every
+        project change (called from _on_project_changed(), not just
+        from the module-toggle panel) so a brand-new/just-opened project
+        starts correct without a separate call site to remember.
+
+        Always removes then re-adds the active items of each group in a
+        FIXED, canonical order (not whatever order toggles happened in)
+        - stable, predictable tree order regardless of click sequence.
+        A group with zero visible children hides itself too, rather
+        than showing an empty bold header."""
+        modules = set(self._project.modules)
+
+        def _sync_group(group, ordered):
+            for _feature_id, item in ordered:
+                parent = item.parent()
+                if parent is not None:
+                    parent.removeChild(item)
+            visible_count = 0
+            for feature_id, item in ordered:
+                if feature_id in modules:
+                    group.addChild(item)
+                    visible_count += 1
+            group.setHidden(visible_count == 0)
+
+        _sync_group(self._group_alarm, [
+            ("intrusion", self._item_zones),
+            ("intrusion", self._item_lines),
+        ])
+        _sync_group(self._group_protection, [
+            ("protection_settings", self._item_electrical_protection),
+            ("protection_process", self._item_process_protection),
+        ])
+
+        # If the branch currently open just became invisible (its
+        # module was removed from composition while the user was
+        # looking at it), don't leave the content area showing an
+        # orphaned panel with no matching tree selection - fall back to
+        # "Skład urządzenia" itself, the obvious place to go fix that.
+        active_item = {
+            _TREE_ITEM_ZONES: self._item_zones,
+            _TREE_ITEM_LINES: self._item_lines,
+            _TREE_ITEM_ELECTRICAL_PROTECTION: self._item_electrical_protection,
+            _TREE_ITEM_PROCESS_PROTECTION: self._item_process_protection,
+        }.get(self._active)
+        if active_item is not None and active_item.parent() is None:
+            self.tree.setCurrentItem(self._item_modules)
 
     def _confirm_discard_project(self) -> bool:
         """True = caller may proceed (nothing unsaved, or the user chose

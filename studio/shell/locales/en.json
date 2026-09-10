@@ -18,6 +18,7 @@
     "group_controller": "CONTROLLER",
     "info": "Project Information",
     "devices": "Device Composition",
+    "io_cards": "I/O Cards",
     "locations": "Locations",
     "point_registry": "Point Registry",
     "apparatus_registry": "Apparatus Registry",
@@ -34,7 +35,8 @@
     "screens": "Project → Configuration → Synoptic Diagram",
     "logic": "Project → Configuration → Logic",
     "info": "Project → Project Information",
-    "devices": "Project → Configuration → Device Composition",
+    "devices": "Project → Device Composition",
+    "io_cards": "Project → Configuration → I/O Cards",
     "locations": "Project → Configuration → Locations",
     "point_registry": "Project → Configuration → Point Registry",
     "apparatus_registry": "Project → Configuration → Apparatus Registry",
@@ -384,5 +386,14 @@
     "error_no_host": "No controller address configured.",
     "error_http": "HTTP error {code}: {reason}",
     "error_connection": "Could not connect: {reason}"
+  },
+  "modules": {
+    "col_name": "Name",
+    "col_description": "Description",
+    "col_active": "Active",
+    "active_yes": "YES",
+    "active_no": "NO",
+    "confirm_disable_title": "Remove Module From Composition?",
+    "confirm_disable_text": "Module \"{name}\" already has data in this project. Disabling it will remove its branch from the tree, but the data will NOT be deleted - re-enabling the module restores it. Disable anyway?"
   }
 }

@@ -322,6 +322,15 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
 # do nothing here), not consistency.
 # ----------------------------------------------------------------------
 
+def build_modules_toolbar(toolbar, _panel, _studio_window):
+    """"Skład urządzenia" - a FIXED, real list mirrored from runtime's
+    own feature_config.py (see project_panels.MODULE_CATALOG's own
+    docstring) - no add/remove, same "the catalog is not a choice"
+    stance build_electrical_protection_toolbar() already has for its
+    own fixed ANSI function catalog."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
 def build_project_info_toolbar(toolbar, _panel, studio_window):
     """Project lifecycle (Nowy/Otwórz/Zapisz/Zapisz jako projekt) lives
     HERE, on the "Informacje o projekcie" branch's own toolbar - not on

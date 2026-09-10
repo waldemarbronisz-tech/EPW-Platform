@@ -61,6 +61,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -98,6 +99,214 @@ from studio.shell.project_format import (
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
 _ANALOG_KINDS = {"AI", "AO"}
 DEVICE_BEHAVIORS = ["SWITCHED", "SIGNAL", "MEASURED", "MODULATED", "SELECTOR"]
+
+# "Skład urządzenia" (task "fix/project-format-integrity", point 2/3) -
+# mirrored from runtime/epw_os/core/feature_config.py's own
+# TOGGLABLE_FEATURES (GRANICE forbids importing runtime/, so this is a
+# hand-copy, same convention as ELECTRICAL_PROTECTION_CATALOG above -
+# re-check against that file if it ever changes). ALWAYS_ON_FEATURES
+# (main_view/digital_inputs/control_outputs/alarms/events/audit_log)
+# are deliberately NOT listed here at all - runtime's own docstring:
+# "cannot be disabled by this dialog" - they aren't a CHOICE, so they
+# don't belong in a table whose whole point is choosing.
+#
+# Each entry: (feature_id, name_pl, name_en, description_pl,
+# description_en, tree_group). `tree_group` is one of "alarm",
+# "protection", or None - which of _refresh_module_visibility()'s
+# groups this toggle gates a REAL Studio branch for; None means the
+# toggle is real and saved (matches a real runtime feature) but Studio
+# has no panel for it yet - shown honestly as such, not hidden.
+MODULE_CATALOG = [
+    ("intrusion", "Alarmówka", "Intrusion Alarm",
+     "Wykrywanie włamań: strefy, linie dozorowe, uzbrajanie/rozbrajanie.",
+     "Burglar detection: zones, supervised lines, arming/disarming.", "alarm"),
+    ("protection_settings", "Zabezpieczenia elektryczne", "Electrical Protection",
+     "Nastawy przekaźnikowe ANSI (napięcie/częstotliwość/prąd/zasilanie), realizowane przez ADA01.",
+     "ANSI relay settings (voltage/frequency/current/power supply), executed by ADA01.", "protection"),
+    ("protection_process", "Zabezpieczenia procesowe", "Process Protection",
+     "Progi górny/dolny na punktach analogowych, oceniane na żywo w runtime.",
+     "Upper/lower thresholds on analog points, evaluated live in runtime.", "protection"),
+    ("trends", "Trendy", "Trends",
+     "Historia wartości punktów procesowych w czasie (Historian).",
+     "Historical logging of process point values over time (Historian).", None),
+    ("power_quality", "Jakość zasilania", "Power Quality",
+     "Monitorowanie parametrów sieci zasilającej (napięcie, THD, asymetria).",
+     "Monitoring of mains power parameters (voltage, THD, imbalance).", None),
+    ("bus_diagnostics", "Diagnostyka magistrali", "Bus Diagnostics",
+     "Liczniki ramek/błędów komunikacji z modułami ELA/ADA/EPM.",
+     "Frame/error counters for communication with ELA/ADA/EPM modules.", None),
+    ("system_topology", "Topologia systemu", "System Topology",
+     "Widok, z jakich modułów i połączeń faktycznie składa się instalacja.",
+     "A view of which modules and links the installation actually consists of.", None),
+    ("engineer_mode", "Tryb inżynierski", "Engineer Mode",
+     "Dodatkowe narzędzia weryfikacyjne dostępne na poziomie dostępu Engineer.",
+     "Additional verification tools available at Engineer access level.", None),
+    ("analog_inputs", "Wejścia analogowe", "Analog Inputs",
+     "Czy ten sterownik w ogóle obsługuje punkty analogowe (AI).",
+     "Whether this controller handles analog (AI) points at all.", None),
+    ("switching_counters", "Liczniki łączeń", "Switching Counters",
+     "Liczba załączeń/wyłączeń i czas pracy aparatów łączeniowych.",
+     "Switch/close counts and running time for switching apparatus.", None),
+    ("service_notes", "Notatki serwisowe", "Service Notes",
+     "Miejsce na wolny tekst serwisanta przy urządzeniach/punktach.",
+     "Free-text space for a technician's notes on devices/points.", None),
+    ("intrusion_history", "Historia alarmów", "Alarm History",
+     "Dziennik zdarzeń alarmówki (uzbrojenia, naruszenia, bypassy) - podstrona Alarmówki w runtime.",
+     "The intrusion alarm's own event log (arming, violations, bypasses) - a runtime Alarmówka subpage.", None),
+    ("intrusion_config", "Podgląd alarmówki", "Alarm Live View",
+     "Żywy podgląd stanu stref i linii na sterowniku - podstrona Alarmówki w runtime.",
+     "A live view of zone/line state on the controller - a runtime Alarmówka subpage.", None),
+]
+
+MODULE_IDS = [entry[0] for entry in MODULE_CATALOG]
+
+
+def _module_entry(feature_id):
+    for entry in MODULE_CATALOG:
+        if entry[0] == feature_id:
+            return entry
+    return None
+
+
+def _module_has_data(project, feature_id: str) -> bool:
+    """Task 2.4: "gdy projekt ma już dane tego modułu — ostrzeż wprost".
+    Only the three modules with a real Studio panel today can HAVE
+    Studio-side data at all; the rest (no panel yet) trivially don't."""
+    if feature_id == "intrusion":
+        return bool(project.zones or project.lines)
+    if feature_id == "protection_settings":
+        return bool(project.electrical_protection_stages)
+    if feature_id == "protection_process":
+        return bool(project.process_protections)
+    return False
+
+
+class _ZeroOneSwitch(QWidget):
+    """The e²TANGO reference's own two-state switch - "[0][I]", pressed
+    segment shows state. The TAK/NIE word is a SEPARATE label the
+    caller places next to this (task 3: "stan widoczny słowem, nie samą
+    ikoną") - this widget only ever renders the two segments."""
+
+    toggled = Signal(bool)
+
+    def __init__(self, checked: bool = False, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.btn_off = QPushButton("0")
+        self.btn_on = QPushButton("I")
+        for b in (self.btn_off, self.btn_on):
+            b.setCheckable(True)
+            b.setFixedWidth(26)
+            layout.addWidget(b)
+        self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
+        self._group.addButton(self.btn_off)
+        self._group.addButton(self.btn_on)
+        self.set_checked(checked)
+        self.btn_on.clicked.connect(lambda: self.toggled.emit(True))
+        self.btn_off.clicked.connect(lambda: self.toggled.emit(False))
+
+    def set_checked(self, value: bool):
+        (self.btn_on if value else self.btn_off).setChecked(True)
+
+
+class ModuleCompositionPanel(QWidget):
+    """"Skład urządzenia" (task "fix/project-format-integrity", points
+    2+3) - SPEC_PROJEKT_EPW.md's own concept, in the e²TANGO layout the
+    user pointed at: one table, Nazwa/Opis/Aktywność, [0][I] switches,
+    scrollable. Backed by MODULE_CATALOG above (mirrored from runtime's
+    real feature_config.py, not guessed) and Project.modules (a plain
+    list of enabled feature ids - "moduł spoza składu NIE ISTNIEJE",
+    matching presence/absence rather than a stored False).
+
+    Toggling a module OFF that already has real Studio data warns first
+    (task 2.4) but never deletes - see _module_has_data()/main_window.
+    _refresh_module_visibility(), which is the ONLY thing that reacts to
+    a change here (removing/restoring a tree branch), never this panel
+    itself touching project.zones/lines/etc."""
+
+    _COLS = ["name", "description", "active"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels(
+            [tr("modules.col_name"), tr("modules.col_description"), tr("modules.col_active")]
+        )
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 0, 190)
+        _make_column_resizable(self.table, 1, 420)
+        layout.addWidget(self.table)
+
+        self.refresh()
+
+    def refresh(self):
+        from studio.shell.i18n import get_language
+        lang = get_language()
+        self._loading = True
+        self.table.setRowCount(0)
+        enabled = set(self._studio_window._project.modules)
+        for feature_id, name_pl, name_en, desc_pl, desc_en, _group in MODULE_CATALOG:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+
+            name_item = QTableWidgetItem(name_pl if lang == "pl" else name_en)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 0, name_item)
+
+            desc_item = QTableWidgetItem(desc_pl if lang == "pl" else desc_en)
+            desc_item.setFlags(desc_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 1, desc_item)
+
+            cell = QWidget()
+            cell_layout = QHBoxLayout(cell)
+            cell_layout.setContentsMargins(6, 0, 6, 0)
+            cell_layout.setSpacing(8)
+            is_on = feature_id in enabled
+            label = QLabel(tr("modules.active_yes") if is_on else tr("modules.active_no"))
+            label.setMinimumWidth(40)
+            switch = _ZeroOneSwitch(checked=is_on)
+            switch.toggled.connect(lambda value, fid=feature_id, lbl=label: self._on_toggled(fid, value, lbl))
+            cell_layout.addWidget(label)
+            cell_layout.addWidget(switch)
+            cell_layout.addStretch(1)
+            self.table.setCellWidget(row, 2, cell)
+        self._loading = False
+
+    def _on_toggled(self, feature_id: str, value: bool, label: QLabel):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        currently_enabled = feature_id in project.modules
+        if value == currently_enabled:
+            return
+        if not value and _module_has_data(project, feature_id):
+            entry = _module_entry(feature_id)
+            from studio.shell.i18n import get_language
+            display_name = (entry[1] if get_language() == "pl" else entry[2]) if entry else feature_id
+            reply = QMessageBox.question(
+                self, tr("modules.confirm_disable_title"),
+                tr("modules.confirm_disable_text", name=display_name),
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                self.refresh()  # snaps the switch back to its real state
+                return
+        if value:
+            project.modules.append(feature_id)
+        else:
+            project.modules = [m for m in project.modules if m != feature_id]
+        label.setText(tr("modules.active_yes") if value else tr("modules.active_no"))
+        project.touch()
+        self._studio_window._on_project_changed()
 
 # "Alarmówka" - state sets per parametrization, same source of truth as
 # project_format.default_value_windows() (which state names exist at

@@ -7,9 +7,13 @@ PointRegistryPanel) are covered indirectly by main_window.py's own
 smoke path (constructed, clicked through, screenshotted - see this
 task's own chat report), not unit-tested here.
 """
-from studio.shell.project_format import Card, Device, Location, Point, new_project
+from studio.shell.project_format import (
+    Card, Device, ElectricalProtectionStage, Line, Location, Point, ProcessProtection, Zone, new_project,
+)
 from studio.shell.project_panels import (
     ELECTRICAL_PROTECTION_CATALOG,
+    MODULE_CATALOG,
+    MODULE_IDS,
     card_from_synoptic_dict,
     card_to_synoptic_dict,
     ensure_electrical_protection_seeded,
@@ -21,6 +25,8 @@ from studio.shell.project_panels import (
     points_of_kind,
     remove_points_for_card,
     sync_points_for_card,
+    _module_has_data,
+    _module_entry,
 )
 
 
@@ -229,3 +235,75 @@ def test_ensure_electrical_protection_seeded_is_idempotent():
     assert changed_again is False
     assert len(project.electrical_protection_stages) == _catalog_stage_count()
     assert project.electrical_protection_stages[0].setting == 12345.0
+
+
+# -- "Skład urządzenia" (task "fix/project-format-integrity", points
+# 2/3) - MODULE_CATALOG/_module_has_data() pure logic. The widget
+# itself (ModuleCompositionPanel, the [0][I] switch, the QMessageBox
+# warning flow) is covered indirectly - constructed, clicked through
+# (including both the "No" and "Yes" branches of the disable warning,
+# via a mocked QMessageBox.question), and screenshotted - see this
+# task's own chat report, not unit-tested here, same stance this
+# file's own module docstring already takes for every other panel.
+
+def test_module_catalog_only_lists_ids_feature_config_calls_togglable():
+    """Mirrors runtime/epw_os/core/feature_config.py's own
+    TOGGLABLE_FEATURES - not ALWAYS_ON_FEATURES (those "cannot be
+    disabled by this dialog" on the runtime side either, so they have
+    no business in a table whose point is choosing)."""
+    always_on_that_leaked_in = {
+        "main_view", "digital_inputs", "control_outputs", "alarms", "events", "audit_log",
+    } & set(MODULE_IDS)
+    assert always_on_that_leaked_in == set()
+
+
+def test_module_catalog_entries_have_both_languages_and_a_group_marker():
+    for entry in MODULE_CATALOG:
+        feature_id, name_pl, name_en, desc_pl, desc_en, tree_group = entry
+        assert name_pl and name_en and desc_pl and desc_en
+        assert tree_group in ("alarm", "protection", None)
+
+
+def test_module_entry_looks_up_by_id():
+    entry = _module_entry("intrusion")
+    assert entry is not None
+    assert entry[0] == "intrusion"
+    assert _module_entry("not_a_real_module") is None
+
+
+def test_module_has_data_false_for_an_empty_project():
+    project = new_project("Test")
+    for feature_id in MODULE_IDS:
+        assert _module_has_data(project, feature_id) is False
+
+
+def test_module_has_data_true_for_intrusion_with_a_zone_or_a_line():
+    project = new_project("Test")
+    project.zones.append(Zone(id="Z1", name="Parter"))
+    assert _module_has_data(project, "intrusion") is True
+
+    project2 = new_project("Test")
+    project2.lines.append(Line(id="L1", name="Czujka", zone_id="Z1"))
+    assert _module_has_data(project2, "intrusion") is True
+
+
+def test_module_has_data_true_for_electrical_protection_with_stages():
+    project = new_project("Test")
+    project.electrical_protection_stages.append(
+        ElectricalProtectionStage(function_id="27 Under Voltage", stage_name="Stage 1")
+    )
+    assert _module_has_data(project, "protection_settings") is True
+
+
+def test_module_has_data_true_for_process_protection_with_entries():
+    project = new_project("Test")
+    project.process_protections.append(ProcessProtection(id="PP1", name="Temp"))
+    assert _module_has_data(project, "protection_process") is True
+
+
+def test_module_has_data_false_for_modules_without_a_studio_panel():
+    """"trends"/"engineer_mode"/etc have no Studio-side data concept
+    yet - _module_has_data() must say so plainly (False), never guess."""
+    project = new_project("Test")
+    for feature_id in ("trends", "power_quality", "engineer_mode", "service_notes"):
+        assert _module_has_data(project, feature_id) is False
