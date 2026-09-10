@@ -168,6 +168,62 @@ def action_icon(name: str, size: int = 20) -> QIcon:
                 QPointF(rect.right() + rect.width() * 0.2, rect.bottom() - rect.height() * 0.18),
             )
 
+    elif name == "copy":
+        # Task "Studio: wyostrzenie stylu — wspólny rdzeń" - Copy/Paste/
+        # Cut/Delete never had icons at all before this (Logic Studio's
+        # own Edit menu showed plain text) - Studio's shared-core
+        # toolbar button (studio/shell/menus.py) needs one identical
+        # icon in both editors, so these are added here rather than
+        # invented in studio/shell/ - same reasoning as save_as/help.
+        # Two overlapping sheets - the universal copy silhouette.
+        back = QRectF(rect.left(), rect.top() + rect.height() * 0.15, rect.width() * 0.75, rect.height() * 0.75)
+        front = QRectF(rect.left() + rect.width() * 0.25, rect.top() + rect.height() * 0.1 + rect.height() * 0.15,
+                        rect.width() * 0.75, rect.height() * 0.75)
+        # front drawn second, opaque fill so the overlap reads correctly
+        painter.setBrush(style.COLOR_BACKGROUND)
+        painter.drawRect(back)
+        painter.drawRect(front)
+
+    elif name == "paste":
+        # A clipboard: body rect plus a small clip tab on top.
+        body = QRectF(rect.left(), rect.top() + rect.height() * 0.12, rect.width(), rect.height() * 0.88)
+        painter.drawRect(body)
+        tab = QRectF(cx - rect.width() * 0.18, rect.top(), rect.width() * 0.36, rect.height() * 0.18)
+        painter.setBrush(style.COLOR_BACKGROUND)
+        painter.drawRect(tab)
+        painter.drawLine(QPointF(rect.left() + rect.width() * 0.2, rect.top() + rect.height() * 0.35),
+                          QPointF(rect.right() - rect.width() * 0.2, rect.top() + rect.height() * 0.35))
+        painter.drawLine(QPointF(rect.left() + rect.width() * 0.2, rect.top() + rect.height() * 0.55),
+                          QPointF(rect.right() - rect.width() * 0.2, rect.top() + rect.height() * 0.55))
+
+    elif name == "cut":
+        # Scissors: two ring "handles" at the bottom, blades crossing to
+        # a point at the top - simplified to circles + two crossing
+        # lines, legible at 16px without full blade shapes.
+        painter.drawEllipse(QPointF(rect.left() + rect.width() * 0.22, rect.bottom() - rect.height() * 0.12), 2.5, 2.5)
+        painter.drawEllipse(QPointF(rect.right() - rect.width() * 0.22, rect.bottom() - rect.height() * 0.12), 2.5, 2.5)
+        apex = QPointF(cx, rect.top())
+        painter.drawLine(QPointF(rect.left() + rect.width() * 0.22, rect.bottom() - rect.height() * 0.12), apex)
+        painter.drawLine(QPointF(rect.right() - rect.width() * 0.22, rect.bottom() - rect.height() * 0.12), apex)
+
+    elif name == "delete":
+        # A trash bin: trapezoid body, a lid line, two ribs - reads as
+        # "delete" without depending on a red color (this set stays
+        # monochrome, STUDIO_UI_STANDARD.md's own "ograniczona paleta").
+        lid_y = rect.top() + rect.height() * 0.18
+        painter.drawLine(QPointF(rect.left(), lid_y), QPointF(rect.right(), lid_y))
+        painter.drawLine(QPointF(cx - rect.width() * 0.15, lid_y), QPointF(cx - rect.width() * 0.1, rect.top()))
+        painter.drawLine(QPointF(cx + rect.width() * 0.15, lid_y), QPointF(cx + rect.width() * 0.1, rect.top()))
+        painter.drawLine(QPointF(cx - rect.width() * 0.1, rect.top()), QPointF(cx + rect.width() * 0.1, rect.top()))
+        bin_poly = QPolygonF([
+            QPointF(rect.left() + rect.width() * 0.12, lid_y),
+            QPointF(rect.right() - rect.width() * 0.12, lid_y),
+            QPointF(rect.right() - rect.width() * 0.2, rect.bottom()),
+            QPointF(rect.left() + rect.width() * 0.2, rect.bottom()),
+        ])
+        painter.drawPolygon(bin_poly)
+        painter.drawLine(QPointF(cx, lid_y + 2), QPointF(cx, rect.bottom() - 2))
+
     elif name in ("undo", "redo"):
         flip = -1 if name == "redo" else 1
         arrow_cx = cx

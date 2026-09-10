@@ -1,0 +1,71 @@
+{
+  "screens_action_count": 48,
+  "screens_breakdown": {
+    "separators": 12,
+    "breadcrumb_widgets": 1,
+    "real_buttons": 35,
+    "total": 48
+  },
+  "screens_core_geometry": {
+    "act_core_copy": [
+      296,
+      4,
+      35,
+      35
+    ],
+    "act_core_paste": [
+      333,
+      4,
+      35,
+      35
+    ],
+    "act_core_delete": [
+      370,
+      4,
+      35,
+      35
+    ],
+    "act_core_snap": [
+      407,
+      4,
+      35,
+      35
+    ]
+  },
+  "screens_toolbar_button_style": 0,
+  "screens_second_row_exists": false,
+  "logic_action_count": 41,
+  "logic_breakdown": {
+    "separators": 10,
+    "breadcrumb_widgets": 1,
+    "real_buttons": 30,
+    "total": 41
+  },
+  "logic_core_geometry": {
+    "act_core_copy": [
+      296,
+      4,
+      35,
+      35
+    ],
+    "act_core_paste": [
+      333,
+      4,
+      35,
+      35
+    ],
+    "act_core_delete": [
+      370,
+      4,
+      35,
+      35
+    ],
+    "act_core_snap": [
+      407,
+      4,
+      35,
+      35
+    ]
+  },
+  "logic_second_row_exists": false
+}

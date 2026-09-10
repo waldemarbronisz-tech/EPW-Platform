@@ -78,13 +78,13 @@ class MainWindow(QMainWindow):
         # --- Edit ---
         self.act_undo = self._make_action("Undo", self._undo, "Ctrl+Z", icon_name="undo")
         self.act_redo = self._make_action("Redo", self._redo, "Ctrl+Y", icon_name="redo")
-        self.act_delete = self._make_action("Delete", self._delete_selected, "Del")
+        self.act_delete = self._make_action("Delete", self._delete_selected, "Del", icon_name="delete")
 
         # feat/clipboard-and-align §1: an in-app clipboard (LogicScene.
         # clipboard_data), not QClipboard — see scene.py's own docstring.
-        self.act_cut = self._make_action("Cut", lambda: self.scene.cut_selected_items(), "Ctrl+X")
-        self.act_copy = self._make_action("Copy", lambda: self.scene.copy_selected_items(), "Ctrl+C")
-        self.act_paste = self._make_action("Paste", lambda: self.scene.paste_clipboard(), "Ctrl+V")
+        self.act_cut = self._make_action("Cut", lambda: self.scene.cut_selected_items(), "Ctrl+X", icon_name="cut")
+        self.act_copy = self._make_action("Copy", lambda: self.scene.copy_selected_items(), "Ctrl+C", icon_name="copy")
+        self.act_paste = self._make_action("Paste", lambda: self.scene.paste_clipboard(), "Ctrl+V", icon_name="paste")
         # §1.5: Cut/Copy need a selection, Paste needs a non-empty
         # clipboard — both start disabled and stay in sync via
         # _update_clipboard_actions()/_update_paste_action() below.

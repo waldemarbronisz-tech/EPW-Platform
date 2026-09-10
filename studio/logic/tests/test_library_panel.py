@@ -160,9 +160,10 @@ def test_block_icon_unknown_type_returns_null_icon():
 def test_all_action_icons_render_without_crashing():
     _app()
     from logic_studio.ui import icons
-    for name in ["new", "open", "save", "save_as", "undo", "redo", "compile",
-                 "start", "pause", "stop", "zoom_in", "zoom_out", "grid",
-                 "snap", "about", "settings", "help"]:
+    for name in ["new", "open", "save", "save_as", "copy", "paste", "cut",
+                 "delete", "undo", "redo", "compile", "start", "pause",
+                 "stop", "zoom_in", "zoom_out", "grid", "snap", "about",
+                 "settings", "help"]:
         icon = icons.action_icon(name)
         assert not icon.isNull()
 

@@ -1,40 +1,46 @@
 """Studio's menu/toolbar content.
 
-Task "EPW Studio: przebudowa nawigacji wg wzorca e²TANGO" replaces
-Stage 2's per-context QMenuBar (one whole menu bar rebuilt on every
-tree click) with the e²TANGO pattern this task's diagnosis names
-directly: Studio was structurally two application MODES wearing one
-skin, which is why the chrome kept jumping. Now:
+Task "Studio: wyostrzenie stylu — wspólny rdzeń" rewrote everything
+below the fixed menu (build_fixed_menu() itself is untouched - this
+correction is only about toolbar CONTENT, "ta korekta dotyczy WYŁĄCZNIE
+zawartości pasków"). Two rules drive every contextual-toolbar builder
+now:
 
-  - build_fixed_menu() builds the APP-level menu (Plik/Widok/
-    Ustawienia/Pomoc) exactly ONCE, in main_window.py's __init__ - it
-    is never rebuilt, never grows or shrinks a menu when the active
-    aspect changes. Only individual items' enabled/checked state
-    changes (main_window.py's _refresh_fixed_menu_state()), the same
-    way Cofnij/Ponów already behaved in Stage 2.
-  - build_logic_context_toolbar()/build_synoptic_context_toolbar()
-    build each aspect's OWN tools - Stage 2's build_logic_menu/
-    build_synoptic_menu content, mostly unchanged, just re-targeted at
-    a QToolBar living in the CONTEXTUAL zone (1.3) instead of the top
-    QMenuBar. QToolBar and QMenu share the same addAction()/
-    addSeparator() surface, so _mirror()/_add() below don't care which
-    one they're given.
+  1. "Ta sama funkcja = ta sama ikona = to samo miejsce" - _CORE_GROUP
+     below (Copy/Paste/Delete/Snap - see this task's own chat report
+     for exactly how that four-item list was MEASURED, not assumed:
+     Cut/Select All/Zoom/Grid were all measured OUT, each for a
+     specific, checked reason) is built FIRST, identically, by every
+     build_*_context_toolbar() call - same icons, same order, same
+     QAction identity pattern, so the pixel position never shifts when
+     the active aspect changes.
+  2. "ikony 16x16, tekst wyłącznie w podpowiedzi" - every action built
+     here now carries a real icon (studio/shell/icons.py - re-exports
+     logic_studio.ui.icons.action_icon() where that already has the
+     right glyph, draws new ones where nothing existed anywhere in the
+     platform to reuse) and BOTH context toolbars are set to
+     ToolButtonIconOnly - Qt shows the action's own text as a tooltip
+     automatically once no icon-adjacent text is displayed, so every
+     tr()'d label from before still reaches the user, just on hover
+     instead of printed on a wide button.
 
-Behavior is still never reimplemented, only re-labelled and re-routed -
-uściślenie 2.2's hard rule from Stage 2 still holds (never merge the
-two editors' own undo/dirty mechanisms):
+Behavior is still never reimplemented, only re-labelled/re-iconed and
+re-routed - uściślenie 2.2's hard rule from Stage 2 still holds (never
+merge the two editors' own undo/dirty mechanisms):
   - a Logic Studio action triggers the SAME QAction its own (hidden)
     MainWindow already built.
   - a Synoptic action clicks the SAME DOM node its own (hidden)
-    MenuBar.tsx already renders (SynopticPanel.trigger_menu_item()).
+    MenuBar.tsx/Toolbar.tsx already renders.
 """
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QCursor
-from PySide6.QtWidgets import QMenuBar
+from PySide6.QtWidgets import QMenuBar, QToolBar
 
+from studio.shell import icons
 from studio.shell.i18n import get_language, tr
 
 
-def _mirror(container, label, source_action, shortcut=None):
+def _mirror(container, label, source_action, shortcut=None, icon_name=None):
     """New QAction, parented to and added into `container` (a QMenu or
     a QToolBar - both share addAction()), that LOOKS like a fresh,
     translated item but DOES exactly what `source_action` (a real
@@ -45,15 +51,25 @@ def _mirror(container, label, source_action, shortcut=None):
     own code already keeps source_action's enabled/checked correct -
     this just listens, it never decides that state itself).
 
+    `icon_name`, when given, looks up studio/shell/icons.py explicitly
+    instead of copying source_action's own icon - most of Logic
+    Studio's own actions never had an icon at all before this task
+    (plain text in its own Edit/Project/Help menus), and giving all of
+    them one now belongs in Studio's own icon module, not scattered
+    edits across logic_studio/ui/main_window.py for every single one.
+
     Parented to `container` on purpose: main_window.py throws away and
     rebuilds each aspect's contextual toolbar on every tree click (the
     same reasoning Stage 2's own menus.py docstring already spelled
     out for the old per-context QMenuBar - everything built here needs
     to die with its container, not pile up across repeated clicks)."""
     action = QAction(label, container)
-    icon = source_action.icon()
-    if not icon.isNull():
-        action.setIcon(icon)
+    if icon_name:
+        action.setIcon(icons.icon(icon_name))
+    else:
+        icon = source_action.icon()
+        if not icon.isNull():
+            action.setIcon(icon)
     if shortcut:
         action.setShortcut(shortcut)
     if source_action.isCheckable():
@@ -85,8 +101,10 @@ def _toolbar_clicker(panel, title, exact=True):
     return lambda: panel.trigger_toolbar_button(title, exact=exact)
 
 
-def _add(container, label, handler):
+def _add(container, label, handler, icon_name=None):
     action = QAction(label, container)
+    if icon_name:
+        action.setIcon(icons.icon(icon_name))
     action.triggered.connect(handler)
     container.addAction(action)
     return action
@@ -104,11 +122,12 @@ def _add_exit(studio_window, file_menu):
 
 def build_fixed_menu(menubar: QMenuBar, studio_window):
     """The APP-level menu - Plik/Widok/Ustawienia/Pomoc, built exactly
-    once. Every action here routes to whichever aspect is currently
-    active via studio_window's own methods (same dispatch pattern as
-    its shared toolbar); studio_window keeps the QAction references
-    (act_menu_*/act_view_*) so it can update enabled/checked state
-    without ever touching this menu's STRUCTURE again."""
+    once. Untouched by this task's own correction (menu content, not
+    toolbar content). Every action here routes to whichever aspect is
+    currently active via studio_window's own methods (same dispatch
+    pattern as its shared toolbar); studio_window keeps the QAction
+    references (act_menu_*/act_view_*) so it can update enabled/checked
+    state without ever touching this menu's STRUCTURE again."""
     file_menu = menubar.addMenu(tr("menu.titles.file"))
     studio_window.act_menu_new = _add(file_menu, tr("menu.file.new"), studio_window._shared_new)
     studio_window.act_menu_open = _add(file_menu, tr("menu.file.open"), studio_window._shared_open)
@@ -149,59 +168,111 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     _add(help_menu, tr("menu.help.about_studio"), studio_window._show_about_studio)
 
 
+# ----------------------------------------------------------------------
+# The shared core - measured, not assumed. See this task's own chat
+# report for the full measurement table; summarized here so the reason
+# each one is (or isn't) in this list stays next to the list itself:
+#
+#   Copy    - both editors have it, both with a real clickable surface
+#             (Synoptic: menu + its own toolbar button; Logic: act_copy).
+#   Paste   - same, both real.
+#   Delete  - same, both real.
+#   Snap to grid - both real (Synoptic's own View menu item; Logic's
+#             act_snap).
+#   Cut     - MEASURED OUT. Logic has it (act_cut); Synoptic's own Edit
+#             menu has Copy/Paste/Delete/Reroute but NO Cut at all -
+#             not a shared function, stays in Logic's own section.
+#   Zaznacz wszystko (Select All) - MEASURED OUT. Logic Studio has NO
+#             select-all mechanism whatsoever (checked: no menu item,
+#             no Ctrl+A binding anywhere in main_window.py). Synoptic
+#             DOES have one (store.selectAll()) but it is reachable
+#             ONLY via an undocumented Ctrl+A keydown handler in
+#             Canvas.tsx - no menu item, no toolbar button, no DOM
+#             element trigger_menu_item()/trigger_toolbar_button() could
+#             ever click. Present in neither editor as an actual UI
+#             surface - excluded from the core AND left unexposed in
+#             Synoptic's own section too, rather than inventing a new
+#             toolbar button in Synoptic's own source to expose it
+#             (GRANICE: minimal+described changes only for the state
+#             bridge/color bridge cases already approved, not a new
+#             standing UI element).
+#   Powiększ/Pomniejsz (Zoom In/Out) - MEASURED OUT. Synoptic has no
+#             zoom UI at all (mouse wheel only, confirmed in Stage 1
+#             reconnaissance) - stays Logic-only, in Logic's own
+#             section, exactly as it already was.
+#   Siatka (grid visibility toggle) - MEASURED OUT. Synoptic exposes
+#             Snap to Grid but never a separate grid-VISIBILITY toggle -
+#             stays Logic-only.
+#   Dopasuj do okna (Fit to window) - MEASURED OUT, on stricter grounds
+#             than the others: NEITHER editor actually has it. Logic's
+#             "Reset Zoom" (act_reset_zoom) is view.resetTransform() -
+#             zoom back to 100%, not "fit all content in view" - a
+#             different function under a similar-sounding name. Synoptic
+#             has no equivalent of either. Reset Zoom stays in Logic's
+#             own section, under its own accurate name - not relabeled
+#             as "Dopasuj do okna", which it does not do.
+# ----------------------------------------------------------------------
+
+def _build_core_group(toolbar, studio_window):
+    """Built identically on every call, by both build_*_context_toolbar
+    functions below, before anything editor-specific - the actual
+    mechanism behind "IDENTYCZNA ikona/kolejność/pozycja od lewej
+    krawędzi". Routing dispatches on studio_window._active as usual
+    (studio_window._core_copy/_core_paste/_core_delete, and the
+    already-existing _view_toggle_snap - reused as-is, not duplicated).
+    Enabled state is refreshed by main_window.py's existing state-poll
+    timer (_refresh_shared_toolbar_state), extended to cover these four
+    too - point 5's own "korzystaj z mostu stanu, który już zbudowałeś"."""
+    studio_window.act_core_copy = _add(toolbar, tr("menu.edit.copy"), studio_window._core_copy, icon_name="copy")
+    studio_window.act_core_paste = _add(toolbar, tr("menu.edit.paste"), studio_window._core_paste, icon_name="paste")
+    studio_window.act_core_delete = _add(toolbar, tr("menu.edit.delete"), studio_window._core_delete, icon_name="delete")
+    studio_window.act_core_snap = _add(toolbar, tr("menu.view.snap"), studio_window._view_toggle_snap, icon_name="snap")
+    toolbar.addSeparator()
+
+
 def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
-    """The contextual zone's tools while LOGIKA is the active aspect -
-    everything Logic Studio's own (now-hidden) menu AND its own (now-
-    hidden, task "Studio: wyostrzenie stylu" Problem 1) toolbar offered.
-    Zoom/Grid/Snap are ALSO reachable from the fixed Widok menu (task
-    1.1/1.2) - mirrored here too, same as any real app's toolbar
-    duplicating a menu command, not a second mechanism: both paths
-    trigger the identical mw.act_zoom_in/etc QAction."""
+    """The contextual zone's tools while LOGIKA is the active aspect:
+    the shared core first, then everything Logic Studio's own (now-
+    hidden) menu AND its own (now-hidden) toolbar offered beyond File
+    (fixed top chrome) and Copy/Paste/Delete/Snap (now the core,
+    immediately above - not repeated here)."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _build_core_group(toolbar, studio_window)
     mw = logic_panel.main_window()
 
     _mirror(toolbar, tr("menu.view.zoom_in"), mw.act_zoom_in)
     _mirror(toolbar, tr("menu.view.zoom_out"), mw.act_zoom_out)
-    _mirror(toolbar, tr("menu.view.reset_zoom"), mw.act_reset_zoom)
+    _mirror(toolbar, tr("menu.view.reset_zoom"), mw.act_reset_zoom, icon_name="reset_zoom")
     _mirror(toolbar, tr("menu.view.grid"), mw.act_grid)
-    _mirror(toolbar, tr("menu.view.snap"), mw.act_snap)
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.file.compare_saved"), mw.act_compare_saved)
-    _mirror(toolbar, tr("menu.file.compare_files"), mw.act_compare_files)
+    _mirror(toolbar, tr("menu.file.compare_saved"), mw.act_compare_saved, icon_name="compare")
+    _mirror(toolbar, tr("menu.file.compare_files"), mw.act_compare_files, icon_name="compare")
     toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.edit.cut"), mw.act_cut)
-    _mirror(toolbar, tr("menu.edit.copy"), mw.act_copy)
-    _mirror(toolbar, tr("menu.edit.paste"), mw.act_paste)
-    _mirror(toolbar, tr("menu.edit.delete"), mw.act_delete)
 
-    # mw.align_menu is rebuilt from the CURRENT selection on every open
-    # (populate_align_menu(), shared with the canvas's own context
-    # menu) - popping the same, freshly rebuilt menu at the cursor
-    # reuses those exact 8 actions without touching Logic Studio's own
-    # object graph (same technique Stage 2 used when this lived in the
-    # top menu).
     def _show_align_popup():
         mw._rebuild_align_menu()
         mw.align_menu.popup(QCursor.pos())
 
-    _add(toolbar, tr("menu.edit.align"), _show_align_popup)
-    _mirror(toolbar, tr("menu.edit.disable_selected"), mw.act_disable_selected)
-    _mirror(toolbar, tr("menu.edit.enable_selected"), mw.act_enable_selected)
+    _add(toolbar, tr("menu.edit.align"), _show_align_popup, icon_name="align_popup")
+    _mirror(toolbar, tr("menu.edit.disable_selected"), mw.act_disable_selected, icon_name="disable_selected")
+    _mirror(toolbar, tr("menu.edit.enable_selected"), mw.act_enable_selected, icon_name="enable_selected")
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.view.toolbar_icons"), mw.act_toolbar_icons)
-    _mirror(toolbar, tr("menu.view.toolbar_icons_text"), mw.act_toolbar_icons_text)
-    _mirror(toolbar, tr("menu.view.toolbar_text"), mw.act_toolbar_text)
+    _mirror(toolbar, tr("menu.view.toolbar_icons"), mw.act_toolbar_icons, icon_name="toolbar_style_icons")
+    _mirror(toolbar, tr("menu.view.toolbar_icons_text"), mw.act_toolbar_icons_text, icon_name="toolbar_style_icons_text")
+    _mirror(toolbar, tr("menu.view.toolbar_text"), mw.act_toolbar_text, icon_name="toolbar_style_text")
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.project.settings"), mw.act_project_settings)
-    _mirror(toolbar, tr("menu.project.export_signals"), mw.act_export_signals)
-    _mirror(toolbar, tr("menu.project.export_pdf"), mw.act_export_pdf)
+    _mirror(toolbar, tr("menu.project.settings"), mw.act_project_settings, icon_name="settings")
+    _mirror(toolbar, tr("menu.project.export_signals"), mw.act_export_signals, icon_name="export")
+    _mirror(toolbar, tr("menu.project.export_pdf"), mw.act_export_pdf, icon_name="export")
     toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.logic.compile"), mw.act_compile)
-    _mirror(toolbar, tr("menu.logic.export_runtime"), mw.act_export_runtime)
+    _mirror(toolbar, tr("menu.logic.export_runtime"), mw.act_export_runtime, icon_name="export")
     toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.simulation.start"), mw.act_sim_start)
@@ -209,75 +280,72 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _mirror(toolbar, tr("menu.simulation.stop"), mw.act_sim_stop)
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.help.catalog"), mw.act_help_catalog)
-    _mirror(toolbar, tr("menu.help.shortcuts"), mw.act_help_shortcuts)
-    _mirror(toolbar, tr("menu.help.export_catalog"), mw.act_export_block_catalog)
+    _mirror(toolbar, tr("menu.help.catalog"), mw.act_help_catalog, icon_name="help_catalog")
+    _mirror(toolbar, tr("menu.help.shortcuts"), mw.act_help_shortcuts, icon_name="help_shortcuts")
+    _mirror(toolbar, tr("menu.help.export_catalog"), mw.act_export_block_catalog, icon_name="export")
     _mirror(toolbar, tr("menu.help.about"), mw.act_about)
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background)
+    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background, icon_name="background_color")
 
 
 def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     """The contextual zone's tools while EKRANY/Schemat synoptyczny is
-    the active aspect - everything Synoptic's own (now-hidden) menu AND
-    its own (now-hidden, task "Studio: wyostrzenie stylu" Problem 1)
-    drawing toolbar offered, beyond File/Undo/Redo (fixed top chrome).
-    Toolbar.tsx's own Undo/Redo buttons are the identical store actions
-    the fixed toolbar's Cofnij/Ponów already reach via trigger_menu_item
-    - not re-added here, same one-mechanism-per-action rule as
-    everywhere else in this module."""
-    _add(toolbar, tr("menu.edit.copy"), _clicker(synoptic_panel, "Copy"))
-    _add(toolbar, tr("menu.edit.paste"), _clicker(synoptic_panel, "Paste"))
-    _add(toolbar, tr("menu.edit.delete"), _clicker(synoptic_panel, "Delete"))
-    _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"))
+    the active aspect: the shared core first, then everything
+    Synoptic's own (now-hidden) menu AND its own (now-hidden) drawing
+    toolbar offered beyond File/Undo/Redo (fixed top chrome) and
+    Copy/Paste/Delete/Snap (now the core, immediately above)."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _build_core_group(toolbar, studio_window)
+
+    _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"), icon_name="reroute")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False))
-    _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False))
-    _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False))
+    _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False), icon_name="draw_wire")
+    _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False), icon_name="draw_frame")
+    _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False), icon_name="draw_building")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Prad"))
-    _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Woda"))
-    _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Wentylacja"))
+    _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Prad"), icon_name="medium_electrical")
+    _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Woda"), icon_name="medium_water")
+    _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Wentylacja"), icon_name="medium_ventilation")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"))
-    _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False))
+    _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"), icon_name="wire_style_normal")
+    _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False), icon_name="wire_style_bus")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False))
-    _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False))
+    _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False), icon_name="routing_direct")
+    _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False), icon_name="routing_avoid")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.distribute_h"), _toolbar_clicker(synoptic_panel, "Distribute Horizontally"))
-    _add(toolbar, tr("canvas.distribute_v"), _toolbar_clicker(synoptic_panel, "Distribute Vertically"))
-    _add(toolbar, tr("canvas.align_left"), _toolbar_clicker(synoptic_panel, "Align Left"))
-    _add(toolbar, tr("canvas.align_center"), _toolbar_clicker(synoptic_panel, "Align Center"))
-    _add(toolbar, tr("canvas.align_right"), _toolbar_clicker(synoptic_panel, "Align Right"))
-    _add(toolbar, tr("canvas.align_middle"), _toolbar_clicker(synoptic_panel, "Align Middle"))
+    _add(toolbar, tr("canvas.distribute_h"), _toolbar_clicker(synoptic_panel, "Distribute Horizontally"), icon_name="distribute_h")
+    _add(toolbar, tr("canvas.distribute_v"), _toolbar_clicker(synoptic_panel, "Distribute Vertically"), icon_name="distribute_v")
+    _add(toolbar, tr("canvas.align_left"), _toolbar_clicker(synoptic_panel, "Align Left"), icon_name="align_left")
+    _add(toolbar, tr("canvas.align_center"), _toolbar_clicker(synoptic_panel, "Align Center"), icon_name="align_center")
+    _add(toolbar, tr("canvas.align_right"), _toolbar_clicker(synoptic_panel, "Align Right"), icon_name="align_right")
+    _add(toolbar, tr("canvas.align_middle"), _toolbar_clicker(synoptic_panel, "Align Middle"), icon_name="align_middle")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.bring_front"), _toolbar_clicker(synoptic_panel, "Bring to Front"))
-    _add(toolbar, tr("canvas.send_back"), _toolbar_clicker(synoptic_panel, "Send to Back"))
-    _add(toolbar, tr("canvas.lock"), _toolbar_clicker(synoptic_panel, "Lock"))
-    _add(toolbar, tr("canvas.unlock"), _toolbar_clicker(synoptic_panel, "Unlock"))
-    _add(toolbar, tr("canvas.rotate_left"), _toolbar_clicker(synoptic_panel, "Rotate Left"))
-    _add(toolbar, tr("canvas.rotate_right"), _toolbar_clicker(synoptic_panel, "Rotate Right"))
+    _add(toolbar, tr("canvas.bring_front"), _toolbar_clicker(synoptic_panel, "Bring to Front"), icon_name="bring_front")
+    _add(toolbar, tr("canvas.send_back"), _toolbar_clicker(synoptic_panel, "Send to Back"), icon_name="send_back")
+    _add(toolbar, tr("canvas.lock"), _toolbar_clicker(synoptic_panel, "Lock"), icon_name="lock")
+    _add(toolbar, tr("canvas.unlock"), _toolbar_clicker(synoptic_panel, "Unlock"), icon_name="unlock")
+    _add(toolbar, tr("canvas.rotate_left"), _toolbar_clicker(synoptic_panel, "Rotate Left"), icon_name="rotate_left")
+    _add(toolbar, tr("canvas.rotate_right"), _toolbar_clicker(synoptic_panel, "Rotate Right"), icon_name="rotate_right")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.add_meter"), _toolbar_clicker(synoptic_panel, "Add Meter"))
-    _add(toolbar, tr("canvas.add_signal_panel"), _toolbar_clicker(synoptic_panel, "Add Signal Panel"))
-    _add(toolbar, tr("canvas.add_group_command"), _toolbar_clicker(synoptic_panel, "Add Group Command Button"))
-    _add(toolbar, tr("canvas.add_setpoint_panel"), _toolbar_clicker(synoptic_panel, "Add Setpoint Panel"))
+    _add(toolbar, tr("canvas.add_meter"), _toolbar_clicker(synoptic_panel, "Add Meter"), icon_name="add_meter")
+    _add(toolbar, tr("canvas.add_signal_panel"), _toolbar_clicker(synoptic_panel, "Add Signal Panel"), icon_name="add_signal_panel")
+    _add(toolbar, tr("canvas.add_group_command"), _toolbar_clicker(synoptic_panel, "Add Group Command Button"), icon_name="add_group_command")
+    _add(toolbar, tr("canvas.add_setpoint_panel"), _toolbar_clicker(synoptic_panel, "Add Setpoint Panel"), icon_name="add_setpoint_panel")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"))
+    _add(toolbar, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"), icon_name="scada_preview")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"))
-    _add(toolbar, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"))
+    _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"), icon_name="project_registers")
+    _add(toolbar, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"), icon_name="device_list")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background)
+    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background, icon_name="background_color")

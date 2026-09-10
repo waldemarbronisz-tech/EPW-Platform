@@ -117,6 +117,36 @@ QLabel#TreeHeader {
 _TREE_ROW_HEIGHT = 24
 
 
+_BREADCRUMB_FIXED_WIDTH = 280
+
+
+def _make_breadcrumb_label(text=""):
+    """Task "Studio: wyostrzenie stylu — wspólny rdzeń": the breadcrumb
+    used to be a plain QLabel sized to its own text - "Projekt →
+    Konfiguracja → Schemat synoptyczny" and "Projekt → Konfiguracja →
+    Logika" are different lengths, so the shared core group built right
+    after it in the SAME toolbar landed at a different x position in
+    each context (measured empirically: a 90px shift, not assumed) -
+    exactly the "ręka ma trafiać w Kopiuj bez patrzenia" problem this
+    correction exists to fix. A FIXED width closes it: every breadcrumb
+    occupies identical horizontal space regardless of its own text
+    length, elided with "..." if it doesn't fit (QFontMetrics), full
+    text always available as the tooltip."""
+    label = QLabel()
+    label.setObjectName("BreadcrumbLabel")
+    label.setFixedWidth(_BREADCRUMB_FIXED_WIDTH)
+    if text:
+        _set_breadcrumb_text(label, text)
+    return label
+
+
+def _set_breadcrumb_text(label, text):
+    metrics = label.fontMetrics()
+    elided = metrics.elidedText(text, Qt.TextElideMode.ElideRight, _BREADCRUMB_FIXED_WIDTH - 12)
+    label.setText(elided)
+    label.setToolTip(text)
+
+
 class _TreeRowHeightDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
@@ -167,8 +197,7 @@ class _AspectContainer(QWidget):
         self.context_toolbar.setMovable(False)
         self.context_toolbar.setStyleSheet(_CONTEXT_TOOLBAR_QSS)
 
-        self.breadcrumb_label = QLabel(breadcrumb_text)
-        self.breadcrumb_label.setObjectName("BreadcrumbLabel")
+        self.breadcrumb_label = _make_breadcrumb_label(breadcrumb_text)
         self.context_toolbar.addWidget(self.breadcrumb_label)
         self.context_toolbar.addSeparator()
         layout.addWidget(self.context_toolbar)
@@ -193,8 +222,7 @@ class _InactivePlaceholder(QWidget):
         self.context_toolbar.setObjectName("ContextToolbar")
         self.context_toolbar.setMovable(False)
         self.context_toolbar.setStyleSheet(_CONTEXT_TOOLBAR_QSS)
-        self.breadcrumb_label = QLabel()
-        self.breadcrumb_label.setObjectName("BreadcrumbLabel")
+        self.breadcrumb_label = _make_breadcrumb_label()
         self.context_toolbar.addWidget(self.breadcrumb_label)
         layout.addWidget(self.context_toolbar)
 
@@ -207,7 +235,7 @@ class _InactivePlaceholder(QWidget):
         layout.addStretch(2)
 
     def set_content(self, breadcrumb_text, message_text):
-        self.breadcrumb_label.setText(breadcrumb_text)
+        _set_breadcrumb_text(self.breadcrumb_label, breadcrumb_text)
         self.message.setText(message_text)
 
 
@@ -488,16 +516,68 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Redo")
 
+    # ------------------------------------------------------------------
+    # Contextual toolbar's shared core (Copy/Paste/Delete/Snap) - state
+    # and routed actions. Task "Studio: wyostrzenie stylu — wspólny
+    # rdzeń": same dispatch-on-_active pattern as the fixed toolbar
+    # above, kept separate from it because these four live in the
+    # CONTEXTUAL toolbar (rebuilt per aspect - menus.py's
+    # _build_core_group()), not the fixed one.
+    # ------------------------------------------------------------------
+
+    def _core_copy(self):
+        if self._active == _TREE_ITEM_LOGIC:
+            self._logic_panel.main_window().act_copy.trigger()
+        elif self._active == _TREE_ITEM_SCREENS:
+            self._synoptic_panel.trigger_menu_item("Copy")
+
+    def _core_paste(self):
+        if self._active == _TREE_ITEM_LOGIC:
+            self._logic_panel.main_window().act_paste.trigger()
+        elif self._active == _TREE_ITEM_SCREENS:
+            self._synoptic_panel.trigger_menu_item("Paste")
+
+    def _core_delete(self):
+        if self._active == _TREE_ITEM_LOGIC:
+            self._logic_panel.main_window().act_delete.trigger()
+        elif self._active == _TREE_ITEM_SCREENS:
+            self._synoptic_panel.trigger_menu_item("Delete")
+
+    def _set_core_toolbar_enabled(self, can_copy, can_paste, can_delete):
+        # Guarded: the core actions only exist once _build_core_group()
+        # has run at least once (the first tree click) - the state timer
+        # can tick before that, while the neutral empty placeholder is
+        # still showing.
+        if not hasattr(self, "act_core_copy"):
+            return
+        has_editor = self._active is not None
+        self.act_core_copy.setEnabled(has_editor and can_copy)
+        self.act_core_paste.setEnabled(has_editor and can_paste)
+        self.act_core_delete.setEnabled(has_editor and can_delete)
+        # Snap is a plain toggle command, not gated on selection/
+        # clipboard content - always clickable whenever an aspect is
+        # active, same as it already was in the fixed Widok menu.
+        self.act_core_snap.setEnabled(has_editor)
+
     def _refresh_shared_toolbar_state(self):
         if self._active == _TREE_ITEM_LOGIC and self._logic_panel is not None:
             mw = self._logic_panel.main_window()
             self._set_shared_toolbar_enabled(
                 mw.is_dirty, len(mw.project.undo_stack) > 0, len(mw.project.redo_stack) > 0
             )
+            # Point 5's own "korzystaj z mostu stanu, który już
+            # zbudowałeś" - Logic Studio's own _update_clipboard_
+            # actions()/selection tracking already keeps these three
+            # correct; read straight from the real actions, not
+            # recomputed here.
+            self._set_core_toolbar_enabled(
+                mw.act_copy.isEnabled(), mw.act_paste.isEnabled(), mw.act_delete.isEnabled()
+            )
         elif self._active == _TREE_ITEM_SCREENS and self._synoptic_panel is not None:
             self._synoptic_panel.query_state(self._apply_synoptic_toolbar_state)
         else:
             self._set_shared_toolbar_enabled(False, False, False)
+            self._set_core_toolbar_enabled(False, False, False)
 
     def _apply_synoptic_toolbar_state(self, state):
         # Guards against a reply arriving after the user has already
@@ -510,10 +590,20 @@ class StudioMainWindow(QMainWindow):
             return
         if state is None:
             self._set_shared_toolbar_enabled(False, False, False)
+            self._set_core_toolbar_enabled(False, False, False)
             return
         self._set_shared_toolbar_enabled(
             bool(state.get("isDirty")), bool(state.get("canUndo")), bool(state.get("canRedo"))
         )
+        # hasSelection covers Copy/Delete honestly. Paste has no
+        # equivalent signal in the read-only bridge (Blocker B's own
+        # approved scope stopped at canUndo/canRedo/isDirty/
+        # hasSelection - "clipboard has content" was never included) -
+        # left enabled whenever Screens is active, same known,
+        # previously-flagged gap as before this task, not silently
+        # papered over.
+        has_selection = bool(state.get("hasSelection"))
+        self._set_core_toolbar_enabled(has_selection, True, has_selection)
 
     # ------------------------------------------------------------------
     # Fixed menu - state and routed actions (Widok/Pomoc)
