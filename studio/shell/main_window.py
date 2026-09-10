@@ -196,6 +196,12 @@ class _AspectContainer(QWidget):
         self.context_toolbar.setObjectName("ContextToolbar")
         self.context_toolbar.setMovable(False)
         self.context_toolbar.setStyleSheet(_CONTEXT_TOOLBAR_QSS)
+        # Task "zestaw ikon Studio" art is drawn at true 16x16 - without
+        # this, Qt's default toolbar icon size (24px+) upscales it with
+        # no smoothing, which is what made the first pass look "too
+        # pixelarty" blown up in the actual button instead of crisp at
+        # its native size the way real Win98 toolbar icons sat.
+        self.context_toolbar.setIconSize(QSize(16, 16))
 
         self.breadcrumb_label = _make_breadcrumb_label(breadcrumb_text)
         self.context_toolbar.addWidget(self.breadcrumb_label)
@@ -428,30 +434,27 @@ class StudioMainWindow(QMainWindow):
         tb = QToolBar(tr("app.title"), self)
         tb.setObjectName("SharedToolbar")
         tb.setMovable(False)
-        tb.setIconSize(QSize(20, 20))
+        # True 16x16, same reasoning as ContextToolbar's own
+        # setIconSize() a few lines below in _AspectContainer - the
+        # art is native pixel art, not meant to be upscaled.
+        tb.setIconSize(QSize(16, 16))
         self.addToolBar(tb)
         self._shared_toolbar = tb
 
-        # Task "Studio: wyostrzenie stylu" Problem 3 - "ikony w pasku
-        # górnym są z różnych stylów: pięć płaskich i jedna kolorowa
-        # czerwona" (the native QStyle.standardIcon() set this toolbar
-        # used to draw from - one theme's glyphs, not one hand). Every
-        # icon here now comes from logic_studio.ui.icons.action_icon()
-        # instead - the SAME procedurally-drawn set Logic Studio's own
-        # toolbar/menu already use (its act_new/act_undo/etc already
-        # pass icon_name="new"/"undo"/etc - see main_window.py there),
-        # so Studio's fixed toolbar and Logic's contextual one share one
-        # actual icon language, not just a similar color. "save_as" and
-        # "help" did not exist in that module before this task - added
-        # there (two small, described elif branches, same drawing
-        # convention as their neighbors) rather than invented separately
-        # here, so the whole platform still has exactly one icon set.
-        from studio.shell.logic_panel import _ensure_logic_studio_importable
-        _ensure_logic_studio_importable()
-        from logic_studio.ui.icons import action_icon
+        # Task "zestaw ikon Studio w manierze Windows 98" - every icon
+        # here now comes from studio/shell/icons (the colorful,
+        # 16x16, hand-described PNG set that task built), replacing the
+        # older flat logic_studio.ui.icons.action_icon() set this
+        # toolbar used since "Studio: wyostrzenie stylu" - that set was
+        # Logic Studio's own internal monochrome-ish icon language;
+        # this one is Studio's own, shared with the contextual toolbars
+        # below, so the fixed bar and the contextual one finally draw
+        # from the same hand instead of two different styles meeting at
+        # the same window.
+        from studio.shell import icons
 
         def _make(text_key, icon_name: str, handler):
-            action = tb.addAction(action_icon(icon_name, size=20), tr(text_key))
+            action = tb.addAction(icons.icon(icon_name), tr(text_key))
             action.triggered.connect(handler)
             return action
 
@@ -543,7 +546,15 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Delete")
 
-    def _set_core_toolbar_enabled(self, can_copy, can_paste, can_delete):
+    def _core_cut(self):
+        # Cut is Logic-only (menus.py's own measurement: Synoptic's Edit
+        # menu has no Cut at all) - grayed there via
+        # _set_core_toolbar_enabled's is_logic gate below, not wired to
+        # anything when Screens is active.
+        if self._active == _TREE_ITEM_LOGIC:
+            self._logic_panel.main_window().act_cut.trigger()
+
+    def _set_core_toolbar_enabled(self, can_copy, can_paste, can_delete, can_cut=False):
         # Guarded: the core actions only exist once _build_core_group()
         # has run at least once (the first tree click) - the state timer
         # can tick before that, while the neutral empty placeholder is
@@ -551,9 +562,18 @@ class StudioMainWindow(QMainWindow):
         if not hasattr(self, "act_core_copy"):
             return
         has_editor = self._active is not None
+        is_logic = self._active == _TREE_ITEM_LOGIC
         self.act_core_copy.setEnabled(has_editor and can_copy)
         self.act_core_paste.setEnabled(has_editor and can_paste)
         self.act_core_delete.setEnabled(has_editor and can_delete)
+        # Cut/Zoom In/Zoom Out/Grid are real only in Logic (no Synoptic
+        # equivalent exists anywhere - menus.py's own measurement) -
+        # grayed while Screens is active, never removed, same rule the
+        # fixed Widok menu already applies to Zoom/Grid.
+        self.act_core_cut.setEnabled(is_logic and can_cut)
+        self.act_core_zoom_in.setEnabled(is_logic)
+        self.act_core_zoom_out.setEnabled(is_logic)
+        self.act_core_grid.setEnabled(is_logic)
         # Snap is a plain toggle command, not gated on selection/
         # clipboard content - always clickable whenever an aspect is
         # active, same as it already was in the fixed Widok menu.
@@ -571,7 +591,8 @@ class StudioMainWindow(QMainWindow):
             # correct; read straight from the real actions, not
             # recomputed here.
             self._set_core_toolbar_enabled(
-                mw.act_copy.isEnabled(), mw.act_paste.isEnabled(), mw.act_delete.isEnabled()
+                mw.act_copy.isEnabled(), mw.act_paste.isEnabled(), mw.act_delete.isEnabled(),
+                mw.act_cut.isEnabled(),
             )
         elif self._active == _TREE_ITEM_SCREENS and self._synoptic_panel is not None:
             self._synoptic_panel.query_state(self._apply_synoptic_toolbar_state)

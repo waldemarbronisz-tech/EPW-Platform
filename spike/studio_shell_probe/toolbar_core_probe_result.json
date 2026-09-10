@@ -1,70 +1,70 @@
 {
-  "screens_action_count": 48,
+  "screens_action_count": 56,
   "screens_breakdown": {
-    "separators": 12,
-    "breadcrumb_widgets": 1,
-    "real_buttons": 35,
-    "total": 48
+    "separators": 15,
+    "breadcrumb_widgets": 2,
+    "real_buttons": 39,
+    "total": 56
   },
   "screens_core_geometry": {
     "act_core_copy": [
       296,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_paste": [
-      333,
+      325,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_delete": [
-      370,
+      383,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_snap": [
-      407,
+      519,
       4,
-      35,
-      35
+      27,
+      27
     ]
   },
   "screens_toolbar_button_style": 0,
   "screens_second_row_exists": false,
-  "logic_action_count": 41,
+  "logic_action_count": 45,
   "logic_breakdown": {
-    "separators": 10,
-    "breadcrumb_widgets": 1,
+    "separators": 13,
+    "breadcrumb_widgets": 2,
     "real_buttons": 30,
-    "total": 41
+    "total": 45
   },
   "logic_core_geometry": {
     "act_core_copy": [
       296,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_paste": [
-      333,
+      325,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_delete": [
-      370,
+      383,
       4,
-      35,
-      35
+      27,
+      27
     ],
     "act_core_snap": [
-      407,
+      519,
       4,
-      35,
-      35
+      27,
+      27
     ]
   },
   "logic_second_row_exists": false

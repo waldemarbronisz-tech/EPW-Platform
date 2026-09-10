@@ -6,14 +6,26 @@ correction is only about toolbar CONTENT, "ta korekta dotyczy WYŁĄCZNIE
 zawartości pasków"). Two rules drive every contextual-toolbar builder
 now:
 
-  1. "Ta sama funkcja = ta sama ikona = to samo miejsce" - _CORE_GROUP
-     below (Copy/Paste/Delete/Snap - see this task's own chat report
-     for exactly how that four-item list was MEASURED, not assumed:
-     Cut/Select All/Zoom/Grid were all measured OUT, each for a
-     specific, checked reason) is built FIRST, identically, by every
-     build_*_context_toolbar() call - same icons, same order, same
-     QAction identity pattern, so the pixel position never shifts when
-     the active aspect changes.
+  1. "Ta sama funkcja = ta sama ikona = to samo miejsce" - _build_core_
+     group() below (Copy/Paste/Cut/Delete/Zoom In/Zoom Out/Grid/Snap -
+     see this task's own chat report for the two-pass history: the
+     first pass measured a strict "both editors have a clickable
+     surface for it" core down to four (Copy/Paste/Delete/Snap); task
+     "zestaw ikon Studio" re-read its own "przycisk WYSZARZONY, nie
+     usunięty" rule as already anticipating editor-specific items shown
+     always and grayed where inapplicable, and widened back to eight on
+     that basis - Cut/Zoom In/Zoom Out/Grid are real in Logic, grayed
+     (never removed) while Synoptic is active. Select All and Fit-to-
+     window stayed OUT even under the wider reading: neither exists as
+     an invokable action in EITHER editor, so unlike the four above they
+     would be permanently dead in both contexts, not "grayed in one" -
+     that fails "zero fasad" in a way the grey-not-remove rule doesn't
+     cover) is built FIRST, identically, by every build_*_context_
+     toolbar() call - same icons, same order, same QAction identity
+     pattern, so the pixel position never shifts when the active aspect
+     changes. A more pronounced gap (double separator + a fixed-width
+     spacer) marks where the core ends and the active editor's own
+     tools begin.
   2. "ikony 16x16, tekst wyłącznie w podpowiedzi" - every action built
      here now carries a real icon (studio/shell/icons.py - re-exports
      logic_studio.ui.icons.action_icon() where that already has the
@@ -34,7 +46,7 @@ merge the two editors' own undo/dirty mechanisms):
 """
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QActionGroup, QCursor
-from PySide6.QtWidgets import QMenuBar, QToolBar
+from PySide6.QtWidgets import QMenuBar, QToolBar, QWidget
 
 from studio.shell import icons
 from studio.shell.i18n import get_language, tr
@@ -169,64 +181,77 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
 
 
 # ----------------------------------------------------------------------
-# The shared core - measured, not assumed. See this task's own chat
-# report for the full measurement table; summarized here so the reason
-# each one is (or isn't) in this list stays next to the list itself:
+# The shared core - two measurement passes, both recorded here so the
+# reason each item is (or isn't) in this list stays next to the list:
 #
-#   Copy    - both editors have it, both with a real clickable surface
-#             (Synoptic: menu + its own toolbar button; Logic: act_copy).
-#   Paste   - same, both real.
-#   Delete  - same, both real.
-#   Snap to grid - both real (Synoptic's own View menu item; Logic's
-#             act_snap).
-#   Cut     - MEASURED OUT. Logic has it (act_cut); Synoptic's own Edit
-#             menu has Copy/Paste/Delete/Reroute but NO Cut at all -
-#             not a shared function, stays in Logic's own section.
-#   Zaznacz wszystko (Select All) - MEASURED OUT. Logic Studio has NO
-#             select-all mechanism whatsoever (checked: no menu item,
-#             no Ctrl+A binding anywhere in main_window.py). Synoptic
-#             DOES have one (store.selectAll()) but it is reachable
-#             ONLY via an undocumented Ctrl+A keydown handler in
-#             Canvas.tsx - no menu item, no toolbar button, no DOM
-#             element trigger_menu_item()/trigger_toolbar_button() could
-#             ever click. Present in neither editor as an actual UI
-#             surface - excluded from the core AND left unexposed in
-#             Synoptic's own section too, rather than inventing a new
-#             toolbar button in Synoptic's own source to expose it
-#             (GRANICE: minimal+described changes only for the state
-#             bridge/color bridge cases already approved, not a new
-#             standing UI element).
-#   Powiększ/Pomniejsz (Zoom In/Out) - MEASURED OUT. Synoptic has no
-#             zoom UI at all (mouse wheel only, confirmed in Stage 1
-#             reconnaissance) - stays Logic-only, in Logic's own
-#             section, exactly as it already was.
-#   Siatka (grid visibility toggle) - MEASURED OUT. Synoptic exposes
-#             Snap to Grid but never a separate grid-VISIBILITY toggle -
-#             stays Logic-only.
-#   Dopasuj do okna (Fit to window) - MEASURED OUT, on stricter grounds
-#             than the others: NEITHER editor actually has it. Logic's
-#             "Reset Zoom" (act_reset_zoom) is view.resetTransform() -
-#             zoom back to 100%, not "fit all content in view" - a
-#             different function under a similar-sounding name. Synoptic
-#             has no equivalent of either. Reset Zoom stays in Logic's
-#             own section, under its own accurate name - not relabeled
-#             as "Dopasuj do okna", which it does not do.
+#   Copy/Paste/Delete/Snap to grid - both editors have a real clickable
+#             surface for each (Synoptic: menu + its own toolbar button;
+#             Logic: act_copy/act_paste/act_delete/act_snap). Core since
+#             the first pass.
+#   Cut     - Logic has it (act_cut); Synoptic's own Edit menu has no
+#             Cut at all. First pass measured this OUT to Logic's own
+#             section. Second pass (task "zestaw ikon Studio") put it
+#             back IN the core, grayed while Synoptic is active - the
+#             existing "przycisk WYSZARZONY, nie usunięty" rule already
+#             anticipates exactly this: an editor-specific function
+#             shown in a fixed, shared place, disabled where it doesn't
+#             apply, not hidden.
+#   Powiększ/Pomniejsz (Zoom In/Out), Siatka (grid visibility) - same
+#             story as Cut: real only in Logic (Synoptic has no zoom UI
+#             beyond the mouse wheel, and exposes Snap to Grid but never
+#             a separate grid-visibility toggle), first pass measured
+#             them out, second pass put them back in the core grayed for
+#             Synoptic.
+#   Zaznacz wszystko (Select All) - stays OUT under BOTH passes, on
+#             different grounds than Cut/Zoom/Grid: Logic Studio has no
+#             select-all mechanism at all (no menu item, no Ctrl+A
+#             binding anywhere), and Synoptic's own store.selectAll()
+#             is reachable ONLY via an undocumented Ctrl+A keydown in
+#             Canvas.tsx - no menu item, no toolbar button, nothing
+#             trigger_menu_item()/trigger_toolbar_button() could ever
+#             click. Present in NEITHER editor as an actual UI surface,
+#             so grey-not-remove doesn't apply - there is no editor left
+#             for it to be real in. Excluded from the core and left
+#             unexposed in Synoptic's own section too (GRANICE: no new
+#             standing UI element invented in Synoptic's own source).
+#   Dopasuj do okna (Fit to window) - stays OUT on the same grounds:
+#             NEITHER editor has it. Logic's "Reset Zoom" (act_reset_
+#             zoom) is view.resetTransform() - zoom back to 100%, not
+#             "fit all content in view" - a different function under a
+#             similar-sounding name, kept in Logic's own section under
+#             its own accurate name rather than relabeled as this.
 # ----------------------------------------------------------------------
 
 def _build_core_group(toolbar, studio_window):
     """Built identically on every call, by both build_*_context_toolbar
     functions below, before anything editor-specific - the actual
     mechanism behind "IDENTYCZNA ikona/kolejność/pozycja od lewej
-    krawędzi". Routing dispatches on studio_window._active as usual
-    (studio_window._core_copy/_core_paste/_core_delete, and the
-    already-existing _view_toggle_snap - reused as-is, not duplicated).
-    Enabled state is refreshed by main_window.py's existing state-poll
-    timer (_refresh_shared_toolbar_state), extended to cover these four
-    too - point 5's own "korzystaj z mostu stanu, który już zbudowałeś"."""
+    krawędzi". Eight items, grouped Copy/Paste/Cut/Delete |
+    Zoom In/Zoom Out | Grid/Snap, each group separated by a plain
+    separator; a MORE pronounced gap (separator + fixed-width spacer +
+    separator) marks the end of the core, before the active editor's
+    own tools start. Routing dispatches on studio_window._active as
+    usual; Cut/Zoom In/Zoom Out/Grid reuse the same dispatch methods the
+    fixed Widok menu and Logic's own toolbar already call
+    (_view_zoom_in/_view_zoom_out/_view_toggle_grid), not duplicated
+    here - only _core_cut is new (mirrors _core_copy/_core_paste/
+    _core_delete's own pattern). Enabled state is refreshed by
+    main_window.py's existing state-poll timer
+    (_refresh_shared_toolbar_state)."""
     studio_window.act_core_copy = _add(toolbar, tr("menu.edit.copy"), studio_window._core_copy, icon_name="copy")
     studio_window.act_core_paste = _add(toolbar, tr("menu.edit.paste"), studio_window._core_paste, icon_name="paste")
+    studio_window.act_core_cut = _add(toolbar, tr("menu.edit.cut"), studio_window._core_cut, icon_name="cut")
     studio_window.act_core_delete = _add(toolbar, tr("menu.edit.delete"), studio_window._core_delete, icon_name="delete")
+    toolbar.addSeparator()
+    studio_window.act_core_zoom_in = _add(toolbar, tr("menu.view.zoom_in"), studio_window._view_zoom_in, icon_name="zoom_in")
+    studio_window.act_core_zoom_out = _add(toolbar, tr("menu.view.zoom_out"), studio_window._view_zoom_out, icon_name="zoom_out")
+    toolbar.addSeparator()
+    studio_window.act_core_grid = _add(toolbar, tr("menu.view.grid"), studio_window._view_toggle_grid, icon_name="grid")
     studio_window.act_core_snap = _add(toolbar, tr("menu.view.snap"), studio_window._view_toggle_snap, icon_name="snap")
+    toolbar.addSeparator()
+    _core_end_spacer = QWidget(toolbar)
+    _core_end_spacer.setFixedWidth(6)
+    toolbar.addWidget(_core_end_spacer)
     toolbar.addSeparator()
 
 
@@ -240,17 +265,17 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _build_core_group(toolbar, studio_window)
     mw = logic_panel.main_window()
 
-    _mirror(toolbar, tr("menu.view.zoom_in"), mw.act_zoom_in)
-    _mirror(toolbar, tr("menu.view.zoom_out"), mw.act_zoom_out)
+    # Zoom In/Zoom Out/Grid/Cut now live in the core group above (real
+    # here, grayed in Synoptic) - not repeated here to avoid the same
+    # function appearing twice in one toolbar. Reset Zoom stays here:
+    # it measured out of the core as its own, un-shared function (see
+    # _build_core_group's own docstring).
     _mirror(toolbar, tr("menu.view.reset_zoom"), mw.act_reset_zoom, icon_name="reset_zoom")
-    _mirror(toolbar, tr("menu.view.grid"), mw.act_grid)
     toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.file.compare_saved"), mw.act_compare_saved, icon_name="compare")
     _mirror(toolbar, tr("menu.file.compare_files"), mw.act_compare_files, icon_name="compare")
     toolbar.addSeparator()
-
-    _mirror(toolbar, tr("menu.edit.cut"), mw.act_cut)
 
     def _show_align_popup():
         mw._rebuild_align_menu()
@@ -271,19 +296,19 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _mirror(toolbar, tr("menu.project.export_pdf"), mw.act_export_pdf, icon_name="export")
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.logic.compile"), mw.act_compile)
+    _mirror(toolbar, tr("menu.logic.compile"), mw.act_compile, icon_name="compile")
     _mirror(toolbar, tr("menu.logic.export_runtime"), mw.act_export_runtime, icon_name="export")
     toolbar.addSeparator()
 
-    _mirror(toolbar, tr("menu.simulation.start"), mw.act_sim_start)
-    _mirror(toolbar, tr("menu.simulation.pause"), mw.act_sim_pause)
-    _mirror(toolbar, tr("menu.simulation.stop"), mw.act_sim_stop)
+    _mirror(toolbar, tr("menu.simulation.start"), mw.act_sim_start, icon_name="sim_start")
+    _mirror(toolbar, tr("menu.simulation.pause"), mw.act_sim_pause, icon_name="sim_pause")
+    _mirror(toolbar, tr("menu.simulation.stop"), mw.act_sim_stop, icon_name="sim_stop")
     toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.help.catalog"), mw.act_help_catalog, icon_name="help_catalog")
     _mirror(toolbar, tr("menu.help.shortcuts"), mw.act_help_shortcuts, icon_name="help_shortcuts")
     _mirror(toolbar, tr("menu.help.export_catalog"), mw.act_export_block_catalog, icon_name="export")
-    _mirror(toolbar, tr("menu.help.about"), mw.act_about)
+    _mirror(toolbar, tr("menu.help.about"), mw.act_about, icon_name="about")
     toolbar.addSeparator()
 
     _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background, icon_name="background_color")
