@@ -46,7 +46,6 @@
   "placeholder": {
     "devices": "The list of field devices (ELA/ADA/EPM) that make up the installation (project/devices.json) - not built yet.",
     "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - edited today together with I/O Cards (one \"Sprzęt\" section in SPEC_PROJEKT_EPW.md); this separate branch not built yet.",
-    "apparatus_registry": "The list of switching apparatus (contactors, breakers), independent of the synoptic diagram (project/apparatus.json) - not built yet.",
     "security_zones": "The intrusion alarm system's own zone breakdown (security/zones.json) - not built yet.",
     "security_lines": "The intrusion alarm system's supervised lines (security/lines.json) - not built yet.",
     "protection_settings": "Electrical and process protection setpoints (protection/electrical.json, process.json) - not built yet.",
@@ -223,7 +222,12 @@
     "add_location": "Add Location",
     "remove_location": "Remove Location",
     "confirm_remove_card_title": "Remove Card?",
-    "confirm_remove_card_text": "Card {id} will be removed together with all of its points (descriptions, notes) - this cannot be undone."
+    "confirm_remove_card_text": "Card {id} will be removed together with all of its points (descriptions, notes) - this cannot be undone.",
+    "duplicate_id_title": "Duplicate Id",
+    "duplicate_id_text": "A card with id \"{id}\" already exists. Enter a unique id.",
+    "invalid_location_code_title": "Invalid Location Code",
+    "invalid_location_code_text": "Code \"{code}\" must consist only of letters A-Z and digits.",
+    "duplicate_location_code_text": "A location with code \"{code}\" already exists. Enter a unique code."
   },
   "points": {
     "filter_card": "Card:",
@@ -238,6 +242,23 @@
     "col_eng_min": "Eng Min",
     "col_eng_max": "Eng Max",
     "col_unit": "Unit",
-    "col_decimals": "Decimals"
+    "col_decimals": "Decimals",
+    "col_device": "Device"
+  },
+  "devices": {
+    "col_id": "Id",
+    "col_behavior": "Behavior",
+    "col_kind": "Kind",
+    "col_feedback": "Feedback",
+    "col_command": "Command",
+    "add_device": "Add Device",
+    "remove_device": "Remove Device",
+    "none": "(none)",
+    "n_points": "{n} pts.",
+    "owned_by": "owned by: {id}",
+    "dialog_feedback": "Feedback - {id}",
+    "dialog_command": "Command - {id}",
+    "duplicate_id_title": "Duplicate Id",
+    "duplicate_id_text": "A device with id \"{id}\" already exists. Enter a unique id."
   }
 }

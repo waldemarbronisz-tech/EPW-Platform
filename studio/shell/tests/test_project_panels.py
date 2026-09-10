@@ -7,8 +7,14 @@ PointRegistryPanel) are covered indirectly by main_window.py's own
 smoke path (constructed, clicked through, screenshotted - see this
 task's own chat report), not unit-tested here.
 """
-from studio.shell.project_format import Card, Point, new_project
+from studio.shell.project_format import Card, Device, Location, Point, new_project
 from studio.shell.project_panels import (
+    card_from_synoptic_dict,
+    card_to_synoptic_dict,
+    find_point_owner,
+    location_from_synoptic_dict,
+    location_to_synoptic_dict,
+    point_owner_map,
     points_for_card,
     remove_points_for_card,
     sync_points_for_card,
@@ -115,3 +121,62 @@ def test_points_for_card_filters_by_address_prefix():
     result = points_for_card(project, card)
 
     assert {p.address for p in result} == {"ELA1.DI.1", "ELA1.DI.2"}
+
+
+def test_find_point_owner_returns_none_for_free_point():
+    project = _project()
+    assert find_point_owner(project, "ELA1.DI.1") is None
+
+
+def test_find_point_owner_returns_the_owning_device():
+    project = _project()
+    device = Device(id="KOT_KMG1", behavior="SIGNAL", feedback=["ELA1.DI.1"])
+    project.devices.append(device)
+    owner = find_point_owner(project, "ELA1.DI.1")
+    assert owner is device
+
+
+def test_find_point_owner_checks_command_list_too():
+    project = _project()
+    device = Device(id="KOT_KMG1", behavior="SWITCHED", command=["ADA1.DO.1"])
+    project.devices.append(device)
+    assert find_point_owner(project, "ADA1.DO.1") is device
+
+
+def test_find_point_owner_excludes_the_given_device_id():
+    """A device re-checking its OWN existing assignment must not be
+    told it conflicts with itself."""
+    project = _project()
+    device = Device(id="KOT_KMG1", behavior="SIGNAL", feedback=["ELA1.DI.1"])
+    project.devices.append(device)
+    assert find_point_owner(project, "ELA1.DI.1", exclude_device_id="KOT_KMG1") is None
+
+
+def test_point_owner_map_covers_feedback_and_command():
+    project = _project()
+    project.devices.append(
+        Device(id="KOT_KMG1", behavior="SWITCHED", feedback=["ELA1.DI.1"], command=["ADA1.DO.1"])
+    )
+    owners = point_owner_map(project)
+    assert owners == {"ELA1.DI.1": "KOT_KMG1", "ADA1.DO.1": "KOT_KMG1"}
+
+
+def test_point_owner_map_omits_unassigned_points():
+    project = _project()
+    assert point_owner_map(project) == {}
+
+
+def test_card_synoptic_dict_round_trip():
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=32)
+    data = card_to_synoptic_dict(card)
+    assert data == {"id": "ELA1", "model": "ELA01", "channelKind": "DI", "channelCount": 32}
+    restored = card_from_synoptic_dict(data)
+    assert restored == card
+
+
+def test_location_synoptic_dict_round_trip():
+    location = Location(code="KOT", description="Kotlownia")
+    data = location_to_synoptic_dict(location)
+    assert data == {"code": "KOT", "description": "Kotlownia"}
+    restored = location_from_synoptic_dict(data)
+    assert restored == location

@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { applyScadaCssVariables } from './theme/ScadaTheme'
 import { useStore } from './store'
+import type { CardEntry, LocationEntry } from './project/DeviceSchema'
 
 // Must run before the first paint, so the interface CSS (which reads these
 // as var(--scada-*)) never has a chance to render with stale fallback
@@ -99,6 +100,54 @@ type CanvasBackgroundBridge = { __synopticCanvasBackground?: () => string };
 type CanvasBackgroundSetter = { __synopticSetCanvasBackground?: (color: string) => void };
 (window as unknown as CanvasBackgroundSetter).__synopticSetCanvasBackground = (color: string): void => {
   useStore.getState().setCanvasBackground(color);
+};
+
+// Task "Studio: rejestr punktów" follow-up ("most Cards/Locations do
+// Synoptic") - Studio's own Project (studio/shell/project_format.py)
+// and this editor's own DeviceRegistry (DeviceSchema.ts) describe
+// nearly the same two lists (CardEntry.id/model/channelKind/
+// channelCount vs Card.id/model/kind/channels; LocationEntry.code/
+// description vs Location.code/description) but are two SEPARATE
+// stores today - a card added in one is invisible in the other. This
+// bridge is deliberately ADD-ONLY in both directions (see
+// studio/shell/main_window.py's own _sync_device_registry_with_
+// synoptic()): reads this store's current cards/locations out, and
+// merges an incoming list IN by id/code, never overwriting or
+// deleting an existing entry on either side. A real rename/delete
+// sync would need a conflict-resolution decision this task does not
+// make - documented as a known gap, not silently attempted.
+type DeviceRegistrySnapshot = {
+  cards: CardEntry[];
+  locations: LocationEntry[];
+};
+type DeviceRegistryBridge = { __synopticDeviceRegistry?: () => DeviceRegistrySnapshot };
+(window as unknown as DeviceRegistryBridge).__synopticDeviceRegistry = (): DeviceRegistrySnapshot => {
+  const s = useStore.getState();
+  return { cards: s.cards, locations: s.locations };
+};
+
+type DeviceRegistryImportBridge = {
+  __synopticImportCardsAndLocations?: (cards: CardEntry[], locations: LocationEntry[]) => void;
+};
+(window as unknown as DeviceRegistryImportBridge).__synopticImportCardsAndLocations = (
+  cards: CardEntry[],
+  locations: LocationEntry[],
+): void => {
+  const state = useStore.getState();
+  const existingCardIds = new Set(state.cards.map((c) => c.id));
+  const existingLocationCodes = new Set(state.locations.map((l) => l.code));
+  for (const card of cards) {
+    if (!existingCardIds.has(card.id)) {
+      state.addCard(card);
+      existingCardIds.add(card.id);
+    }
+  }
+  for (const location of locations) {
+    if (!existingLocationCodes.has(location.code)) {
+      state.addLocation(location);
+      existingLocationCodes.add(location.code);
+    }
+  }
 };
 
 createRoot(document.getElementById('root')!).render(

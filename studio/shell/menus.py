@@ -350,6 +350,15 @@ def build_cards_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("cards.remove_location"), panel.remove_selected_location, icon_name="remove_row")
 
 
+def build_devices_toolbar(toolbar, panel, _studio_window):
+    """SPEC's "Aparaty" - Dodaj/Usuń aparat, same add_row/remove_row
+    icons as build_cards_toolbar (table-row actions, not Copy/Paste/
+    Delete's canvas-selection meaning)."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("devices.add_device"), panel.add_device, icon_name="add_row")
+    _add(toolbar, tr("devices.remove_device"), panel.remove_selected_device, icon_name="remove_row")
+
+
 def build_point_registry_toolbar(toolbar, _panel, _studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's

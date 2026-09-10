@@ -46,7 +46,6 @@
   "placeholder": {
     "devices": "Lista urządzeń polowych ELA/ADA/EPM wchodzących w skład instalacji (project/devices.json) — jeszcze nie zbudowane.",
     "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — edytowana dziś razem z Kartami wejść/wyjść (jedna sekcja \"Sprzęt\" w SPEC_PROJEKT_EPW.md); ta osobna gałąź jeszcze nie zbudowana.",
-    "apparatus_registry": "Lista aparatów łączeniowych (styczniki, wyłączniki) niezależna od schematu synoptycznego (project/apparatus.json) — jeszcze nie zbudowane.",
     "security_zones": "Podział systemu alarmowego na strefy (security/zones.json) — jeszcze nie zbudowane.",
     "security_lines": "Linie dozorowe systemu alarmowego (security/lines.json) — jeszcze nie zbudowane.",
     "protection_settings": "Nastawy zabezpieczeń elektrycznych i procesowych (protection/electrical.json, process.json) — jeszcze nie zbudowane.",
@@ -223,7 +222,12 @@
     "add_location": "Dodaj lokalizację",
     "remove_location": "Usuń lokalizację",
     "confirm_remove_card_title": "Usunąć kartę?",
-    "confirm_remove_card_text": "Karta {id} zostanie usunięta razem ze wszystkimi jej punktami (opisy, notatki) — tej operacji nie da się cofnąć."
+    "confirm_remove_card_text": "Karta {id} zostanie usunięta razem ze wszystkimi jej punktami (opisy, notatki) — tej operacji nie da się cofnąć.",
+    "duplicate_id_title": "Zduplikowane id",
+    "duplicate_id_text": "Karta o id \"{id}\" już istnieje. Wpisz unikalne id.",
+    "invalid_location_code_title": "Nieprawidłowy kod lokalizacji",
+    "invalid_location_code_text": "Kod \"{code}\" musi składać się wyłącznie z liter A-Z i cyfr.",
+    "duplicate_location_code_text": "Lokalizacja o kodzie \"{code}\" już istnieje. Wpisz unikalny kod."
   },
   "points": {
     "filter_card": "Karta:",
@@ -238,6 +242,23 @@
     "col_eng_min": "Eng min",
     "col_eng_max": "Eng max",
     "col_unit": "Jednostka",
-    "col_decimals": "Miejsca dziesiętne"
+    "col_decimals": "Miejsca dziesiętne",
+    "col_device": "Aparat"
+  },
+  "devices": {
+    "col_id": "Id",
+    "col_behavior": "Zachowanie",
+    "col_kind": "Rodzaj",
+    "col_feedback": "Odczyt",
+    "col_command": "Sterowanie",
+    "add_device": "Dodaj aparat",
+    "remove_device": "Usuń aparat",
+    "none": "(brak)",
+    "n_points": "{n} pkt.",
+    "owned_by": "zajęty: {id}",
+    "dialog_feedback": "Odczyt (feedback) — {id}",
+    "dialog_command": "Sterowanie (command) — {id}",
+    "duplicate_id_title": "Zduplikowane id",
+    "duplicate_id_text": "Aparat o id \"{id}\" już istnieje. Wpisz unikalne id."
   }
 }

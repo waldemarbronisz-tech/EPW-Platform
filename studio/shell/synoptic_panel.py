@@ -66,7 +66,7 @@ import json
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtWidgets import QLabel, QStackedWidget, QVBoxLayout, QWidget
 
 from studio.shell.i18n import tr
@@ -141,6 +141,14 @@ class SynopticPanel(QWidget):
     as an error page in this widget instead - the rest of Studio (the
     tree, the status bar, LOGIC) is never touched by it."""
 
+    # Task "Studio: rejestr punktów" follow-up - fires once the page has
+    # actually finished loading (query_device_registry()/
+    # push_device_registry() are no-ops before that, same guard every
+    # other bridge call already has). main_window.py uses this to run
+    # the Cards/Locations sync at the one moment it can actually reach
+    # the page, instead of guessing a delay.
+    page_ready = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         # Imported here, not at module level: the module-level docstring
@@ -194,6 +202,7 @@ class SynopticPanel(QWidget):
         if ok:
             self._pages.setCurrentIndex(_PAGE_VIEW)
             self._view.page().runJavaScript(_STUDIO_SKIN_JS)
+            self.page_ready.emit()
         else:
             self._show_error(tr("synoptic.load_failed"))
 
@@ -319,5 +328,49 @@ class SynopticPanel(QWidget):
         js = (
             "typeof window.__synopticSetCanvasBackground === 'function' "
             f"&& window.__synopticSetCanvasBackground({json.dumps(hex_color)});"
+        )
+        self._view.page().runJavaScript(js)
+
+    def query_device_registry(self, callback):
+        """Task "Studio: rejestr punktów" follow-up ("most Cards/
+        Locations do Synoptic") - reads Synoptic's OWN cards/locations
+        (main.tsx's __synopticDeviceRegistry bridge) so Studio's Project
+        can pick up cards/locations a user already defined inside
+        Synoptic's own AddCardDialog/AddLocationDialog. `callback`
+        receives {"cards": [...], "locations": [...]} (Synoptic's own
+        field names - channelKind/channelCount, code/description) or
+        None if the page hasn't loaded / doesn't expose the bridge yet."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            callback(None)
+            return
+        js = (
+            "typeof window.__synopticDeviceRegistry === 'function' "
+            "? JSON.stringify(window.__synopticDeviceRegistry()) : ''"
+        )
+
+        def _handle(result):
+            if not result:
+                callback(None)
+                return
+            try:
+                callback(json.loads(result))
+            except ValueError:
+                callback(None)
+
+        self._view.page().runJavaScript(js, _handle)
+
+    def push_device_registry(self, cards, locations):
+        """The write half - ADDITIVE only (main.tsx's
+        __synopticImportCardsAndLocations bridge skips any id/code it
+        already has), never overwrites or removes an existing Synoptic
+        card/location. `cards`/`locations` are plain dicts already in
+        Synoptic's OWN field-name shape (see
+        main_window.py's _sync_device_registry_with_synoptic for the
+        Card/Location -> CardEntry/LocationEntry field mapping)."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        js = (
+            "typeof window.__synopticImportCardsAndLocations === 'function' "
+            f"&& window.__synopticImportCardsAndLocations({json.dumps(cards)}, {json.dumps(locations)});"
         )
         self._view.page().runJavaScript(js)

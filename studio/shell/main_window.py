@@ -38,7 +38,7 @@ from PySide6.QtWidgets import (
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
-    build_cards_toolbar, build_fixed_menu, build_logic_context_toolbar,
+    build_cards_toolbar, build_devices_toolbar, build_fixed_menu, build_logic_context_toolbar,
     build_point_registry_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
@@ -54,6 +54,9 @@ _TREE_ITEM_LOGIC = "logic"
 _TREE_ITEM_INFO = "info"
 _TREE_ITEM_IO_CARDS = "io_cards"
 _TREE_ITEM_POINT_REGISTRY = "point_registry"
+# "Co jeszcze możemy dorobić" follow-up - SPEC's next section, Aparaty
+# (a device's feedback/command point lists), same "active" leaf pattern.
+_TREE_ITEM_DEVICES = "apparatus_registry"
 
 # The remaining project-structure branches shared/docs/SPEC_FORMAT_EPW.md
 # describes but nothing in this platform builds yet (task 1.4) - each
@@ -66,10 +69,13 @@ _TREE_ITEM_POINT_REGISTRY = "point_registry"
 # older, now-superseded SPEC_FORMAT_EPW.md, and reconciling the tree's
 # own granularity with the newer spec is a separate task, not implied
 # by "let me name DI/DO/AI points". Flagged, not silently restructured.
+# "devices"/tree.devices ("Skład urządzenia") is a DIFFERENT thing from
+# apparatus_registry above - SPEC's "which runtime modules this
+# controller has", not "which apparatus consumes which point" - stays
+# inactive, unrelated to this follow-up.
 _INACTIVE_CONFIG_CHILDREN = [
     ("devices", "tree.devices"),
     ("locations", "tree.locations"),
-    ("apparatus_registry", "tree.apparatus_registry"),
 ]
 _INACTIVE_ALARM_CHILDREN = [
     ("security_zones", "tree.security_zones"),
@@ -84,6 +90,7 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_INFO: "breadcrumb.info",
     _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
+    _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -286,6 +293,7 @@ class StudioMainWindow(QMainWindow):
         self._project_info_panel = None
         self._cards_panel = None
         self._point_registry_panel = None
+        self._devices_panel = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -405,6 +413,9 @@ class StudioMainWindow(QMainWindow):
         icon_info = icons.icon("about")
         icon_io_cards = icons.icon("device_list")
         icon_point_registry = icons.icon("project_registers")
+        # "settings" (a gear) reads plainly as "a mechanism/apparatus" -
+        # closer to "Aparaty" than any other icon already in the set.
+        icon_devices = icons.icon("settings")
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -449,6 +460,9 @@ class StudioMainWindow(QMainWindow):
         self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
         self._item_point_registry = add_active_leaf(
             config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
+        )
+        self._item_devices = add_active_leaf(
+            config, _TREE_ITEM_DEVICES, "tree.apparatus_registry", icon_devices
         )
         for key, label_key in _INACTIVE_CONFIG_CHILDREN:
             add_inactive_leaf(config, key, label_key)
@@ -812,6 +826,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_io_cards()
             elif key == _TREE_ITEM_POINT_REGISTRY:
                 self._open_point_registry()
+            elif key == _TREE_ITEM_DEVICES:
+                self._open_devices()
         elif kind == "inactive":
             self._open_inactive(key)
 
@@ -819,6 +835,13 @@ class StudioMainWindow(QMainWindow):
         if self._synoptic_panel is None:
             from studio.shell.synoptic_panel import SynopticPanel
             self._synoptic_panel = SynopticPanel()
+            self._synoptic_panel.page_ready.connect(self._sync_device_registry_with_synoptic)
+        else:
+            # Already loaded from an earlier visit - page_ready won't
+            # fire again, so run the sync directly (query_device_
+            # registry() itself no-ops safely if the page somehow isn't
+            # ready, same guard as every other bridge call).
+            self._sync_device_registry_with_synoptic()
         self._show_aspect_container(
             _TREE_ITEM_SCREENS, self._synoptic_panel, build_synoptic_context_toolbar, self._synoptic_panel
         )
@@ -826,6 +849,59 @@ class StudioMainWindow(QMainWindow):
         self._active = _TREE_ITEM_SCREENS
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
+
+    def _sync_device_registry_with_synoptic(self):
+        """Task "Studio: rejestr punktów" follow-up ("most Cards/
+        Locations do Synoptic"). ADD-ONLY, both directions - see
+        synoptic_panel.py's query_device_registry()/
+        push_device_registry() docstrings and main.tsx's own comment for
+        why: a real rename/delete sync needs a conflict-resolution
+        decision this task does not make. Pulls in any card/location
+        Synoptic already has that Studio doesn't (spawning points for a
+        newly-pulled card, same as adding one by hand), then pushes
+        Studio's own list out so Synoptic picks up anything added there
+        instead."""
+        if self._synoptic_panel is None:
+            return
+
+        def _after_pull(registry):
+            from studio.shell.project_panels import (
+                card_from_synoptic_dict, card_to_synoptic_dict,
+                location_from_synoptic_dict, location_to_synoptic_dict,
+                sync_points_for_card,
+            )
+            project = self._project
+            changed = False
+            if registry:
+                existing_card_ids = {c.id for c in project.cards}
+                for card_data in registry.get("cards", []):
+                    if card_data.get("id") in existing_card_ids:
+                        continue
+                    card = card_from_synoptic_dict(card_data)
+                    project.cards.append(card)
+                    sync_points_for_card(project, card)
+                    existing_card_ids.add(card.id)
+                    changed = True
+                existing_codes = {l.code for l in project.locations}
+                for location_data in registry.get("locations", []):
+                    if location_data.get("code") in existing_codes:
+                        continue
+                    location = location_from_synoptic_dict(location_data)
+                    project.locations.append(location)
+                    existing_codes.add(location.code)
+                    changed = True
+            if changed:
+                project.touch()
+                self._on_project_changed()
+                if self._cards_panel is not None:
+                    self._cards_panel.refresh()
+                if self._point_registry_panel is not None:
+                    self._point_registry_panel.refresh()
+            cards_out = [card_to_synoptic_dict(c) for c in self._project.cards]
+            locations_out = [location_to_synoptic_dict(l) for l in self._project.locations]
+            self._synoptic_panel.push_device_registry(cards_out, locations_out)
+
+        self._synoptic_panel.query_device_registry(_after_pull)
 
     def _open_logic(self):
         if self._logic_panel is None:
@@ -882,6 +958,20 @@ class StudioMainWindow(QMainWindow):
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
+    def _open_devices(self):
+        if self._devices_panel is None:
+            from studio.shell.project_panels import DevicesPanel
+            self._devices_panel = DevicesPanel(self)
+        else:
+            self._devices_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_DEVICES, self._devices_panel, build_devices_toolbar, self._devices_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_DEVICES
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
     # ------------------------------------------------------------------
     # Project lifecycle (Informacje o projekcie's own toolbar) - separate
     # from _shared_new/_shared_open/etc above, see project_panels.py's
@@ -926,6 +1016,8 @@ class StudioMainWindow(QMainWindow):
             self._cards_panel.refresh()
         if self._point_registry_panel is not None:
             self._point_registry_panel.refresh()
+        if self._devices_panel is not None:
+            self._devices_panel.refresh()
 
     def _open_project(self):
         if not self._confirm_discard_project():
@@ -949,6 +1041,8 @@ class StudioMainWindow(QMainWindow):
             self._cards_panel.refresh()
         if self._point_registry_panel is not None:
             self._point_registry_panel.refresh()
+        if self._devices_panel is not None:
+            self._devices_panel.refresh()
 
     def _save_project(self) -> bool:
         if self._project_path is None:
