@@ -1,5 +1,18 @@
 # SPECYFIKACJA FORMATU `.epw`
 
+> ## ⚠️ NIEAKTUALNE — zastąpione przez `SPEC_PROJEKT_EPW.md`
+> Ten dokument opisywał format wieloplikowy (archiwum ZIP z osobnymi
+> plikami `project/`, `io/`, `screens/`, `logic/`, ...). Task "EPW
+> Studio: format projektu" (2026-09) wprowadził nowy, obowiązujący
+> kontrakt: **jeden plik `projekt.epw`**, ekrany i logika w środku, nie
+> obok, z wersjonowaniem i połączeniem ze sterownikiem. Różnica jest
+> fundamentalna, nie kosmetyczna - nie traktuj niczego poniżej jako
+> aktualnego kontraktu. Właściwy dokument: `shared/docs/SPEC_PROJEKT_EPW.md`.
+> Ten plik zostaje wyłącznie jako historia decyzji (czemu ZIP, czemu
+> rozdzielenie konfiguracji od danych eksploatacyjnych - rozdział 5
+> poniżej wciąż obowiązuje merytorycznie, tylko nie jego struktura
+> wewnętrzna z rozdziału 3).
+
 **Wspólny format projektu platformy EPW**
 Wersja specyfikacji: 1.0 · 2026-09
 
