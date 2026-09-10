@@ -62,6 +62,7 @@ that being checked):
    the failure never leaves this widget's __init__.
 """
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -76,6 +77,39 @@ _SYNOPTIC_MAIN_PATH = SYNOPTIC_DIR / "main.py"
 _PAGE_LOADING = 0
 _PAGE_ERROR = 1
 _PAGE_VIEW = 2
+
+# Task "EPW Studio: jedna szata graficzna", 2.1 + 2.3 - applied on every
+# load, not just as a Stage 1 probe. Stage 1 (test_style_overlay.py)
+# proved both of these live-reflow cleanly with no reload:
+#   - retint Synoptic's own chrome to shared/docs/STUDIO_UI_STANDARD.md
+#     section 9's values, by overriding the --scada-*/--sys-* CSS custom
+#     properties ScadaTheme.ts already reads everything from. Domain
+#     colors (alarm/energized/water/...) are deliberately NOT in this
+#     list - the standard never touches those, and neither does this.
+#   - hide Synoptic's own File/Edit/View/Devices/Help bar: that role now
+#     belongs to Studio's own shared QMenuBar (see studio/shell/menus.py)
+#     which reaches these same actions via trigger_menu_item() below -
+#     showing both at once would be the "two menus" problem this whole
+#     task exists to remove.
+# No studio/synoptic/src/ change was needed for either - both are pure
+# runtime CSS/DOM effects on the page Synoptic already serves.
+_STUDIO_SKIN_JS = """
+(function(){
+    const root = document.documentElement;
+    root.style.setProperty('--scada-panel', '#D4D0C8');
+    root.style.setProperty('--scada-bevel-light', '#FFFFFF');
+    root.style.setProperty('--scada-bevel-dark', '#808080');
+    root.style.setProperty('--scada-outline', '#000000');
+    root.style.setProperty('--scada-value-field', '#FFFFFF');
+    root.style.setProperty('--scada-font-ui', 'Tahoma, "MS Sans Serif", sans-serif');
+    root.style.setProperty('--scada-font-size-small', '11px');
+    root.style.setProperty('--sys-highlight', '#000080');
+    root.style.setProperty('--sys-highlight-text', '#FFFFFF');
+    const bar = document.querySelector('.menu-bar');
+    if (bar) bar.style.display = 'none';
+    return 'ok';
+})();
+"""
 
 
 def _load_synoptic_launcher_module():
@@ -154,6 +188,7 @@ class SynopticPanel(QWidget):
     def _on_load_finished(self, ok: bool):
         if ok:
             self._pages.setCurrentIndex(_PAGE_VIEW)
+            self._view.page().runJavaScript(_STUDIO_SKIN_JS)
         else:
             self._show_error(tr("synoptic.load_failed"))
 
@@ -166,3 +201,58 @@ class SynopticPanel(QWidget):
         page().runJavaScript(...) calls a later shared-project-tree
         task will need (Stage 1 already proved this round-trip works)."""
         return self._view
+
+    def trigger_menu_item(self, text_fragment: str, exact: bool = False):
+        """Fires one of Synoptic's own menu actions from Studio's shared
+        menu (2.1) - Stage 1's test_menu_reachability.py proved a plain
+        DOM .click() on the right `.dropdown-item` fires the real React
+        onClick handler regardless of the item's CSS hover-visibility
+        (now permanently display:none via _STUDIO_SKIN_JS above, not
+        just hidden-on-hover). `exact` distinguishes e.g. "Save" from
+        "Save As..." - matching by bare substring would hit whichever
+        comes first in the DOM. Fire-and-forget: the caller (Studio's
+        menu/toolbar action) doesn't need the result, only Synoptic's
+        own on-screen effect."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        text_json = json.dumps(text_fragment)
+        cmp_expr = f"t.textContent.trim() === {text_json}" if exact else f"t.textContent.includes({text_json})"
+        js = (
+            "(function(){"
+            f"const t = Array.from(document.querySelectorAll('.dropdown-item')).find(t => {cmp_expr});"
+            "if (t) { t.click(); return true; } return false;"
+            "})();"
+        )
+        self._view.page().runJavaScript(js)
+
+    def query_state(self, callback):
+        """Reads the read-only state bridge added to studio/synoptic/
+        src/main.tsx (Blocker B of this task - approved for READ access
+        only): whether there's anything to undo/redo, unsaved changes,
+        and a selection. Used by Studio's shared toolbar (studio/shell/
+        main_window.py) to decide whether Save/Undo/Redo may actually do
+        anything right now - see this task's own "uściślenie 2.2": a
+        button that's always clickable but sometimes a no-op is exactly
+        what's being removed. `callback` receives a dict with keys
+        canUndo/canRedo/isDirty/hasSelection, or None if the page hasn't
+        loaded yet or (an old, un-rebuilt dist/) doesn't expose the
+        bridge at all - the caller must treat None as "unknown", not as
+        "everything false"."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            callback(None)
+            return
+        js = (
+            "typeof window.__synopticStudioState === 'function' "
+            "? JSON.stringify(window.__synopticStudioState()) : ''"
+        )
+
+        def _handle(result):
+            if not result:
+                callback(None)
+                return
+            try:
+                callback(json.loads(result))
+            except ValueError:
+                callback(None)
+
+        self._view.page().runJavaScript(js, _handle)

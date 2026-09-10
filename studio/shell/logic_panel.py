@@ -69,6 +69,26 @@ class LogicPanel(QWidget):
         # (tree-expand-state etc.) should carry over into the shell too.
         self._main_window = MainWindow()
 
+        # Task "EPW Studio: jedna szata graficzna" 2.1/2.2 - this
+        # embedded MainWindow's own menu bar and its New/Open/Save/Undo/
+        # Redo toolbar buttons are replaced by Studio's shared ones
+        # (studio/shell/menus.py, main_window.py's shared toolbar) -
+        # showing both would mean two menus and two Save buttons, which
+        # is the exact problem this task exists to remove. Only THIS
+        # embedded instance is affected: logic_studio/ui/main_window.py
+        # itself is untouched, so studio/logic/main.py's standalone
+        # MainWindow (its own, separate instance) still has its own full
+        # menu bar and toolbar exactly as before.
+        self._main_window.menuBar().setVisible(False)
+        for action in (
+            self._main_window.act_new,
+            self._main_window.act_open,
+            self._main_window.act_save,
+            self._main_window.act_undo,
+            self._main_window.act_redo,
+        ):
+            self._main_window.toolbar.removeAction(action)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._main_window)

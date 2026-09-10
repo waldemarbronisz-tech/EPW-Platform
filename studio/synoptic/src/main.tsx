@@ -42,6 +42,41 @@ useStore.subscribe((state, prevState) => {
   if (state.isDirty !== prevState.isDirty) pushDirtyToNativeHost(state.isDirty);
 });
 
+// Read-only state bridge for the EPW Studio shell ("EPW Studio: jedna
+// szata graficzna", Stage 2, Blocker B - approved for READ access only,
+// nothing settable, no command dispatch added here). The shell's shared
+// Undo/Redo/Save toolbar buttons reach Synoptic's own actions by
+// clicking this page's (now shell-hidden) menu items directly - see
+// studio/shell/synoptic_panel.py - but a button that's always clickable
+// regardless of whether there's actually anything to undo/redo/save is
+// exactly the "lying button" uściślenie 2.2 exists to rule out. The
+// shell polls window.__synopticStudioState() before deciding whether to
+// enable those three buttons. Every field is read fresh off the live
+// store on each call - nothing cached, and there is no companion setter.
+type SynopticStudioState = {
+  canUndo: boolean;
+  canRedo: boolean;
+  isDirty: boolean;
+  hasSelection: boolean;
+};
+type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
+(window as unknown as StudioStateBridge).__synopticStudioState = (): SynopticStudioState => {
+  const s = useStore.getState();
+  return {
+    canUndo: s.historyIndex > 0,
+    canRedo: s.historyIndex < s.history.length - 1,
+    isDirty: s.isDirty,
+    hasSelection:
+      s.selectedIds.length > 0 ||
+      s.selectedConnectionIds.length > 0 ||
+      s.selectedMeterIds.length > 0 ||
+      s.selectedSignalPanelIds.length > 0 ||
+      s.selectedFrameIds.length > 0 ||
+      s.selectedGroupCommandIds.length > 0 ||
+      s.selectedSetpointPanelIds.length > 0,
+  };
+};
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
