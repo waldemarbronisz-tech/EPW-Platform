@@ -334,6 +334,25 @@ def icon_snap(img):
     _circle(img, 9, 9, 2, RED)
 
 
+def icon_add_row(img):
+    # Task "edytor DI/DO/AI" - a green plus, for adding a row (card,
+    # location...) to one of the new table panels.
+    rect(img, 1, 1, 14, 14, WHITE)
+    outline_rect(img, 1, 1, 14, 14, GREY_DARK)
+    rect(img, 6, 3, 9, 12, GREEN)
+    rect(img, 3, 6, 12, 9, GREEN)
+
+
+def icon_remove_row(img):
+    # Same frame as icon_add_row, red minus - the deliberate visual
+    # pair (add/remove), not reusing "delete"'s big red X so the two
+    # concepts (delete a selected OBJECT vs. remove a TABLE ROW) stay
+    # visually distinct in a panel where both might appear.
+    rect(img, 1, 1, 14, 14, WHITE)
+    outline_rect(img, 1, 1, 14, 14, GREY_DARK)
+    rect(img, 3, 6, 12, 9, RED)
+
+
 # ----------------------------------------------------------------------
 # Synoptic tools (7 explicitly described)
 # ----------------------------------------------------------------------

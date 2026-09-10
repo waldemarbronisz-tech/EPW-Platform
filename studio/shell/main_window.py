@@ -25,32 +25,50 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
      happens to implement which part - EKRANY/LOGIKA become two leaves
      among many, most still unbuilt and shown, honestly, as such.
 """
+from pathlib import Path
+
 from PySide6.QtCore import Qt, QSettings, QSize, QTimer
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
-    QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
+    QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
     QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
     QVBoxLayout,
 )
 
+from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
-from studio.shell.menus import build_fixed_menu, build_logic_context_toolbar, build_synoptic_context_toolbar
+from studio.shell.menus import (
+    build_cards_toolbar, build_fixed_menu, build_logic_context_toolbar,
+    build_point_registry_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
+)
+from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
 
 _TREE_ITEM_SCREENS = "screens"
 _TREE_ITEM_LOGIC = "logic"
+# Task "edytor DI/DO/AI" - SPEC_PROJEKT_EPW.md's own "Kolejność
+# wdrożenia" step 2 ("Rejestr punktów w Studio — karty rodzą punkty,
+# opisy"), built on step 1 (project_format.py). Promoted out of
+# _INACTIVE_CONFIG_CHILDREN below, same "active" leaf pattern as
+# Screens/Logic above - real panels, not another placeholder sentence.
+_TREE_ITEM_INFO = "info"
+_TREE_ITEM_IO_CARDS = "io_cards"
+_TREE_ITEM_POINT_REGISTRY = "point_registry"
 
-# The 10 project-structure branches shared/docs/SPEC_FORMAT_EPW.md
+# The remaining project-structure branches shared/docs/SPEC_FORMAT_EPW.md
 # describes but nothing in this platform builds yet (task 1.4) - each
-# tuple is (key, tree label tr() key). GRANICE for this task: build
-# NONE of these as real panels - a click shows one explanatory sentence
+# tuple is (key, tree label tr() key). GRANICE for THESE: still build
+# NONE as real panels - a click shows one explanatory sentence
 # (placeholder.<key> in locales/*.json), never an empty or fake form.
-_INACTIVE_INFO = ("info", "tree.info")
+# "locations" stays here deliberately even though CardsPanel now edits
+# Locations too (SPEC_PROJEKT_EPW.md groups cards+locations under one
+# "Sprzęt" heading) - this tree's OWN branch list still comes from the
+# older, now-superseded SPEC_FORMAT_EPW.md, and reconciling the tree's
+# own granularity with the newer spec is a separate task, not implied
+# by "let me name DI/DO/AI points". Flagged, not silently restructured.
 _INACTIVE_CONFIG_CHILDREN = [
     ("devices", "tree.devices"),
-    ("io_cards", "tree.io_cards"),
     ("locations", "tree.locations"),
-    ("point_registry", "tree.point_registry"),
     ("apparatus_registry", "tree.apparatus_registry"),
 ]
 _INACTIVE_ALARM_CHILDREN = [
@@ -63,6 +81,9 @@ _INACTIVE_CONTROLLER_CHILDREN = [("controller_connection", "tree.controller_conn
 _BREADCRUMB_KEYS = {
     _TREE_ITEM_SCREENS: "breadcrumb.screens",
     _TREE_ITEM_LOGIC: "breadcrumb.logic",
+    _TREE_ITEM_INFO: "breadcrumb.info",
+    _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
+    _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -262,12 +283,28 @@ class StudioMainWindow(QMainWindow):
 
         self._synoptic_panel = None
         self._logic_panel = None
-        self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC
+        self._project_info_panel = None
+        self._cards_panel = None
+        self._point_registry_panel = None
+        self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
 
+        # Task "edytor DI/DO/AI" - SPEC_PROJEKT_EPW.md step 1
+        # (project_format.py) finally has somewhere to live: a real,
+        # in-memory Project, present from the moment the window opens
+        # (an unsaved new project IS unsaved work - new_project()'s own
+        # docstring). This is intentionally SEPARATE from the fixed
+        # toolbar's Nowy/Otwórz/Zapisz (still "the active aspect's own
+        # document", unchanged) - see project_panels.py's module
+        # docstring for why redefining those would have been a silent
+        # regression, not a fix.
+        self._project = new_project(tr("project_info.default_name"))
+        self._project_path = None
+
         self._build_ui()
         self._restore_splitter_state()
+        self._on_project_changed()
 
         menubar = QMenuBar(self)
         self.setMenuBar(menubar)
@@ -359,6 +396,15 @@ class StudioMainWindow(QMainWindow):
         # from the two ACTIVE branches' own icons above, so an active
         # and an inactive branch are never one accidental click apart.
         icon_inactive = _dimmed_icon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        # The three newly-active leaves reuse icons from Studio's own
+        # Win98-manner set (task "zestaw ikon Studio") rather than a
+        # fourth standardIcon() - "about" (info circle) reads plainly as
+        # "project info", "device_list"/"project_registers" already
+        # exist for exactly "a list of hardware" / "a table of
+        # registers", no new icon needed.
+        icon_info = icons.icon("about")
+        icon_io_cards = icons.icon("device_list")
+        icon_point_registry = icons.icon("project_registers")
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -381,6 +427,14 @@ class StudioMainWindow(QMainWindow):
             parent_item.addChild(item)
             self._tree_label_refs.append((item, label_key))
 
+        def add_active_leaf(parent_item, key, label_key, icon):
+            item = QTreeWidgetItem([tr(label_key)])
+            item.setIcon(0, icon)
+            item.setData(0, Qt.ItemDataRole.UserRole, ("active", key))
+            parent_item.addChild(item)
+            self._tree_label_refs.append((item, label_key))
+            return item
+
         root = QTreeWidgetItem([tr("tree.root")])
         root.setFlags(root.flags() & ~Qt.ItemFlag.ItemIsSelectable)
         f = root.font(0)
@@ -389,9 +443,13 @@ class StudioMainWindow(QMainWindow):
         tree.addTopLevelItem(root)
         self._tree_label_refs.append((root, "tree.root"))
 
-        add_inactive_leaf(root, *_INACTIVE_INFO)
+        self._item_info = add_active_leaf(root, _TREE_ITEM_INFO, "tree.info", icon_info)
 
         config = add_group(root, "tree.group_config")
+        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
+        self._item_point_registry = add_active_leaf(
+            config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
+        )
         for key, label_key in _INACTIVE_CONFIG_CHILDREN:
             add_inactive_leaf(config, key, label_key)
 
@@ -451,7 +509,6 @@ class StudioMainWindow(QMainWindow):
         # below, so the fixed bar and the contextual one finally draw
         # from the same hand instead of two different styles meeting at
         # the same window.
-        from studio.shell import icons
 
         def _make(text_key, icon_name: str, handler):
             action = tb.addAction(icons.icon(icon_name), tr(text_key))
@@ -720,7 +777,7 @@ class StudioMainWindow(QMainWindow):
         self.setMenuBar(menubar)
         build_fixed_menu(menubar, self)
 
-        self._status_project.setText(tr("statusbar.no_project"))
+        self._on_project_changed()
         current_item = self.tree.currentItem()
         if current_item is None:
             self._status_editor.setText(tr("statusbar.no_editor"))
@@ -749,6 +806,12 @@ class StudioMainWindow(QMainWindow):
                 self._open_screens()
             elif key == _TREE_ITEM_LOGIC:
                 self._open_logic()
+            elif key == _TREE_ITEM_INFO:
+                self._open_info()
+            elif key == _TREE_ITEM_IO_CARDS:
+                self._open_io_cards()
+            elif key == _TREE_ITEM_POINT_REGISTRY:
+                self._open_point_registry()
         elif kind == "inactive":
             self._open_inactive(key)
 
@@ -775,6 +838,147 @@ class StudioMainWindow(QMainWindow):
         self._active = _TREE_ITEM_LOGIC
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
+
+    def _open_info(self):
+        if self._project_info_panel is None:
+            from studio.shell.project_panels import ProjectInfoPanel
+            self._project_info_panel = ProjectInfoPanel(self)
+        else:
+            self._project_info_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_INFO, self._project_info_panel, build_project_info_toolbar, self._project_info_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_INFO
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_io_cards(self):
+        if self._cards_panel is None:
+            from studio.shell.project_panels import CardsPanel
+            self._cards_panel = CardsPanel(self)
+        else:
+            self._cards_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_IO_CARDS, self._cards_panel, build_cards_toolbar, self._cards_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_IO_CARDS
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_point_registry(self):
+        if self._point_registry_panel is None:
+            from studio.shell.project_panels import PointRegistryPanel
+            self._point_registry_panel = PointRegistryPanel(self)
+        else:
+            self._point_registry_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_POINT_REGISTRY, self._point_registry_panel, build_point_registry_toolbar,
+            self._point_registry_panel,
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_POINT_REGISTRY
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    # ------------------------------------------------------------------
+    # Project lifecycle (Informacje o projekcie's own toolbar) - separate
+    # from _shared_new/_shared_open/etc above, see project_panels.py's
+    # module docstring for why.
+    # ------------------------------------------------------------------
+
+    def _on_project_changed(self):
+        """Called by project_panels.py after every edit (card added,
+        point named, metadata changed, ...) - the one place that keeps
+        the status bar and the info panel's own read-outs (path,
+        revision) honest. Does NOT refresh the Cards/Point Registry
+        panels themselves on every keystroke - each _open_* above
+        already refreshes on entry, which is the only time stale data
+        would actually be visible."""
+        name = self._project.metadata.name or tr("project_info.default_name")
+        marker = "*" if self._project.is_dirty else ""
+        self._status_project.setText(f"{name}{marker}")
+        if self._project_info_panel is not None:
+            self._project_info_panel.refresh()
+
+    def _confirm_discard_project(self) -> bool:
+        """True = caller may proceed (nothing unsaved, or the user chose
+        Save/Discard). False = Cancel, caller must stop."""
+        if not self._project.is_dirty:
+            return True
+        reply = QMessageBox.question(
+            self, tr("project_info.unsaved_title"), tr("project_info.unsaved_text"),
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+        )
+        if reply == QMessageBox.StandardButton.Save:
+            return self._save_project()
+        return reply == QMessageBox.StandardButton.Discard
+
+    def _new_project(self):
+        if not self._confirm_discard_project():
+            return
+        self._project = new_project(tr("project_info.default_name"))
+        self._project_path = None
+        self._on_project_changed()
+        if self._cards_panel is not None:
+            self._cards_panel.refresh()
+        if self._point_registry_panel is not None:
+            self._point_registry_panel.refresh()
+
+    def _open_project(self):
+        if not self._confirm_discard_project():
+            return
+        path, _filter = QFileDialog.getOpenFileName(
+            self, tr("project_info.open_dialog_title"),
+            self.settings.value("project/last_dir", ""), "EPW Project (*.epw)",
+        )
+        if not path:
+            return
+        try:
+            project = load_project(path)
+        except (ProjectFormatError, OSError) as exc:
+            QMessageBox.critical(self, tr("project_info.open_failed_title"), str(exc))
+            return
+        self._project = project
+        self._project_path = path
+        self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._on_project_changed()
+        if self._cards_panel is not None:
+            self._cards_panel.refresh()
+        if self._point_registry_panel is not None:
+            self._point_registry_panel.refresh()
+
+    def _save_project(self) -> bool:
+        if self._project_path is None:
+            return self._save_project_as()
+        try:
+            save_project(self._project, self._project_path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("project_info.save_failed_title"), str(exc))
+            return False
+        self._on_project_changed()
+        return True
+
+    def _save_project_as(self) -> bool:
+        path, _filter = QFileDialog.getSaveFileName(
+            self, tr("project_info.save_dialog_title"),
+            self.settings.value("project/last_dir", ""), "EPW Project (*.epw)",
+        )
+        if not path:
+            return False
+        if not path.lower().endswith(".epw"):
+            path += ".epw"
+        try:
+            save_project(self._project, path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("project_info.save_failed_title"), str(exc))
+            return False
+        self._project_path = path
+        self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._on_project_changed()
+        return True
 
     def _show_aspect_container(self, key, editor_widget, toolbar_builder, panel_for_builder):
         """Wraps `editor_widget` in a fresh _AspectContainer (breadcrumb
@@ -817,6 +1021,12 @@ class StudioMainWindow(QMainWindow):
             self.splitter.setSizes([230, 1170])
 
     def closeEvent(self, event):
+        # Task "edytor DI/DO/AI" - the Project is real/mutable for the
+        # first time; closing without asking would silently discard
+        # named points same as any other editor's unsaved-work loss.
+        if not self._confirm_discard_project():
+            event.ignore()
+            return
         self.settings.setValue("shell/splitter_state", self.splitter.saveState())
         super().closeEvent(event)
 

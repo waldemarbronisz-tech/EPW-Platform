@@ -44,11 +44,8 @@
     "controller_connection": "Projekt → Sterownik → Połączenie i podgląd"
   },
   "placeholder": {
-    "info": "Nazwa, opis, lokalizacja, autor i daty projektu (project/metadata.json) — jeszcze nie zbudowane.",
     "devices": "Lista urządzeń polowych ELA/ADA/EPM wchodzących w skład instalacji (project/devices.json) — jeszcze nie zbudowane.",
-    "io_cards": "Opisy i konfiguracja fizycznych kart wejść/wyjść (io/digital_inputs.json, digital_outputs.json, analog_points.json) — jeszcze nie zbudowane.",
-    "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — jeszcze nie zbudowane.",
-    "point_registry": "Rejestr wszystkich punktów procesowych (cyfrowych i analogowych) w jednym miejscu, ze skalowaniem (io/analog_points.json) — jeszcze nie zbudowane.",
+    "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — edytowana dziś razem z Kartami wejść/wyjść (jedna sekcja \"Sprzęt\" w SPEC_PROJEKT_EPW.md); ta osobna gałąź jeszcze nie zbudowana.",
     "apparatus_registry": "Lista aparatów łączeniowych (styczniki, wyłączniki) niezależna od schematu synoptycznego (project/apparatus.json) — jeszcze nie zbudowane.",
     "security_zones": "Podział systemu alarmowego na strefy (security/zones.json) — jeszcze nie zbudowane.",
     "security_lines": "Linie dozorowe systemu alarmowego (security/lines.json) — jeszcze nie zbudowane.",
@@ -192,5 +189,55 @@
   },
   "about": {
     "studio_text": "EPW Studio\n\nWspólna powłoka projektowa platformy EPW — Schemat synoptyczny (Synoptic Editor) i Logika (Logic Studio) w jednym oknie, jednej szacie graficznej."
+  },
+  "project_info": {
+    "default_name": "Nowy projekt",
+    "path": "Plik:",
+    "path_unsaved": "(niezapisany)",
+    "name": "Nazwa:",
+    "author": "Autor:",
+    "description": "Opis:",
+    "revision": "Wersja:",
+    "new": "Nowy projekt",
+    "open": "Otwórz projekt...",
+    "save": "Zapisz projekt",
+    "save_as": "Zapisz projekt jako...",
+    "unsaved_title": "Niezapisane zmiany",
+    "unsaved_text": "Projekt ma niezapisane zmiany. Zapisać przed kontynuowaniem?",
+    "open_dialog_title": "Otwórz projekt",
+    "open_failed_title": "Nie udało się otworzyć projektu",
+    "save_dialog_title": "Zapisz projekt",
+    "save_failed_title": "Nie udało się zapisać projektu"
+  },
+  "cards": {
+    "cards_heading": "Karty",
+    "locations_heading": "Lokalizacje",
+    "col_id": "Id",
+    "col_model": "Model",
+    "col_kind": "Rodzaj",
+    "col_channels": "Kanały",
+    "col_code": "Kod",
+    "col_description": "Opis",
+    "add_card": "Dodaj kartę",
+    "remove_card": "Usuń kartę",
+    "add_location": "Dodaj lokalizację",
+    "remove_location": "Usuń lokalizację",
+    "confirm_remove_card_title": "Usunąć kartę?",
+    "confirm_remove_card_text": "Karta {id} zostanie usunięta razem ze wszystkimi jej punktami (opisy, notatki) — tej operacji nie da się cofnąć."
+  },
+  "points": {
+    "filter_card": "Karta:",
+    "filter_all": "Wszystkie karty",
+    "col_address": "Adres",
+    "col_description": "Opis",
+    "col_location": "Lokalizacja",
+    "col_technical_note": "Notatka techniczna",
+    "col_signal_type": "Typ sygnału",
+    "col_raw_min": "Raw min",
+    "col_raw_max": "Raw max",
+    "col_eng_min": "Eng min",
+    "col_eng_max": "Eng max",
+    "col_unit": "Jednostka",
+    "col_decimals": "Miejsca dziesiętne"
   }
 }

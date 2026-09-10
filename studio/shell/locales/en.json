@@ -44,11 +44,8 @@
     "controller_connection": "Project → Controller → Connection and Live View"
   },
   "placeholder": {
-    "info": "The project's name, description, site, author and dates (project/metadata.json) - not built yet.",
     "devices": "The list of field devices (ELA/ADA/EPM) that make up the installation (project/devices.json) - not built yet.",
-    "io_cards": "Descriptions and configuration of the physical I/O cards (io/digital_inputs.json, digital_outputs.json, analog_points.json) - not built yet.",
-    "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - not built yet.",
-    "point_registry": "A single registry of every process point (digital and analog), with scaling (io/analog_points.json) - not built yet.",
+    "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - edited today together with I/O Cards (one \"Sprzęt\" section in SPEC_PROJEKT_EPW.md); this separate branch not built yet.",
     "apparatus_registry": "The list of switching apparatus (contactors, breakers), independent of the synoptic diagram (project/apparatus.json) - not built yet.",
     "security_zones": "The intrusion alarm system's own zone breakdown (security/zones.json) - not built yet.",
     "security_lines": "The intrusion alarm system's supervised lines (security/lines.json) - not built yet.",
@@ -192,5 +189,55 @@
   },
   "about": {
     "studio_text": "EPW Studio\n\nThe EPW platform's shared design shell - the Synoptic Diagram (Synoptic Editor) and Logic (Logic Studio) in one window, one skin."
+  },
+  "project_info": {
+    "default_name": "New project",
+    "path": "File:",
+    "path_unsaved": "(unsaved)",
+    "name": "Name:",
+    "author": "Author:",
+    "description": "Description:",
+    "revision": "Revision:",
+    "new": "New Project",
+    "open": "Open Project...",
+    "save": "Save Project",
+    "save_as": "Save Project As...",
+    "unsaved_title": "Unsaved Changes",
+    "unsaved_text": "The project has unsaved changes. Save before continuing?",
+    "open_dialog_title": "Open Project",
+    "open_failed_title": "Could Not Open Project",
+    "save_dialog_title": "Save Project",
+    "save_failed_title": "Could Not Save Project"
+  },
+  "cards": {
+    "cards_heading": "Cards",
+    "locations_heading": "Locations",
+    "col_id": "Id",
+    "col_model": "Model",
+    "col_kind": "Kind",
+    "col_channels": "Channels",
+    "col_code": "Code",
+    "col_description": "Description",
+    "add_card": "Add Card",
+    "remove_card": "Remove Card",
+    "add_location": "Add Location",
+    "remove_location": "Remove Location",
+    "confirm_remove_card_title": "Remove Card?",
+    "confirm_remove_card_text": "Card {id} will be removed together with all of its points (descriptions, notes) - this cannot be undone."
+  },
+  "points": {
+    "filter_card": "Card:",
+    "filter_all": "All Cards",
+    "col_address": "Address",
+    "col_description": "Description",
+    "col_location": "Location",
+    "col_technical_note": "Technical Note",
+    "col_signal_type": "Signal Type",
+    "col_raw_min": "Raw Min",
+    "col_raw_max": "Raw Max",
+    "col_eng_min": "Eng Min",
+    "col_eng_max": "Eng Max",
+    "col_unit": "Unit",
+    "col_decimals": "Decimals"
   }
 }

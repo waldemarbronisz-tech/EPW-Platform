@@ -314,6 +314,52 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background, icon_name="background_color")
 
 
+# ----------------------------------------------------------------------
+# Task "edytor DI/DO/AI" - the three new project panels' own contextual
+# toolbars. Deliberately NOT built on _build_core_group() - Copy/Paste/
+# Cut/Zoom/Grid/Snap describe drawing-canvas editing, not a data table;
+# forcing that shape onto a table editor would be a facade (buttons that
+# do nothing here), not consistency.
+# ----------------------------------------------------------------------
+
+def build_project_info_toolbar(toolbar, _panel, studio_window):
+    """Project lifecycle (Nowy/Otwórz/Zapisz/Zapisz jako projekt) lives
+    HERE, on the "Informacje o projekcie" branch's own toolbar - not on
+    the fixed top toolbar, which already means "the active aspect's own
+    document" (Logic diagram / Synoptic screen). Redefining THAT would
+    silently make Logic/Synoptic's own save unreachable from Studio's
+    chrome - two lifecycles, two places, both real, see
+    project_panels.py's own module docstring for the full reasoning."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("project_info.new"), studio_window._new_project, icon_name="new")
+    _add(toolbar, tr("project_info.open"), studio_window._open_project, icon_name="open")
+    _add(toolbar, tr("project_info.save"), studio_window._save_project, icon_name="save")
+    _add(toolbar, tr("project_info.save_as"), studio_window._save_project_as, icon_name="save_as")
+
+
+def build_cards_toolbar(toolbar, panel, _studio_window):
+    """Dodaj/Usuń kartę, Dodaj/Usuń lokalizację - table-row actions, not
+    document actions, hence the new add_row/remove_row icons instead of
+    reusing Copy/Paste/Delete's own (those mean something else: acting
+    on a drawing-canvas SELECTION, not a table row)."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("cards.add_card"), panel.add_card, icon_name="add_row")
+    _add(toolbar, tr("cards.remove_card"), panel.remove_selected_card, icon_name="remove_row")
+    toolbar.addSeparator()
+    _add(toolbar, tr("cards.add_location"), panel.add_location, icon_name="add_row")
+    _add(toolbar, tr("cards.remove_location"), panel.remove_selected_location, icon_name="remove_row")
+
+
+def build_point_registry_toolbar(toolbar, _panel, _studio_window):
+    """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
+    "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's
+    only entry points are a card being added/resized (CardsPanel) or
+    removed. The panel's own card filter combo lives in the widget
+    itself, not the toolbar - nothing to build here beyond the
+    breadcrumb _AspectContainer already adds."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
 def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     """The contextual zone's tools while EKRANY/Schemat synoptyczny is
     the active aspect: the shared core first, then everything
