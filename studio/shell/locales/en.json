@@ -6,13 +6,54 @@
   "app": {
     "title": "EPW Studio"
   },
-  "tree": {
-    "screens": "SCREENS",
-    "logic": "LOGIC"
-  },
   "editor": {
     "synoptic_name": "Screens (Synoptic Editor)",
     "logic_name": "Logic (Logic Studio)"
+  },
+  "tree": {
+    "root": "PROJECT",
+    "group_config": "CONFIGURATION",
+    "group_alarm": "INTRUSION ALARM",
+    "group_protection": "PROTECTION",
+    "group_controller": "CONTROLLER",
+    "info": "Project Information",
+    "devices": "Device Composition",
+    "io_cards": "I/O Cards",
+    "locations": "Locations",
+    "point_registry": "Point Registry",
+    "apparatus_registry": "Apparatus Registry",
+    "screens": "Synoptic Diagram",
+    "logic": "Logic",
+    "security_zones": "Zones",
+    "security_lines": "Supervised Lines",
+    "protection_settings": "Setpoints",
+    "controller_connection": "Connection and Live View"
+  },
+  "breadcrumb": {
+    "screens": "Project → Configuration → Synoptic Diagram",
+    "logic": "Project → Configuration → Logic",
+    "info": "Project → Project Information",
+    "devices": "Project → Configuration → Device Composition",
+    "io_cards": "Project → Configuration → I/O Cards",
+    "locations": "Project → Configuration → Locations",
+    "point_registry": "Project → Configuration → Point Registry",
+    "apparatus_registry": "Project → Configuration → Apparatus Registry",
+    "security_zones": "Project → Intrusion Alarm → Zones",
+    "security_lines": "Project → Intrusion Alarm → Supervised Lines",
+    "protection_settings": "Project → Protection → Setpoints",
+    "controller_connection": "Project → Controller → Connection and Live View"
+  },
+  "placeholder": {
+    "info": "The project's name, description, site, author and dates (project/metadata.json) - not built yet.",
+    "devices": "The list of field devices (ELA/ADA/EPM) that make up the installation (project/devices.json) - not built yet.",
+    "io_cards": "Descriptions and configuration of the physical I/O cards (io/digital_inputs.json, digital_outputs.json, analog_points.json) - not built yet.",
+    "locations": "The list of installation locations (buildings, floors, rooms) that devices and screens refer to - not built yet.",
+    "point_registry": "A single registry of every process point (digital and analog), with scaling (io/analog_points.json) - not built yet.",
+    "apparatus_registry": "The list of switching apparatus (contactors, breakers), independent of the synoptic diagram (project/apparatus.json) - not built yet.",
+    "security_zones": "The intrusion alarm system's own zone breakdown (security/zones.json) - not built yet.",
+    "security_lines": "The intrusion alarm system's supervised lines (security/lines.json) - not built yet.",
+    "protection_settings": "Electrical and process protection setpoints (protection/electrical.json, process.json) - not built yet.",
+    "controller_connection": "A live connection to a real EPW-OS controller and a view of its current state - not built yet."
   },
   "statusbar": {
     "no_project": "No project open",
@@ -27,13 +68,14 @@
   "menu": {
     "titles": {
       "file": "File",
-      "edit": "Edit",
       "view": "View",
+      "settings": "Settings",
+      "help": "Help",
+      "edit": "Edit",
       "project": "Project",
       "logic": "Logic",
       "simulation": "Simulation",
-      "devices": "Devices",
-      "help": "Help"
+      "devices": "Devices"
     },
     "file": {
       "new": "New",
@@ -91,15 +133,26 @@
       "catalog": "Block Catalog",
       "shortcuts": "Keyboard Shortcuts",
       "export_catalog": "Export Block Catalog...",
-      "about": "About"
+      "about": "About",
+      "about_studio": "About EPW Studio"
     },
-    "neutral_hint": "Select Screens or Logic in the tree"
+    "settings": {
+      "language": "Language",
+      "language_pl": "Polish",
+      "language_en": "English"
+    },
+    "neutral_hint": "Select an item in the project tree"
   },
   "toolbar": {
     "new": "New",
     "open": "Open",
     "save": "Save",
+    "save_as": "Save As",
     "undo": "Undo",
-    "redo": "Redo"
+    "redo": "Redo",
+    "help": "Help"
+  },
+  "about": {
+    "studio_text": "EPW Studio\n\nThe EPW platform's shared design shell - the Synoptic Diagram (Synoptic Editor) and Logic (Logic Studio) in one window, one skin."
   }
 }

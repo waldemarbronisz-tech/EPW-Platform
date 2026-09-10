@@ -1,56 +1,56 @@
-"""Studio's own shared QMenuBar content.
+"""Studio's menu/toolbar content.
 
-Task "EPW Studio: jedna szata graficzna" 2.1: Logic Studio's 36 menu
-actions and Synoptic's 16 dropdown items are re-authored HERE as new,
-translated QAction objects (every label goes through tr(), keys added
-to studio/shell/locales/*.json) - not lifted wholesale from either
-editor's own menu bar (both of which are now hidden, see
-logic_panel.py's menuBar().setVisible(False) and synoptic_panel.py's
-_STUDIO_SKIN_JS). Per the user's own decision resolving Blocker A: the
-mixed English/Polish text INSIDE each editor (Object Library, panel
-labels, etc.) is untouched and out of scope for this task - only the
-menu/toolbar chrome that used to belong to each editor's own window
-becomes Studio's, in one language.
+Task "EPW Studio: przebudowa nawigacji wg wzorca e²TANGO" replaces
+Stage 2's per-context QMenuBar (one whole menu bar rebuilt on every
+tree click) with the e²TANGO pattern this task's diagnosis names
+directly: Studio was structurally two application MODES wearing one
+skin, which is why the chrome kept jumping. Now:
 
-Behavior is never reimplemented, only re-labelled and re-routed - this
-is uściślenie 2.2's hard rule (Studio must never grow a second undo
-history or a second dirty flag):
-  - a Logic Studio menu item triggers the SAME QAction its own
-    MainWindow already built (mw.act_undo.trigger(), etc.) - its own
-    undo stack / is_dirty / clipboard state keeps being the single
-    source of truth.
-  - a Synoptic menu item clicks the SAME DOM node its own MenuBar.tsx
-    already renders (SynopticPanel.trigger_menu_item() - Stage 1 proved
-    this fires the real onClick handler regardless of the item's
-    now-permanent display:none).
+  - build_fixed_menu() builds the APP-level menu (Plik/Widok/
+    Ustawienia/Pomoc) exactly ONCE, in main_window.py's __init__ - it
+    is never rebuilt, never grows or shrinks a menu when the active
+    aspect changes. Only individual items' enabled/checked state
+    changes (main_window.py's _refresh_fixed_menu_state()), the same
+    way Cofnij/Ponów already behaved in Stage 2.
+  - build_logic_context_toolbar()/build_synoptic_context_toolbar()
+    build each aspect's OWN tools - Stage 2's build_logic_menu/
+    build_synoptic_menu content, mostly unchanged, just re-targeted at
+    a QToolBar living in the CONTEXTUAL zone (1.3) instead of the top
+    QMenuBar. QToolBar and QMenu share the same addAction()/
+    addSeparator() surface, so _mirror()/_add() below don't care which
+    one they're given.
 
-Every QAction built here is parented to the QMenu it lives in (never to
-the long-lived StudioMainWindow) on purpose: main_window.py's
-_rebuild_menu() throws the whole QMenuBar away and builds a fresh one
-every time the active editor changes (Qt's own setMenuBar() deletes the
-previous bar), so everything built here needs to die with it - both to
-avoid an unbounded pile of stale QActions across repeated tree clicks,
-and because a stale one left listening to a source_action.changed
-signal would otherwise keep "mirroring" state forever for a menu item
-nobody can even see any more.
+Behavior is still never reimplemented, only re-labelled and re-routed -
+uściślenie 2.2's hard rule from Stage 2 still holds (never merge the
+two editors' own undo/dirty mechanisms):
+  - a Logic Studio action triggers the SAME QAction its own (hidden)
+    MainWindow already built.
+  - a Synoptic action clicks the SAME DOM node its own (hidden)
+    MenuBar.tsx already renders (SynopticPanel.trigger_menu_item()).
 """
-from PySide6.QtGui import QAction, QCursor
+from PySide6.QtGui import QAction, QActionGroup, QCursor
 from PySide6.QtWidgets import QMenuBar
 
-from studio.shell.i18n import tr
+from studio.shell.i18n import get_language, tr
 
 
-def _mirror(menu, label, source_action, shortcut=None):
-    """New QAction, parented to and added into `menu`, that LOOKS like a
-    fresh, translated menu item but DOES exactly what `source_action` (a
-    real QAction already living on Logic Studio's own, now-hidden,
+def _mirror(container, label, source_action, shortcut=None):
+    """New QAction, parented to and added into `container` (a QMenu or
+    a QToolBar - both share addAction()), that LOOKS like a fresh,
+    translated item but DOES exactly what `source_action` (a real
+    QAction already living on Logic Studio's own, now-hidden,
     MainWindow) does - clicking ours calls source_action.trigger(), so
     the real handler runs exactly once, on the real object. Enabled/
     checked state is mirrored live via QAction.changed (Logic Studio's
     own code already keeps source_action's enabled/checked correct -
-    e.g. _update_clipboard_actions() - this just listens, it never
-    decides that state itself)."""
-    action = QAction(label, menu)
+    this just listens, it never decides that state itself).
+
+    Parented to `container` on purpose: main_window.py throws away and
+    rebuilds each aspect's contextual toolbar on every tree click (the
+    same reasoning Stage 2's own menus.py docstring already spelled
+    out for the old per-context QMenuBar - everything built here needs
+    to die with its container, not pile up across repeated clicks)."""
+    action = QAction(label, container)
     icon = source_action.icon()
     if not icon.isNull():
         action.setIcon(icon)
@@ -68,7 +68,7 @@ def _mirror(menu, label, source_action, shortcut=None):
 
     source_action.changed.connect(_sync)
     action.triggered.connect(source_action.trigger)
-    menu.addAction(action)
+    container.addAction(action)
     return action
 
 
@@ -78,141 +78,139 @@ def _clicker(panel, text, exact=False):
     return lambda: panel.trigger_menu_item(text, exact=exact)
 
 
-def _add(menu, label, handler):
-    action = QAction(label, menu)
+def _add(container, label, handler):
+    action = QAction(label, container)
     action.triggered.connect(handler)
-    menu.addAction(action)
+    container.addAction(action)
     return action
 
 
 def _add_exit(studio_window, file_menu):
     """One real Studio-level Exit, shared by both contexts - NOT a
-    mirror of either editor's own act_exit/"Exit" item. Those close (or
-    would try to close) just the editor's own top-level window, which
-    doesn't exist here - MainWindow/App are embedded child widgets, not
-    windows, so calling their own exit would either do nothing
-    meaningful or silently misbehave. Closing the actual Studio
-    QMainWindow is the only "Exit" that means what it says here."""
+    mirror of either editor's own act_exit/"Exit" item (see Stage 2's
+    own reasoning: MainWindow/App are embedded child widgets here, not
+    windows, so their own exit would do nothing meaningful)."""
     exit_action = QAction(tr("menu.file.exit"), file_menu)
     exit_action.triggered.connect(studio_window.close)
     file_menu.addAction(exit_action)
 
 
-def build_neutral_menu(menubar: QMenuBar, studio_window):
-    """Shown when neither EKRANY/SCREENS nor LOGIKA/LOGIC is selected
-    yet (Studio's own empty-placeholder state) - kept genuinely minimal
-    rather than padded with disabled stand-ins for editor actions that
-    don't apply to anything right now (zero fasad)."""
+def build_fixed_menu(menubar: QMenuBar, studio_window):
+    """The APP-level menu - Plik/Widok/Ustawienia/Pomoc, built exactly
+    once. Every action here routes to whichever aspect is currently
+    active via studio_window's own methods (same dispatch pattern as
+    its shared toolbar); studio_window keeps the QAction references
+    (act_menu_*/act_view_*) so it can update enabled/checked state
+    without ever touching this menu's STRUCTURE again."""
     file_menu = menubar.addMenu(tr("menu.titles.file"))
+    studio_window.act_menu_new = _add(file_menu, tr("menu.file.new"), studio_window._shared_new)
+    studio_window.act_menu_open = _add(file_menu, tr("menu.file.open"), studio_window._shared_open)
+    studio_window.act_menu_save = _add(file_menu, tr("menu.file.save"), studio_window._shared_save)
+    studio_window.act_menu_save_as = _add(file_menu, tr("menu.file.save_as"), studio_window._shared_save_as)
+    file_menu.addSeparator()
     _add_exit(studio_window, file_menu)
+
+    view_menu = menubar.addMenu(tr("menu.titles.view"))
+    studio_window.act_view_zoom_in = _add(view_menu, tr("menu.view.zoom_in"), studio_window._view_zoom_in)
+    studio_window.act_view_zoom_out = _add(view_menu, tr("menu.view.zoom_out"), studio_window._view_zoom_out)
+    studio_window.act_view_reset_zoom = _add(view_menu, tr("menu.view.reset_zoom"), studio_window._view_reset_zoom)
+    view_menu.addSeparator()
+    studio_window.act_view_grid = _add(view_menu, tr("menu.view.grid"), studio_window._view_toggle_grid)
+    studio_window.act_view_snap = _add(view_menu, tr("menu.view.snap"), studio_window._view_toggle_snap)
+
+    settings_menu = menubar.addMenu(tr("menu.titles.settings"))
+    lang_menu = settings_menu.addMenu(tr("menu.settings.language"))
+    lang_group = QActionGroup(studio_window)
+    lang_group.setExclusive(True)
+    studio_window.act_lang_pl = QAction(tr("menu.settings.language_pl"), lang_menu)
+    studio_window.act_lang_pl.setCheckable(True)
+    studio_window.act_lang_en = QAction(tr("menu.settings.language_en"), lang_menu)
+    studio_window.act_lang_en.setCheckable(True)
+    current = get_language()
+    studio_window.act_lang_pl.setChecked(current == "pl")
+    studio_window.act_lang_en.setChecked(current == "en")
+    lang_group.addAction(studio_window.act_lang_pl)
+    lang_group.addAction(studio_window.act_lang_en)
+    lang_menu.addAction(studio_window.act_lang_pl)
+    lang_menu.addAction(studio_window.act_lang_en)
+    studio_window.act_lang_pl.triggered.connect(lambda: studio_window._set_language("pl"))
+    studio_window.act_lang_en.triggered.connect(lambda: studio_window._set_language("en"))
 
     help_menu = menubar.addMenu(tr("menu.titles.help"))
-    hint = QAction(tr("menu.neutral_hint"), help_menu)
-    hint.setEnabled(False)
-    help_menu.addAction(hint)
+    studio_window.act_menu_help_topics = _add(help_menu, tr("menu.help.topics"), studio_window._help_topics)
+    help_menu.addSeparator()
+    _add(help_menu, tr("menu.help.about_studio"), studio_window._show_about_studio)
 
 
-def build_logic_menu(menubar: QMenuBar, logic_panel, studio_window):
+def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
+    """The contextual zone's tools while LOGIKA is the active aspect -
+    everything Logic Studio's own (now-hidden) menu offered beyond
+    File/Zoom/Grid/Snap (those moved to the fixed top chrome, task
+    1.1/1.2)."""
     mw = logic_panel.main_window()
 
-    file_menu = menubar.addMenu(tr("menu.titles.file"))
-    _mirror(file_menu, tr("menu.file.new"), mw.act_new)
-    _mirror(file_menu, tr("menu.file.open"), mw.act_open)
-    _mirror(file_menu, tr("menu.file.save"), mw.act_save)
-    _mirror(file_menu, tr("menu.file.save_as"), mw.act_save_as)
-    file_menu.addSeparator()
-    _mirror(file_menu, tr("menu.file.compare_saved"), mw.act_compare_saved)
-    _mirror(file_menu, tr("menu.file.compare_files"), mw.act_compare_files)
-    file_menu.addSeparator()
-    _add_exit(studio_window, file_menu)
+    _mirror(toolbar, tr("menu.file.compare_saved"), mw.act_compare_saved)
+    _mirror(toolbar, tr("menu.file.compare_files"), mw.act_compare_files)
+    toolbar.addSeparator()
 
-    edit_menu = menubar.addMenu(tr("menu.titles.edit"))
-    _mirror(edit_menu, tr("menu.edit.undo"), mw.act_undo)
-    _mirror(edit_menu, tr("menu.edit.redo"), mw.act_redo)
-    edit_menu.addSeparator()
-    _mirror(edit_menu, tr("menu.edit.cut"), mw.act_cut)
-    _mirror(edit_menu, tr("menu.edit.copy"), mw.act_copy)
-    _mirror(edit_menu, tr("menu.edit.paste"), mw.act_paste)
-    _mirror(edit_menu, tr("menu.edit.delete"), mw.act_delete)
-    edit_menu.addSeparator()
+    _mirror(toolbar, tr("menu.edit.cut"), mw.act_cut)
+    _mirror(toolbar, tr("menu.edit.copy"), mw.act_copy)
+    _mirror(toolbar, tr("menu.edit.paste"), mw.act_paste)
+    _mirror(toolbar, tr("menu.edit.delete"), mw.act_delete)
 
     # mw.align_menu is rebuilt from the CURRENT selection on every open
-    # (populate_align_menu(), shared with the canvas's own context menu)
-    # - reusing that QMenu object as a real submenu here would reparent
-    # it away from mw's own (hidden) Edit menu. Popping the same, freshly
-    # rebuilt menu at the cursor instead reuses the exact same 8 actions
-    # without touching Logic Studio's own object graph.
+    # (populate_align_menu(), shared with the canvas's own context
+    # menu) - popping the same, freshly rebuilt menu at the cursor
+    # reuses those exact 8 actions without touching Logic Studio's own
+    # object graph (same technique Stage 2 used when this lived in the
+    # top menu).
     def _show_align_popup():
         mw._rebuild_align_menu()
         mw.align_menu.popup(QCursor.pos())
 
-    _add(edit_menu, tr("menu.edit.align"), _show_align_popup)
+    _add(toolbar, tr("menu.edit.align"), _show_align_popup)
+    _mirror(toolbar, tr("menu.edit.disable_selected"), mw.act_disable_selected)
+    _mirror(toolbar, tr("menu.edit.enable_selected"), mw.act_enable_selected)
+    toolbar.addSeparator()
 
-    edit_menu.addSeparator()
-    _mirror(edit_menu, tr("menu.edit.disable_selected"), mw.act_disable_selected)
-    _mirror(edit_menu, tr("menu.edit.enable_selected"), mw.act_enable_selected)
+    _mirror(toolbar, tr("menu.view.toolbar_icons"), mw.act_toolbar_icons)
+    _mirror(toolbar, tr("menu.view.toolbar_icons_text"), mw.act_toolbar_icons_text)
+    _mirror(toolbar, tr("menu.view.toolbar_text"), mw.act_toolbar_text)
+    toolbar.addSeparator()
 
-    view_menu = menubar.addMenu(tr("menu.titles.view"))
-    _mirror(view_menu, tr("menu.view.zoom_in"), mw.act_zoom_in)
-    _mirror(view_menu, tr("menu.view.zoom_out"), mw.act_zoom_out)
-    _mirror(view_menu, tr("menu.view.reset_zoom"), mw.act_reset_zoom)
-    view_menu.addSeparator()
-    _mirror(view_menu, tr("menu.view.grid"), mw.act_grid)
-    _mirror(view_menu, tr("menu.view.snap"), mw.act_snap)
-    view_menu.addSeparator()
-    toolbar_menu = view_menu.addMenu(tr("menu.view.toolbar"))
-    _mirror(toolbar_menu, tr("menu.view.toolbar_icons"), mw.act_toolbar_icons)
-    _mirror(toolbar_menu, tr("menu.view.toolbar_icons_text"), mw.act_toolbar_icons_text)
-    _mirror(toolbar_menu, tr("menu.view.toolbar_text"), mw.act_toolbar_text)
+    _mirror(toolbar, tr("menu.project.settings"), mw.act_project_settings)
+    _mirror(toolbar, tr("menu.project.export_signals"), mw.act_export_signals)
+    _mirror(toolbar, tr("menu.project.export_pdf"), mw.act_export_pdf)
+    toolbar.addSeparator()
 
-    project_menu = menubar.addMenu(tr("menu.titles.project"))
-    _mirror(project_menu, tr("menu.project.settings"), mw.act_project_settings)
-    _mirror(project_menu, tr("menu.project.export_signals"), mw.act_export_signals)
-    _mirror(project_menu, tr("menu.project.export_pdf"), mw.act_export_pdf)
+    _mirror(toolbar, tr("menu.logic.compile"), mw.act_compile)
+    _mirror(toolbar, tr("menu.logic.export_runtime"), mw.act_export_runtime)
+    toolbar.addSeparator()
 
-    logic_menu = menubar.addMenu(tr("menu.titles.logic"))
-    _mirror(logic_menu, tr("menu.logic.compile"), mw.act_compile)
-    _mirror(logic_menu, tr("menu.logic.export_runtime"), mw.act_export_runtime)
+    _mirror(toolbar, tr("menu.simulation.start"), mw.act_sim_start)
+    _mirror(toolbar, tr("menu.simulation.pause"), mw.act_sim_pause)
+    _mirror(toolbar, tr("menu.simulation.stop"), mw.act_sim_stop)
+    toolbar.addSeparator()
 
-    sim_menu = menubar.addMenu(tr("menu.titles.simulation"))
-    _mirror(sim_menu, tr("menu.simulation.start"), mw.act_sim_start)
-    _mirror(sim_menu, tr("menu.simulation.pause"), mw.act_sim_pause)
-    _mirror(sim_menu, tr("menu.simulation.stop"), mw.act_sim_stop)
-
-    help_menu = menubar.addMenu(tr("menu.titles.help"))
-    _mirror(help_menu, tr("menu.help.topics"), mw.act_help)
-    _mirror(help_menu, tr("menu.help.catalog"), mw.act_help_catalog)
-    _mirror(help_menu, tr("menu.help.shortcuts"), mw.act_help_shortcuts)
-    _mirror(help_menu, tr("menu.help.export_catalog"), mw.act_export_block_catalog)
-    help_menu.addSeparator()
-    _mirror(help_menu, tr("menu.help.about"), mw.act_about)
+    _mirror(toolbar, tr("menu.help.catalog"), mw.act_help_catalog)
+    _mirror(toolbar, tr("menu.help.shortcuts"), mw.act_help_shortcuts)
+    _mirror(toolbar, tr("menu.help.export_catalog"), mw.act_export_block_catalog)
+    _mirror(toolbar, tr("menu.help.about"), mw.act_about)
 
 
-def build_synoptic_menu(menubar: QMenuBar, synoptic_panel, studio_window):
-    file_menu = menubar.addMenu(tr("menu.titles.file"))
-    _add(file_menu, tr("menu.file.new"), _clicker(synoptic_panel, "New", exact=True))
-    _add(file_menu, tr("menu.file.open"), _clicker(synoptic_panel, "Open"))
-    _add(file_menu, tr("menu.file.save"), _clicker(synoptic_panel, "Save", exact=True))
-    _add(file_menu, tr("menu.file.save_as"), _clicker(synoptic_panel, "Save As"))
-    file_menu.addSeparator()
-    _add_exit(studio_window, file_menu)
+def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
+    """The contextual zone's tools while EKRANY/Schemat synoptyczny is
+    the active aspect - everything Synoptic's own (now-hidden) menu
+    offered beyond File/Snap (Undo/Redo stay on the fixed top toolbar,
+    not repeated here)."""
+    _add(toolbar, tr("menu.edit.copy"), _clicker(synoptic_panel, "Copy"))
+    _add(toolbar, tr("menu.edit.paste"), _clicker(synoptic_panel, "Paste"))
+    _add(toolbar, tr("menu.edit.delete"), _clicker(synoptic_panel, "Delete"))
+    _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"))
+    toolbar.addSeparator()
 
-    edit_menu = menubar.addMenu(tr("menu.titles.edit"))
-    _add(edit_menu, tr("menu.edit.undo"), _clicker(synoptic_panel, "Undo"))
-    _add(edit_menu, tr("menu.edit.redo"), _clicker(synoptic_panel, "Redo"))
-    edit_menu.addSeparator()
-    _add(edit_menu, tr("menu.edit.copy"), _clicker(synoptic_panel, "Copy"))
-    _add(edit_menu, tr("menu.edit.paste"), _clicker(synoptic_panel, "Paste"))
-    _add(edit_menu, tr("menu.edit.delete"), _clicker(synoptic_panel, "Delete"))
-    _add(edit_menu, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"))
+    _add(toolbar, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"))
+    toolbar.addSeparator()
 
-    view_menu = menubar.addMenu(tr("menu.titles.view"))
-    _add(view_menu, tr("menu.view.snap"), _clicker(synoptic_panel, "Snap to Grid"))
-    _add(view_menu, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"))
-
-    devices_menu = menubar.addMenu(tr("menu.titles.devices"))
-    _add(devices_menu, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"))
-    _add(devices_menu, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"))
-
-    help_menu = menubar.addMenu(tr("menu.titles.help"))
-    _add(help_menu, tr("menu.help.topics"), _clicker(synoptic_panel, "Help Topics"))
+    _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"))
+    _add(toolbar, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"))

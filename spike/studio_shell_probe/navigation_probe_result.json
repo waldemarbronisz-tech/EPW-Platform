@@ -1,0 +1,30 @@
+{
+  "screens_menu": [
+    "Plik",
+    "Widok",
+    "Ustawienia",
+    "Pomoc"
+  ],
+  "logic_menu": [
+    "Plik",
+    "Widok",
+    "Ustawienia",
+    "Pomoc"
+  ],
+  "menus_identical": true,
+  "inactive_item_text": "Karty wejść/wyjść",
+  "inactive_item_grey": "#808080",
+  "inactive_item_italic": true,
+  "placeholder_header": "Projekt → Konfiguracja → Karty wejść/wyjść",
+  "placeholder_message": "Opisy i konfiguracja fizycznych kart wejść/wyjść (io/digital_inputs.json, digital_outputs.json, analog_points.json) — jeszcze nie zbudowane.",
+  "active_after_inactive_click": null,
+  "menu_after_english": [
+    "File",
+    "View",
+    "Settings",
+    "Help"
+  ],
+  "tree_root_after_english": "PROJECT",
+  "breadcrumb_after_english": "Project → Configuration → I/O Cards",
+  "placeholder_after_english": "Descriptions and configuration of the physical I/O cards (io/digital_inputs.json, digital_outputs.json, analog_points.json) - not built yet."
+}

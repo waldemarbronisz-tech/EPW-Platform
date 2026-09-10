@@ -6,13 +6,54 @@
   "app": {
     "title": "EPW Studio"
   },
-  "tree": {
-    "screens": "EKRANY",
-    "logic": "LOGIKA"
-  },
   "editor": {
     "synoptic_name": "Ekrany (Synoptic Editor)",
     "logic_name": "Logika (Logic Studio)"
+  },
+  "tree": {
+    "root": "PROJEKT",
+    "group_config": "KONFIGURACJA",
+    "group_alarm": "ALARMÓWKA",
+    "group_protection": "ZABEZPIECZENIA",
+    "group_controller": "STEROWNIK",
+    "info": "Informacje o projekcie",
+    "devices": "Skład urządzenia",
+    "io_cards": "Karty wejść/wyjść",
+    "locations": "Lokalizacje",
+    "point_registry": "Rejestr punktów",
+    "apparatus_registry": "Rejestr aparatów",
+    "screens": "Schemat synoptyczny",
+    "logic": "Logika",
+    "security_zones": "Strefy",
+    "security_lines": "Linie dozorowe",
+    "protection_settings": "Nastawy",
+    "controller_connection": "Połączenie i podgląd"
+  },
+  "breadcrumb": {
+    "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
+    "logic": "Projekt → Konfiguracja → Logika",
+    "info": "Projekt → Informacje o projekcie",
+    "devices": "Projekt → Konfiguracja → Skład urządzenia",
+    "io_cards": "Projekt → Konfiguracja → Karty wejść/wyjść",
+    "locations": "Projekt → Konfiguracja → Lokalizacje",
+    "point_registry": "Projekt → Konfiguracja → Rejestr punktów",
+    "apparatus_registry": "Projekt → Konfiguracja → Rejestr aparatów",
+    "security_zones": "Projekt → Alarmówka → Strefy",
+    "security_lines": "Projekt → Alarmówka → Linie dozorowe",
+    "protection_settings": "Projekt → Zabezpieczenia → Nastawy",
+    "controller_connection": "Projekt → Sterownik → Połączenie i podgląd"
+  },
+  "placeholder": {
+    "info": "Nazwa, opis, lokalizacja, autor i daty projektu (project/metadata.json) — jeszcze nie zbudowane.",
+    "devices": "Lista urządzeń polowych ELA/ADA/EPM wchodzących w skład instalacji (project/devices.json) — jeszcze nie zbudowane.",
+    "io_cards": "Opisy i konfiguracja fizycznych kart wejść/wyjść (io/digital_inputs.json, digital_outputs.json, analog_points.json) — jeszcze nie zbudowane.",
+    "locations": "Lista lokalizacji instalacji (budynki, piętra, pomieszczenia), do których odnoszą się urządzenia i ekrany — jeszcze nie zbudowane.",
+    "point_registry": "Rejestr wszystkich punktów procesowych (cyfrowych i analogowych) w jednym miejscu, ze skalowaniem (io/analog_points.json) — jeszcze nie zbudowane.",
+    "apparatus_registry": "Lista aparatów łączeniowych (styczniki, wyłączniki) niezależna od schematu synoptycznego (project/apparatus.json) — jeszcze nie zbudowane.",
+    "security_zones": "Podział systemu alarmowego na strefy (security/zones.json) — jeszcze nie zbudowane.",
+    "security_lines": "Linie dozorowe systemu alarmowego (security/lines.json) — jeszcze nie zbudowane.",
+    "protection_settings": "Nastawy zabezpieczeń elektrycznych i procesowych (protection/electrical.json, process.json) — jeszcze nie zbudowane.",
+    "controller_connection": "Żywe połączenie ze sterownikiem EPW-OS i podgląd jego bieżącego stanu — jeszcze nie zbudowane."
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -27,13 +68,14 @@
   "menu": {
     "titles": {
       "file": "Plik",
-      "edit": "Edycja",
       "view": "Widok",
+      "settings": "Ustawienia",
+      "help": "Pomoc",
+      "edit": "Edycja",
       "project": "Projekt",
       "logic": "Logika",
       "simulation": "Symulacja",
-      "devices": "Urządzenia",
-      "help": "Pomoc"
+      "devices": "Urządzenia"
     },
     "file": {
       "new": "Nowy",
@@ -87,19 +129,30 @@
       "device_list": "Lista urządzeń..."
     },
     "help": {
-      "topics": "Pomoc",
+      "topics": "Tematy pomocy",
       "catalog": "Katalog bloków",
       "shortcuts": "Skróty klawiszowe",
       "export_catalog": "Eksportuj katalog bloków...",
-      "about": "O programie"
+      "about": "O programie",
+      "about_studio": "O programie EPW Studio"
     },
-    "neutral_hint": "Wybierz Ekrany lub Logikę w drzewie"
+    "settings": {
+      "language": "Język",
+      "language_pl": "Polski",
+      "language_en": "Angielski"
+    },
+    "neutral_hint": "Wybierz pozycję w drzewie projektu"
   },
   "toolbar": {
     "new": "Nowy",
     "open": "Otwórz",
     "save": "Zapisz",
+    "save_as": "Zapisz jako",
     "undo": "Cofnij",
-    "redo": "Ponów"
+    "redo": "Ponów",
+    "help": "Pomoc"
+  },
+  "about": {
+    "studio_text": "EPW Studio\n\nWspólna powłoka projektowa platformy EPW — Schemat synoptyczny (Synoptic Editor) i Logika (Logic Studio) w jednym oknie, jednej szacie graficznej."
   }
 }
