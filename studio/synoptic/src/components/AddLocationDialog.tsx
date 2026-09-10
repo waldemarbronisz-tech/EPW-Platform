@@ -44,21 +44,21 @@ export const AddLocationDialog: React.FC<AddLocationDialogProps> = ({ onAdded, o
     <>
       <div style={backdropStyle} onClick={onCancel} />
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={headerStyle}>Nowa lokalizacja</div>
+        <div style={headerStyle}>New Location</div>
         <div style={bodyStyle}>
           <div className="property-row">
-            <label>Kod</label>
+            <label>Code</label>
             <input autoFocus value={code} onChange={e => setCode(e.target.value)} style={inputStyle} placeholder="KOT" />
           </div>
           <div className="property-row">
-            <label>Opis</label>
-            <input value={description} onChange={e => setDescription(e.target.value)} style={inputStyle} placeholder="Kotlownia" />
+            <label>Description</label>
+            <input value={description} onChange={e => setDescription(e.target.value)} style={inputStyle} placeholder="Boiler room" />
           </div>
           {error && <div style={errorStyle}>{error}</div>}
         </div>
         <div style={footerStyle}>
-          <button onClick={onCancel}>Anuluj</button>
-          <button onClick={handleAdd}>Dodaj</button>
+          <button onClick={onCancel}>Cancel</button>
+          <button onClick={handleAdd}>Add</button>
         </div>
       </div>
     </>

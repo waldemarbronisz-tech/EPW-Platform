@@ -1,6 +1,6 @@
 // feat/site-objects-2d commit 4 - "14. Trawa/Grass" from docs/EPW_
-// rysunki_referencja.py's own trawa(on). States ZALACZONY (green,
-// SITE_GRASS) / WYLACZONY (yellowed, SITE_GRASS_DIM). A SURFACE, not a
+// rysunki_referencja.py's own trawa(on). States ON (green,
+// SITE_GRASS) / OFF (yellowed, SITE_GRASS_DIM). A SURFACE, not a
 // fixed-size icon like the other 15 TEREN objects - see this file's own
 // sibling SurfaceGeometry.ts for the full reasoning on why a surface
 // does NOT use SITE_CANVAS_SCALE the way every other site/ component
@@ -26,12 +26,12 @@ import { resolveSiteState } from './SiteSymbolState';
 import { computeGrassDashes } from './SurfaceGeometry';
 import { SITE_GRASS, SITE_GRASS_DIM, SITE_BAND_WIDTH_WIDE, SITE_TEXTURE_LINE_WIDTH } from '../../theme/ScadaTheme';
 
-export type GrassState = 'ZALACZONY' | 'WYLACZONY';
+export type GrassState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const GRASS_STATES: GrassState[] = ['ZALACZONY', 'WYLACZONY'];
+export const GRASS_STATES: GrassState[] = ['ON', 'OFF'];
 
 export const GrassSymbol: React.FC<SymbolProps> = ({ obj, state }) => {
-  const on = resolveSiteState(state, GRASS_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, GRASS_STATES, 'OFF') === 'ON';
   const triad = on ? SITE_GRASS : SITE_GRASS_DIM;
 
   const scaleX = obj.scaleX || 1;

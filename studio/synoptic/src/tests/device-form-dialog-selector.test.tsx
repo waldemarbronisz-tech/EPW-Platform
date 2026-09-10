@@ -17,21 +17,21 @@ function makeSelector(overrides: Partial<SelectorDevice> = {}): SelectorDevice {
     // all is now rejected (SELECTOR_NO_FEEDBACK_AT_ALL), so a "fully
     // valid" default fixture must have at least one - two, so removing
     // either end position (as one test below does) still leaves one.
-    positions: [{ name: 'RECZNIE', feedback: 'ELA1.DI.1' }, { name: '0' }, { name: 'AUTOMAT', feedback: 'ELA1.DI.2' }],
+    positions: [{ name: 'MANUAL', feedback: 'ELA1.DI.1' }, { name: '0' }, { name: 'AUTOMAT', feedback: 'ELA1.DI.2' }],
     ...overrides
   };
 }
 
-// fix/device-form-polish commit 2: Zapisz is aria-disabled now, not
+// fix/device-form-polish commit 2: Save is aria-disabled now, not
 // natively disabled - see device-form-dialog-switched.test.tsx's own
 // copy of this helper for the full reasoning.
 function isSaveDisabled(): boolean {
-  return screen.getByRole('button', { name: 'Zapisz' }).getAttribute('aria-disabled') === 'true';
+  return screen.getByRole('button', { name: 'Save' }).getAttribute('aria-disabled') === 'true';
 }
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [{ id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 }],
     devices: []
   });
@@ -48,27 +48,27 @@ describe('DeviceFormDialog - SELECTOR section', () => {
 
   it('renders one name field per position, pre-filled', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeSelector()} onSave={() => {}} onCancel={() => {}} />);
-    const nameInputs = screen.getAllByPlaceholderText('RECZNIE') as HTMLInputElement[];
-    expect(nameInputs.map(i => i.value)).toEqual(['RECZNIE', '0', 'AUTOMAT']);
+    const nameInputs = screen.getAllByPlaceholderText('MANUAL') as HTMLInputElement[];
+    expect(nameInputs.map(i => i.value)).toEqual(['MANUAL', '0', 'AUTOMAT']);
   });
 
   it('dropping to 1 position disables its own remove button and, if forced to 1 anyway, is rejected on Save', () => {
-    render(<DeviceFormDialog mode="edit" initialDevice={makeSelector({ positions: [{ name: 'RECZNIE' }, { name: 'AUTOMAT' }] })} onSave={() => {}} onCancel={() => {}} />);
-    const removeButtons = screen.getAllByTitle('Wymagane co najmniej 2 polozenia') as HTMLButtonElement[];
+    render(<DeviceFormDialog mode="edit" initialDevice={makeSelector({ positions: [{ name: 'MANUAL' }, { name: 'AUTOMAT' }] })} onSave={() => {}} onCancel={() => {}} />);
+    const removeButtons = screen.getAllByTitle('At least 2 positions are required') as HTMLButtonElement[];
     expect(removeButtons.every(b => b.disabled)).toBe(true);
   });
 
   it('adding a position with an empty name blocks Save and shows the empty-name error', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeSelector()} onSave={() => {}} onCancel={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: '+ Dodaj polozenie' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Add Position' }));
     expect(isSaveDisabled()).toBe(true);
     expect(screen.getByText(/positions\[3\]\.name must not be empty/)).toBeTruthy();
   });
 
   it('renaming two positions to the same name blocks Save with a duplicate-name error', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeSelector()} onSave={() => {}} onCancel={() => {}} />);
-    const nameInputs = screen.getAllByPlaceholderText('RECZNIE') as HTMLInputElement[];
-    fireEvent.change(nameInputs[1], { target: { value: 'RECZNIE' } });
+    const nameInputs = screen.getAllByPlaceholderText('MANUAL') as HTMLInputElement[];
+    fireEvent.change(nameInputs[1], { target: { value: 'MANUAL' } });
     expect(isSaveDisabled()).toBe(true);
     expect(screen.getByText(/duplicate position name/)).toBeTruthy();
   });
@@ -83,16 +83,16 @@ describe('DeviceFormDialog - SELECTOR section', () => {
   it('saving calls onSave with the edited position name applied', () => {
     let saved: SelectorDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSelector()} onSave={(d) => { saved = d as SelectorDevice; }} onCancel={() => {}} />);
-    const nameInputs = screen.getAllByPlaceholderText('RECZNIE') as HTMLInputElement[];
-    fireEvent.change(nameInputs[0], { target: { value: 'RECZNIE (lokalnie)' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    const nameInputs = screen.getAllByPlaceholderText('MANUAL') as HTMLInputElement[];
+    fireEvent.change(nameInputs[0], { target: { value: 'MANUAL (lokalnie)' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved).not.toBeNull();
-    expect(saved!.positions[0].name).toBe('RECZNIE (lokalnie)');
+    expect(saved!.positions[0].name).toBe('MANUAL (lokalnie)');
   });
 
   it('SELECTOR is offered in the behavior dropdown', () => {
     render(<DeviceFormDialog mode="add" onSave={() => {}} onCancel={() => {}} />);
-    const behaviorRow = screen.getByText('Zachowanie').closest('.property-row')!;
+    const behaviorRow = screen.getByText('Behaviour').closest('.property-row')!;
     const select = behaviorRow.querySelector('select') as HTMLSelectElement;
     const options = Array.from(select.options).map(o => o.value);
     expect(options).toContain('SELECTOR');

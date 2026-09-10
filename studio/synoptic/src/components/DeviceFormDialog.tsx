@@ -264,7 +264,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
 
   const handleBehaviorChange = (next: DeviceBehavior) => {
     if (next === behavior) return;
-    if (isEdit && !confirm('Zmiana zachowania wyczysci dotychczasowa konfiguracje szczegolowa tego aparatu. Kontynuowac?')) {
+    if (isEdit && !confirm('Changing the behaviour will clear this device\'s existing detailed configuration. Continue?')) {
       return;
     }
     setBehavior(next);
@@ -308,7 +308,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
   const canAttemptSave = behavior !== '' && commonFieldsFilled && (!hasFullForm || ownIssues.length === 0);
 
   const handleSave = () => {
-    // fix/device-form-polish commit 2: pressing Zapisz while the form
+    // fix/device-form-polish commit 2: pressing Save while the form
     // is invalid reveals every current error at once (submitAttempted)
     // instead of silently doing nothing - a real button press, verified
     // live to actually fire: a genuinely `disabled` button in this
@@ -328,7 +328,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
   // it never submitted the form even before this (this dialog is built
   // entirely out of plain divs, no HTML form element anywhere, so there
   // has never been anything for Enter to submit; handleSave only ever
-  // runs from the Zapisz button's own onClick). Delegated on the body's
+  // runs from the Save button's own onClick). Delegated on the body's
   // own onKeyDown rather than
   // attached to every individual <input> - only plain text/number
   // inputs move focus; a <select> or checkbox's own native Enter
@@ -350,7 +350,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
   // feat/device-form-from-canvas commit 3c: Escape closes without
   // saving - confirmed first if anything was actually changed. Scoped
   // to Escape alone, on purpose: the backdrop click, the header's own
-  // "x" and the footer's own Anuluj all still call onCancel directly,
+  // "x" and the footer's own Cancel all still call onCancel directly,
   // completely unchanged, exactly as before this commit (no
   // confirmation there either, same as today) - GRANICE's own "don't
   // touch what isn't asked" applies as much to already-working buttons
@@ -359,7 +359,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
   // Canvas.tsx's own keyboard shortcuts are wired - see this file's own
   // note on the dialogRef/tabIndex below for why.
   const handleEscape = () => {
-    if (hasUnsavedChanges && !confirm('Masz niezapisane zmiany w formularzu aparatu. Zamknac bez zapisywania?')) {
+    if (hasUnsavedChanges && !confirm('You have unsaved changes in the device form. Close without saving?')) {
       return;
     }
     onCancel();
@@ -433,10 +433,10 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
     setOwnFields(prev => ({ ...(prev as SelectorOwnFields), positions: (prev as SelectorOwnFields).positions.filter((_, i) => i !== index) }));
 
   const outputHint = switched ? {
-    '1-MAINTAINED': 'Jedno wyjscie utrzymywane - typowy stycznik/zawor z jedna cewka trzymana pod napieciem w stanie zalaczonym.',
-    '1-PULSE': 'Jedno wyjscie impulsowe - typowy przekaznik bistabilny sterowany krotkim impulsem.',
-    '2-MAINTAINED': 'Dwa wyjscia utrzymywane - typowy siownik/zawor trojpolozeniowy z oddzielnymi cewkami OTWORZ/ZAMKNIJ.',
-    '2-PULSE': 'Dwa wyjscia impulsowe - typowy stycznik bistabilny z oddzielnymi impulsami ZALACZ/WYLACZ.'
+    '1-MAINTAINED': 'One maintained output - a typical contactor/valve with a single coil held energized in the ON state.',
+    '1-PULSE': 'One pulsed output - a typical bistable relay driven by a short pulse.',
+    '2-MAINTAINED': 'Two maintained outputs - a typical actuator/three-position valve with separate OPEN/CLOSE coils.',
+    '2-PULSE': 'Two pulsed outputs - a typical bistable contactor with separate ON/OFF pulses.'
   }[`${switched.command.outputCount}-${switched.command.style}`] : '';
 
   // fix/inline-device-creation commit 4: which of SWITCHED's own
@@ -456,7 +456,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
   // water_selector_valve_switched has no real "closed" state at all -
   // it always routes to one of its two branches - so "Pozycja A"/
   // "Pozycja B" reads honestly where "diClosed"/"diOpen" would not.
-  const isThreeWayValve = kind.trim().toLowerCase() === 'zawor trojdrogowy';
+  const isThreeWayValve = kind.trim().toLowerCase() === 'three-way valve';
   const commandHasError = hasFieldError('command.doClose') || hasFieldError('command.doOpen') || hasFieldError('command.pulseMs');
   const supervisionHasError = hasFieldError('supervision.confirmTimeoutMs');
   const extraInputsHasError = hasFieldError('extraInputs.diFault');
@@ -475,8 +475,8 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
           <div>
             <div>
               {isEdit
-                ? `Edycja aparatu ${initialDevice?.id}`
-                : (creationContext && createOrAssignMode === 'assign' ? 'Przypisz aparat' : 'Nowy aparat')}
+                ? `Edit Device ${initialDevice?.id}`
+                : (creationContext && createOrAssignMode === 'assign' ? 'Assign Device' : 'New Device')}
             </div>
             {/* 3a: shown only when the caller passed one (every entry
                 point but Lista aparatow's own Dodaj/Edytuj) - see this
@@ -487,7 +487,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 is not optional, unlike deviceFormRequest's own). */}
             {sourceContext && <div style={sourceContextStyle}>{sourceContext}</div>}
           </div>
-          <button onClick={onCancel} title="Anuluj" style={closeButtonStyle}>x</button>
+          <button onClick={onCancel} title="Cancel" style={closeButtonStyle}>x</button>
         </div>
 
         {/* fix/inline-device-creation commit 3: the two-mode switcher -
@@ -501,13 +501,13 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
               style={createOrAssignMode === 'create' ? modeTabActiveStyle : modeTabInactiveStyle}
               onClick={() => setCreateOrAssignMode('create')}
             >
-              Utworz nowy
+              Create New
             </div>
             <div
               style={createOrAssignMode === 'assign' ? modeTabActiveStyle : modeTabInactiveStyle}
               onClick={() => setCreateOrAssignMode('assign')}
             >
-              Przypisz istniejacy
+              Assign Existing
             </div>
           </div>
         )}
@@ -548,7 +548,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     <option value="">-</option>
                     {locations.map(l => <option key={l.code} value={l.code}>{l.code}</option>)}
                   </select>
-                  <button type="button" onClick={() => setShowAddLocation(true)} title="Dodaj nowa lokalizacje">+</button>
+                  <button type="button" onClick={() => setShowAddLocation(true)} title="Add new location">+</button>
                   <span>_</span>
                   <input
                     ref={suffixInputRef}
@@ -569,7 +569,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
               <FieldErrors messages={fieldErrors.get('id')} fieldKey="id" />
             </div>
             <div className="property-row" {...rowBlurProps('designation')}>
-              <label>Oznaczenie</label>
+              <label>Designation</label>
               <input
                 value={designation}
                 onChange={e => setDesignation(e.target.value)}
@@ -580,12 +580,12 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
               <FieldErrors messages={fieldErrors.get('designation')} fieldKey="designation" />
             </div>
             <div className="property-row" {...rowBlurProps('name')}>
-              <label>Nazwa</label>
-              <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="Stycznik grzalki" />
+              <label>Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="Heater contactor" />
               <FieldErrors messages={fieldErrors.get('name')} fieldKey="name" />
             </div>
             <div className="property-row">
-              <label>Zachowanie</label>
+              <label>Behaviour</label>
               <select value={behavior} onChange={e => handleBehaviorChange(e.target.value as DeviceBehavior)} style={inputStyle}>
                 {/* fix/inline-device-creation commit 3: only reachable
                     when a device-less symbol's own type is outside
@@ -593,37 +593,37 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     is always changeable, but here there is none to start
                     from, so the user must pick explicitly (Save stays
                     disabled until they do). */}
-                {behavior === '' && <option value="">-- wybierz --</option>}
+                {behavior === '' && <option value="">-- select --</option>}
                 {BEHAVIORS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             <div className="property-row" {...rowBlurProps('kind')}>
-              <label>Rodzaj</label>
+              <label>Kind</label>
               <input value={kind} onChange={e => setKind(e.target.value)} style={inputStyle} placeholder="contactor" list="device-kind-suggestions" />
               <datalist id="device-kind-suggestions">
-                <option value="contactor" /><option value="valve" /><option value="damper" /><option value="sensor" /><option value="vfd" /><option value="zawor trojdrogowy" />
+                <option value="contactor" /><option value="valve" /><option value="damper" /><option value="sensor" /><option value="vfd" /><option value="three-way valve" />
               </datalist>
               <FieldErrors messages={fieldErrors.get('kind')} fieldKey="kind" />
             </div>
             <div className="property-row">
-              <label>Publikuj do HA</label>
+              <label>Publish to HA</label>
               <input type="checkbox" checked={publishToHa} onChange={e => setPublishToHa(e.target.checked)} />
             </div>
           </div>
 
           {switched && (
             <>
-              <CollapsibleSection title="Wejscie zwrotne (feedback)" defaultExpanded hasError={feedbackHasError}>
+              <CollapsibleSection title="Feedback" defaultExpanded hasError={feedbackHasError}>
                 <div style={warningStyle}>
-                  Uwaga: tryb NONE oznacza sterowanie bez potwierdzenia rzeczywistego stanu aparatu -
-                  system nigdy nie wykryje, ze aparat nie wykonal polecenia.
+                  Warning: NONE mode means the device is controlled with no confirmation of its actual
+                  state - the system will never detect that a command was not carried out.
                 </div>
                 <div style={warningStyle}>
-                  Uwaga: pojedyncze wejscie zwrotne (SINGLE) nie odroznia stanu posredniego ani zaniku
-                  sygnalu od stanu OFF - tylko DUAL wykrywa taka rozbieznosc.
+                  Warning: a single feedback input (SINGLE) cannot distinguish an intermediate state or
+                  a lost signal from the OFF state - only DUAL detects that discrepancy.
                 </div>
                 <div className="property-row">
-                  <label>Tryb</label>
+                  <label>Mode</label>
                   <select value={switched.feedback.mode} onChange={e => patchSwitchedFeedback({ mode: e.target.value as SwitchedOwnFields['feedback']['mode'] })} style={inputStyle}>
                     <option value="DUAL">DUAL</option>
                     <option value="SINGLE">SINGLE</option>
@@ -632,27 +632,27 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 </div>
                 {(switched.feedback.mode === 'DUAL' || switched.feedback.mode === 'SINGLE') && (
                   <div className="property-row" {...rowBlurProps('feedback.diClosed')}>
-                    <label>{isThreeWayValve ? 'Pozycja A' : 'diClosed'}</label>
+                    <label>{isThreeWayValve ? 'Position A' : 'diClosed'}</label>
                     <ChannelAddressPicker value={switched.feedback.diClosed} onChange={addr => patchSwitchedFeedback({ diClosed: addr })} expectedKind="DI" cards={cards} occupied={occupied} />
                     <FieldErrors messages={fieldErrors.get('feedback.diClosed')} fieldKey="feedback.diClosed" />
                   </div>
                 )}
                 {switched.feedback.mode === 'DUAL' && (
                   <div className="property-row" {...rowBlurProps('feedback.diOpen')}>
-                    <label>{isThreeWayValve ? 'Pozycja B' : 'diOpen'}</label>
+                    <label>{isThreeWayValve ? 'Position B' : 'diOpen'}</label>
                     <ChannelAddressPicker value={switched.feedback.diOpen} onChange={addr => patchSwitchedFeedback({ diOpen: addr })} expectedKind="DI" cards={cards} occupied={occupied} />
                     <FieldErrors messages={fieldErrors.get('feedback.diOpen')} fieldKey="feedback.diOpen" />
                   </div>
                 )}
                 {switched.feedback.mode === 'SINGLE' && (
                   <div className="property-row">
-                    <label>Neguj (invert)</label>
+                    <label>Invert</label>
                     <input type="checkbox" checked={!!switched.feedback.invert} onChange={e => patchSwitchedFeedback({ invert: e.target.checked })} />
                   </div>
                 )}
               </CollapsibleSection>
 
-              <CollapsibleSection title="Wejscia dodatkowe" defaultExpanded={false} hasError={extraInputsHasError}>
+              <CollapsibleSection title="Extra Inputs" defaultExpanded={false} hasError={extraInputsHasError}>
                 <div className="property-row" {...rowBlurProps('extraInputs.diFault')}>
                   <label>diFault</label>
                   <ChannelAddressPicker value={switched.extraInputs?.diFault} onChange={patchSwitchedExtraInput} expectedKind="DI" cards={cards} occupied={occupied} allowEmpty />
@@ -660,16 +660,16 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 </div>
               </CollapsibleSection>
 
-              <CollapsibleSection title="Sterowanie (command)" defaultExpanded hasError={commandHasError}>
+              <CollapsibleSection title="Command" defaultExpanded hasError={commandHasError}>
                 <div className="property-row">
-                  <label>Liczba wyjsc</label>
+                  <label>Output Count</label>
                   <select value={switched.command.outputCount} onChange={e => patchSwitchedCommand({ outputCount: Number(e.target.value) as 1 | 2 })} style={inputStyle}>
                     <option value={1}>1</option>
                     <option value={2}>2</option>
                   </select>
                 </div>
                 <div className="property-row">
-                  <label>Styl</label>
+                  <label>Style</label>
                   <select value={switched.command.style} onChange={e => patchSwitchedCommand({ style: e.target.value as SwitchedOwnFields['command']['style'] })} style={inputStyle}>
                     <option value="MAINTAINED">MAINTAINED</option>
                     <option value="PULSE">PULSE</option>
@@ -690,29 +690,29 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 )}
                 {switched.command.style === 'PULSE' && (
                   <div className="property-row" {...rowBlurProps('command.pulseMs')}>
-                    <label>Czas impulsu (ms)</label>
+                    <label>Pulse Time (ms)</label>
                     <input type="number" value={switched.command.pulseMs ?? ''} onChange={e => patchSwitchedCommand({ pulseMs: Number(e.target.value) })} style={inputStyle} />
                     <FieldErrors messages={fieldErrors.get('command.pulseMs')} fieldKey="command.pulseMs" />
                   </div>
                 )}
               </CollapsibleSection>
 
-              <CollapsibleSection title="Nadzor (supervision)" defaultExpanded={false} hasError={supervisionHasError}>
+              <CollapsibleSection title="Supervision" defaultExpanded={false} hasError={supervisionHasError}>
                 <div className="property-row" {...rowBlurProps('supervision.confirmTimeoutMs')}>
-                  <label>Timeout potwierdzenia (ms)</label>
+                  <label>Confirmation Timeout (ms)</label>
                   <input type="number" value={switched.supervision.confirmTimeoutMs} onChange={e => patchSwitchedSupervision({ confirmTimeoutMs: Number(e.target.value) })} style={inputStyle} />
                   <FieldErrors messages={fieldErrors.get('supervision.confirmTimeoutMs')} fieldKey="supervision.confirmTimeoutMs" />
                 </div>
-                <div style={hintStyle}>Czas na potwierdzenie zmiany stanu przez wejscie zwrotne, zanim zglaszany jest alarm rozbieznosci (min. 100 ms).</div>
+                <div style={hintStyle}>Time allowed for the feedback input to confirm the state change before a discrepancy alarm is raised (min. 100 ms).</div>
                 <div className="property-row">
-                  <label>Alarm rozbieznosci</label>
+                  <label>Discrepancy Alarm</label>
                   <input type="checkbox" checked={switched.supervision.discrepancyAlarm} onChange={e => patchSwitchedSupervision({ discrepancyAlarm: e.target.checked })} />
                 </div>
               </CollapsibleSection>
 
-              <CollapsibleSection title="Stan bezpieczny (safeState)" defaultExpanded={false} hasError={false}>
+              <CollapsibleSection title="Safe State" defaultExpanded={false} hasError={false}>
                 <div className="property-row">
-                  <label>Przy starcie</label>
+                  <label>On Startup</label>
                   <select value={switched.safeState.onStartup} onChange={e => patchSwitchedSafeState({ onStartup: e.target.value as SwitchedOwnFields['safeState']['onStartup'] })} style={inputStyle}>
                     <option value="NO_CHANGE">NO_CHANGE</option>
                     <option value="OPEN">OPEN</option>
@@ -720,7 +720,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                   </select>
                 </div>
                 <div className="property-row">
-                  <label>Przy utracie lacznosci</label>
+                  <label>On Link Loss</label>
                   <select value={switched.safeState.onLinkLoss} onChange={e => patchSwitchedSafeState({ onLinkLoss: e.target.value as SwitchedOwnFields['safeState']['onLinkLoss'] })} style={inputStyle}>
                     <option value="NO_CHANGE">NO_CHANGE</option>
                     <option value="OPEN">OPEN</option>
@@ -728,34 +728,34 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                   </select>
                 </div>
                 <div className="property-row">
-                  <label>Licznik przelaczen</label>
+                  <label>Switch Counter</label>
                   <input type="checkbox" checked={switched.switchCounter} onChange={e => patchSwitched({ switchCounter: e.target.checked })} />
                 </div>
-                <div style={hintStyle}>Zlicza przelaczenia aparatu (sygnal .COUNTER) - prog ostrzegawczy definiuje sie w Logic Studio, nie tutaj.</div>
+                <div style={hintStyle}>Counts the device's own switch operations (the .COUNTER signal) - the warning threshold is defined in Logic Studio, not here.</div>
               </CollapsibleSection>
 
-              <CollapsibleSection title="Blokady (interlock)" defaultExpanded={false} hasError={false}>
+              <CollapsibleSection title="Interlocks" defaultExpanded={false} hasError={false}>
                 <div style={warningStyle}>
-                  Wylacznie opis dla operatora/inzyniera - nie definiuje tu zadnej logiki. Rzeczywista
-                  wartosc blokady (.INHIBIT_CLOSE/.INHIBIT_OPEN) jest zapisywana przez logike w
-                  EPW-Logic-Studio; ten opis tylko wyjasnia, DLACZEGO polecenie moze zostac odrzucone.
+                  A description for the operator/engineer only - it defines no logic here. The actual
+                  interlock value (.INHIBIT_CLOSE/.INHIBIT_OPEN) is written by logic in
+                  EPW-Logic-Studio; this description only explains WHY a command may be refused.
                 </div>
                 <div className="property-row">
-                  <label>Opis blokady ZAMKNIJ</label>
+                  <label>CLOSE Interlock Description</label>
                   <input
                     value={switched.interlock?.closeDescription ?? ''}
                     onChange={e => patchSwitchedInterlock({ closeDescription: e.target.value })}
                     style={inputStyle}
-                    placeholder="np. Zablokowane, gdy drzwi rozdzielnicy sa otwarte"
+                    placeholder="e.g. Blocked while the switchgear cabinet door is open"
                   />
                 </div>
                 <div className="property-row">
-                  <label>Opis blokady OTWORZ</label>
+                  <label>OPEN Interlock Description</label>
                   <input
                     value={switched.interlock?.openDescription ?? ''}
                     onChange={e => patchSwitchedInterlock({ openDescription: e.target.value })}
                     style={inputStyle}
-                    placeholder="np. Zablokowane podczas biegu pompy rezerwowej"
+                    placeholder="e.g. Blocked while the standby pump is running"
                   />
                 </div>
               </CollapsibleSection>
@@ -764,18 +764,18 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
 
           {signal && (
             <div className="property-group">
-              <div style={sectionTitleStyle}>Wejscie (feedback)</div>
+              <div style={sectionTitleStyle}>Feedback</div>
               <div className="property-row" {...rowBlurProps('feedback.di')}>
                 <label>di</label>
                 <ChannelAddressPicker value={signal.feedback.di} onChange={addr => patchSignalFeedback({ di: addr ?? '' })} expectedKind="DI" cards={cards} occupied={occupied} />
                 <FieldErrors messages={fieldErrors.get('feedback.di')} fieldKey="feedback.di" />
               </div>
               <div className="property-row">
-                <label>Neguj (invert)</label>
+                <label>Invert</label>
                 <input type="checkbox" checked={signal.feedback.invert} onChange={e => patchSignalFeedback({ invert: e.target.checked })} />
               </div>
               <div className="property-row">
-                <label>Stan alarmowy</label>
+                <label>Alarm State</label>
                 <select value={signal.alarmState} onChange={e => patchSignal({ alarmState: e.target.value as SignalOwnFields['alarmState'] })} style={inputStyle}>
                   <option value="HIGH">HIGH</option>
                   <option value="LOW">LOW</option>
@@ -791,24 +791,24 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
 
           {measured && (
             <div className="property-group">
-              <div style={sectionTitleStyle}>Pomiar</div>
+              <div style={sectionTitleStyle}>Measurement</div>
               <div className="property-row" {...rowBlurProps('input')}>
                 <label>input</label>
                 <ChannelAddressPicker value={measured.input} onChange={addr => patchMeasured({ input: addr ?? '' })} expectedKind="AI" cards={cards} occupied={occupied} />
                 <FieldErrors messages={fieldErrors.get('input')} fieldKey="input" />
               </div>
               <div className="property-row" {...rowBlurProps('unit')}>
-                <label>Jednostka</label>
+                <label>Unit</label>
                 <input value={measured.unit} onChange={e => patchMeasured({ unit: e.target.value })} style={inputStyle} placeholder="°C" />
                 <FieldErrors messages={fieldErrors.get('unit')} fieldKey="unit" />
               </div>
               <div className="property-row" {...rowBlurProps('rangeMin')}>
-                <label>Zakres min</label>
+                <label>Range Min</label>
                 <input type="number" value={measured.rangeMin} onChange={e => patchMeasured({ rangeMin: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('rangeMin')} fieldKey="rangeMin" />
               </div>
               <div className="property-row" {...rowBlurProps('rangeMax')}>
-                <label>Zakres max</label>
+                <label>Range Max</label>
                 <input type="number" value={measured.rangeMax} onChange={e => patchMeasured({ rangeMax: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('rangeMax')} fieldKey="rangeMax" />
               </div>
@@ -817,7 +817,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 <input value={measured.format} onChange={e => patchMeasured({ format: e.target.value })} style={inputStyle} placeholder="0.0" />
               </div>
               <div className="property-row" {...rowBlurProps('deadband')}>
-                <label>Strefa martwa (deadband)</label>
+                <label>Deadband</label>
                 <input type="number" value={measured.deadband} onChange={e => patchMeasured({ deadband: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('deadband')} fieldKey="deadband" />
               </div>
@@ -826,14 +826,14 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     (MeterResolver.ts's own contract) - the cast below stays
                     scoped to that, not a claim that this draft is otherwise
                     a complete MeasuredDevice yet. */}
-                Podglad (srodek zakresu, edytor nie ma zywych danych): {formatMeasuredValue(getMeasuredPreviewValue({ rangeMin: measured.rangeMin, rangeMax: measured.rangeMax } as MeasuredDevice), measured.format)} {measured.unit}
+                Preview (midpoint of the range, the editor has no live data): {formatMeasuredValue(getMeasuredPreviewValue({ rangeMin: measured.rangeMin, rangeMax: measured.rangeMax } as MeasuredDevice), measured.format)} {measured.unit}
               </div>
             </div>
           )}
 
           {modulated && (
             <div className="property-group">
-              <div style={sectionTitleStyle}>Modulacja</div>
+              <div style={sectionTitleStyle}>Modulation</div>
               <div className="property-row" {...rowBlurProps('setpointOutput')}>
                 <label>setpointOutput</label>
                 <ChannelAddressPicker value={modulated.setpointOutput} onChange={addr => patchModulated({ setpointOutput: addr ?? '' })} expectedKind="AO" cards={cards} occupied={occupied} />
@@ -845,27 +845,27 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                 <FieldErrors messages={fieldErrors.get('feedbackInput')} fieldKey="feedbackInput" />
               </div>
               <div className="property-row" {...rowBlurProps('unit')}>
-                <label>Jednostka</label>
+                <label>Unit</label>
                 <input value={modulated.unit} onChange={e => patchModulated({ unit: e.target.value })} style={inputStyle} placeholder="%" />
                 <FieldErrors messages={fieldErrors.get('unit')} fieldKey="unit" />
               </div>
               <div className="property-row" {...rowBlurProps('rangeMin')}>
-                <label>Zakres min</label>
+                <label>Range Min</label>
                 <input type="number" value={modulated.rangeMin} onChange={e => patchModulated({ rangeMin: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('rangeMin')} fieldKey="rangeMin" />
               </div>
               <div className="property-row" {...rowBlurProps('rangeMax')}>
-                <label>Zakres max</label>
+                <label>Range Max</label>
                 <input type="number" value={modulated.rangeMax} onChange={e => patchModulated({ rangeMax: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('rangeMax')} fieldKey="rangeMax" />
               </div>
               <div className="property-row" {...rowBlurProps('startupValue')}>
-                <label>Wartosc startowa</label>
+                <label>Startup Value</label>
                 <input type="number" value={modulated.startupValue} onChange={e => patchModulated({ startupValue: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('startupValue')} fieldKey="startupValue" />
               </div>
               <div className="property-row" {...rowBlurProps('safeValue')}>
-                <label>Wartosc bezpieczna</label>
+                <label>Safe Value</label>
                 <input type="number" value={modulated.safeValue} onChange={e => patchModulated({ safeValue: Number(e.target.value) })} style={inputStyle} />
                 <FieldErrors messages={fieldErrors.get('safeValue')} fieldKey="safeValue" />
               </div>
@@ -880,11 +880,11 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
             // row to attach to; blur bubbles up from whichever position
             // row the user actually left, same as everywhere else.
             <div className="property-group" {...rowBlurProps('positions')}>
-              <div style={sectionTitleStyle}>Polozenia (positions)</div>
+              <div style={sectionTitleStyle}>Positions</div>
               <div style={warningStyle}>
-                Przelacznik jest odczytywany, nigdy sterowany zdalnie - obraca sie go recznie
-                na szafie. Musza byc co najmniej 2 polozenia; wejscie zwrotne (DI) jest
-                opcjonalne dla kazdego z nich.
+                The selector switch is READ, never controlled remotely - it is turned by hand
+                on the cabinet. At least 2 positions are required; a feedback input (DI) is
+                optional for each of them.
               </div>
               {/* fix/audit-findings commit 1: always visible, not tied
                   to any error state - a single position's own feedback
@@ -892,8 +892,8 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                   NONE of them have one passed validation anyway (no
                   input at all, so it can never report where it is). */}
               <div style={warningStyle}>
-                Co najmniej jedna pozycja musi miec przypisane wejscie. Pozycje bez
-                wejscia sa dozwolone - stan takiej pozycji wnioskuje sie z pozostalych.
+                At least one position must have an input assigned. Positions without an
+                input are allowed - such a position's state is inferred from the others.
               </div>
               <FieldErrors messages={fieldErrors.get('positions')} fieldKey="positions" />
               {selector.positions.map((position, i) => (
@@ -902,7 +902,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     value={position.name}
                     onChange={e => patchSelectorPosition(i, { name: e.target.value })}
                     style={inputStyle}
-                    placeholder="RECZNIE"
+                    placeholder="MANUAL"
                   />
                   <ChannelAddressPicker
                     value={position.feedback}
@@ -912,12 +912,12 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     occupied={occupied}
                     allowEmpty
                   />
-                  <button onClick={() => removeSelectorPosition(i)} disabled={selector.positions.length <= 2} title={selector.positions.length <= 2 ? 'Wymagane co najmniej 2 polozenia' : 'Usun to polozenie'}>x</button>
+                  <button onClick={() => removeSelectorPosition(i)} disabled={selector.positions.length <= 2} title={selector.positions.length <= 2 ? 'At least 2 positions are required' : 'Remove this position'}>x</button>
                   <FieldErrors messages={fieldErrors.get(`positions[${i}].feedback`)} fieldKey={`positions[${i}].feedback`} />
                 </div>
               ))}
               <div className="property-row">
-                <button onClick={addSelectorPosition}>+ Dodaj polozenie</button>
+                <button onClick={addSelectorPosition}>+ Add Position</button>
               </div>
             </div>
           )}
@@ -930,13 +930,13 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
         )}
 
         <div style={footerStyle}>
-          <button onClick={onCancel}>Anuluj</button>
+          <button onClick={onCancel}>Cancel</button>
           {creationContext && !isEdit && createOrAssignMode === 'assign' ? (
             <button
               onClick={() => assignSelectedId && creationContext.onAssignExisting(assignSelectedId)}
               disabled={!assignSelectedId}
             >
-              Przypisz
+              Assign
             </button>
           ) : (
             <>
@@ -950,14 +950,14 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                   below) while still receiving the click, so handleSave's
                   own !canAttemptSave branch can react to an attempted
                   save instead of the click silently doing nothing. */}
-              <button onClick={handleSave} aria-disabled={!canAttemptSave} style={saveButtonStyle(canAttemptSave)}>Zapisz</button>
+              <button onClick={handleSave} aria-disabled={!canAttemptSave} style={saveButtonStyle(canAttemptSave)}>Save</button>
               {/* fix/inline-device-creation commit 4: a separate sibling,
                   not text inside the button itself - the button's own
-                  accessible name stays exactly "Zapisz" either way, so
-                  every existing getByRole('button', { name: 'Zapisz' })
+                  accessible name stays exactly "Save" either way, so
+                  every existing getByRole('button', { name: 'Save' })
                   query across the test suite keeps matching unchanged. */}
               {!canAttemptSave && ownIssues.length > 0 && (
-                <span style={errorBadgeStyle} title={`${ownIssues.length} blad(y) walidacji`}>{ownIssues.length}</span>
+                <span style={errorBadgeStyle} title={`${ownIssues.length} validation error(s)`}>{ownIssues.length}</span>
               )}
             </>
           )}
@@ -1008,7 +1008,7 @@ const errorBadgeStyle: React.CSSProperties = {
   background: COLOR_ALARM, color: 'var(--scada-panel)', borderRadius: '9px',
   padding: '1px 7px', fontSize: `${FONT_SIZE_SMALL}px`, fontWeight: 'bold'
 };
-// fix/device-form-polish commit 2: the Zapisz button's own look when
+// fix/device-form-polish commit 2: the Save button's own look when
 // aria-disabled - a real HTML disabled button gets this appearance for
 // free from the browser's own UA stylesheet; aria-disabled does not,
 // so it is reproduced here explicitly.

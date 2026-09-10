@@ -34,7 +34,7 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [{ id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }],
     devices: []
   });
@@ -44,41 +44,41 @@ describe('19. a section containing a validation error is shown expanded, without
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('Nadzor (supervision) auto-expands when confirmTimeoutMs is invalid, while an error-free section stays collapsed', () => {
+  it('Supervision auto-expands when confirmTimeoutMs is invalid, while an error-free section stays collapsed', () => {
     const device = makeSwitched({ supervision: { confirmTimeoutMs: 50, discrepancyAlarm: false } });
     render(<DeviceFormDialog mode="edit" initialDevice={device} onSave={() => {}} onCancel={() => {}} />);
 
     // Nadzor holds the error (confirmTimeoutMs 50 < 100) - its own
     // field is visible immediately, no click needed.
-    expect(input('Timeout potwierdzenia (ms)')).toBeTruthy();
+    expect(input('Confirmation Timeout (ms)')).toBeTruthy();
     expect(screen.getByText(/confirmTimeoutMs must be >= 100/)).toBeTruthy();
 
-    // Blokady (interlock) holds no error and was never clicked - still
+    // Interlocks holds no error and was never clicked - still
     // collapsed, its own fields are not even in the document.
-    expect(screen.queryByText('Opis blokady ZAMKNIJ')).toBeNull();
+    expect(screen.queryByText('CLOSE Interlock Description')).toBeNull();
   });
 
   it('collapsing an errored section by hand has no visible effect - the error can never be hidden', () => {
     const device = makeSwitched({ supervision: { confirmTimeoutMs: 50, discrepancyAlarm: false } });
     render(<DeviceFormDialog mode="edit" initialDevice={device} onSave={() => {}} onCancel={() => {}} />);
 
-    fireEvent.click(screen.getByText('Nadzor (supervision)'));
-    expect(input('Timeout potwierdzenia (ms)')).toBeTruthy();
+    fireEvent.click(screen.getByText('Supervision'));
+    expect(input('Confirmation Timeout (ms)')).toBeTruthy();
   });
 
   it('fixing the error collapses the section back down on its own - it was never manually opened, only forced open by the error', () => {
     const device = makeSwitched({ supervision: { confirmTimeoutMs: 50, discrepancyAlarm: false } });
     render(<DeviceFormDialog mode="edit" initialDevice={device} onSave={() => {}} onCancel={() => {}} />);
 
-    fireEvent.change(input('Timeout potwierdzenia (ms)'), { target: { value: '1000' } });
+    fireEvent.change(input('Confirmation Timeout (ms)'), { target: { value: '1000' } });
 
     expect(screen.queryByText(/confirmTimeoutMs must be >= 100/)).toBeNull();
-    expect(screen.queryByText('Timeout potwierdzenia (ms)')).toBeNull();
+    expect(screen.queryByText('Confirmation Timeout (ms)')).toBeNull();
 
     // Clicking the header now genuinely opens it (a plain toggle, no
     // error left to force anything).
-    fireEvent.click(screen.getByText('Nadzor (supervision)'));
-    expect(screen.getByText('Timeout potwierdzenia (ms)')).toBeTruthy();
+    fireEvent.click(screen.getByText('Supervision'));
+    expect(screen.getByText('Confirmation Timeout (ms)')).toBeTruthy();
   });
 });
 
@@ -86,11 +86,11 @@ describe('20. Enter in a text field moves to the next field, never saves the for
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('pressing Enter in Nazwa never calls onSave, and moves focus to the next field', () => {
+  it('pressing Enter in Name never calls onSave, and moves focus to the next field', () => {
     let saved: SwitchedDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={(d) => { saved = d as SwitchedDevice; }} onCancel={() => {}} />);
 
-    const nameInput = input('Nazwa');
+    const nameInput = input('Name');
     nameInput.focus();
     fireEvent.keyDown(nameInput, { key: 'Enter' });
 
@@ -102,7 +102,7 @@ describe('20. Enter in a text field moves to the next field, never saves the for
     let saved: SwitchedDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={(d) => { saved = d as SwitchedDevice; }} onCancel={() => {}} />);
 
-    const checkbox = row('Publikuj do HA').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const checkbox = row('Publish to HA').querySelector('input[type="checkbox"]') as HTMLInputElement;
     checkbox.focus();
     fireEvent.keyDown(checkbox, { key: 'Enter' });
 

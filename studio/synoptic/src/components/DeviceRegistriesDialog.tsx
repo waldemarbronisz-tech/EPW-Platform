@@ -92,10 +92,10 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
   const handleDeleteLocation = (code: string) => {
     const usedBy = getDevicesUsingLocation(devices, code);
     if (usedBy.length > 0) {
-      setLocError(`Nie mozna usunac lokalizacji '${code}' - jest uzywana przez ${usedBy.length} aparat(ow) (${usedBy.map(d => d.id).join(', ')}).`);
+      setLocError(`Cannot delete location '${code}' - it is used by ${usedBy.length} device(s) (${usedBy.map(d => d.id).join(', ')}).`);
       return;
     }
-    if (!confirm(`Usunac lokalizacje '${code}'?`)) return;
+    if (!confirm(`Delete location '${code}'?`)) return;
     deleteLocation(code);
     setLocError(null);
   };
@@ -155,10 +155,10 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
     const usages = getChannelUsagesForCard(devices, id);
     if (usages.length > 0) {
       const byDevice = Array.from(new Set(usages.map(u => u.deviceId)));
-      setCardError(`Nie mozna usunac karty '${id}' - jej kanaly sa uzywane przez ${byDevice.length} aparat(ow) (${byDevice.join(', ')}).`);
+      setCardError(`Cannot delete card '${id}' - its channels are used by ${byDevice.length} device(s) (${byDevice.join(', ')}).`);
       return;
     }
-    if (!confirm(`Usunac karte '${id}'?`)) return;
+    if (!confirm(`Delete card '${id}'?`)) return;
     deleteCard(id);
     setCardError(null);
   };
@@ -168,13 +168,13 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
       <div style={backdropStyle} onClick={onClose} />
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <span>Rejestry projektu</span>
-          <button onClick={onClose} title="Zamknij" style={closeButtonStyle}>x</button>
+          <span>Project Registers</span>
+          <button onClick={onClose} title="Close" style={closeButtonStyle}>x</button>
         </div>
 
         <div style={tabBarStyle}>
-          <div style={tab === 'locations' ? tabActiveStyle : tabInactiveStyle} onClick={() => setTab('locations')}>Lokalizacje</div>
-          <div style={tab === 'cards' ? tabActiveStyle : tabInactiveStyle} onClick={() => setTab('cards')}>Karty</div>
+          <div style={tab === 'locations' ? tabActiveStyle : tabInactiveStyle} onClick={() => setTab('locations')}>Locations</div>
+          <div style={tab === 'cards' ? tabActiveStyle : tabInactiveStyle} onClick={() => setTab('cards')}>Cards</div>
         </div>
 
         <div style={bodyStyle}>
@@ -183,9 +183,9 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
               <table style={tableStyle}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>Kod</th>
-                    <th style={thStyle}>Opis</th>
-                    <th style={thStyle}>Uzycie</th>
+                    <th style={thStyle}>Code</th>
+                    <th style={thStyle}>Description</th>
+                    <th style={thStyle}>Usage</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
@@ -205,13 +205,13 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
                         <td style={tdStyle}>
                           {editing ? (
                             <>
-                              <button onClick={() => handleSaveLocationEdit(loc.code)}>Zapisz</button>
-                              <button onClick={() => { setEditingLocCode(null); setLocError(null); }}>Anuluj</button>
+                              <button onClick={() => handleSaveLocationEdit(loc.code)}>Save</button>
+                              <button onClick={() => { setEditingLocCode(null); setLocError(null); }}>Cancel</button>
                             </>
                           ) : (
                             <>
-                              <button onClick={() => startEditLocation(loc)}>Edytuj</button>
-                              <button onClick={() => handleDeleteLocation(loc.code)} disabled={usedBy.length > 0} title={usedBy.length > 0 ? `Uzywana przez ${usedBy.length} aparat(ow)` : ''}>Usun</button>
+                              <button onClick={() => startEditLocation(loc)}>Edit</button>
+                              <button onClick={() => handleDeleteLocation(loc.code)} disabled={usedBy.length > 0} title={usedBy.length > 0 ? `Used by ${usedBy.length} device(s)` : ''}>Delete</button>
                             </>
                           )}
                         </td>
@@ -220,9 +220,9 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
                   })}
                   <tr>
                     <td style={tdStyle}><input value={newLocCode} onChange={e => setNewLocCode(e.target.value)} style={inputStyle} placeholder="KOT" /></td>
-                    <td style={tdStyle}><input value={newLocDesc} onChange={e => setNewLocDesc(e.target.value)} style={inputStyle} placeholder="Kotlownia" /></td>
+                    <td style={tdStyle}><input value={newLocDesc} onChange={e => setNewLocDesc(e.target.value)} style={inputStyle} placeholder="Boiler room" /></td>
                     <td style={tdStyle}></td>
-                    <td style={tdStyle}><button onClick={handleAddLocation}>+ Dodaj</button></td>
+                    <td style={tdStyle}><button onClick={handleAddLocation}>+ Add</button></td>
                   </tr>
                 </tbody>
               </table>
@@ -237,9 +237,9 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
                   <tr>
                     <th style={thStyle}>Id</th>
                     <th style={thStyle}>Model</th>
-                    <th style={thStyle}>Rodzaj</th>
-                    <th style={thStyle}>Kanaly</th>
-                    <th style={thStyle}>Uzycie</th>
+                    <th style={thStyle}>Kind</th>
+                    <th style={thStyle}>Channels</th>
+                    <th style={thStyle}>Usage</th>
                     <th style={thStyle}></th>
                   </tr>
                 </thead>
@@ -272,13 +272,13 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
                         <td style={tdStyle}>
                           {editing ? (
                             <>
-                              <button onClick={() => handleSaveCardEdit(card.id)}>Zapisz</button>
-                              <button onClick={() => { setEditingCardId(null); setCardError(null); }}>Anuluj</button>
+                              <button onClick={() => handleSaveCardEdit(card.id)}>Save</button>
+                              <button onClick={() => { setEditingCardId(null); setCardError(null); }}>Cancel</button>
                             </>
                           ) : (
                             <>
-                              <button onClick={() => startEditCard(card)}>Edytuj</button>
-                              <button onClick={() => handleDeleteCard(card.id)} disabled={usedByCount > 0} title={usedByCount > 0 ? `Uzywana przez ${usedByCount} aparat(ow)` : ''}>Usun</button>
+                              <button onClick={() => startEditCard(card)}>Edit</button>
+                              <button onClick={() => handleDeleteCard(card.id)} disabled={usedByCount > 0} title={usedByCount > 0 ? `Used by ${usedByCount} device(s)` : ''}>Delete</button>
                             </>
                           )}
                         </td>
@@ -295,7 +295,7 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
                     </td>
                     <td style={tdStyle}><input type="number" value={newCardCount} onChange={e => setNewCardCount(Number(e.target.value))} style={inputStyle} /></td>
                     <td style={tdStyle}></td>
-                    <td style={tdStyle}><button onClick={handleAddCard}>+ Dodaj</button></td>
+                    <td style={tdStyle}><button onClick={handleAddCard}>+ Add</button></td>
                   </tr>
                 </tbody>
               </table>
@@ -305,7 +305,7 @@ export const DeviceRegistriesDialog: React.FC<DeviceRegistriesDialogProps> = ({ 
         </div>
 
         <div style={footerStyle}>
-          <button onClick={onClose}>Zamknij</button>
+          <button onClick={onClose}>Close</button>
         </div>
       </div>
     </>

@@ -26,9 +26,9 @@ import { objectPipeSegment, waterStub } from './BandedShading';
 import { resolveSiteState } from './SiteSymbolState';
 import { COLOR_OUTLINE, SITE_DGREY, SITE_BLUE } from '../../theme/ScadaTheme';
 
-export type DripLineState = 'ZALACZONY' | 'WYLACZONY';
+export type DripLineState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const DRIP_LINE_STATES: DripLineState[] = ['ZALACZONY', 'WYLACZONY'];
+export const DRIP_LINE_STATES: DripLineState[] = ['ON', 'OFF'];
 
 // docs/EPW_gospodarka_wodna_referencja.py's own linia_krop(on): 4
 // drippers at x=24,48,72,96 - a 24-unit spacing, first dripper 18
@@ -48,7 +48,7 @@ export function computeDripperPositions(width: number): number[] {
 }
 
 export const DripLineSymbol: React.FC<SymbolProps> = ({ obj, state, terminalNetState }) => {
-  const on = resolveSiteState(state, DRIP_LINE_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, DRIP_LINE_STATES, 'OFF') === 'ON';
   const wlotLive = (terminalNetState?.('WLOT') ?? 'INACTIVE') === 'ACTIVE';
   const scaleX = obj.scaleX || 1;
   const scaleY = obj.scaleY || 1;

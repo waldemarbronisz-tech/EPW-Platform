@@ -2,7 +2,7 @@
 // feat/device-form-from-canvas commit 2 - the shared openDeviceForm
 // called from every other place an aparat is visible: Properties'
 // Aparat row (2a), a meter row (2b), a signal-panel row (2c), a
-// wizard row (2d), and Lista aparatow's own Edytuj button (unified
+// wizard row (2d), and Device List's own Edit button (unified
 // here too, for test 12's own meaningful comparison). Renders the
 // REAL components against the REAL store, same convention every other
 // PropertyInspector/DeviceListDialog test in this project already uses.
@@ -55,7 +55,7 @@ function makeMeasured(overrides: Partial<MeasuredDevice> = {}): MeasuredDevice {
 function resetStore() {
   useStore.setState({
     objects: [], connections: [], meters: [], signalPanels: [], frames: [], groupCommands: [], setpointPanels: [],
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [{ id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }, { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 }],
     devices: [makeSwitched(), makeMeasured()],
     selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [],
@@ -66,21 +66,21 @@ function resetStore() {
   });
 }
 
-describe('2a / 9. Properties\' Aparat row has a button to open the bound device\'s form', () => {
+describe('2a / 9. Properties\' Device row has a button to open the bound device\'s form', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('9: disabled when Aparat is empty (no device bound)', () => {
+  it('9: disabled when Device is empty (no device bound)', () => {
     useStore.setState({ objects: [makeObj({ deviceId: undefined })], selectedIds: ['O1'] });
     render(<PropertyInspector />);
-    const button = screen.getByRole('button', { name: 'Otworz...' }) as HTMLButtonElement;
+    const button = screen.getByRole('button', { name: 'Open...' }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
   });
 
-  it('enabled and opens the bound device\'s form when Aparat is set', () => {
+  it('enabled and opens the bound device\'s form when Device is set', () => {
     useStore.setState({ objects: [makeObj({ deviceId: 'KOT_KMG1', designation: '-K1' })], selectedIds: ['O1'] });
     render(<PropertyInspector />);
-    const button = screen.getByRole('button', { name: 'Otworz...' }) as HTMLButtonElement;
+    const button = screen.getByRole('button', { name: 'Open...' }) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
 
     fireEvent.click(button);
@@ -154,7 +154,7 @@ describe('2d / 11. Double-click on a wizard row opens the device form without to
     const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
-    expect(screen.getByText(/Zaznaczono: 1/)).toBeTruthy();
+    expect(screen.getByText(/Selected: 1/)).toBeTruthy();
   });
 
   it('11 (signal panel wizard): opens the form and leaves the checkbox unchecked', () => {
@@ -176,11 +176,11 @@ describe('2d / 11. Double-click on a wizard row opens the device form without to
   });
 });
 
-describe('12. The form opened from the schematic and from Lista aparatow is the SAME component', () => {
+describe('12. The form opened from the schematic and from Device List is the SAME component', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('both ObjectNode.tsx (schematic double-click) and DeviceListDialog.tsx (Edytuj) call the identical shared function, by source', () => {
+  it('both ObjectNode.tsx (schematic double-click) and DeviceListDialog.tsx (Edit) call the identical shared function, by source', () => {
     expect(objectNodeSource).toContain('.openDeviceForm(');
     expect(deviceListDialogSource).toContain('.openDeviceForm(');
   });
@@ -197,12 +197,12 @@ describe('12. The form opened from the schematic and from Lista aparatow is the 
     expect(renderMatches.length).toBe(2);
   });
 
-  it('DeviceListDialog.tsx itself only ever renders DeviceFormDialog in mode="add" now - Edytuj no longer has a local copy', () => {
+  it('DeviceListDialog.tsx itself only ever renders DeviceFormDialog in mode="add" now - Edit no longer has a local copy', () => {
     expect(deviceListDialogSource).toContain('mode="add"');
     expect(deviceListDialogSource).not.toContain("mode={form.mode}");
   });
 
-  it('behaviorally: double-clicking a bound symbol and clicking Edytuj on the same device produce the identical deviceFormRequest shape', () => {
+  it('behaviorally: double-clicking a bound symbol and clicking Edit on the same device produce the identical deviceFormRequest shape', () => {
     useStore.setState({ objects: [makeObj({ deviceId: 'KOT_KMG1' })] });
     handleSymbolDblClick({ cancelBubble: false }, useStore.getState().objects[0]);
     const fromSchematic = useStore.getState().deviceFormRequest;
@@ -212,16 +212,16 @@ describe('12. The form opened from the schematic and from Lista aparatow is the 
 
     render(<DeviceListDialog onClose={() => {}} />);
     fireEvent.click(screen.getByText('KOT_KMG1'));
-    fireEvent.click(screen.getByRole('button', { name: 'Edytuj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const fromList = useStore.getState().deviceFormRequest;
 
     expect(fromList?.deviceId).toBe(fromSchematic?.deviceId);
   });
 
-  it('Edytuj opens with no sourceContext, so the form\'s header stays exactly what it always was for this path', () => {
+  it('Edit opens with no sourceContext, so the form\'s header stays exactly what it always was for this path', () => {
     render(<DeviceListDialog onClose={() => {}} />);
     fireEvent.click(screen.getByText('KOT_KMG1'));
-    fireEvent.click(screen.getByRole('button', { name: 'Edytuj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     expect(useStore.getState().deviceFormRequest?.sourceContext).toBeUndefined();
   });
 });

@@ -58,22 +58,15 @@ describe('24. DOPLYW is a single straight horizontal krociec, touching the tank\
   });
 });
 
-describe('25. ODPLYW is likewise a single straight horizontal krociec, touching the true RIGHT terminal', () => {
-  it('TANK_TERMINAL_AXIS also matches the RIGHT terminal\'s own true edge-midpoint height', () => {
-    expect(TANK_TERMINAL_AXIS).toBe(getTerminalOffsetForSide('RIGHT', W, H).y);
-  });
-
-  it('waterStub at that axis, on the right side, is also a single straight segment', () => {
-    const el = waterStub(TANK_SHELL_BOUNDS.x + TANK_SHELL_BOUNDS.width, TANK_TERMINAL_AXIS, 'R', true, W, H);
-    const path = findAll(el, 'Path')[0];
-    const m = /M([\d.-]+),([\d.-]+) L([\d.-]+),([\d.-]+)/.exec(path.props.data);
-    expect(path.props.data.split('L').length).toBe(2);
-    expect(Number(m![2])).toBe(Number(m![4]));
-  });
-
-  it('the component draws ODPLYW via waterStub at TANK_TERMINAL_AXIS too', () => {
-    expect(rainwaterTank2Source).toMatch(/waterStub\(BX \+ BW,\s*TANK_TERMINAL_AXIS,\s*'R'/);
+// fix/tank-language-and-media commit 2 moved ODPLYW from the RIGHT
+// edge to the BOTTOM edge (water drains from the floor, not the
+// wall) - this describe block is updated to match; see that task's
+// own test 9 for the full mandated coverage ("single vertical
+// segment").
+describe('25. ODPLYW is a single straight krociec, touching its own true terminal (now on the BOTTOM edge)', () => {
+  it('the component draws ODPLYW via waterStub on side B, not the old RIGHT-side TANK_TERMINAL_AXIS jog', () => {
     expect(rainwaterTank2Source).not.toContain('{ x: BX + BW, y: BY + BH - 7 }'); // the old jog's own starting point
+    expect(rainwaterTank2Source).not.toMatch(/waterStub\(BX \+ BW,\s*TANK_TERMINAL_AXIS,\s*'R'/); // the old right-side call
   });
 });
 

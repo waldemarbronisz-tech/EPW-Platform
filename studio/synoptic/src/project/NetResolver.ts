@@ -126,7 +126,11 @@ function segmentsOf(points: WirePoint[]): [WirePoint, WirePoint][] {
   return segs;
 }
 
-function pointTouchesConnection(px: number, py: number, conn: SynopticConnection): boolean {
+// feat/tank-language-and-media commit 1: exported (was module-private)
+// so the draw-time media guard below can ask "does this exact point
+// touch this existing wire's own segment" - the same question
+// resolveNets already asks internally, never a second geometry test.
+export function pointTouchesConnection(px: number, py: number, conn: SynopticConnection): boolean {
   return segmentsOf(conn.points).some(([a, b]) => pointOnSegment(px, py, a.x, a.y, b.x, b.y));
 }
 
@@ -228,6 +232,21 @@ export function resolveNets(connections: SynopticConnection[], items: SynopticOb
   return nets;
 }
 
+export type Medium = 'ELECTRICAL' | 'WATER' | 'VENTILATION';
+
+// ---- Media compatibility -------------------------------------------------
+// feat/tank-language-and-media commit 1: the ONE rule this whole
+// section exists to enforce - two media may share a net only when they
+// are the same medium. validateNets' own MIXED_MEDIUM check below and
+// the draw-time guard (findMediaConflictAtPoint) both call this SAME
+// function - there is no second, independent copy of the rule anywhere
+// in this codebase.
+
+/** Whether a terminal/wire of medium `a` may share a net with one of medium `b`. */
+export function areMediaCompatible(a: Medium, b: Medium): boolean {
+  return a === b;
+}
+
 // ---- validateNets -------------------------------------------------------
 
 /**
@@ -237,22 +256,27 @@ export function resolveNets(connections: SynopticConnection[], items: SynopticOb
 export function validateNets(nets: Net[], items: SynopticObject[]): NetIssue[] {
   const issues: NetIssue[] = [];
   const worldTerminals = getAllWorldTerminals(items);
-  const terminalMedium = new Map<string, 'ELECTRICAL' | 'WATER' | 'VENTILATION'>();
+  const terminalMedium = new Map<string, Medium>();
   worldTerminals.forEach(t => terminalMedium.set(`${t.objId}:${t.terminalId}`, t.medium));
   const objById = new Map(items.map(o => [o.id, o]));
 
   nets.forEach(net => {
-    // Three media now (ELECTRICAL, WATER, VENTILATION) - the check
-    // itself is unchanged, a Set naturally flags any 2+ of them mixed
-    // in one net: power tied to water, power tied to a duct, or water
-    // tied to a duct are all the same MIXED_MEDIUM error.
-    const media = new Set(net.terminals.map(t => terminalMedium.get(`${t.objId}:${t.terminalId}`)).filter(Boolean));
-    if (media.size > 1) {
+    // Three media now (ELECTRICAL, WATER, VENTILATION). Built from
+    // areMediaCompatible - any two DISTINCT media found on the same
+    // net are, by that function's own definition, incompatible, so a
+    // plain Set-of-distinct-values check already IS "every pair is
+    // compatible" for this three-value domain; this is not a second,
+    // parallel rule, just the same one read at the net level instead
+    // of a single pair.
+    const media = new Set(net.terminals.map(t => terminalMedium.get(`${t.objId}:${t.terminalId}`)).filter(Boolean)) as Set<Medium>;
+    const mediaList = [...media];
+    const hasIncompatiblePair = mediaList.some((m, i) => mediaList.some((other, j) => j > i && !areMediaCompatible(m, other)));
+    if (hasIncompatiblePair) {
       issues.push({
         severity: 'ERROR',
         code: 'MIXED_MEDIUM',
         netId: net.id,
-        message: `Net touches terminals of different media (${[...media].join(', ')}) - a terminal from one medium plugged into another medium's net`
+        message: `Net touches terminals of different media (${mediaList.join(', ')}) - a terminal from one medium plugged into another medium's net`
       });
     }
 
@@ -280,6 +304,45 @@ export function validateNets(nets: Net[], items: SynopticObject[]): NetIssue[] {
   });
 
   return issues;
+}
+
+// ---- Draw-time media guard -------------------------------------------------
+// feat/tank-language-and-media commit 1: usterka fix - a mismatched
+// medium used to surface only as a MIXED_MEDIUM issue from validateNets,
+// AFTER the wire already existed. This lets Canvas.tsx ask the exact
+// same question BEFORE placing a point: would landing here touch a
+// terminal or an existing wire of an incompatible medium. Built
+// entirely from areMediaCompatible and pointTouchesConnection above -
+// no second geometry or compatibility rule.
+
+export interface MediaConflict {
+  drawnMedium: Medium;
+  otherMedium: Medium;
+  // Which kind of thing the point would touch - a symbol's own
+  // terminal, or the middle/end of an already-drawn wire (usterka c).
+  source: 'terminal' | 'wire';
+}
+
+/**
+ * Whether placing a new wire point of `drawnMedium` exactly at `point`
+ * would touch something of an incompatible medium. Checked against
+ * every terminal (getAllWorldTerminals, the same lookup resolveNets
+ * itself uses) and every existing connection's own segments
+ * (pointTouchesConnection, exported above) - returns the FIRST
+ * conflict found, or null when the point is safe to place.
+ */
+export function findMediaConflictAtPoint(point: { x: number; y: number }, objects: SynopticObject[], connections: SynopticConnection[], drawnMedium: Medium): MediaConflict | null {
+  for (const t of getAllWorldTerminals(objects)) {
+    if (t.x === point.x && t.y === point.y && !areMediaCompatible(t.medium, drawnMedium)) {
+      return { drawnMedium, otherMedium: t.medium, source: 'terminal' };
+    }
+  }
+  for (const conn of connections) {
+    if (!areMediaCompatible(conn.medium, drawnMedium) && pointTouchesConnection(point.x, point.y, conn)) {
+      return { drawnMedium, otherMedium: conn.medium, source: 'wire' };
+    }
+  }
+  return null;
 }
 
 // ---- Junction dots -------------------------------------------------------

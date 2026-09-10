@@ -19,10 +19,10 @@ function input(labelText: string): HTMLInputElement {
   return row(labelText).querySelector('input') as HTMLInputElement;
 }
 function isSaveDisabled(): boolean {
-  return screen.getByRole('button', { name: 'Zapisz' }).getAttribute('aria-disabled') === 'true';
+  return screen.getByRole('button', { name: 'Save' }).getAttribute('aria-disabled') === 'true';
 }
 function attemptSave() {
-  fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 }
 
 function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
@@ -39,7 +39,7 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [
       { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 },
       { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }
@@ -78,25 +78,25 @@ describe('DeviceFormDialog - validation message timing', () => {
   // 6. the error counter is visible in a freshly opened form
   it('6: the error counter next to Save is visible from the start', () => {
     openFreshAddForm();
-    expect(screen.getByTitle(/blad\(y\) walidacji/)).toBeTruthy();
+    expect(screen.getByTitle(/validation error\(s\)/)).toBeTruthy();
   });
 
   // 7. leaving the empty designation field shows its own message
-  it('7: leaving the empty Oznaczenie field shows its own error message', () => {
+  it('7: leaving the empty Designation field shows its own error message', () => {
     openFreshAddForm();
-    const designationInput = input('Oznaczenie');
+    const designationInput = input('Designation');
     fireEvent.focus(designationInput);
     fireEvent.blur(designationInput);
     expect(screen.getByText(/designation must not be empty/)).toBeTruthy();
   });
 
   // 8. another, untouched field's message still does not show
-  it('8: another, untouched field\'s error stays hidden after only Oznaczenie was touched', () => {
+  it('8: another, untouched field\'s error stays hidden after only Designation was touched', () => {
     openFreshAddForm();
-    const designationInput = input('Oznaczenie');
+    const designationInput = input('Designation');
     fireEvent.focus(designationInput);
     fireEvent.blur(designationInput);
-    // Nazwa is also empty (a real error), but was never touched.
+    // Name is also empty (a real error), but was never touched.
     expect(screen.queryByText(/name must not be empty/)).toBeNull();
   });
 
@@ -116,7 +116,7 @@ describe('DeviceFormDialog - validation message timing', () => {
   // validation itself is unchanged - only the moment it FIRST appears is)
   it('10: correcting a touched field removes its message immediately', () => {
     openFreshAddForm();
-    const designationInput = input('Oznaczenie');
+    const designationInput = input('Designation');
     fireEvent.blur(designationInput);
     expect(screen.getByText(/designation must not be empty/)).toBeTruthy();
     fireEvent.change(designationInput, { target: { value: '-K1' } });

@@ -32,7 +32,7 @@ export function validateDeviceBindings(objects: SynopticObject[], devices: Devic
       issues.push({
         severity: 'WARNING',
         objectId: obj.id,
-        message: `Symbol ${describeObject(obj)} wskazuje na nieistniejacy aparat '${obj.deviceId}'`
+        message: `Symbol ${describeObject(obj)} points to a nonexistent device '${obj.deviceId}'`
       });
     }
   }

@@ -24,7 +24,7 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [{ id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }],
     devices: [makeSwitched()]
   });
@@ -36,18 +36,18 @@ describe('3a. DeviceFormDialog\'s own context header', () => {
 
   it('shows sourceContext as a second header line when provided', () => {
     render(
-      <DeviceFormDialog mode="edit" initialDevice={makeSwitched()} sourceContext="Schemat, symbol -K1" onSave={() => {}} onCancel={() => {}} />
+      <DeviceFormDialog mode="edit" initialDevice={makeSwitched()} sourceContext="Diagram, symbol -K1" onSave={() => {}} onCancel={() => {}} />
     );
-    expect(screen.getByText('Schemat, symbol -K1')).toBeTruthy();
+    expect(screen.getByText('Diagram, symbol -K1')).toBeTruthy();
   });
 
-  it('shows nothing extra when sourceContext is not provided - the header stays exactly what it always was (Lista aparatow\'s own path, task 3b/GRANICE)', () => {
+  it('shows nothing extra when sourceContext is not provided - the header stays exactly what it always was (Device List\'s own path, task 3b/GRANICE)', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={() => {}} onCancel={() => {}} />);
-    expect(screen.getByText('Edycja aparatu KOT_KMG1')).toBeTruthy();
+    expect(screen.getByText('Edit Device KOT_KMG1')).toBeTruthy();
     // Nothing else in the header names a source - the header block has
     // exactly one text line.
-    const header = screen.getByText('Edycja aparatu KOT_KMG1').parentElement!;
-    expect(header.textContent).toBe('Edycja aparatu KOT_KMG1');
+    const header = screen.getByText('Edit Device KOT_KMG1').parentElement!;
+    expect(header.textContent).toBe('Edit Device KOT_KMG1');
   });
 });
 
@@ -95,7 +95,7 @@ describe('3c. Escape closes the form without saving, confirming first if anythin
     }
   });
 
-  it('the backdrop, the header "x" and the footer Anuluj still close directly, with no confirmation - unchanged from before this commit', () => {
+  it('the backdrop, the header "x" and the footer Cancel still close directly, with no confirmation - unchanged from before this commit', () => {
     const originalConfirm = window.confirm;
     let confirmCalled = false;
     window.confirm = () => { confirmCalled = true; return true; };
@@ -103,7 +103,7 @@ describe('3c. Escape closes the form without saving, confirming first if anythin
       let cancelled = false;
       render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={() => {}} onCancel={() => { cancelled = true; }} />);
       fireEvent.change(screen.getByDisplayValue('-K1'), { target: { value: '-K2' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(cancelled).toBe(true);
       expect(confirmCalled).toBe(false);
     } finally {
@@ -117,7 +117,7 @@ describe('3c. Escape closes the form without saving, confirming first if anythin
     try {
       let cancelledWithContext = false;
       const { unmount } = render(
-        <DeviceFormDialog mode="edit" initialDevice={makeSwitched()} sourceContext="Schemat, symbol -K1" onSave={() => {}} onCancel={() => { cancelledWithContext = true; }} />
+        <DeviceFormDialog mode="edit" initialDevice={makeSwitched()} sourceContext="Diagram, symbol -K1" onSave={() => {}} onCancel={() => { cancelledWithContext = true; }} />
       );
       const input1 = screen.getByDisplayValue('-K1');
       fireEvent.change(input1, { target: { value: '-K2' } });

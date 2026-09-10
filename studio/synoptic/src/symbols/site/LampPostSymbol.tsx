@@ -18,9 +18,9 @@ import {
   SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type LampPostState = 'ZALACZONY' | 'WYLACZONY';
+export type LampPostState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol pair, same convention as scada/ symbols.
-export const LAMP_POST_STATES: LampPostState[] = ['ZALACZONY', 'WYLACZONY'];
+export const LAMP_POST_STATES: LampPostState[] = ['ON', 'OFF'];
 
 function renderLampPost(fixtureCount: 1 | 2, on: boolean): React.ReactElement {
   const fixtureColor = on ? SITE_YELL : SITE_DARK;
@@ -56,11 +56,11 @@ function renderLampPost(fixtureCount: 1 | 2, on: boolean): React.ReactElement {
 }
 
 export const LampPostDoubleSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, LAMP_POST_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, LAMP_POST_STATES, 'OFF') === 'ON';
   return renderLampPost(2, on);
 };
 
 export const LampPostSingleSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, LAMP_POST_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, LAMP_POST_STATES, 'OFF') === 'ON';
   return renderLampPost(1, on);
 };

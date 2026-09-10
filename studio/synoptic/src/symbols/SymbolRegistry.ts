@@ -114,7 +114,7 @@ export const getSymbolDefinition = (type: string): SymbolDefinition | undefined 
 // before its own entry gets added here - is appended afterward, in
 // whatever order it was first encountered, so it is never silently
 // dropped from the library.
-const CATEGORY_DISPLAY_ORDER = ['Electrical', 'Water', 'HVAC', 'Instrumentation', 'TEREN', 'SCADA', 'Automation'];
+const CATEGORY_DISPLAY_ORDER = ['Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA', 'Automation'];
 
 // Only what the Object Library should show - getSymbolDefinition above
 // stays unfiltered, since an already-placed object of a hidden type

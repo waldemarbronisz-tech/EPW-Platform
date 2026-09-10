@@ -47,7 +47,7 @@ describe('PropertyInspector - group command button', () => {
     useStore.setState({ groupCommands: [makeGroupCommand()], selectedGroupCommandIds: ['G1'] });
     render(<PropertyInspector />);
     expect((screen.getByDisplayValue('Start wentylatorow') as HTMLInputElement).value).toBe('Start wentylatorow');
-    expect((row('Polecenie').querySelector('select') as HTMLSelectElement).value).toBe('CLOSE');
+    expect((row('Command').querySelector('select') as HTMLSelectElement).value).toBe('CLOSE');
   });
 
   it('editing the label updates the store', () => {
@@ -60,7 +60,7 @@ describe('PropertyInspector - group command button', () => {
   it('changing the command dropdown updates the store', () => {
     useStore.setState({ groupCommands: [makeGroupCommand()], selectedGroupCommandIds: ['G1'] });
     render(<PropertyInspector />);
-    fireEvent.change(row('Polecenie').querySelector('select')!, { target: { value: 'OPEN' } });
+    fireEvent.change(row('Command').querySelector('select')!, { target: { value: 'OPEN' } });
     expect(useStore.getState().groupCommands[0].command).toBe('OPEN');
   });
 
@@ -71,7 +71,7 @@ describe('PropertyInspector - group command button', () => {
       selectedGroupCommandIds: ['G1']
     });
     render(<PropertyInspector />);
-    const addSelect = screen.getByText('+ Dodaj aparat...').closest('select') as HTMLSelectElement;
+    const addSelect = screen.getByText('+ Add device...').closest('select') as HTMLSelectElement;
     const options = Array.from(addSelect.options).map(o => o.value).filter(v => v !== '');
     expect(options).toEqual(['KOT_W2']);
   });
@@ -83,7 +83,7 @@ describe('PropertyInspector - group command button', () => {
       selectedGroupCommandIds: ['G1']
     });
     render(<PropertyInspector />);
-    const addSelect = screen.getByText('+ Dodaj aparat...').closest('select') as HTMLSelectElement;
+    const addSelect = screen.getByText('+ Add device...').closest('select') as HTMLSelectElement;
     fireEvent.change(addSelect, { target: { value: 'KOT_W1' } });
     expect(useStore.getState().groupCommands[0].deviceIds).toEqual(['KOT_W1']);
   });
@@ -106,7 +106,7 @@ describe('PropertyInspector - group command button', () => {
       selectedGroupCommandIds: ['G1']
     });
     render(<PropertyInspector />);
-    expect(screen.getByText(/brak \/ nie SWITCHED/)).toBeTruthy();
+    expect(screen.getByText(/missing \/ not SWITCHED/)).toBeTruthy();
   });
 
   it('"Testuj (podglad)" logs an INFO message naming every valid target, never sends anything', () => {

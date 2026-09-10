@@ -11,16 +11,16 @@ import { bandedRect, waterStub } from './BandedShading';
 import { resolveSiteState } from './SiteSymbolState';
 import { COLOR_OUTLINE, SITE_GREY, SITE_GREEN, SITE_RED } from '../../theme/ScadaTheme';
 
-export type CheckValveState = 'ZALACZONY' | 'WYLACZONY';
+export type CheckValveState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const CHECK_VALVE_STATES: CheckValveState[] = ['ZALACZONY', 'WYLACZONY'];
+export const CHECK_VALVE_STATES: CheckValveState[] = ['ON', 'OFF'];
 
 // fix/hydraulic-connections commit 5: the whole body shifted up by 6
 // (was centered on y=54, the true WLOT/WYLOT terminal height is 48) so
 // the krociec/kolnierz standard lands exactly on the real terminal
 // instead of 6 units off it.
 export const CheckValveSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const live = resolveSiteState(state, CHECK_VALVE_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const live = resolveSiteState(state, CHECK_VALVE_STATES, 'OFF') === 'ON';
   const netState = (id: string) => (terminalNetState?.(id) ?? 'INACTIVE') === 'ACTIVE';
 
   return (

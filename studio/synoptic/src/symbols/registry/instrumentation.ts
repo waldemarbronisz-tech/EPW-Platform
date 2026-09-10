@@ -70,12 +70,12 @@ export const instrumentationSymbols: Record<string, SymbolDefinition> = {
   // for the full reasoning) - `type` unchanged, only `category`.
   'site.rain_sensor': {
     type: 'site.rain_sensor',
-    label: 'Czujnik deszczu',
+    label: 'Rain Sensor',
     category: 'Instrumentation',
     defaultWidth: 128,
     defaultHeight: 96,
-    allowedStates: ['ZALACZONY', 'WYLACZONY'],
-    defaultState: 'WYLACZONY',
+    allowedStates: ['ON', 'OFF'],
+    defaultState: 'OFF',
     terminals: [{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]
   },
 

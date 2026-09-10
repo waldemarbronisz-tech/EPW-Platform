@@ -45,7 +45,7 @@ export function syncObjectDesignationsAfterDeviceSave(
 // own header comment states the same "never a raw id/UUID" rule for
 // naming an object in a message; this is the same rule for a device).
 export function formatDeviceSavedMessage(device: Pick<Device, 'designation' | 'name'>): string {
-  return `[INFO] Zapisano aparat ${device.designation} (${device.name})`;
+  return `[INFO] Saved device ${device.designation} (${device.name})`;
 }
 
 // fix/inline-device-creation commit 3c - PRZYPISZ ISTNIEJACY's own
@@ -53,7 +53,7 @@ export function formatDeviceSavedMessage(device: Pick<Device, 'designation' | 'n
 // rule as formatDeviceSavedMessage above, worded for an assignment
 // rather than a save (nothing about the device itself changed).
 export function formatDeviceAssignedMessage(device: Pick<Device, 'designation' | 'name'>): string {
-  return `[INFO] Przypisano aparat ${device.designation} (${device.name})`;
+  return `[INFO] Assigned device ${device.designation} (${device.name})`;
 }
 
 // fix/inline-device-creation commit 3c: the two store-mutation paths

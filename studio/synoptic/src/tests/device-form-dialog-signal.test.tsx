@@ -16,11 +16,11 @@ function input(labelText: string): HTMLInputElement {
 function select(labelText: string): HTMLSelectElement {
   return row(labelText).querySelector('select') as HTMLSelectElement;
 }
-// fix/device-form-polish commit 2: Zapisz is aria-disabled now, not
+// fix/device-form-polish commit 2: Save is aria-disabled now, not
 // natively disabled - see device-form-dialog-switched.test.tsx's own
 // copy of this helper for the full reasoning.
 function isSaveDisabled(): boolean {
-  return screen.getByRole('button', { name: 'Zapisz' }).getAttribute('aria-disabled') === 'true';
+  return screen.getByRole('button', { name: 'Save' }).getAttribute('aria-disabled') === 'true';
 }
 
 function makeSignal(overrides: Partial<SignalDevice> = {}): SignalDevice {
@@ -33,7 +33,7 @@ function makeSignal(overrides: Partial<SignalDevice> = {}): SignalDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [
       { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 },
       { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }
@@ -70,8 +70,8 @@ describe('DeviceFormDialog - SIGNAL section', () => {
   it('saving calls onSave with the edited fields applied', () => {
     let saved: SignalDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSignal()} onSave={(d) => { saved = d as SignalDevice; }} onCancel={() => {}} />);
-    fireEvent.change(select('Stan alarmowy'), { target: { value: 'LOW' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    fireEvent.change(select('Alarm State'), { target: { value: 'LOW' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved).not.toBeNull();
     expect(saved!.alarmState).toBe('LOW');
     expect(saved!.id).toBe('KOT_STY1');

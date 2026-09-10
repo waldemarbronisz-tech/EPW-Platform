@@ -38,7 +38,7 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [
       { id: 'ELA1', model: 'ELA01', channelKind: 'AI', channelCount: 8 },
       { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }
@@ -53,18 +53,18 @@ describe('Meter and signal-panel wizards show real devices from the registry', (
 
   it('test 18: a MEASURED device created through DeviceFormDialog appears in the meter wizard', () => {
     render(<DeviceFormDialog mode="add" onSave={(d) => useStore.getState().addDevice(d)} onCancel={() => {}} />);
-    fireEvent.change(select('Zachowanie'), { target: { value: 'MEASURED' } });
+    fireEvent.change(select('Behaviour'), { target: { value: 'MEASURED' } });
     const idRow = row('Id');
     fireEvent.change(idRow.querySelector('select')!, { target: { value: 'KOT' } });
     fireEvent.change(idRow.querySelector('input')!, { target: { value: 'TEMP1' } });
-    fireEvent.change(input('Oznaczenie'), { target: { value: '-B1' } });
-    fireEvent.change(input('Nazwa'), { target: { value: 'Czujnik temperatury' } });
-    fireEvent.change(input('Rodzaj'), { target: { value: 'sensor' } });
-    fireEvent.change(input('Jednostka'), { target: { value: '°C' } });
+    fireEvent.change(input('Designation'), { target: { value: '-B1' } });
+    fireEvent.change(input('Name'), { target: { value: 'Czujnik temperatury' } });
+    fireEvent.change(input('Kind'), { target: { value: 'sensor' } });
+    fireEvent.change(input('Unit'), { target: { value: '°C' } });
     const inputRow = row('input');
     fireEvent.change(inputRow.querySelectorAll('select')[0], { target: { value: 'ELA1' } });
     fireEvent.change(inputRow.querySelectorAll('select')[1], { target: { value: '1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(useStore.getState().devices.map(d => d.id)).toEqual(['KOT_TEMP1']);
     cleanup();

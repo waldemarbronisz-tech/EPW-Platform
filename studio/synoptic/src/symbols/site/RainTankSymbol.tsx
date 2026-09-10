@@ -1,7 +1,7 @@
 // feat/site-objects-2d commit 2 - "4. Zbiornik na deszczowke" from
 // docs/EPW_rysunki_referencja.py's own zbiornik(on). Top view: a
 // circular tank with a visible water level inside, a center cap, a
-// side spigot (krolec). ZALACZONY - high level; WYLACZONY - low.
+// side spigot (krolec). ON - high level; OFF - low.
 //
 // The reference draws the water level through an SVG clipPath (a
 // rectangle whose height tracks the fill level, clipped to the tank's
@@ -19,14 +19,14 @@ import {
   SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type RainTankState = 'ZALACZONY' | 'WYLACZONY';
+export type RainTankState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const RAIN_TANK_STATES: RainTankState[] = ['ZALACZONY', 'WYLACZONY'];
+export const RAIN_TANK_STATES: RainTankState[] = ['ON', 'OFF'];
 
 const CX = 80, CY = 64;
 
 export const RainTankSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, RAIN_TANK_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, RAIN_TANK_STATES, 'OFF') === 'ON';
   const level = on ? 0.68 : 0.22;
   const height = Math.floor(62 * level);
   const krociecLive = (terminalNetState?.('KROCIEC') ?? 'INACTIVE') === 'ACTIVE';

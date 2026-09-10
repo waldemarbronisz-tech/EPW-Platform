@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-// feat/device-list-ui commit 2 - the "Lista aparatow" window, and
+// feat/device-list-ui commit 2 - the "Device List" window, and
 // mandatory test 15 (duplicating a device clears id/designation only).
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -22,7 +22,7 @@ function makeSwitchedDevice(overrides: Partial<SwitchedDevice> = {}): SwitchedDe
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [
       { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 16 },
       { id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }
@@ -47,18 +47,18 @@ describe('DeviceListDialog', () => {
   it('the status bar reports device count and channel usage', () => {
     render(<DeviceListDialog onClose={() => {}} />);
     // 1 device, 0 validation errors (the seeded device is fully valid).
-    expect(screen.getByText(/Aparaty: 1/)).toBeTruthy();
-    expect(screen.getByText(/Bledy: 0/)).toBeTruthy();
+    expect(screen.getByText(/Devices: 1/)).toBeTruthy();
+    expect(screen.getByText(/Errors: 0/)).toBeTruthy();
   });
 
   it('test 15: duplicating a device opens a new draft with id and designation cleared, everything else unchanged', () => {
     render(<DeviceListDialog onClose={() => {}} />);
     fireEvent.click(screen.getByText('KOT_KMG1'));
-    fireEvent.click(screen.getByRole('button', { name: 'Duplikuj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
 
-    // The new-device form is open (title says "Nowy aparat", not "Edycja") -
+    // The new-device form is open (title says "New Device", not "Edit") -
     // designation is blank...
-    expect(screen.getByText('Nowy aparat')).toBeTruthy();
+    expect(screen.getByText('New Device')).toBeTruthy();
     const designationInput = screen.getByPlaceholderText('-K1') as HTMLInputElement;
     expect(designationInput.value).toBe('');
     // ...the suffix part of the id is blank too (location dropdown is its
@@ -76,7 +76,7 @@ describe('DeviceListDialog', () => {
     try {
       render(<DeviceListDialog onClose={() => {}} />);
       fireEvent.click(screen.getByText('KOT_KMG1'));
-      fireEvent.click(screen.getByRole('button', { name: 'Usun' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       expect(useStore.getState().devices).toHaveLength(0);
     } finally {
       window.confirm = originalConfirm;

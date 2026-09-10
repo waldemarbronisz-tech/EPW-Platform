@@ -1,6 +1,9 @@
 // fix/hydraulic-connections commit 6 - the 4 mandatory tests for the
-// tank's own rebuilt connection layout (DOPLYW left, ODPLYW right,
-// docs/EPW_kolnierze_referencja.py's own updated tank()).
+// tank's own rebuilt connection layout (DOPLYW left, ODPLYW originally
+// right, docs/EPW_kolnierze_referencja.py's own updated tank()).
+// fix/tank-language-and-media commit 2 later moved ODPLYW from the
+// right edge to the bottom edge - test 23 below is updated to match;
+// tests 24-26 are unaffected (neither depends on which side ODPLYW is on).
 
 import { describe, it, expect } from 'vitest';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
@@ -14,19 +17,19 @@ function overlaps(a: { x: number; y: number; width: number; height: number }, b:
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-describe('23. the tank has a DOPLYW terminal on the left and an ODPLYW terminal on the right', () => {
+describe('23. the tank has a DOPLYW terminal on the left and an ODPLYW terminal on the bottom (fix/tank-language-and-media commit 2 moved ODPLYW from the right edge - see that task\'s own test 8 for the mandated coverage of this exact change)', () => {
   it('the registry declares exactly these two terminals, both WATER', () => {
     const def = getSymbolDefinition('site.rainwater_tank2')!;
     expect(def.terminals).toEqual([
       { id: 'DOPLYW', side: 'LEFT', medium: 'WATER' },
-      { id: 'ODPLYW', side: 'RIGHT', medium: 'WATER' }
+      { id: 'ODPLYW', side: 'BOTTOM', medium: 'WATER' }
     ]);
   });
 
-  it('LEFT/RIGHT resolve to the true edge midpoints on this object\'s own 128x96 canvas', () => {
+  it('LEFT/BOTTOM resolve to the true edge midpoints on this object\'s own 128x96 canvas', () => {
     const def = getSymbolDefinition('site.rainwater_tank2')!;
     expect(getTerminalOffsetForSide('LEFT', def.defaultWidth, def.defaultHeight)).toEqual({ x: 0, y: 48 });
-    expect(getTerminalOffsetForSide('RIGHT', def.defaultWidth, def.defaultHeight)).toEqual({ x: 128, y: 48 });
+    expect(getTerminalOffsetForSide('BOTTOM', def.defaultWidth, def.defaultHeight)).toEqual({ x: 64, y: 96 });
   });
 });
 

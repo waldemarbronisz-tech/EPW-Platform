@@ -50,7 +50,7 @@ export const AddCardDialog: React.FC<AddCardDialogProps> = ({ expectedKind, onAd
     <>
       <div style={backdropStyle} onClick={onCancel} />
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={headerStyle}>Nowa karta</div>
+        <div style={headerStyle}>New Card</div>
         <div style={bodyStyle}>
           <div className="property-row">
             <label>Id</label>
@@ -61,18 +61,18 @@ export const AddCardDialog: React.FC<AddCardDialogProps> = ({ expectedKind, onAd
             <input value={model} onChange={e => setModel(e.target.value)} style={inputStyle} placeholder="ELA01" />
           </div>
           <div className="property-row">
-            <label>Rodzaj kanalow</label>
+            <label>Channel Kind</label>
             <input value={expectedKind} disabled style={inputStyle} />
           </div>
           <div className="property-row">
-            <label>Liczba kanalow</label>
+            <label>Channel Count</label>
             <input type="number" value={channelCount} onChange={e => setChannelCount(Number(e.target.value))} style={inputStyle} />
           </div>
           {error && <div style={errorStyle}>{error}</div>}
         </div>
         <div style={footerStyle}>
-          <button onClick={onCancel}>Anuluj</button>
-          <button onClick={handleAdd}>Dodaj</button>
+          <button onClick={onCancel}>Cancel</button>
+          <button onClick={handleAdd}>Add</button>
         </div>
       </div>
     </>

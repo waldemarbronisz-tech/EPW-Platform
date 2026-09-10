@@ -12,12 +12,12 @@ import {
   SITE_OUTLINE_WIDTH, SITE_CONNECTOR_WIDTH, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type HalogenState = 'ZALACZONY' | 'WYLACZONY';
+export type HalogenState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const HALOGEN_STATES: HalogenState[] = ['ZALACZONY', 'WYLACZONY'];
+export const HALOGEN_STATES: HalogenState[] = ['ON', 'OFF'];
 
 export const HalogenSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, HALOGEN_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, HALOGEN_STATES, 'OFF') === 'ON';
   const panel = on ? SITE_YELL : SITE_DARK;
 
   return (

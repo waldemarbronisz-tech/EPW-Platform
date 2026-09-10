@@ -15,12 +15,12 @@ function row(labelText: string): HTMLElement {
 function input(labelText: string): HTMLInputElement {
   return row(labelText).querySelector('input') as HTMLInputElement;
 }
-// fix/inline-device-creation commit 4: Blokady (interlock) is one of
+// fix/inline-device-creation commit 4: Interlocks is one of
 // SWITCHED's own CollapsibleSections, collapsed by default (it is pure
 // optional documentation, never blocks Save) - every test below opens
 // it first, the same as a real user would click its header.
 function expandInterlock(): void {
-  fireEvent.click(screen.getByText('Blokady (interlock)'));
+  fireEvent.click(screen.getByText('Interlocks'));
 }
 
 function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
@@ -35,7 +35,7 @@ function makeSwitched(overrides: Partial<SwitchedDevice> = {}): SwitchedDevice {
 
 function resetStore() {
   useStore.setState({
-    locations: [{ code: 'KOT', description: 'Kotlownia' }],
+    locations: [{ code: 'KOT', description: 'Boiler room' }],
     cards: [{ id: 'ADA1', model: 'ADA01', channelKind: 'DO', channelCount: 16 }],
     devices: []
   });
@@ -48,24 +48,24 @@ describe('DeviceFormDialog - interlock section (SWITCHED)', () => {
   it('a device with no interlock at all shows both description fields blank, and Save stays enabled', () => {
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={() => {}} onCancel={() => {}} />);
     expandInterlock();
-    expect(input('Opis blokady ZAMKNIJ').value).toBe('');
-    expect(input('Opis blokady OTWORZ').value).toBe('');
-    expect((screen.getByRole('button', { name: 'Zapisz' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(input('CLOSE Interlock Description').value).toBe('');
+    expect(input('OPEN Interlock Description').value).toBe('');
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('an existing interlock description is shown pre-filled', () => {
     const device = makeSwitched({ interlock: { closeDescription: 'Zablokowane, gdy drzwi otwarte' } });
     render(<DeviceFormDialog mode="edit" initialDevice={device} onSave={() => {}} onCancel={() => {}} />);
     expandInterlock();
-    expect(input('Opis blokady ZAMKNIJ').value).toBe('Zablokowane, gdy drzwi otwarte');
+    expect(input('CLOSE Interlock Description').value).toBe('Zablokowane, gdy drzwi otwarte');
   });
 
   it('typing a close-interlock description and saving persists it on the device', () => {
     let saved: SwitchedDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={(d) => { saved = d as SwitchedDevice; }} onCancel={() => {}} />);
     expandInterlock();
-    fireEvent.change(input('Opis blokady ZAMKNIJ'), { target: { value: 'Zablokowane, gdy drzwi otwarte' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    fireEvent.change(input('CLOSE Interlock Description'), { target: { value: 'Zablokowane, gdy drzwi otwarte' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved).not.toBeNull();
     expect(saved!.interlock?.closeDescription).toBe('Zablokowane, gdy drzwi otwarte');
   });
@@ -75,8 +75,8 @@ describe('DeviceFormDialog - interlock section (SWITCHED)', () => {
     const device = makeSwitched({ interlock: { closeDescription: 'temp' } });
     render(<DeviceFormDialog mode="edit" initialDevice={device} onSave={(d) => { saved = d as SwitchedDevice; }} onCancel={() => {}} />);
     expandInterlock();
-    fireEvent.change(input('Opis blokady ZAMKNIJ'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    fireEvent.change(input('CLOSE Interlock Description'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved!.interlock).toBeUndefined();
   });
 
@@ -84,9 +84,9 @@ describe('DeviceFormDialog - interlock section (SWITCHED)', () => {
     let saved: SwitchedDevice | null = null;
     render(<DeviceFormDialog mode="edit" initialDevice={makeSwitched()} onSave={(d) => { saved = d as SwitchedDevice; }} onCancel={() => {}} />);
     expandInterlock();
-    fireEvent.change(input('Opis blokady OTWORZ'), { target: { value: 'Zablokowane podczas biegu pompy rezerwowej' } });
-    expect((screen.getByRole('button', { name: 'Zapisz' }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz' }));
+    fireEvent.change(input('OPEN Interlock Description'), { target: { value: 'Zablokowane podczas biegu pompy rezerwowej' } });
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved!.interlock?.openDescription).toBe('Zablokowane podczas biegu pompy rezerwowej');
     expect(saved!.interlock?.closeDescription).toBeUndefined();
   });

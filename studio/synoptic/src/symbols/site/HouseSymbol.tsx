@@ -1,7 +1,7 @@
 // feat/site-objects-2d commit 2 - "1. Dom" from
 // docs/EPW_rysunki_referencja.py's own dom(on). Side view: gable roof
-// with ridge, four windows, a door, a chimney. States ZALACZONY (lit
-// windows, brick roof) / WYLACZONY (dimmed windows, dimmed roof).
+// with ridge, four windows, a door, a chimney. States ON (lit
+// windows, brick roof) / OFF (dimmed windows, dimmed roof).
 
 import React from 'react';
 import { Group, Line } from 'react-konva';
@@ -13,12 +13,12 @@ import {
   SITE_BAND_WIDTH_NARROW, SITE_OUTLINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type HouseState = 'ZALACZONY' | 'WYLACZONY';
+export type HouseState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const HOUSE_STATES: HouseState[] = ['ZALACZONY', 'WYLACZONY'];
+export const HOUSE_STATES: HouseState[] = ['ON', 'OFF'];
 
 export const HouseSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, HOUSE_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, HOUSE_STATES, 'OFF') === 'ON';
   const roof = on ? SITE_BRICK : SITE_BRICK_DIM;
   const windowColor = on ? SITE_BLUE : SITE_DGREY;
 

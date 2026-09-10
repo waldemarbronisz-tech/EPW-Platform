@@ -13,9 +13,9 @@ import {
   SITE_BAND_WIDTH, SITE_BAND_WIDTH_NARROW, SITE_OUTLINE_WIDTH, SITE_OUTLINE_WIDTH_MEDIUM, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type AlarmHornState = 'ZALACZONY' | 'WYLACZONY';
+export type AlarmHornState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const ALARM_HORN_STATES: AlarmHornState[] = ['ZALACZONY', 'WYLACZONY'];
+export const ALARM_HORN_STATES: AlarmHornState[] = ['ON', 'OFF'];
 
 // Three sound-wave arcs, each a fixed x/opacity pair -
 // docs/EPW_rysunki_referencja.py's own `for i,(x,op) in enumerate(...)`
@@ -29,7 +29,7 @@ const SOUND_WAVES = [
 ];
 
 export const AlarmHornSymbol: React.FC<SymbolProps> = ({ state }) => {
-  const on = resolveSiteState(state, ALARM_HORN_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, ALARM_HORN_STATES, 'OFF') === 'ON';
   const horn = on ? SITE_HORN_LIT : SITE_GREY;
 
   return (

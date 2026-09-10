@@ -72,12 +72,12 @@ describe('DeviceBindingValidation (pure)', () => {
   });
 });
 
-describe('PropertyInspector - Aparat dropdown', () => {
+describe('PropertyInspector - Device dropdown', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
   function apparatSelect(): HTMLSelectElement {
-    return screen.getByText('Aparat').closest('.property-row')!.querySelector('select') as HTMLSelectElement;
+    return screen.getByText('Device').closest('.property-row')!.querySelector('select') as HTMLSelectElement;
   }
 
   it('lists every device in the registry', () => {
@@ -85,7 +85,7 @@ describe('PropertyInspector - Aparat dropdown', () => {
     render(<PropertyInspector />);
     const options = Array.from(apparatSelect().options).map(o => o.value);
     expect(options).toContain('KOT_KMG1');
-    expect(options).toContain(''); // (brak)
+    expect(options).toContain(''); // (none)
   });
 
   it('assigning a device auto-fills an empty designation', () => {
@@ -105,7 +105,7 @@ describe('PropertyInspector - Aparat dropdown', () => {
     expect(updated.designation).toBe('-Q9');
   });
 
-  it('a symbol with no assigned device shows (brak) selected - a valid, unremarkable state', () => {
+  it('a symbol with no assigned device shows (none) selected - a valid, unremarkable state', () => {
     useStore.setState({ objects: [makeObj({ deviceId: undefined })], selectedIds: ['O1'] });
     render(<PropertyInspector />);
     expect(apparatSelect().value).toBe('');
@@ -116,10 +116,10 @@ describe('PropertyInspector - Aparat dropdown', () => {
     expect(() => render(<PropertyInspector />)).not.toThrow();
     const select = apparatSelect();
     expect(select.value).toBe('GHOST_1');
-    expect(screen.getByText(/GHOST_1 \(nie istnieje\)/)).toBeTruthy();
+    expect(screen.getByText(/GHOST_1 \(does not exist\)/)).toBeTruthy();
   });
 
-  it('clearing the device back to (brak) removes deviceId without touching designation', () => {
+  it('clearing the device back to (none) removes deviceId without touching designation', () => {
     useStore.setState({ objects: [makeObj({ designation: '-K1', deviceId: 'KOT_KMG1' })], selectedIds: ['O1'] });
     render(<PropertyInspector />);
     fireEvent.change(apparatSelect(), { target: { value: '' } });

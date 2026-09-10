@@ -13,12 +13,12 @@ import {
   SITE_OUTLINE_WIDTH_MEDIUM, SITE_OUTLINE_WIDTH_THIN, SITE_CANVAS_SCALE
 } from '../../theme/ScadaTheme';
 
-export type SewagePlantState = 'ZALACZONY' | 'WYLACZONY';
+export type SewagePlantState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as scada/ symbols.
-export const SEWAGE_PLANT_STATES: SewagePlantState[] = ['ZALACZONY', 'WYLACZONY'];
+export const SEWAGE_PLANT_STATES: SewagePlantState[] = ['ON', 'OFF'];
 
 export const SewagePlantSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, SEWAGE_PLANT_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, SEWAGE_PLANT_STATES, 'OFF') === 'ON';
   const chamberColor = on ? SITE_BLUE : SITE_WATER_DIM;
   const netState = (id: string) => (terminalNetState?.(id) ?? 'INACTIVE') === 'ACTIVE';
 

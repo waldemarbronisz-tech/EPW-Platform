@@ -47,7 +47,7 @@ export const AssignExistingDeviceList: React.FC<AssignExistingDeviceListProps> =
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Szukaj po id, oznaczeniu lub nazwie..."
+          placeholder="Search by id, designation or name..."
           style={{ flex: 1 }}
         />
       </div>
@@ -55,7 +55,7 @@ export const AssignExistingDeviceList: React.FC<AssignExistingDeviceListProps> =
         <div className="property-row">
           <label>
             <input type="checkbox" checked={filterByBehavior} onChange={e => setFilterByBehavior(e.target.checked)} />
-            {` Tylko zachowanie ${suggestedBehavior}`}
+            {` Only behaviour ${suggestedBehavior}`}
           </label>
         </div>
       )}
@@ -63,9 +63,9 @@ export const AssignExistingDeviceList: React.FC<AssignExistingDeviceListProps> =
         <thead>
           <tr>
             <th style={thStyle}>Id</th>
-            <th style={thStyle}>Oznaczenie</th>
-            <th style={thStyle}>Nazwa</th>
-            <th style={thStyle}>Uzycia</th>
+            <th style={thStyle}>Designation</th>
+            <th style={thStyle}>Name</th>
+            <th style={thStyle}>Uses</th>
           </tr>
         </thead>
         <tbody>
@@ -82,7 +82,7 @@ export const AssignExistingDeviceList: React.FC<AssignExistingDeviceListProps> =
             </tr>
           ))}
           {filtered.length === 0 && (
-            <tr><td style={tdStyle} colSpan={4}>Brak aparatow spelniajacych kryteria.</td></tr>
+            <tr><td style={tdStyle} colSpan={4}>No devices match these criteria.</td></tr>
           )}
         </tbody>
       </table>

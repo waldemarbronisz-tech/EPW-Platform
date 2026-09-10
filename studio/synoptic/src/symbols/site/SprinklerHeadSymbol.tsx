@@ -14,14 +14,14 @@ import { bandedRect, bandedVRect, bandedCircleLightOnly, waterStub } from './Ban
 import { resolveSiteState } from './SiteSymbolState';
 import { SITE_CONC, SITE_DGREY, SITE_BLUE, SITE_SPRAY_BLUE, SITE_OUTLINE_WIDTH_MEDIUM } from '../../theme/ScadaTheme';
 
-export type SprinklerHeadState = 'ZALACZONY' | 'WYLACZONY';
+export type SprinklerHeadState = 'ON' | 'OFF';
 // oxlint-disable-next-line react/only-export-components -- one file per symbol, same convention as every other site/ symbol.
-export const SPRINKLER_HEAD_STATES: SprinklerHeadState[] = ['ZALACZONY', 'WYLACZONY'];
+export const SPRINKLER_HEAD_STATES: SprinklerHeadState[] = ['ON', 'OFF'];
 
 const ARC_DX = [-34, -18, 0, 18, 34];
 
 export const SprinklerHeadSymbol: React.FC<SymbolProps> = ({ state, terminalNetState }) => {
-  const on = resolveSiteState(state, SPRINKLER_HEAD_STATES, 'WYLACZONY') === 'ZALACZONY';
+  const on = resolveSiteState(state, SPRINKLER_HEAD_STATES, 'OFF') === 'ON';
   const wodaLive = (terminalNetState?.('WODA') ?? 'INACTIVE') === 'ACTIVE';
 
   return (

@@ -18,7 +18,7 @@ describe('the last 6 objects are registered (Water/Instrumentation - fix/hydraul
     for (const type of ['site.flow_meter', 'site.water_meter', 'site.pressure_switch']) {
       const def = getSymbolDefinition(type)!;
       expect(def.category).toBe('Water');
-      expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+      expect(def.allowedStates).toEqual(['ON', 'OFF']);
       expect(def.terminals!.length).toBe(2);
       expect(def.terminals!.every(t => t.medium === 'WATER')).toBe(true);
     }
@@ -27,13 +27,13 @@ describe('the last 6 objects are registered (Water/Instrumentation - fix/hydraul
   it('site.rain_sensor: two states, one ELECTRICAL terminal (a powered sensor, no plumbing), category Instrumentation', () => {
     const def = getSymbolDefinition('site.rain_sensor')!;
     expect(def.category).toBe('Instrumentation');
-    expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+    expect(def.allowedStates).toEqual(['ON', 'OFF']);
     expect(def.terminals).toEqual([{ id: 'ZASILANIE', side: 'BOTTOM', medium: 'ELECTRICAL' }]);
   });
 
   it('site.sprinkler_head: two states, one WATER terminal, no aparat expected (task\'s own "BEZ tagu")', () => {
     const def = getSymbolDefinition('site.sprinkler_head')!;
-    expect(def.allowedStates).toEqual(['ZALACZONY', 'WYLACZONY']);
+    expect(def.allowedStates).toEqual(['ON', 'OFF']);
     expect(def.terminals!.length).toBe(1);
     expect(def.terminals![0].medium).toBe('WATER');
   });
