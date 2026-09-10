@@ -187,8 +187,8 @@ class Device:
     id: str
     behavior: str  # SWITCHED | SIGNAL | MEASURED | MODULATED | SELECTOR
     kind: str = ""
-    feedback: list = field(default_factory=list)
-    command: list = field(default_factory=list)
+    feedback: list[str] = field(default_factory=list)
+    command: list[str] = field(default_factory=list)
     supervision: dict = field(default_factory=dict)
     safe_state: dict = field(default_factory=dict)  # onStartup, onLinkLoss
 
@@ -360,16 +360,16 @@ class Project:
     what's deliberately still missing and why)."""
 
     metadata: ProjectMetadata
-    modules: list = field(default_factory=list)  # list[str]
-    cards: list = field(default_factory=list)  # list[Card]
-    locations: list = field(default_factory=list)  # list[Location]
-    points: list = field(default_factory=list)  # list[Point]
-    devices: list = field(default_factory=list)  # list[Device]
-    zones: list = field(default_factory=list)  # list[Zone]
-    lines: list = field(default_factory=list)  # list[Line]
+    modules: list[str] = field(default_factory=list)
+    cards: list[Card] = field(default_factory=list)
+    locations: list[Location] = field(default_factory=list)
+    points: list[Point] = field(default_factory=list)
+    devices: list[Device] = field(default_factory=list)
+    zones: list[Zone] = field(default_factory=list)
+    lines: list[Line] = field(default_factory=list)
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
-    electrical_protection_stages: list = field(default_factory=list)  # list[ElectricalProtectionStage]
-    process_protections: list = field(default_factory=list)  # list[ProcessProtection]
+    electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
+    process_protections: list[ProcessProtection] = field(default_factory=list)
     modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
