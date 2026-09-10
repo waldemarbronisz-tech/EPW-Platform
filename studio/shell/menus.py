@@ -394,6 +394,20 @@ def build_process_protection_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("process.remove_protection"), panel.remove_selected_protection, icon_name="remove_row")
 
 
+def build_controller_toolbar(toolbar, _panel, _studio_window):
+    """No table here, nothing to add/remove - the panel's own buttons
+    (Testuj połączenie/Wyślij/Zgraj/Pobierz podgląd) are enough on their
+    own, same "empty toolbar beyond the breadcrumb" as
+    build_point_registry_toolbar()."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
+def build_help_toolbar(toolbar, _panel, _studio_window):
+    """"Dział help pełny" - the panel's own topic list is the
+    navigation; nothing to add here beyond the breadcrumb."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
 def build_point_registry_toolbar(toolbar, _panel, _studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's

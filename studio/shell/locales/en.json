@@ -27,7 +27,8 @@
     "security_lines": "Supervised Lines",
     "protection_electrical": "Electrical Protection",
     "protection_process": "Process Protection",
-    "controller_connection": "Connection and Live View"
+    "controller_connection": "Connection and Live View",
+    "help": "Help"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -41,10 +42,8 @@
     "security_lines": "Project → Intrusion Alarm → Supervised Lines",
     "protection_electrical": "Project → Protection → Electrical Protection",
     "protection_process": "Project → Protection → Process Protection",
-    "controller_connection": "Project → Controller → Connection and Live View"
-  },
-  "placeholder": {
-    "controller_connection": "A live connection to a real EPW-OS controller and a view of its current state - not built yet."
+    "controller_connection": "Project → Controller → Connection and Live View",
+    "help": "Help"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -220,7 +219,22 @@
     "duplicate_id_text": "A card with id \"{id}\" already exists. Enter a unique id.",
     "invalid_location_code_title": "Invalid Location Code",
     "invalid_location_code_text": "Code \"{code}\" must consist only of letters A-Z and digits.",
-    "duplicate_location_code_text": "A location with code \"{code}\" already exists. Enter a unique code."
+    "duplicate_location_code_text": "A location with code \"{code}\" already exists. Enter a unique code.",
+    "col_modbus_unit_id": "Modbus Address",
+    "invalid_modbus_unit_title": "Invalid Modbus Address",
+    "invalid_modbus_unit_text": "The Modbus address must be a number 1-247 (or blank if the module isn't addressed yet).",
+    "modbus_bus_heading": "Modbus Bus",
+    "modbus_transport": "Transport:",
+    "modbus_transport_rtu": "RTU (serial port)",
+    "modbus_transport_tcp": "TCP",
+    "modbus_port": "Port:",
+    "modbus_baud": "Baud Rate:",
+    "modbus_parity": "Parity:",
+    "modbus_parity_n": "None",
+    "modbus_parity_e": "Even",
+    "modbus_parity_o": "Odd",
+    "modbus_host": "Gateway Address (IP):",
+    "modbus_tcp_port": "TCP Port:"
   },
   "points": {
     "filter_card": "Card:",
@@ -347,5 +361,28 @@
     "default_name": "Protection {id}",
     "add_protection": "Add Protection",
     "remove_protection": "Remove Protection"
+  },
+  "controller": {
+    "connection_heading": "Connection",
+    "host": "Address (URL):",
+    "token": "Access Token:",
+    "test_connection": "Test Connection",
+    "status_unknown": "Unknown",
+    "status_testing": "Testing...",
+    "status_ok": "Connection OK",
+    "status_failed": "Failed: {reason}",
+    "sync_heading": "Project Sync",
+    "send_to_device": "Send to Device",
+    "receive_from_device": "Receive from Device",
+    "not_implemented_send": "Runtime does not yet expose a REST endpoint for uploading project configuration - verified empirically in runtime/epw_os/backend/api.py. This needs a runtime-side extension (a new endpoint, plus reading the revision before overwriting), not done in Studio.",
+    "not_implemented_receive": "Runtime does not yet expose a REST endpoint for downloading project configuration - verified empirically in runtime/epw_os/backend/api.py. This needs a runtime-side extension, not done in Studio.",
+    "preview_heading": "Live Preview",
+    "fetch_tags": "Fetch Tag Preview",
+    "col_tag": "Tag",
+    "col_value": "Value",
+    "col_quality": "Quality",
+    "error_no_host": "No controller address configured.",
+    "error_http": "HTTP error {code}: {reason}",
+    "error_connection": "Could not connect: {reason}"
   }
 }

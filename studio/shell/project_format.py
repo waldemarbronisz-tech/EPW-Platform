@@ -116,12 +116,23 @@ class ProjectMetadata:
 class Card:
     """SPEC_PROJEKT_EPW.md, "Sprzęt": `id (nadane przez użytkownika),
     model, rodzaj kanałów, liczba kanałów`. Example from the contract:
-    id="DI1", model="ELA01", kind="DI", channels=32."""
+    id="DI1", model="ELA01", kind="DI", channels=32.
+
+    `modbus_unit_id` (task: "ELA i ADA i EPM będą łączyły się z orange
+    pi [...] po modbus - trzeba dać opcję adresowania") is GREENFIELD -
+    unlike Zone/Line/ElectricalProtectionStage, no ModbusDriver exists
+    in runtime yet to mirror field-for-field (confirmed: runtime/epw_os/
+    core/comm_diagnostics.py's own docstring describes itself as built
+    FOR a still-nonexistent future ModbusDriver). This is a standard
+    Modbus unit/slave address (1-247, RTU/TCP alike) - `None` means
+    "not addressed yet", same "absent = not configured" convention
+    every other optional field in this module already uses."""
 
     id: str
     model: str
     kind: str
     channels: int
+    modbus_unit_id: Optional[int] = None
 
 
 @dataclass
@@ -323,6 +334,26 @@ class ProcessProtection:
 
 
 @dataclass
+class ModbusBusConfig:
+    """The single serial/TCP bus the controller (Orange Pi) uses to
+    reach every ELA/ADA/EPM module - one bus, many unit ids (Card.
+    modbus_unit_id above addresses individual modules on it). GREENFIELD
+    (see Card.modbus_unit_id's own docstring) - `transport` picks which
+    of the two address shapes below apply, matching how Modbus RTU vs
+    TCP are actually configured (a serial port has no IP, a TCP gateway
+    has no baud rate)."""
+
+    transport: str = "RTU"  # "RTU" (serial) | "TCP"
+    port: str = ""          # RTU: "/dev/ttyUSB0" or "COM3"
+    baud_rate: int = 9600   # RTU only
+    parity: str = "N"       # RTU only - "N" | "E" | "O"
+    data_bits: int = 8      # RTU only
+    stop_bits: int = 1      # RTU only
+    host: str = ""          # TCP only - the Modbus TCP gateway's address
+    tcp_port: int = 502     # TCP only
+
+
+@dataclass
 class Project:
     """The whole of `projekt.epw`'s in-memory representation - only the
     fields this module currently implements (see module docstring for
@@ -339,6 +370,7 @@ class Project:
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
     electrical_protection_stages: list = field(default_factory=list)  # list[ElectricalProtectionStage]
     process_protections: list = field(default_factory=list)  # list[ProcessProtection]
+    modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
     # day one even though the "reject an older revision on upload"
@@ -428,6 +460,13 @@ def _to_json_dict(project: Project) -> dict:
         if project.process_protections:
             protection["process"] = [asdict(p) for p in project.process_protections]
         data["protection"] = protection
+    # Modbus bus - task "adresowanie ELA/ADA/EPM" - omitted when the
+    # bus is still at its all-defaults, untouched state (no port/host
+    # ever set) - same "absent = not configured" reading as everything
+    # else in this function.
+    bus = project.modbus_bus
+    if bus.port or bus.host:
+        data["modbus_bus"] = asdict(bus)
     return data
 
 
@@ -525,5 +564,7 @@ def load_project(path) -> Project:
         ElectricalProtectionStage(**s) for s in protection.get("electrical", [])
     ]
     project.process_protections = [ProcessProtection(**p) for p in protection.get("process", [])]
+    if "modbus_bus" in data:
+        project.modbus_bus = ModbusBusConfig(**data["modbus_bus"])
     project.is_dirty = False
     return project

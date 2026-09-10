@@ -18,6 +18,7 @@ from studio.shell.project_format import (
     LineParametrization,
     LineType,
     Location,
+    ModbusBusConfig,
     NORMAL_STATE_NC,
     Point,
     PowerSupervision,
@@ -308,6 +309,56 @@ def test_protection_section_present_with_only_electrical_configured():
     assert "protection" in data
     assert "electrical" in data["protection"]
     assert "process" not in data["protection"]
+
+
+# -- Modbus (Card.modbus_unit_id / ModbusBusConfig) ------------------------
+# Task "ELA i ADA i EPM będą łączyły się z orange pi [...] po modbus" -
+# GREENFIELD (see both dataclasses' own docstrings - no existing runtime
+# driver to mirror field-for-field), a standard Modbus unit id / bus config.
+
+def test_card_modbus_unit_id_defaults_to_none():
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=8)
+    assert card.modbus_unit_id is None
+
+
+def test_card_modbus_unit_id_round_trip(tmp_path):
+    p = new_project("Test")
+    p.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=8, modbus_unit_id=3))
+    path = tmp_path / "projekt.epw"
+    save_project(p, path)
+    loaded = load_project(path)
+    assert loaded.cards[0].modbus_unit_id == 3
+
+
+def test_old_card_without_modbus_unit_id_loads_as_none(tmp_path):
+    """A pre-existing project.epw predates this field entirely - must
+    load without error, same backward-compat stance every other
+    optional field in this module already has."""
+    p = new_project("Test")
+    path = tmp_path / "projekt.epw"
+    save_project(p, path)
+    with gzip.open(path, "rb") as f:
+        data = json.loads(f.read())
+    data["cards"] = [{"id": "ELA1", "model": "ELA01", "kind": "DI", "channels": 8}]
+    with gzip.open(path, "wb") as f:
+        f.write(json.dumps(data).encode("utf-8"))
+    loaded = load_project(path)
+    assert loaded.cards[0].modbus_unit_id is None
+
+
+def test_modbus_bus_omitted_when_untouched():
+    p = new_project("Test")
+    data = json.loads(_decompress_saved(p))
+    assert "modbus_bus" not in data
+
+
+def test_modbus_bus_round_trip(tmp_path):
+    p = new_project("Test")
+    p.modbus_bus = ModbusBusConfig(transport="RTU", port="/dev/ttyUSB0", baud_rate=19200, parity="E")
+    path = tmp_path / "projekt.epw"
+    save_project(p, path)
+    loaded = load_project(path)
+    assert loaded.modbus_bus == p.modbus_bus
 
 
 def _decompress_saved(project) -> str:

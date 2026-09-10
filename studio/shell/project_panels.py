@@ -53,12 +53,14 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
     recognizable pattern across both, per the task's own "tu również"
     (same treatment, not a smaller one because the domain is simpler).
 """
+import os
 import re
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -78,6 +80,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QSplitter,
     QTableWidget,
+    QTextBrowser,
     QTableWidgetItem,
     QTreeWidget,
     QTreeWidgetItem,
@@ -384,17 +387,21 @@ class ProjectInfoPanel(QWidget):
 
 
 class CardsPanel(QWidget):
-    """"Skład urządzenia" - the physical ELA/ADA I/O module registry:
+    """"Skład urządzenia" - the physical ELA/ADA/EPM I/O module registry:
     address (id), model, channel kind (DI/DO/AI/AO), channel count -
-    SPEC's own "Sprzęt" section. Locations moved out to their own
-    LocationsPanel/tree branch (task "ostatnie dwa działy" - the tree's
-    own SPEC_FORMAT_EPW.md-derived structure always kept them separate;
-    this un-merges the Phase-2 shortcut that combined them under one
-    screen). Editing a card's kind/channels re-runs sync_points_for_
-    card() - "karty rodzą punkty" happens HERE, not in the point
-    registry panel, which only ever shows what cards already produced."""
+    SPEC's own "Sprzęt" section, plus each module's own Modbus unit
+    address (task: "ELA i ADA i EPM będą łączyły się z orange pi [...]
+    po modbus - trzeba dać opcję adresowania") and the one shared bus
+    (port/baud, or a TCP gateway) every module sits on - see
+    project_format.ModbusBusConfig's own docstring for why this is
+    GREENFIELD, not copied from an existing runtime driver. Locations
+    moved out to their own LocationsPanel/tree branch (task "ostatnie
+    dwa działy"). Editing a card's kind/channels re-runs
+    sync_points_for_card() - "karty rodzą punkty" happens HERE, not in
+    the point registry panel, which only ever shows what cards already
+    produced."""
 
-    _CARD_COLS = ["id", "model", "kind", "channels"]
+    _CARD_COLS = ["id", "model", "kind", "channels", "modbus_unit_id"]
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -408,12 +415,42 @@ class CardsPanel(QWidget):
         self.cards_table = QTableWidget(0, len(self._CARD_COLS))
         self.cards_table.setHorizontalHeaderLabels([
             tr("cards.col_id"), tr("cards.col_model"), tr("cards.col_kind"), tr("cards.col_channels"),
+            tr("cards.col_modbus_unit_id"),
         ])
         _prep_table(self.cards_table)
         _make_column_resizable(self.cards_table, 1, 220)
         layout.addWidget(self.cards_table)
 
         self.cards_table.itemChanged.connect(self._on_card_item_changed)
+
+        layout.addWidget(_section_label(tr("cards.modbus_bus_heading")))
+        bus_form = QFormLayout()
+        self.transport_combo = QComboBox()
+        self.transport_combo.addItem(tr("cards.modbus_transport_rtu"), "RTU")
+        self.transport_combo.addItem(tr("cards.modbus_transport_tcp"), "TCP")
+        bus_form.addRow(tr("cards.modbus_transport"), self.transport_combo)
+        self.port_edit = QLineEdit()
+        bus_form.addRow(tr("cards.modbus_port"), self.port_edit)
+        self.baud_spin = QSpinBox()
+        self.baud_spin.setRange(300, 921_600)
+        bus_form.addRow(tr("cards.modbus_baud"), self.baud_spin)
+        self.parity_combo = QComboBox()
+        for code, key in (("N", "cards.modbus_parity_n"), ("E", "cards.modbus_parity_e"), ("O", "cards.modbus_parity_o")):
+            self.parity_combo.addItem(tr(key), code)
+        bus_form.addRow(tr("cards.modbus_parity"), self.parity_combo)
+        self.host_edit = QLineEdit()
+        bus_form.addRow(tr("cards.modbus_host"), self.host_edit)
+        self.tcp_port_spin = QSpinBox()
+        self.tcp_port_spin.setRange(1, 65535)
+        bus_form.addRow(tr("cards.modbus_tcp_port"), self.tcp_port_spin)
+        layout.addLayout(bus_form)
+
+        self.transport_combo.currentIndexChanged.connect(self._on_bus_changed)
+        self.port_edit.editingFinished.connect(self._on_bus_changed)
+        self.baud_spin.valueChanged.connect(self._on_bus_changed)
+        self.parity_combo.currentIndexChanged.connect(self._on_bus_changed)
+        self.host_edit.editingFinished.connect(self._on_bus_changed)
+        self.tcp_port_spin.valueChanged.connect(self._on_bus_changed)
 
         self.refresh()
 
@@ -425,7 +462,44 @@ class CardsPanel(QWidget):
         self.cards_table.setRowCount(0)
         for card in project.cards:
             self._append_card_row(card)
+
+        bus = project.modbus_bus
+        idx = self.transport_combo.findData(bus.transport)
+        self.transport_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.port_edit.setText(bus.port)
+        self.baud_spin.setValue(bus.baud_rate)
+        pidx = self.parity_combo.findData(bus.parity)
+        self.parity_combo.setCurrentIndex(pidx if pidx >= 0 else 0)
+        self.host_edit.setText(bus.host)
+        self.tcp_port_spin.setValue(bus.tcp_port)
+        self._update_bus_field_visibility()
         self._loading = False
+
+    def _update_bus_field_visibility(self):
+        is_rtu = self.transport_combo.currentData() == "RTU"
+        for w in (self.port_edit, self.baud_spin, self.parity_combo):
+            w.setEnabled(is_rtu)
+        for w in (self.host_edit, self.tcp_port_spin):
+            w.setEnabled(not is_rtu)
+
+    def _on_bus_changed(self, *_args):
+        if self._loading:
+            return
+        from studio.shell.project_format import ModbusBusConfig
+        project = self._studio_window._project
+        project.modbus_bus = ModbusBusConfig(
+            transport=self.transport_combo.currentData(),
+            port=self.port_edit.text(),
+            baud_rate=self.baud_spin.value(),
+            parity=self.parity_combo.currentData(),
+            data_bits=project.modbus_bus.data_bits,
+            stop_bits=project.modbus_bus.stop_bits,
+            host=self.host_edit.text(),
+            tcp_port=self.tcp_port_spin.value(),
+        )
+        self._update_bus_field_visibility()
+        project.touch()
+        self._studio_window._on_project_changed()
 
     def _append_card_row(self, card: Card):
         row = self.cards_table.rowCount()
@@ -438,6 +512,7 @@ class CardsPanel(QWidget):
         kind_combo.currentTextChanged.connect(lambda _text, r=row: self._on_card_kind_changed(r))
         self.cards_table.setCellWidget(row, 2, kind_combo)
         self.cards_table.setItem(row, 3, QTableWidgetItem(str(card.channels)))
+        self.cards_table.setItem(row, 4, QTableWidgetItem(_fmt(card.modbus_unit_id)))
 
     # -- row add/remove (called by menus.py's build_cards_toolbar) -----
 
@@ -496,6 +571,22 @@ class CardsPanel(QWidget):
             self._loading = True
             self.cards_table.item(row, 3).setText(str(card.channels))
             self._loading = False
+        modbus_text = self.cards_table.item(row, 4).text().strip()
+        if not modbus_text:
+            card.modbus_unit_id = None
+        else:
+            try:
+                unit_id = int(modbus_text)
+                if not (1 <= unit_id <= 247):
+                    raise ValueError
+                card.modbus_unit_id = unit_id
+            except ValueError:
+                QMessageBox.warning(
+                    self, tr("cards.invalid_modbus_unit_title"), tr("cards.invalid_modbus_unit_text")
+                )
+                self._loading = True
+                self.cards_table.item(row, 4).setText(_fmt(card.modbus_unit_id))
+                self._loading = False
         if old_id != card.id or old_kind != card.kind:
             # Address prefix changed - the OLD points are orphaned
             # (their address no longer matches anything this card would
@@ -1799,6 +1890,228 @@ class ProcessProtectionPanel(QWidget):
         protection.delay_seconds = self.delay_spin.value()
         self._studio_window._project.touch()
         self._studio_window._on_project_changed()
+
+
+class ControllerPanel(QWidget):
+    """"Połączenie i podgląd" (STEROWNIK) - Studio <-> a real EPW-OS
+    controller, over its existing REST API (SPEC_PROJEKT_EPW.md: "Studio
+    łączy się ze sterownikiem przez istniejące REST API [...] ten sam
+    mechanizm co dla HAOS"). Host/token live in QSettings, NOT in
+    project.epw - a bearer token is a per-operator secret (runtime's own
+    api_auth.py: "token authenticates a LEVEL"), not project data meant
+    to be shared or committed alongside a project file. A flagged
+    engineering call, not something the contract states outright.
+
+    "Testuj połączenie" and "Pobierz podgląd tagów" are REAL - GET
+    /api/v1/health and /api/v1/tags already exist in runtime/epw_os/
+    backend/api.py and this panel calls them for real (stdlib
+    urllib.request only - GRANICE: no new dependency for one HTTP GET).
+
+    "Wyślij do urządzenia"/"Zgraj z urządzenia" (task's own two options)
+    are honestly INCOMPLETE: verified empirically - that same api.py has
+    ZERO endpoints for a project config upload/download or a revision
+    check (the exact mechanism SPEC_PROJEKT_EPW.md's own "Wersjonowanie"
+    section describes: "przed wgraniem projektu [...] odczytać revision
+    z urządzenia [...] rozjazd = ZATRZYMAĆ SIĘ"). Clicking either button
+    explains exactly what's missing on the runtime side - GRANICE
+    forbids touching runtime/ from here to invent one, and a button that
+    silently pretends to sync is the exact facade this whole session
+    avoids."""
+
+    _SETTINGS_HOST = "controller/host"
+    _SETTINGS_TOKEN = "controller/token"
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+
+        conn_box = QGroupBox(tr("controller.connection_heading"))
+        form = QFormLayout(conn_box)
+        self.host_edit = QLineEdit()
+        self.host_edit.setPlaceholderText("http://192.168.1.50:8000")
+        form.addRow(tr("controller.host"), self.host_edit)
+        self.token_edit = QLineEdit()
+        self.token_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow(tr("controller.token"), self.token_edit)
+        self.host_edit.editingFinished.connect(self._save_connection_settings)
+        self.token_edit.editingFinished.connect(self._save_connection_settings)
+        layout.addWidget(conn_box)
+
+        test_row = QHBoxLayout()
+        self.test_button = QPushButton(tr("controller.test_connection"))
+        self.test_button.clicked.connect(self._test_connection)
+        test_row.addWidget(self.test_button)
+        self.status_label = QLabel(tr("controller.status_unknown"))
+        test_row.addWidget(self.status_label, 1)
+        layout.addLayout(test_row)
+
+        sync_box = QGroupBox(tr("controller.sync_heading"))
+        sync_layout = QHBoxLayout(sync_box)
+        self.send_button = QPushButton(tr("controller.send_to_device"))
+        self.send_button.clicked.connect(self._send_to_device)
+        sync_layout.addWidget(self.send_button)
+        self.receive_button = QPushButton(tr("controller.receive_from_device"))
+        self.receive_button.clicked.connect(self._receive_from_device)
+        sync_layout.addWidget(self.receive_button)
+        sync_layout.addStretch(1)
+        layout.addWidget(sync_box)
+
+        preview_box = QGroupBox(tr("controller.preview_heading"))
+        preview_layout = QVBoxLayout(preview_box)
+        self.preview_button = QPushButton(tr("controller.fetch_tags"))
+        self.preview_button.clicked.connect(self._fetch_tag_preview)
+        preview_layout.addWidget(self.preview_button)
+        self.preview_table = QTableWidget(0, 3)
+        self.preview_table.setHorizontalHeaderLabels(
+            [tr("controller.col_tag"), tr("controller.col_value"), tr("controller.col_quality")]
+        )
+        _prep_table(self.preview_table)
+        _make_column_resizable(self.preview_table, 0, 260)
+        preview_layout.addWidget(self.preview_table)
+        layout.addWidget(preview_box, 1)
+
+        self._load_connection_settings()
+
+    def _load_connection_settings(self):
+        settings = self._studio_window.settings
+        self.host_edit.setText(settings.value(self._SETTINGS_HOST, ""))
+        self.token_edit.setText(settings.value(self._SETTINGS_TOKEN, ""))
+
+    def _save_connection_settings(self):
+        settings = self._studio_window.settings
+        settings.setValue(self._SETTINGS_HOST, self.host_edit.text().strip())
+        settings.setValue(self._SETTINGS_TOKEN, self.token_edit.text())
+
+    def _request(self, path: str, timeout: float = 4.0):
+        """One GET against the configured host, stdlib only. Returns
+        (True, parsed_json) or (False, error_message) - never raises,
+        same "a connectivity problem is data, not a crash" stance every
+        other network-adjacent feature in this codebase already takes."""
+        import json as _json
+        import urllib.error
+        import urllib.request
+
+        host = self.host_edit.text().strip().rstrip("/")
+        if not host:
+            return False, tr("controller.error_no_host")
+        url = f"{host}{path}"
+        headers = {}
+        token = self.token_edit.text().strip()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        request = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                body = response.read().decode("utf-8")
+            return True, _json.loads(body) if body else {}
+        except urllib.error.HTTPError as e:
+            return False, tr("controller.error_http", code=e.code, reason=e.reason)
+        except urllib.error.URLError as e:
+            return False, tr("controller.error_connection", reason=str(e.reason))
+        except Exception as e:  # noqa: BLE001 - any failure here is "show it", not a Studio crash
+            return False, str(e)
+
+    def _test_connection(self):
+        self.status_label.setText(tr("controller.status_testing"))
+        QApplication.processEvents()
+        ok, result = self._request("/api/v1/health")
+        if ok:
+            self.status_label.setText(tr("controller.status_ok"))
+        else:
+            self.status_label.setText(tr("controller.status_failed", reason=result))
+
+    def _fetch_tag_preview(self):
+        ok, result = self._request("/api/v1/tags")
+        if not ok:
+            QMessageBox.warning(self, tr("controller.preview_heading"), result)
+            return
+        self.preview_table.setRowCount(0)
+        tags = result if isinstance(result, list) else result.get("tags", [])
+        for tag in tags:
+            row = self.preview_table.rowCount()
+            self.preview_table.insertRow(row)
+            self.preview_table.setItem(row, 0, QTableWidgetItem(str(tag.get("name", ""))))
+            self.preview_table.setItem(row, 1, QTableWidgetItem(str(tag.get("value", ""))))
+            self.preview_table.setItem(row, 2, QTableWidgetItem(str(tag.get("quality", ""))))
+
+    def _send_to_device(self):
+        QMessageBox.information(self, tr("controller.send_to_device"), tr("controller.not_implemented_send"))
+
+    def _receive_from_device(self):
+        QMessageBox.information(self, tr("controller.receive_from_device"), tr("controller.not_implemented_receive"))
+
+
+class HelpPanel(QWidget):
+    """"Dział help pełny" - a real, browsable topic tree + a Markdown
+    viewer, one per Studio panel (see studio/shell/help/generate_help.py
+    for the actual content and why it's original to Studio, not copied
+    from runtime/epw_os/help/'s own 164 files - those document a
+    DIFFERENT program's own screens). Topic list/order comes from
+    studio/shell/help/_manifest.py, generated alongside the .md content
+    so the two can never disagree. Language follows Studio's own
+    current language (get_language()) - switching language in
+    Ustawienia switches which folder this reads from next time it's
+    opened, same as every other tr()'d string in Studio."""
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        self.topic_list = QListWidget()
+        self.topic_list.setFixedWidth(240)
+        self.topic_list.currentRowChanged.connect(self._on_topic_selected)
+        splitter.addWidget(self.topic_list)
+
+        self.viewer = QTextBrowser()
+        self.viewer.setOpenExternalLinks(False)
+        splitter.addWidget(self.viewer)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        layout.addWidget(splitter)
+
+        self._topics = []
+        self.refresh()
+
+    def refresh(self):
+        from studio.shell.i18n import get_language
+        from studio.shell.help._manifest import TOPICS
+
+        current_key = self._topics[self.topic_list.currentRow()][0] if self._topics else None
+        self._topics = TOPICS
+        self._lang = get_language()
+
+        self.topic_list.blockSignals(True)
+        self.topic_list.clear()
+        select_row = 0
+        for i, (key, title_pl, title_en) in enumerate(self._topics):
+            self.topic_list.addItem(title_pl if self._lang == "pl" else title_en)
+            if key == current_key:
+                select_row = i
+        self.topic_list.blockSignals(False)
+        self.topic_list.setCurrentRow(select_row)
+        self._on_topic_selected(select_row)
+
+    def _on_topic_selected(self, row):
+        if row < 0 or row >= len(self._topics):
+            self.viewer.setMarkdown("")
+            return
+        key, _title_pl, _title_en = self._topics[row]
+        help_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "help")
+        path = os.path.join(help_dir, self._lang, f"{key}.md")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except OSError:
+            text = f"*(brak pliku pomocy: {path})*"
+        self.viewer.setMarkdown(text)
 
 
 def _slug(text: str) -> str:

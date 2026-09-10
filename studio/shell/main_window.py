@@ -38,10 +38,11 @@ from PySide6.QtWidgets import (
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
-    build_cards_toolbar, build_devices_toolbar, build_electrical_protection_toolbar,
-    build_fixed_menu, build_lines_toolbar, build_locations_toolbar, build_logic_context_toolbar,
-    build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
-    build_synoptic_context_toolbar, build_zones_toolbar,
+    build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
+    build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
+    build_locations_toolbar, build_logic_context_toolbar, build_point_registry_toolbar,
+    build_process_protection_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
+    build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -87,7 +88,13 @@ _TREE_ITEM_LINES = "security_lines"
 # process_protection_manager.py).
 _TREE_ITEM_ELECTRICAL_PROTECTION = "protection_electrical"
 _TREE_ITEM_PROCESS_PROTECTION = "protection_process"
-_INACTIVE_CONTROLLER_CHILDREN = [("controller_connection", "tree.controller_connection")]
+# "Połączenie ze sterownikiem" + "dział help pełny" - the last two
+# promotions: STEROWNIK's own last inactive placeholder, and a new
+# "Pomoc" leaf (not part of SPEC_FORMAT_EPW.md's own structure, but
+# task explicitly asked for a full help department, same active-leaf
+# navigation pattern as everything else rather than a plain dialog).
+_TREE_ITEM_CONTROLLER = "controller_connection"
+_TREE_ITEM_HELP = "help"
 
 _BREADCRUMB_KEYS = {
     _TREE_ITEM_SCREENS: "breadcrumb.screens",
@@ -101,6 +108,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_LINES: "breadcrumb.security_lines",
     _TREE_ITEM_ELECTRICAL_PROTECTION: "breadcrumb.protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
+    _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
+    _TREE_ITEM_HELP: "breadcrumb.help",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -309,6 +318,8 @@ class StudioMainWindow(QMainWindow):
         self._lines_panel = None
         self._electrical_protection_panel = None
         self._process_protection_panel = None
+        self._controller_panel = None
+        self._help_panel = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -446,6 +457,11 @@ class StudioMainWindow(QMainWindow):
         # value", the actual subject of process protection.
         icon_electrical = icons.icon("medium_electrical")
         icon_process = icons.icon("add_meter")
+        # "scada_preview" (a small monitor) reads as "a live connection
+        # to a remote device"; "help" (blue question mark) is Help's own
+        # existing icon, reused from the fixed toolbar for consistency.
+        icon_controller = icons.icon("scada_preview")
+        icon_help = icons.icon("help")
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -521,8 +537,11 @@ class StudioMainWindow(QMainWindow):
         )
 
         controller = add_group(root, "tree.group_controller")
-        for key, label_key in _INACTIVE_CONTROLLER_CHILDREN:
-            add_inactive_leaf(controller, key, label_key)
+        self._item_controller = add_active_leaf(
+            controller, _TREE_ITEM_CONTROLLER, "tree.controller_connection", icon_controller
+        )
+
+        self._item_help = add_active_leaf(root, _TREE_ITEM_HELP, "tree.help", icon_help)
 
         tree.expandAll()
         tree.currentItemChanged.connect(self._on_tree_selection_changed)
@@ -871,6 +890,10 @@ class StudioMainWindow(QMainWindow):
                 self._open_electrical_protection()
             elif key == _TREE_ITEM_PROCESS_PROTECTION:
                 self._open_process_protection()
+            elif key == _TREE_ITEM_CONTROLLER:
+                self._open_controller()
+            elif key == _TREE_ITEM_HELP:
+                self._open_help()
         elif kind == "inactive":
             self._open_inactive(key)
 
@@ -1084,6 +1107,32 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_PROCESS_PROTECTION
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_controller(self):
+        if self._controller_panel is None:
+            from studio.shell.project_panels import ControllerPanel
+            self._controller_panel = ControllerPanel(self)
+        self._show_aspect_container(
+            _TREE_ITEM_CONTROLLER, self._controller_panel, build_controller_toolbar, self._controller_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_CONTROLLER
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_help(self):
+        if self._help_panel is None:
+            from studio.shell.project_panels import HelpPanel
+            self._help_panel = HelpPanel(self)
+        else:
+            self._help_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_HELP, self._help_panel, build_help_toolbar, self._help_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_HELP
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 

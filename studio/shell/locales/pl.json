@@ -27,7 +27,8 @@
     "security_lines": "Linie dozorowe",
     "protection_electrical": "Zabezpieczenia elektryczne",
     "protection_process": "Zabezpieczenia procesowe",
-    "controller_connection": "Połączenie i podgląd"
+    "controller_connection": "Połączenie i podgląd",
+    "help": "Pomoc"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -41,10 +42,8 @@
     "security_lines": "Projekt → Alarmówka → Linie dozorowe",
     "protection_electrical": "Projekt → Zabezpieczenia → Zabezpieczenia elektryczne",
     "protection_process": "Projekt → Zabezpieczenia → Zabezpieczenia procesowe",
-    "controller_connection": "Projekt → Sterownik → Połączenie i podgląd"
-  },
-  "placeholder": {
-    "controller_connection": "Żywe połączenie ze sterownikiem EPW-OS i podgląd jego bieżącego stanu — jeszcze nie zbudowane."
+    "controller_connection": "Projekt → Sterownik → Połączenie i podgląd",
+    "help": "Pomoc"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -220,7 +219,22 @@
     "duplicate_id_text": "Karta o id \"{id}\" już istnieje. Wpisz unikalne id.",
     "invalid_location_code_title": "Nieprawidłowy kod lokalizacji",
     "invalid_location_code_text": "Kod \"{code}\" musi składać się wyłącznie z liter A-Z i cyfr.",
-    "duplicate_location_code_text": "Lokalizacja o kodzie \"{code}\" już istnieje. Wpisz unikalny kod."
+    "duplicate_location_code_text": "Lokalizacja o kodzie \"{code}\" już istnieje. Wpisz unikalny kod.",
+    "col_modbus_unit_id": "Adres Modbus",
+    "invalid_modbus_unit_title": "Nieprawidłowy adres Modbus",
+    "invalid_modbus_unit_text": "Adres Modbus musi być liczbą 1-247 (albo puste pole, jeśli moduł nie jest jeszcze zaadresowany).",
+    "modbus_bus_heading": "Magistrala Modbus",
+    "modbus_transport": "Rodzaj połączenia:",
+    "modbus_transport_rtu": "RTU (port szeregowy)",
+    "modbus_transport_tcp": "TCP",
+    "modbus_port": "Port:",
+    "modbus_baud": "Prędkość (baud):",
+    "modbus_parity": "Parzystość:",
+    "modbus_parity_n": "Brak",
+    "modbus_parity_e": "Parzysta",
+    "modbus_parity_o": "Nieparzysta",
+    "modbus_host": "Adres bramki (IP):",
+    "modbus_tcp_port": "Port TCP:"
   },
   "points": {
     "filter_card": "Karta:",
@@ -347,5 +361,28 @@
     "default_name": "Zabezpieczenie {id}",
     "add_protection": "Dodaj zabezpieczenie",
     "remove_protection": "Usuń zabezpieczenie"
+  },
+  "controller": {
+    "connection_heading": "Połączenie",
+    "host": "Adres (URL):",
+    "token": "Token dostępu:",
+    "test_connection": "Testuj połączenie",
+    "status_unknown": "Nieznany",
+    "status_testing": "Testowanie...",
+    "status_ok": "Połączenie OK",
+    "status_failed": "Błąd: {reason}",
+    "sync_heading": "Synchronizacja projektu",
+    "send_to_device": "Wyślij do urządzenia",
+    "receive_from_device": "Zgraj z urządzenia",
+    "not_implemented_send": "Runtime nie udostępnia dziś endpointu REST do wysyłania konfiguracji projektu — sprawdzone empirycznie w runtime/epw_os/backend/api.py. Potrzebne rozszerzenie po stronie runtime (nowy endpoint + odczyt rewizji przed nadpisaniem), nie zrobione w Studio.",
+    "not_implemented_receive": "Runtime nie udostępnia dziś endpointu REST do pobierania konfiguracji projektu — sprawdzone empirycznie w runtime/epw_os/backend/api.py. Potrzebne rozszerzenie po stronie runtime, nie zrobione w Studio.",
+    "preview_heading": "Podgląd na żywo",
+    "fetch_tags": "Pobierz podgląd tagów",
+    "col_tag": "Tag",
+    "col_value": "Wartość",
+    "col_quality": "Jakość",
+    "error_no_host": "Nie podano adresu sterownika.",
+    "error_http": "Błąd HTTP {code}: {reason}",
+    "error_connection": "Nie można połączyć się: {reason}"
   }
 }
