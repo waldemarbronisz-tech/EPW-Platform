@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "language": "Polski",
+    "code": "pl"
+  },
+  "app": {
+    "title": "EPW Studio"
+  },
+  "tree": {
+    "screens": "EKRANY",
+    "logic": "LOGIKA"
+  },
+  "editor": {
+    "synoptic_name": "Ekrany (Synoptic Editor)",
+    "logic_name": "Logika (Logic Studio)"
+  },
+  "statusbar": {
+    "no_project": "Brak otwartego projektu",
+    "active_editor": "Aktywny edytor: {name}",
+    "no_editor": "Brak otwartego edytora"
+  }
+}
