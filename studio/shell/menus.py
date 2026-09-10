@@ -153,6 +153,11 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     studio_window.act_menu_check_project = _add(
         file_menu, tr("menu.file.check_project"), studio_window._check_project
     )
+    # Task point 7 - "Eksportuj listę punktów" - same "not tied to any
+    # one aspect" reasoning as "Sprawdź projekt" just above.
+    studio_window.act_menu_export_points = _add(
+        file_menu, tr("menu.file.export_points"), studio_window._export_point_list
+    )
     file_menu.addSeparator()
     _add_exit(studio_window, file_menu)
 

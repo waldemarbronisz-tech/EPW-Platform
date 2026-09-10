@@ -17,6 +17,8 @@ from studio.shell.project_panels import (
     card_from_synoptic_dict,
     card_to_synoptic_dict,
     ensure_electrical_protection_seeded,
+    export_points_csv,
+    export_points_html,
     find_point_owner,
     load_help_topic_markdown,
     location_from_synoptic_dict,
@@ -430,3 +432,88 @@ def test_validate_project_no_orphan_warning_once_the_module_is_in_composition():
     project.modules.append("intrusion")
     project.zones.append(Zone(id="Z1", name="Parter"))
     assert validate_project(project) == []
+
+
+# Task point 7 - "Eksportuj listę punktów": export_points_csv()/
+# export_points_html() are pure functions (no Qt, no file I/O) -
+# main_window._export_point_list() itself (the file-picker/write) is
+# covered by main_window.py's own smoke path, not here, same division
+# this file's module docstring already draws everywhere else.
+def _export_demo_project():
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=2))
+    project.cards.append(Card(id="ADA1", model="ADA01", kind="AI", channels=1))
+    project.locations.append(Location(code="KOT", description="Kotlownia"))
+    project.points.append(Point(
+        address="ELA1.DI.1", description="Czujnik drzwi", location="KOT",
+        technical_note="NC, 2-przewodowy",
+    ))
+    project.points.append(Point(address="ELA1.DI.2", description="Bez lokalizacji"))
+    project.points.append(Point(
+        address="ADA1.AI.1", description="Temperatura kotla", location="KOT",
+        raw_min=4.0, raw_max=20.0, eng_min=0.0, eng_max=100.0, unit="degC",
+    ))
+    project.devices.append(Device(id="APARAT1", behavior="SIGNAL", feedback=["ELA1.DI.1"]))
+    return project
+
+
+def test_export_points_csv_has_the_tasks_own_columns_in_order():
+    import csv
+    import io
+
+    text = export_points_csv(_export_demo_project())
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == [
+        "Adres", "Opis", "Lokalizacja", "Notatka techniczna", "Aparat",
+        "Zakres surowy", "Zakres inżynieryjny", "Jednostka",
+    ]
+
+
+def test_export_points_csv_rows_have_the_right_values():
+    import csv
+    import io
+
+    text = export_points_csv(_export_demo_project())
+    by_address = {row[0]: row for row in list(csv.reader(io.StringIO(text)))[1:]}
+    assert by_address["ELA1.DI.1"] == [
+        "ELA1.DI.1", "Czujnik drzwi", "KOT", "NC, 2-przewodowy", "APARAT1", "", "", "",
+    ]
+    assert by_address["ELA1.DI.2"][2] == "(bez lokalizacji)"
+    assert by_address["ADA1.AI.1"][5:8] == ["4…20", "0…100", "degC"]
+
+
+def test_export_points_csv_orders_rows_by_card_then_location():
+    import csv
+    import io
+
+    addresses = [row[0] for row in list(csv.reader(io.StringIO(export_points_csv(_export_demo_project()))))[1:]]
+    assert addresses.index("ELA1.DI.1") < addresses.index("ELA1.DI.2") < addresses.index("ADA1.AI.1")
+
+
+def test_export_points_csv_of_an_empty_project_is_header_only():
+    import csv
+    import io
+
+    rows = list(csv.reader(io.StringIO(export_points_csv(new_project("Test")))))
+    assert len(rows) == 1
+
+
+def test_export_points_html_groups_by_card_then_location():
+    text = export_points_html(_export_demo_project())
+    assert "<h2>ELA1" in text and "<h2>ADA1" in text
+    assert "<h3>KOT</h3>" in text
+    assert "<h3>(bez lokalizacji)</h3>" in text
+    assert text.index("<h2>ELA1") < text.index("<h2>ADA1")
+
+
+def test_export_points_html_escapes_user_supplied_text():
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=1))
+    project.points.append(Point(address="ELA1.DI.1", description="<script>alert(1)</script>"))
+    text = export_points_html(project)
+    assert "<script>alert(1)</script>" not in text
+    assert "&lt;script&gt;" in text
+
+
+def test_export_points_html_of_an_empty_project_has_no_group_headers():
+    assert "<h2>" not in export_points_html(new_project("Test"))

@@ -942,6 +942,47 @@ class StudioMainWindow(QMainWindow):
             if selector is not None:
                 selector(issue.arg)
 
+    def _export_point_list(self):
+        """Task point 7 - "Eksportuj listę punktów": Waldek's own
+        technical notes in the point registry, turned into a printable
+        terminal-block table (HTML) or a spreadsheet (CSV) - no new
+        data entry, just a different view of project.points that
+        already exists. Both formats built by project_panels.py's own
+        export_points_csv()/export_points_html() (pure, no Qt - see
+        their docstrings), this method is only the file-picker/write."""
+        if not self._project.points:
+            QMessageBox.information(self, tr("export.dialog_title"), tr("export.no_points"))
+            return
+        path, selected_filter = QFileDialog.getSaveFileName(
+            self, tr("export.dialog_title"), "",
+            f"{tr('export.filter_csv')};;{tr('export.filter_html')}",
+        )
+        if not path:
+            return
+        from studio.shell.project_panels import export_points_csv, export_points_html
+        is_html = ".html" in selected_filter.lower() or path.lower().endswith(".html")
+        if is_html:
+            if not path.lower().endswith(".html"):
+                path += ".html"
+            content = export_points_html(self._project)
+        else:
+            if not path.lower().endswith(".csv"):
+                path += ".csv"
+            content = export_points_csv(self._project)
+        try:
+            # utf-8-sig (BOM) for CSV - the task's own stated audience
+            # is Excel, which otherwise mis-renders Polish diacritics in
+            # a plain utf-8 CSV; HTML declares its own charset in the
+            # <head> instead, no BOM needed there.
+            encoding = "utf-8-sig" if not is_html else "utf-8"
+            newline = "" if not is_html else None
+            with open(path, "w", encoding=encoding, newline=newline) as f:
+                f.write(content)
+        except OSError as e:
+            QMessageBox.warning(self, tr("export.dialog_title"), tr("export.error_write", error=str(e)))
+            return
+        self.statusBar().showMessage(tr("export.done", path=path), 5000)
+
     def _set_language(self, code):
         set_language(code)
         self._retranslate()

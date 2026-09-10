@@ -1315,6 +1315,147 @@ def points_of_kind(project, kind: str):
     return result
 
 
+def _grouped_export_points(project):
+    """Task point 7 - "Grupowanie po karcie, potem po lokalizacji."
+    Shared by both export_points_csv()/export_points_html() below so
+    the two formats can never silently disagree on row order. Returns
+    [(Card, [(location_label, [Point, ...]), ...]), ...] - only cards
+    that actually have points appear at all (an empty card contributes
+    nothing to a terminal documentation table); a point with no
+    location assigned is its own group, always LAST within its card
+    (real, named locations first, in the project's own Lokalizacje
+    order - matching how a reader would expect a printed table to
+    read, not raw alphabetical)."""
+    location_order = {loc.code: i for i, loc in enumerate(project.locations)}
+
+    def _card_id_of(address):
+        return address.split(".", 1)[0] if "." in address else address
+
+    points_by_card = {}
+    for point in project.points:
+        points_by_card.setdefault(_card_id_of(point.address), []).append(point)
+
+    groups = []
+    for card in project.cards:
+        card_points = points_by_card.get(card.id, [])
+        if not card_points:
+            continue
+        by_location = {}
+        for point in card_points:
+            by_location.setdefault(point.location, []).append(point)
+        location_labels = sorted(
+            by_location.keys(),
+            key=lambda loc: (loc == "", location_order.get(loc, 999), loc),
+        )
+        location_groups = [
+            (label, sorted(by_location[label], key=lambda p: p.address))
+            for label in location_labels
+        ]
+        groups.append((card, location_groups))
+    return groups
+
+
+def _analog_export_fields(point: Point, card_kind: str):
+    """The task's own "dla AI/AO zakresy i jednostka" column group -
+    empty for every non-analog card kind, same "wyszarzone/puste, nie
+    wymyślone" stance PointRegistryPanel's own analog columns already
+    take for a DI/DO row."""
+    if card_kind not in _ANALOG_KINDS:
+        return "", "", ""
+    raw_range = f"{_fmt(point.raw_min)}…{_fmt(point.raw_max)}" if (point.raw_min is not None or point.raw_max is not None) else ""
+    eng_range = f"{_fmt(point.eng_min)}…{_fmt(point.eng_max)}" if (point.eng_min is not None or point.eng_max is not None) else ""
+    return raw_range, eng_range, (point.unit or "")
+
+
+def export_points_csv(project) -> str:
+    """Task point 7 - "CSV (do Excela)". Columns verbatim, in the
+    task's own order: adres, opis, lokalizacja, notatka techniczna,
+    aparat korzystający z punktu, [AI/AO] zakres surowy/inżynieryjny/
+    jednostka. No separate "karta" column (not in the task's own list) -
+    "grupowanie po karcie" is expressed as ROW ORDER instead (every
+    address is already card-prefixed, so sorting by address in Excel
+    reproduces the same grouping) - see this module's own docstring
+    convention of using row order, not an invented column, wherever the
+    task's column list doesn't itself ask for one."""
+    import csv
+    import io
+
+    owners = point_owner_map(project)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        tr("export.col_address"), tr("export.col_description"), tr("export.col_location"),
+        tr("export.col_technical_note"), tr("export.col_device"),
+        tr("export.col_raw_range"), tr("export.col_eng_range"), tr("export.col_unit"),
+    ])
+    for card, location_groups in _grouped_export_points(project):
+        for location, points in location_groups:
+            location_label = location or tr("export.no_location")
+            for point in points:
+                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                writer.writerow([
+                    point.address, point.description, location_label, point.technical_note,
+                    owners.get(point.address, ""), raw_range, eng_range, unit,
+                ])
+    return output.getvalue()
+
+
+def export_points_html(project) -> str:
+    """Task point 7 - "Markdown albo HTML (do wydruku)" - HTML chosen:
+    directly printable from any browser (Ctrl+P), no separate renderer
+    needed, unlike Markdown. A REAL grouped document (H2 per card, H3
+    per location) - this is the "gotowa tabela zacisków do teczki
+    powykonawczej" the task describes, not a dump of the same flat CSV
+    rows with headers pasted on top."""
+    import html as html_lib
+
+    owners = point_owner_map(project)
+    title = tr("export.document_title")
+    parts = [
+        "<!doctype html><html><head><meta charset=\"utf-8\">",
+        f"<title>{html_lib.escape(title)}</title>",
+        "<style>",
+        "body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;margin:24px;}",
+        "h1{font-size:18px;margin-bottom:4px;}",
+        ".subtitle{color:#555;margin-top:0;margin-bottom:24px;}",
+        "h2{font-size:15px;margin-top:28px;border-bottom:2px solid #000;padding-bottom:2px;}",
+        "h3{font-size:13px;margin-top:14px;color:#333;}",
+        "table{border-collapse:collapse;width:100%;margin-bottom:10px;}",
+        "th,td{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top;}",
+        "th{background:#e8e8e8;}",
+        "@media print{h2{page-break-inside:avoid;}tr{page-break-inside:avoid;}}",
+        "</style></head><body>",
+        f"<h1>{html_lib.escape(title)}</h1>",
+        f"<p class=\"subtitle\">{html_lib.escape(project.metadata.name)}"
+        f" — {html_lib.escape(project.metadata.description)}</p>" if project.metadata.description
+        else f"<p class=\"subtitle\">{html_lib.escape(project.metadata.name)}</p>",
+    ]
+    cols = [
+        tr("export.col_location"), tr("export.col_address"), tr("export.col_description"),
+        tr("export.col_technical_note"), tr("export.col_device"),
+        tr("export.col_raw_range"), tr("export.col_eng_range"), tr("export.col_unit"),
+    ]
+    groups = _grouped_export_points(project)
+    if not groups:
+        parts.append(f"<p>{html_lib.escape(tr('export.no_points'))}</p>")
+    for card, location_groups in groups:
+        parts.append(f"<h2>{html_lib.escape(card.id)} — {html_lib.escape(card.model)} ({html_lib.escape(card.kind)})</h2>")
+        for location, points in location_groups:
+            location_label = location or tr("export.no_location")
+            parts.append(f"<h3>{html_lib.escape(location_label)}</h3>")
+            parts.append("<table><tr>" + "".join(f"<th>{html_lib.escape(c)}</th>" for c in cols) + "</tr>")
+            for point in points:
+                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                row_cells = [
+                    location_label, point.address, point.description, point.technical_note,
+                    owners.get(point.address, ""), raw_range, eng_range, unit,
+                ]
+                parts.append("<tr>" + "".join(f"<td>{html_lib.escape(str(v))}</td>" for v in row_cells) + "</tr>")
+            parts.append("</table>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+
 class ZonesPanel(QWidget):
     """SPEC's "Alarmówka": a zone (strefa) - name + exit/entry delay,
     both real fields on intrusion_manager.IntrusionManager.add_zone().

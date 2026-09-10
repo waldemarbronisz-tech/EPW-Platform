@@ -75,6 +75,7 @@
       "save": "Zapisz",
       "save_as": "Zapisz jako...",
       "check_project": "Sprawdź projekt",
+      "export_points": "Eksportuj listę punktów...",
       "exit": "Zamknij",
       "compare_saved": "Porównaj z zapisanym plikiem...",
       "compare_files": "Porównaj dwa projekty..."
@@ -416,5 +417,23 @@
     "msg_process_missing_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
     "msg_process_not_ai_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, który nie jest wejściem analogowym (AI).",
     "msg_module_has_orphan_data": "Moduł \"{module}\" ma zapisane dane w projekcie, ale nie jest w składzie urządzenia — jego gałąź jest ukryta, dane nie zostały skasowane."
+  },
+  "export": {
+    "dialog_title": "Eksportuj listę punktów",
+    "document_title": "Tabela zacisków",
+    "no_points": "Rejestr punktów jest pusty — nie ma czego eksportować.",
+    "filter_csv": "CSV (*.csv)",
+    "filter_html": "HTML (*.html)",
+    "no_location": "(bez lokalizacji)",
+    "col_address": "Adres",
+    "col_description": "Opis",
+    "col_location": "Lokalizacja",
+    "col_technical_note": "Notatka techniczna",
+    "col_device": "Aparat",
+    "col_raw_range": "Zakres surowy",
+    "col_eng_range": "Zakres inżynieryjny",
+    "col_unit": "Jednostka",
+    "error_write": "Nie udało się zapisać pliku: {error}",
+    "done": "Wyeksportowano listę punktów do {path}"
   }
 }

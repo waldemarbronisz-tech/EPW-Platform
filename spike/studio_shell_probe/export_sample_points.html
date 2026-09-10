@@ -1,0 +1,40 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Tabela zacisków</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;margin:24px;}
+h1{font-size:18px;margin-bottom:4px;}
+.subtitle{color:#555;margin-top:0;margin-bottom:24px;}
+h2{font-size:15px;margin-top:28px;border-bottom:2px solid #000;padding-bottom:2px;}
+h3{font-size:13px;margin-top:14px;color:#333;}
+table{border-collapse:collapse;width:100%;margin-bottom:10px;}
+th,td{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top;}
+th{background:#e8e8e8;}
+@media print{h2{page-break-inside:avoid;}tr{page-break-inside:avoid;}}
+</style></head><body>
+<h1>Tabela zacisków</h1>
+<p class="subtitle">Kotlownia - demo eksportu — Przykladowy projekt do zrzutu eksportu listy punktow</p>
+<h2>ELA1 — ELA01 (DI)</h2>
+<h3>KOT</h3>
+<table><tr><th>Lokalizacja</th><th>Adres</th><th>Opis</th><th>Notatka techniczna</th><th>Aparat</th><th>Zakres surowy</th><th>Zakres inżynieryjny</th><th>Jednostka</th></tr>
+<tr><td>KOT</td><td>ELA1.DI.1</td><td>Czujnik drzwi kotlowni</td><td>Styk NC, kabel 2x0.5</td><td></td><td></td><td></td><td></td></tr>
+<tr><td>KOT</td><td>ELA1.DI.2</td><td>Presostat gazu</td><td>Styk NC, wyzwalanie &lt; 15 mbar</td><td>ZAWOR_GAZU</td><td></td><td></td><td></td></tr>
+</table>
+<h3>(bez lokalizacji)</h3>
+<table><tr><th>Lokalizacja</th><th>Adres</th><th>Opis</th><th>Notatka techniczna</th><th>Aparat</th><th>Zakres surowy</th><th>Zakres inżynieryjny</th><th>Jednostka</th></tr>
+<tr><td>(bez lokalizacji)</td><td>ELA1.DI.3</td><td>Rezerwa</td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+<h2>ELA2 — ELA01 (DO)</h2>
+<h3>KOT</h3>
+<table><tr><th>Lokalizacja</th><th>Adres</th><th>Opis</th><th>Notatka techniczna</th><th>Aparat</th><th>Zakres surowy</th><th>Zakres inżynieryjny</th><th>Jednostka</th></tr>
+<tr><td>KOT</td><td>ELA2.DO.1</td><td>Zawor gazu - sterowanie</td><td>24V DC, cewka zaworu YV1</td><td>ZAWOR_GAZU</td><td></td><td></td><td></td></tr>
+</table>
+<h2>ADA1 — ADA01 (AI)</h2>
+<h3>KOT</h3>
+<table><tr><th>Lokalizacja</th><th>Adres</th><th>Opis</th><th>Notatka techniczna</th><th>Aparat</th><th>Zakres surowy</th><th>Zakres inżynieryjny</th><th>Jednostka</th></tr>
+<tr><td>KOT</td><td>ADA1.AI.1</td><td>Temperatura wody zasilajacej</td><td>Czujnik PT1000, przetwornik 4-20mA</td><td></td><td>4…20</td><td>0…120</td><td>degC</td></tr>
+</table>
+<h3>HALA</h3>
+<table><tr><th>Lokalizacja</th><th>Adres</th><th>Opis</th><th>Notatka techniczna</th><th>Aparat</th><th>Zakres surowy</th><th>Zakres inżynieryjny</th><th>Jednostka</th></tr>
+<tr><td>HALA</td><td>ADA1.AI.2</td><td>Cisnienie w hali</td><td></td><td></td><td>4…20</td><td>0…10</td><td>bar</td></tr>
+</table>
+</body></html>

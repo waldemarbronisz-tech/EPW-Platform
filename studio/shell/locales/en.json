@@ -75,6 +75,7 @@
       "save": "Save",
       "save_as": "Save As...",
       "check_project": "Check Project",
+      "export_points": "Export Point List...",
       "exit": "Exit",
       "compare_saved": "Compare with Saved File...",
       "compare_files": "Compare Two Projects..."
@@ -416,5 +417,23 @@
     "msg_process_missing_point": "Process protection \"{protection}\" points to point {address}, which is not in the point registry.",
     "msg_process_not_ai_point": "Process protection \"{protection}\" points to point {address}, which is not an analog input (AI).",
     "msg_module_has_orphan_data": "Module \"{module}\" has data saved in the project but is not in the device composition - its branch is hidden, the data was not deleted."
+  },
+  "export": {
+    "dialog_title": "Export Point List",
+    "document_title": "Terminal Block Table",
+    "no_points": "The point registry is empty - there is nothing to export.",
+    "filter_csv": "CSV (*.csv)",
+    "filter_html": "HTML (*.html)",
+    "no_location": "(no location)",
+    "col_address": "Address",
+    "col_description": "Description",
+    "col_location": "Location",
+    "col_technical_note": "Technical Note",
+    "col_device": "Apparatus",
+    "col_raw_range": "Raw Range",
+    "col_eng_range": "Engineering Range",
+    "col_unit": "Unit",
+    "error_write": "Could not write the file: {error}",
+    "done": "Exported the point list to {path}"
   }
 }
