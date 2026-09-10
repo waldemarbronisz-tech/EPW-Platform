@@ -74,6 +74,8 @@
       "open": "Otwórz...",
       "save": "Zapisz",
       "save_as": "Zapisz jako...",
+      "recent_projects": "Ostatnio otwarte projekty",
+      "recent_projects_empty": "(brak)",
       "check_project": "Sprawdź projekt",
       "export_points": "Eksportuj listę punktów...",
       "exit": "Zamknij",

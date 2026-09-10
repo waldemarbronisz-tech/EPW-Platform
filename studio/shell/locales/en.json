@@ -74,6 +74,8 @@
       "open": "Open...",
       "save": "Save",
       "save_as": "Save As...",
+      "recent_projects": "Recent Projects",
+      "recent_projects_empty": "(none)",
       "check_project": "Check Project",
       "export_points": "Export Point List...",
       "exit": "Exit",

@@ -446,6 +446,16 @@ class StudioMainWindow(QMainWindow):
         status_bar = self.statusBar()
         status_bar.addWidget(self._status_project)
         status_bar.addPermanentWidget(self._status_editor)
+        # Task point 8.3 - "Wersja Studio widoczna w pasku stanu albo
+        # tytule" - status bar chosen over the title (the title already
+        # carries app.title, retranslated on every language switch;
+        # tacking a version number onto that string is one more thing
+        # that string would have to keep consistent forever). Rightmost
+        # permanent widget - never covered by a transient showMessage()
+        # (see _export_point_list's own status message).
+        from studio.shell.version import STUDIO_VERSION
+        self._status_version = QLabel(f"EPW Studio {STUDIO_VERSION}")
+        status_bar.addPermanentWidget(self._status_version)
         # Problem 2's own status-bar bullet: "uchwyt rozmiaru w rogu" -
         # QStatusBar draws one natively once told to; Qt just doesn't
         # enable it by default.
@@ -1400,12 +1410,15 @@ class StudioMainWindow(QMainWindow):
             return self._save_project()
         return reply == QMessageBox.StandardButton.Discard
 
-    def _new_project(self):
-        if not self._confirm_discard_project():
-            return
-        self._project = new_project(tr("project_info.default_name"))
-        self._project_path = None
-        self._on_project_changed()
+    def _refresh_all_project_panels(self):
+        """Every panel that reads project.* eagerly at construction
+        time (unlike ModuleCompositionPanel/etc's own lazy _open_*())
+        needs a real refresh() after a wholesale project swap
+        (Nowy/Otwórz/Ostatnio otwarte) - factored out of _new_project()/
+        _open_project() (task point 8.1's own _open_recent_project()
+        needs the exact same sequence a third time) so the list can't
+        drift between call sites the way three independent copies
+        eventually would."""
         if self._cards_panel is not None:
             self._cards_panel.refresh()
         if self._locations_panel is not None:
@@ -1423,6 +1436,14 @@ class StudioMainWindow(QMainWindow):
         if self._process_protection_panel is not None:
             self._process_protection_panel.refresh()
 
+    def _new_project(self):
+        if not self._confirm_discard_project():
+            return
+        self._project = new_project(tr("project_info.default_name"))
+        self._project_path = None
+        self._on_project_changed()
+        self._refresh_all_project_panels()
+
     def _open_project(self):
         if not self._confirm_discard_project():
             return
@@ -1432,31 +1453,69 @@ class StudioMainWindow(QMainWindow):
         )
         if not path:
             return
+        self._load_project_from_path(path)
+
+    def _load_project_from_path(self, path: str):
+        """Shared by _open_project() (file dialog) and
+        _open_recent_project() (task 8.1, no dialog - the path is
+        already known) - the ONE place that actually calls
+        load_project() and reacts to it, so the two entry points can
+        never drift on error handling/panel refresh/recent-list update."""
         try:
             project = load_project(path)
         except (ProjectFormatError, OSError) as exc:
             QMessageBox.critical(self, tr("project_info.open_failed_title"), str(exc))
+            self._remove_recent_project(path)  # a saved-but-now-broken/missing entry is worse than none
             return
         self._project = project
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
         self._on_project_changed()
-        if self._cards_panel is not None:
-            self._cards_panel.refresh()
-        if self._locations_panel is not None:
-            self._locations_panel.refresh()
-        if self._point_registry_panel is not None:
-            self._point_registry_panel.refresh()
-        if self._devices_panel is not None:
-            self._devices_panel.refresh()
-        if self._zones_panel is not None:
-            self._zones_panel.refresh()
-        if self._lines_panel is not None:
-            self._lines_panel.refresh()
-        if self._electrical_protection_panel is not None:
-            self._electrical_protection_panel.refresh()
-        if self._process_protection_panel is not None:
-            self._process_protection_panel.refresh()
+        self._refresh_all_project_panels()
+
+    def _open_recent_project(self, path: str):
+        if not self._confirm_discard_project():
+            return
+        self._load_project_from_path(path)
+
+    # ------------------------------------------------------------------
+    # Task point 8.1 - "Ostatnio otwarte projekty - menu Plik, pięć
+    # pozycji, QSettings." A submenu (not five flat top-level entries) -
+    # Plik already grew two new items this session (points 6/7); five
+    # more flat entries there would make it the least scannable menu in
+    # the whole app for no real gain over one more level.
+    # ------------------------------------------------------------------
+    _RECENT_PROJECTS_KEY = "project/recent_files"
+    _RECENT_PROJECTS_MAX = 5
+
+    def _recent_projects(self) -> list:
+        return list(self.settings.value(self._RECENT_PROJECTS_KEY, []) or [])
+
+    def _remember_recent_project(self, path: str):
+        recent = [p for p in self._recent_projects() if p != path]
+        recent.insert(0, path)
+        del recent[self._RECENT_PROJECTS_MAX:]
+        self.settings.setValue(self._RECENT_PROJECTS_KEY, recent)
+        self._refresh_recent_projects_menu()
+
+    def _remove_recent_project(self, path: str):
+        recent = [p for p in self._recent_projects() if p != path]
+        self.settings.setValue(self._RECENT_PROJECTS_KEY, recent)
+        self._refresh_recent_projects_menu()
+
+    def _refresh_recent_projects_menu(self):
+        menu = getattr(self, "menu_recent_projects", None)
+        if menu is None:
+            return  # called once before build_fixed_menu() builds the menu itself - harmless no-op
+        menu.clear()
+        recent = self._recent_projects()
+        if not recent:
+            empty_action = menu.addAction(tr("menu.file.recent_projects_empty"))
+            empty_action.setEnabled(False)
+            return
+        for path in recent:
+            menu.addAction(path, lambda checked=False, p=path: self._open_recent_project(p))
 
     def _save_project(self) -> bool:
         if self._project_path is None:
@@ -1485,6 +1544,7 @@ class StudioMainWindow(QMainWindow):
             return False
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
         self._on_project_changed()
         return True
 

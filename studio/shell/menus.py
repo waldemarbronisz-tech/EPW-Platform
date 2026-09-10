@@ -146,6 +146,16 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     studio_window.act_menu_save = _add(file_menu, tr("menu.file.save"), studio_window._shared_save)
     studio_window.act_menu_save_as = _add(file_menu, tr("menu.file.save_as"), studio_window._shared_save_as)
     file_menu.addSeparator()
+    # Task point 8.1 - "Ostatnio otwarte projekty" - projekt.epw itself
+    # (this menu's act_menu_open/save above are the SEPARATE Logic/
+    # Synoptic document lifecycle - see _shared_open's own docstring),
+    # so this submenu's own entries call _open_recent_project(), never
+    # act_menu_open. Built once, refreshed by content (menu.clear() +
+    # rebuild), same "shape never changes, content does" split every
+    # other fixed-menu item in this function already follows.
+    studio_window.menu_recent_projects = file_menu.addMenu(tr("menu.file.recent_projects"))
+    studio_window._refresh_recent_projects_menu()
+    file_menu.addSeparator()
     # Task "fix/project-format-integrity" point 6 - "Sprawdź projekt":
     # not tied to any one aspect (unlike New/Open/Save above), so no
     # act_* enabled-state juggling needed - it operates on
