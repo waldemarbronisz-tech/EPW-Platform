@@ -1,0 +1,28 @@
+{
+  "all_dropdown_items": [
+    "New",
+    "Open...",
+    "Save",
+    "Save As...",
+    "Exit",
+    "Undo",
+    "Redo",
+    "Copy",
+    "Paste",
+    "Delete",
+    "Reroute",
+    "✓ Snap to Grid",
+    "SCADA Style Preview...",
+    "Project Registers...",
+    "Device List...",
+    "Help Topics...  F1"
+  ],
+  "snap_to_grid_before": "✓ Snap to Grid",
+  "snap_to_grid_after_first_click": "   Snap to Grid",
+  "snap_to_grid_after_second_click": "✓ Snap to Grid",
+  "window_reachability": {
+    "useStore": "undefined",
+    "ProjectFileService": "undefined",
+    "pywebview": "undefined"
+  }
+}
