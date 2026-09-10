@@ -150,6 +150,13 @@ export interface AppState {
   setFileName: (name: string | null) => void;
   setFileHandle: (handle: FileSystemFileHandle | null) => void;
   setDirty: (dirty: boolean) => void;
+  // Task "Studio: wyostrzenie stylu" Problem 4.3 - canvasConfig.background
+  // is already a project-file field (serialized like every other
+  // canvasConfig value, ProjectSchema.ts), but nothing ever WROTE to it
+  // before this task - checked empirically, not assumed (no existing
+  // setter, no UI reachable it from at all). One setter, following the
+  // exact shape every other project-field setter here already has.
+  setCanvasBackground: (color: string) => void;
   addMessage: (text: string) => void;
 
   setCanvasState: (state: Partial<CanvasState>) => void;

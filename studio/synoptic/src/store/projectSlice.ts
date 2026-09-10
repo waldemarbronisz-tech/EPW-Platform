@@ -10,7 +10,8 @@ import type { AppState } from './appState';
 export type ProjectSlice = Pick<AppState,
   | 'projectMetadata' | 'canvasConfig' | 'projectName' | 'fileName' | 'fileHandle'
   | 'isDirty' | 'messages' | 'devices'
-  | 'setProjectName' | 'setFileName' | 'setFileHandle' | 'setDirty' | 'addMessage' | 'setCanvasState'
+  | 'setProjectName' | 'setFileName' | 'setFileHandle' | 'setDirty' | 'setCanvasBackground'
+  | 'addMessage' | 'setCanvasState'
   | 'screenKind' | 'setScreenKind'
 >;
 
@@ -46,6 +47,16 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
   setFileName: (name) => set({ fileName: name }),
   setFileHandle: (handle) => set({ fileHandle: handle }),
   setDirty: (dirty) => set({ isDirty: dirty }),
+  // Task "Studio: wyostrzenie stylu" Problem 4.3/4.4 - the ONE way
+  // canvasConfig.background ever changes, from Studio's own color
+  // picker (studio/shell/color_picker.py) via SynopticPanel calling
+  // this through the page (the same runJavaScript-calls-a-real-store-
+  // action pattern the read-only state bridge in main.tsx already
+  // established, not a new mechanism).
+  setCanvasBackground: (color) => set((state) => ({
+    canvasConfig: { ...state.canvasConfig, background: color },
+    isDirty: true,
+  })),
   addMessage: (text) => {
     let type: 'info' | 'error' | 'warning' = 'info';
     if (text.startsWith('[ERROR]')) type = 'error';

@@ -78,6 +78,13 @@ def _clicker(panel, text, exact=False):
     return lambda: panel.trigger_menu_item(text, exact=exact)
 
 
+def _toolbar_clicker(panel, title, exact=True):
+    """Same idea as _clicker(), for Synoptic's own toolbar (Toolbar.tsx)
+    instead of its menu - matched by `title` attribute, not text
+    content (SynopticPanel.trigger_toolbar_button())."""
+    return lambda: panel.trigger_toolbar_button(title, exact=exact)
+
+
 def _add(container, label, handler):
     action = QAction(label, container)
     action.triggered.connect(handler)
@@ -144,10 +151,20 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
 
 def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     """The contextual zone's tools while LOGIKA is the active aspect -
-    everything Logic Studio's own (now-hidden) menu offered beyond
-    File/Zoom/Grid/Snap (those moved to the fixed top chrome, task
-    1.1/1.2)."""
+    everything Logic Studio's own (now-hidden) menu AND its own (now-
+    hidden, task "Studio: wyostrzenie stylu" Problem 1) toolbar offered.
+    Zoom/Grid/Snap are ALSO reachable from the fixed Widok menu (task
+    1.1/1.2) - mirrored here too, same as any real app's toolbar
+    duplicating a menu command, not a second mechanism: both paths
+    trigger the identical mw.act_zoom_in/etc QAction."""
     mw = logic_panel.main_window()
+
+    _mirror(toolbar, tr("menu.view.zoom_in"), mw.act_zoom_in)
+    _mirror(toolbar, tr("menu.view.zoom_out"), mw.act_zoom_out)
+    _mirror(toolbar, tr("menu.view.reset_zoom"), mw.act_reset_zoom)
+    _mirror(toolbar, tr("menu.view.grid"), mw.act_grid)
+    _mirror(toolbar, tr("menu.view.snap"), mw.act_snap)
+    toolbar.addSeparator()
 
     _mirror(toolbar, tr("menu.file.compare_saved"), mw.act_compare_saved)
     _mirror(toolbar, tr("menu.file.compare_files"), mw.act_compare_files)
@@ -196,17 +213,64 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _mirror(toolbar, tr("menu.help.shortcuts"), mw.act_help_shortcuts)
     _mirror(toolbar, tr("menu.help.export_catalog"), mw.act_export_block_catalog)
     _mirror(toolbar, tr("menu.help.about"), mw.act_about)
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background)
 
 
 def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     """The contextual zone's tools while EKRANY/Schemat synoptyczny is
-    the active aspect - everything Synoptic's own (now-hidden) menu
-    offered beyond File/Snap (Undo/Redo stay on the fixed top toolbar,
-    not repeated here)."""
+    the active aspect - everything Synoptic's own (now-hidden) menu AND
+    its own (now-hidden, task "Studio: wyostrzenie stylu" Problem 1)
+    drawing toolbar offered, beyond File/Undo/Redo (fixed top chrome).
+    Toolbar.tsx's own Undo/Redo buttons are the identical store actions
+    the fixed toolbar's Cofnij/Ponów already reach via trigger_menu_item
+    - not re-added here, same one-mechanism-per-action rule as
+    everywhere else in this module."""
     _add(toolbar, tr("menu.edit.copy"), _clicker(synoptic_panel, "Copy"))
     _add(toolbar, tr("menu.edit.paste"), _clicker(synoptic_panel, "Paste"))
     _add(toolbar, tr("menu.edit.delete"), _clicker(synoptic_panel, "Delete"))
     _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False))
+    _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False))
+    _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Prad"))
+    _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Woda"))
+    _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Wentylacja"))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"))
+    _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False))
+    _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.distribute_h"), _toolbar_clicker(synoptic_panel, "Distribute Horizontally"))
+    _add(toolbar, tr("canvas.distribute_v"), _toolbar_clicker(synoptic_panel, "Distribute Vertically"))
+    _add(toolbar, tr("canvas.align_left"), _toolbar_clicker(synoptic_panel, "Align Left"))
+    _add(toolbar, tr("canvas.align_center"), _toolbar_clicker(synoptic_panel, "Align Center"))
+    _add(toolbar, tr("canvas.align_right"), _toolbar_clicker(synoptic_panel, "Align Right"))
+    _add(toolbar, tr("canvas.align_middle"), _toolbar_clicker(synoptic_panel, "Align Middle"))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.bring_front"), _toolbar_clicker(synoptic_panel, "Bring to Front"))
+    _add(toolbar, tr("canvas.send_back"), _toolbar_clicker(synoptic_panel, "Send to Back"))
+    _add(toolbar, tr("canvas.lock"), _toolbar_clicker(synoptic_panel, "Lock"))
+    _add(toolbar, tr("canvas.unlock"), _toolbar_clicker(synoptic_panel, "Unlock"))
+    _add(toolbar, tr("canvas.rotate_left"), _toolbar_clicker(synoptic_panel, "Rotate Left"))
+    _add(toolbar, tr("canvas.rotate_right"), _toolbar_clicker(synoptic_panel, "Rotate Right"))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.add_meter"), _toolbar_clicker(synoptic_panel, "Add Meter"))
+    _add(toolbar, tr("canvas.add_signal_panel"), _toolbar_clicker(synoptic_panel, "Add Signal Panel"))
+    _add(toolbar, tr("canvas.add_group_command"), _toolbar_clicker(synoptic_panel, "Add Group Command Button"))
+    _add(toolbar, tr("canvas.add_setpoint_panel"), _toolbar_clicker(synoptic_panel, "Add Setpoint Panel"))
     toolbar.addSeparator()
 
     _add(toolbar, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"))
@@ -214,3 +278,6 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
 
     _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"))
     _add(toolbar, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"))
+    toolbar.addSeparator()
+
+    _add(toolbar, tr("canvas.background_color"), studio_window._choose_canvas_background)

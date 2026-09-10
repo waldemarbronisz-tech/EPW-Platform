@@ -26,7 +26,7 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
      among many, most still unbuilt and shown, honestly, as such.
 """
 from PySide6.QtCore import Qt, QSettings, QSize, QTimer
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
     QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
 
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import build_fixed_menu, build_logic_context_toolbar, build_synoptic_context_toolbar
+from studio.shell.style import STUDIO_CHROME_QSS
 
 _TREE_ITEM_SCREENS = "screens"
 _TREE_ITEM_LOGIC = "logic"
@@ -70,17 +71,15 @@ _BREADCRUMB_KEYS = {
 # (task 1.3's own point: today both sit on the same background and
 # read as one bar split in two; a real background+border boundary is
 # what a label alone cannot fix).
-_DOCUMENT_HEADER_QSS = """
-QLabel#DocumentHeader {
-    background: #D4D0C8;
-    color: #000000;
-    border-style: outset;
-    border-width: 2px;
-    border-color: #FFFFFF #808080 #808080 #FFFFFF;
-    padding: 4px 6px;
-    font-weight: bold;
-}
-"""
+#
+# Task "Studio: wyostrzenie stylu" Problem 1 - the breadcrumb used to be
+# its own QLabel bar, stacked ABOVE this toolbar: menu + shared toolbar
+# + breadcrumb + contextual toolbar + the editor's own toolbar was five
+# bars before a stroke of canvas. The breadcrumb is now the FIRST widget
+# INSIDE this same toolbar (BreadcrumbLabel, addWidget()'d below,
+# followed by a real QToolBar::separator) - one fewer bar, and the
+# editor's own toolbar is gone entirely (its tools mirrored in here too,
+# see menus.py's build_*_context_toolbar) - three bars, not five.
 _CONTEXT_TOOLBAR_QSS = """
 QToolBar#ContextToolbar {
     background: #D4D0C8;
@@ -90,8 +89,27 @@ QToolBar#ContextToolbar {
     spacing: 2px;
     padding: 2px;
 }
+QLabel#BreadcrumbLabel {
+    color: #000000;
+    font-weight: bold;
+    padding: 0 8px 0 2px;
+}
 """
 _PLACEHOLDER_MESSAGE_QSS = "color: #808080; font-style: italic; padding: 24px;"
+
+# Task "Studio: wyostrzenie stylu" Problem 3 - "drzewo projektu NIE MA
+# nagłówka, a Object Library i Properties mają granatowe". accent_bg/
+# accent_text (STUDIO_UI_STANDARD.md section 1) - the identical navy the
+# tree's own SELECTED row already uses, so the header reads as "this bar
+# and the tree below it are one panel", not a color picked separately.
+_TREE_HEADER_QSS = """
+QLabel#TreeHeader {
+    background: #000080;
+    color: #FFFFFF;
+    padding: 4px 6px;
+    font-weight: bold;
+}
+"""
 
 # STUDIO_UI_STANDARD.md section 6: 24px tree rows, sourced from
 # runtime/epw_os/gui/widgets/nav_tree.py's own ROW_HEIGHT - repeated
@@ -106,11 +124,36 @@ class _TreeRowHeightDelegate(QStyledItemDelegate):
         return size
 
 
+def _dimmed_icon(icon: QIcon, size: int = 16) -> QIcon:
+    """Task "Studio: wyostrzenie stylu" Problem 3 - "gałęzie [...]
+    nieaktywne mają dziś sam szary tekst kursywą. Dodaj im wyszarzone
+    ikony". The SAME glyph as an active branch's own icon, faded rather
+    than swapped for a different shape - a dimmed icon still reads as
+    "this is a real, specific thing", just not one you can open yet;
+    a generic placeholder glyph would read as "this is a filler", which
+    is the opposite of what task 1.4's own zero-fasad tree wants. Uses
+    QPainter's own opacity compositing on the icon's real pixmap rather
+    than Qt's built-in QIcon.Mode.Disabled rendering - that path is
+    meant for buttons and reads as near-invisible at a 16px tree-row
+    size in a quick visual check, so a plain alpha fade is used
+    instead."""
+    pixmap = icon.pixmap(size, size)
+    dimmed = QPixmap(pixmap.size())
+    dimmed.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(dimmed)
+    painter.setOpacity(0.38)
+    painter.drawPixmap(0, 0, pixmap)
+    painter.end()
+    return QIcon(dimmed)
+
+
 class _AspectContainer(QWidget):
-    """Task 1.3/1.5: a breadcrumb header over a contextual toolbar,
-    over the aspect's own real editor widget - the whole reason the
-    old shell "looked like a zlepek dwóch programów" was that these
-    lived at the top, beside the app-level chrome; here they are a
+    """Task 1.3/1.5, tightened by "Studio: wyostrzenie stylu" Problem 1:
+    ONE contextual toolbar - the breadcrumb path as its own left-most
+    label (BreadcrumbLabel), a separator, then the active aspect's own
+    tools - over the aspect's own real editor widget. The whole reason
+    the old shell "looked like a zlepek dwóch programów" was chrome
+    stacked at the top beside the app-level bars; this is a single,
     visually distinct zone INSIDE the document area instead."""
 
     def __init__(self, breadcrumb_text, editor_widget, parent=None):
@@ -119,15 +162,15 @@ class _AspectContainer(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self.header = QLabel(breadcrumb_text)
-        self.header.setObjectName("DocumentHeader")
-        self.header.setStyleSheet(_DOCUMENT_HEADER_QSS)
-        layout.addWidget(self.header)
-
         self.context_toolbar = QToolBar()
         self.context_toolbar.setObjectName("ContextToolbar")
         self.context_toolbar.setMovable(False)
         self.context_toolbar.setStyleSheet(_CONTEXT_TOOLBAR_QSS)
+
+        self.breadcrumb_label = QLabel(breadcrumb_text)
+        self.breadcrumb_label.setObjectName("BreadcrumbLabel")
+        self.context_toolbar.addWidget(self.breadcrumb_label)
+        self.context_toolbar.addSeparator()
         layout.addWidget(self.context_toolbar)
 
         layout.addWidget(editor_widget, 1)
@@ -146,10 +189,14 @@ class _InactivePlaceholder(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self.header = QLabel()
-        self.header.setObjectName("DocumentHeader")
-        self.header.setStyleSheet(_DOCUMENT_HEADER_QSS)
-        layout.addWidget(self.header)
+        self.context_toolbar = QToolBar()
+        self.context_toolbar.setObjectName("ContextToolbar")
+        self.context_toolbar.setMovable(False)
+        self.context_toolbar.setStyleSheet(_CONTEXT_TOOLBAR_QSS)
+        self.breadcrumb_label = QLabel()
+        self.breadcrumb_label.setObjectName("BreadcrumbLabel")
+        self.context_toolbar.addWidget(self.breadcrumb_label)
+        layout.addWidget(self.context_toolbar)
 
         self.message = QLabel()
         self.message.setWordWrap(True)
@@ -160,13 +207,15 @@ class _InactivePlaceholder(QWidget):
         layout.addStretch(2)
 
     def set_content(self, breadcrumb_text, message_text):
-        self.header.setText(breadcrumb_text)
+        self.breadcrumb_label.setText(breadcrumb_text)
         self.message.setText(message_text)
 
 
 class StudioMainWindow(QMainWindow):
     def __init__(self, settings=None):
         super().__init__()
+        self.setObjectName("StudioMainWindow")
+        self.setStyleSheet(STUDIO_CHROME_QSS)
         self.setWindowTitle(tr("app.title"))
         self.resize(1400, 900)
 
@@ -210,6 +259,16 @@ class StudioMainWindow(QMainWindow):
     def _build_ui(self):
         self.tree = self._build_tree()
 
+        tree_container = QWidget()
+        tree_layout = QVBoxLayout(tree_container)
+        tree_layout.setContentsMargins(0, 0, 0, 0)
+        tree_layout.setSpacing(0)
+        self._tree_header = QLabel(tr("tree.root"))
+        self._tree_header.setObjectName("TreeHeader")
+        self._tree_header.setStyleSheet(_TREE_HEADER_QSS)
+        tree_layout.addWidget(self._tree_header)
+        tree_layout.addWidget(self.tree, 1)
+
         self.stack = QStackedWidget()
         self._empty_placeholder = QWidget()
         placeholder_layout = QVBoxLayout(self._empty_placeholder)
@@ -220,7 +279,7 @@ class StudioMainWindow(QMainWindow):
         self.stack.addWidget(self._inactive_placeholder)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.addWidget(self.tree)
+        self.splitter.addWidget(tree_container)
         self.splitter.addWidget(self.stack)
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
@@ -236,6 +295,10 @@ class StudioMainWindow(QMainWindow):
         status_bar = self.statusBar()
         status_bar.addWidget(self._status_project)
         status_bar.addPermanentWidget(self._status_editor)
+        # Problem 2's own status-bar bullet: "uchwyt rozmiaru w rogu" -
+        # QStatusBar draws one natively once told to; Qt just doesn't
+        # enable it by default.
+        status_bar.setSizeGripEnabled(True)
 
     def _build_tree(self):
         """Task 1.4 - the WHOLE project structure, not just what's
@@ -244,6 +307,7 @@ class StudioMainWindow(QMainWindow):
         supply every branch label - the tree mirrors the project FILE
         FORMAT's structure, not a list of programs."""
         tree = QTreeWidget()
+        tree.setObjectName("ProjectTree")
         tree.setHeaderHidden(True)
         tree.setIndentation(12)
         tree.setItemDelegate(_TreeRowHeightDelegate(tree))
@@ -251,7 +315,16 @@ class StudioMainWindow(QMainWindow):
         style = self.style()
         icon_screens = style.standardIcon(QStyle.StandardPixmap.SP_DesktopIcon)
         icon_logic = style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
-        icon_inactive = style.standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+        # Task "Studio: wyostrzenie stylu" Problem 3 - each inactive
+        # branch gets a DIMMED version of the icon its own future active
+        # counterpart would plausibly use (nav_tree.py's convention:
+        # every branch is a real thing, styled to look reachable or not
+        # - never a blank/generic filler glyph). SP_FileDialogInfoView
+        # (a document with a small "i") stands in for the still-unbuilt
+        # config/registry/setpoint pages generically - visually distinct
+        # from the two ACTIVE branches' own icons above, so an active
+        # and an inactive branch are never one accidental click apart.
+        icon_inactive = _dimmed_icon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
 
         def add_group(parent_item, label_key):
             item = QTreeWidgetItem([tr(label_key)])
@@ -324,7 +397,6 @@ class StudioMainWindow(QMainWindow):
         implementation of its own); Save/Undo/Redo's enabled state is
         kept honest by _refresh_shared_toolbar_state() (unchanged from
         the previous stage - GRANICE: "nie ruszaj mostu stanu")."""
-        style = self.style()
         tb = QToolBar(tr("app.title"), self)
         tb.setObjectName("SharedToolbar")
         tb.setMovable(False)
@@ -332,34 +404,38 @@ class StudioMainWindow(QMainWindow):
         self.addToolBar(tb)
         self._shared_toolbar = tb
 
-        def _make(text_key, icon: QIcon, handler):
-            action = tb.addAction(icon, tr(text_key))
+        # Task "Studio: wyostrzenie stylu" Problem 3 - "ikony w pasku
+        # górnym są z różnych stylów: pięć płaskich i jedna kolorowa
+        # czerwona" (the native QStyle.standardIcon() set this toolbar
+        # used to draw from - one theme's glyphs, not one hand). Every
+        # icon here now comes from logic_studio.ui.icons.action_icon()
+        # instead - the SAME procedurally-drawn set Logic Studio's own
+        # toolbar/menu already use (its act_new/act_undo/etc already
+        # pass icon_name="new"/"undo"/etc - see main_window.py there),
+        # so Studio's fixed toolbar and Logic's contextual one share one
+        # actual icon language, not just a similar color. "save_as" and
+        # "help" did not exist in that module before this task - added
+        # there (two small, described elif branches, same drawing
+        # convention as their neighbors) rather than invented separately
+        # here, so the whole platform still has exactly one icon set.
+        from studio.shell.logic_panel import _ensure_logic_studio_importable
+        _ensure_logic_studio_importable()
+        from logic_studio.ui.icons import action_icon
+
+        def _make(text_key, icon_name: str, handler):
+            action = tb.addAction(action_icon(icon_name, size=20), tr(text_key))
             action.triggered.connect(handler)
             return action
 
-        self.act_shared_new = _make(
-            "toolbar.new", style.standardIcon(QStyle.StandardPixmap.SP_FileIcon), self._shared_new
-        )
-        self.act_shared_open = _make(
-            "toolbar.open", style.standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton), self._shared_open
-        )
-        self.act_shared_save = _make(
-            "toolbar.save", style.standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton), self._shared_save
-        )
-        self.act_shared_save_as = _make(
-            "toolbar.save_as", style.standardIcon(QStyle.StandardPixmap.SP_DriveFDIcon), self._shared_save_as
-        )
+        self.act_shared_new = _make("toolbar.new", "new", self._shared_new)
+        self.act_shared_open = _make("toolbar.open", "open", self._shared_open)
+        self.act_shared_save = _make("toolbar.save", "save", self._shared_save)
+        self.act_shared_save_as = _make("toolbar.save_as", "save_as", self._shared_save_as)
         tb.addSeparator()
-        self.act_shared_undo = _make(
-            "toolbar.undo", style.standardIcon(QStyle.StandardPixmap.SP_ArrowBack), self._shared_undo
-        )
-        self.act_shared_redo = _make(
-            "toolbar.redo", style.standardIcon(QStyle.StandardPixmap.SP_ArrowForward), self._shared_redo
-        )
+        self.act_shared_undo = _make("toolbar.undo", "undo", self._shared_undo)
+        self.act_shared_redo = _make("toolbar.redo", "redo", self._shared_redo)
         tb.addSeparator()
-        self.act_shared_help = _make(
-            "toolbar.help", style.standardIcon(QStyle.StandardPixmap.SP_DialogHelpButton), self._help_topics
-        )
+        self.act_shared_help = _make("toolbar.help", "help", self._help_topics)
         self._set_shared_toolbar_enabled(False, False, False)
 
     # ------------------------------------------------------------------
@@ -483,6 +559,28 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Snap to Grid")
 
+    def _choose_canvas_background(self):
+        """Task "Studio: wyostrzenie stylu" Problem 4.2 - reachable from
+        the CONTEXTUAL toolbar (menus.py's build_*_context_toolbar), not
+        the fixed Widok menu: canvas background is a property of the
+        active aspect's own document, same category as Zoom/Grid/Snap
+        conceptually, but unlike those it has no cross-aspect meaning at
+        all when neither aspect is active - it belongs with the rest of
+        that aspect's own tools, not the app-level chrome."""
+        from studio.shell.color_picker import DEFAULT_CANVAS_BACKGROUND, StudioColorDialog
+
+        def _open_with(current_hex, apply_callback):
+            chosen = StudioColorDialog.get_color(current_hex or DEFAULT_CANVAS_BACKGROUND, self)
+            if chosen is not None:
+                apply_callback(chosen.name())
+
+        if self._active == _TREE_ITEM_LOGIC:
+            _open_with(self._logic_panel.canvas_background(), self._logic_panel.set_canvas_background)
+        elif self._active == _TREE_ITEM_SCREENS:
+            self._synoptic_panel.query_canvas_background(
+                lambda color: _open_with(color, self._synoptic_panel.set_canvas_background)
+            )
+
     def _help_topics(self):
         if self._active == _TREE_ITEM_LOGIC:
             self._logic_panel.main_window().act_help.trigger()
@@ -498,6 +596,7 @@ class StudioMainWindow(QMainWindow):
 
     def _retranslate(self):
         self.setWindowTitle(tr("app.title"))
+        self._tree_header.setText(tr("tree.root"))
         for item, key in self._tree_label_refs:
             item.setText(0, tr(key))
 

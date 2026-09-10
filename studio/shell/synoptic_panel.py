@@ -86,11 +86,14 @@ _PAGE_VIEW = 2
 #     properties ScadaTheme.ts already reads everything from. Domain
 #     colors (alarm/energized/water/...) are deliberately NOT in this
 #     list - the standard never touches those, and neither does this.
-#   - hide Synoptic's own File/Edit/View/Devices/Help bar: that role now
-#     belongs to Studio's own shared QMenuBar (see studio/shell/menus.py)
-#     which reaches these same actions via trigger_menu_item() below -
-#     showing both at once would be the "two menus" problem this whole
-#     task exists to remove.
+#   - hide Synoptic's own File/Edit/View/Devices/Help bar AND its own
+#     drawing/editing toolbar: both roles now belong to Studio's own
+#     chrome (menus.py's build_fixed_menu() and, for the toolbar,
+#     build_synoptic_context_toolbar() - reaching every one of these
+#     same actions via trigger_menu_item()/trigger_toolbar_button()
+#     below) - showing Synoptic's own copies at the same time is
+#     exactly the "pięć pasów, dwa programy sklejone" problem task
+#     "Studio: wyostrzenie stylu" 's Problem 1 exists to remove.
 # No studio/synoptic/src/ change was needed for either - both are pure
 # runtime CSS/DOM effects on the page Synoptic already serves.
 _STUDIO_SKIN_JS = """
@@ -107,6 +110,8 @@ _STUDIO_SKIN_JS = """
     root.style.setProperty('--sys-highlight-text', '#FFFFFF');
     const bar = document.querySelector('.menu-bar');
     if (bar) bar.style.display = 'none';
+    const toolbar = document.querySelector('.toolbar');
+    if (toolbar) toolbar.style.display = 'none';
     return 'ok';
 })();
 """
@@ -225,6 +230,35 @@ class SynopticPanel(QWidget):
         )
         self._view.page().runJavaScript(js)
 
+    def trigger_toolbar_button(self, title: str, exact: bool = True):
+        """Fires one of Synoptic's own toolbar buttons (Toolbar.tsx) -
+        now permanently display:none, same as the menu bar (see
+        _STUDIO_SKIN_JS). Every button in that toolbar carries a real
+        `title` attribute (used for its own native tooltip) - matched
+        against that, not textContent, since these buttons render an
+        icon, not text. `exact` defaults True here (unlike
+        trigger_menu_item's default) because Toolbar.tsx's own titles
+        are already short and specific enough that substring matching
+        would be more likely to hit the wrong button (e.g. "Align
+        Left"/"Align Center"/"Align Right" all share the substring
+        "Align") than to help - callers pass exact=False only for a
+        button whose title varies (none do, today)."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        title_json = json.dumps(title)
+        cmp_expr = (
+            f"b.getAttribute('title') === {title_json}"
+            if exact
+            else f"(b.getAttribute('title') || '').includes({title_json})"
+        )
+        js = (
+            "(function(){"
+            f"const b = Array.from(document.querySelectorAll('.toolbar button')).find(b => {cmp_expr});"
+            "if (b) { b.click(); return true; } return false;"
+            "})();"
+        )
+        self._view.page().runJavaScript(js)
+
     def query_state(self, callback):
         """Reads the read-only state bridge added to studio/synoptic/
         src/main.tsx (Blocker B of this task - approved for READ access
@@ -256,3 +290,34 @@ class SynopticPanel(QWidget):
                 callback(None)
 
         self._view.page().runJavaScript(js, _handle)
+
+    def query_canvas_background(self, callback):
+        """Task "Studio: wyostrzenie stylu" Problem 4.3 - reads
+        canvasConfig.background (a real project-file field,
+        ProjectSchema.ts) through the read-only bridge main.tsx adds
+        for exactly this. `callback` receives a "#RRGGBB" string, or
+        None if the page hasn't loaded yet."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            callback(None)
+            return
+        js = (
+            "typeof window.__synopticCanvasBackground === 'function' "
+            "? window.__synopticCanvasBackground() : ''"
+        )
+
+        def _handle(result):
+            callback(result or None)
+
+        self._view.page().runJavaScript(js, _handle)
+
+    def set_canvas_background(self, hex_color: str):
+        """The write half - calls the real store action (main.tsx's
+        __synopticSetCanvasBackground bridge), so isDirty updates
+        exactly as any other project edit would."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        js = (
+            "typeof window.__synopticSetCanvasBackground === 'function' "
+            f"&& window.__synopticSetCanvasBackground({json.dumps(hex_color)});"
+        )
+        self._view.page().runJavaScript(js)

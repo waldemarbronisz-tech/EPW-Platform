@@ -26,11 +26,38 @@ Studio standalone exactly as before.
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 LOGIC_DIR = Path(__file__).resolve().parents[1] / "logic"
 
 _blocks_registered = False
+
+# Task "Studio: wyostrzenie stylu" Problem 4.3 - checked empirically
+# before writing this (LogicScene.drawBackground()'s own comment):
+# Logic Studio has no per-project or per-app canvas-background concept
+# at all, unlike Synoptic's real canvasConfig.background project field.
+# Reported as its own finding rather than guessed past - the proposal,
+# implemented here: since there is nowhere in Logic Studio's OWN project
+# format (.epwlogic, core/project.py) to put a per-project color yet,
+# this lives in Studio's own QSettings instead - the same store
+# StudioMainWindow itself already uses ("BroniszLabs"/"EPW Studio", not
+# Logic Studio's separate "BroniszLabs"/"EPW Logic Studio" store), since
+# it is a Studio-level UI preference until Logic Studio's project format
+# grows a real field for it. Revisit once/if it does - the "per-project"
+# vs "per-app" answer would change to match Synoptic's.
+_SETTINGS_KEY = "logic/canvas_background"
+_DEFAULT_BACKGROUND = "#FFFFFF"
+
+
+def _load_saved_canvas_background() -> str:
+    settings = QSettings("BroniszLabs", "EPW Studio")
+    return str(settings.value(_SETTINGS_KEY, _DEFAULT_BACKGROUND))
+
+
+def _save_canvas_background(hex_color: str) -> None:
+    settings = QSettings("BroniszLabs", "EPW Studio")
+    settings.setValue(_SETTINGS_KEY, hex_color)
 
 
 def _ensure_logic_studio_importable():
@@ -69,25 +96,30 @@ class LogicPanel(QWidget):
         # (tree-expand-state etc.) should carry over into the shell too.
         self._main_window = MainWindow()
 
-        # Task "EPW Studio: jedna szata graficzna" 2.1/2.2 - this
-        # embedded MainWindow's own menu bar and its New/Open/Save/Undo/
-        # Redo toolbar buttons are replaced by Studio's shared ones
-        # (studio/shell/menus.py, main_window.py's shared toolbar) -
-        # showing both would mean two menus and two Save buttons, which
-        # is the exact problem this task exists to remove. Only THIS
-        # embedded instance is affected: logic_studio/ui/main_window.py
-        # itself is untouched, so studio/logic/main.py's standalone
-        # MainWindow (its own, separate instance) still has its own full
-        # menu bar and toolbar exactly as before.
+        # Task "EPW Studio: jedna szata graficzna" 2.1/2.2, extended by
+        # "Studio: wyostrzenie stylu" Problem 1 - this embedded
+        # MainWindow's own menu bar AND its own toolbar are both
+        # replaced by Studio's chrome (menus.py's build_fixed_menu() +
+        # build_logic_context_toolbar(), main_window.py's shared
+        # toolbar) - showing Logic Studio's own copies at the same time
+        # is the "pięć pasów, dwa programy sklejone" problem this task
+        # exists to remove; every one of this toolbar's own actions
+        # (Compile/Simulation/Zoom/Grid/Snap) is already mirrored into
+        # build_logic_context_toolbar, so nothing is actually lost by
+        # hiding the whole bar rather than pruning it action by action.
+        # Only THIS embedded instance is affected: logic_studio/ui/
+        # main_window.py itself is untouched, so studio/logic/main.py's
+        # standalone MainWindow (its own, separate instance) still has
+        # its own full menu bar and toolbar exactly as before.
         self._main_window.menuBar().setVisible(False)
-        for action in (
-            self._main_window.act_new,
-            self._main_window.act_open,
-            self._main_window.act_save,
-            self._main_window.act_undo,
-            self._main_window.act_redo,
-        ):
-            self._main_window.toolbar.removeAction(action)
+        self._main_window.toolbar.setVisible(False)
+
+        # Problem 4.2/4.3 - restores whatever canvas background color
+        # was last picked (Studio's own QSettings, see module docstring
+        # above) - a fresh embed looks the same as it did last session,
+        # not reset to white every time Studio restarts.
+        from PySide6.QtGui import QColor
+        self._main_window.scene.background_color = QColor(_load_saved_canvas_background())
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -95,3 +127,19 @@ class LogicPanel(QWidget):
 
     def main_window(self):
         return self._main_window
+
+    def canvas_background(self) -> str:
+        """Current canvas background color, "#RRGGBB" - the picker's
+        own starting color (Problem 4.1's "podgląd: obecny kolor obok
+        nowego")."""
+        return self._main_window.scene.background_color.name()
+
+    def set_canvas_background(self, hex_color: str) -> None:
+        """The write half - updates the real scene property, repaints,
+        marks the document dirty (same as any other edit reaching
+        LogicScene would), and persists to Studio's own QSettings."""
+        from PySide6.QtGui import QColor
+        self._main_window.scene.background_color = QColor(hex_color)
+        self._main_window.scene.update()
+        self._main_window.set_dirty()
+        _save_canvas_background(hex_color)

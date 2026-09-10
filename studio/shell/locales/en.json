@@ -152,6 +152,44 @@
     "redo": "Redo",
     "help": "Help"
   },
+  "canvas": {
+    "distribute_h": "Distribute Horizontally",
+    "distribute_v": "Distribute Vertically",
+    "add_meter": "Add Meter",
+    "add_signal_panel": "Add Signal Panel",
+    "add_group_command": "Add Group Command Button",
+    "add_setpoint_panel": "Add Setpoint Panel",
+    "draw_wire": "Draw Wire",
+    "draw_frame": "Draw Frame",
+    "draw_building": "Draw Building",
+    "medium_electrical": "Electrical",
+    "medium_water": "Water",
+    "medium_ventilation": "Ventilation",
+    "wire_style_normal": "Normal",
+    "wire_style_bus": "Bus",
+    "routing_direct": "Direct",
+    "routing_avoid": "Avoid Obstacles",
+    "bring_front": "Bring to Front",
+    "send_back": "Send to Back",
+    "align_left": "Align Left",
+    "align_center": "Align Center",
+    "align_right": "Align Right",
+    "align_middle": "Align Middle",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "rotate_left": "Rotate Left",
+    "rotate_right": "Rotate Right",
+    "background_color": "Canvas Background Color..."
+  },
+  "color_picker": {
+    "title": "Color",
+    "hex_label": "Hex:",
+    "current_label": "Current",
+    "new_label": "New",
+    "presets_label": "Presets",
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
   "about": {
     "studio_text": "EPW Studio\n\nThe EPW platform's shared design shell - the Synoptic Diagram (Synoptic Editor) and Logic (Logic Studio) in one window, one skin."
   }

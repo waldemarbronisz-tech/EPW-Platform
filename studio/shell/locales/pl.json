@@ -152,6 +152,44 @@
     "redo": "Ponów",
     "help": "Pomoc"
   },
+  "canvas": {
+    "distribute_h": "Rozłóż poziomo",
+    "distribute_v": "Rozłóż pionowo",
+    "add_meter": "Dodaj miernik",
+    "add_signal_panel": "Dodaj panel sygnałowy",
+    "add_group_command": "Dodaj przycisk polecenia grupowego",
+    "add_setpoint_panel": "Dodaj panel nastaw",
+    "draw_wire": "Rysuj przewód",
+    "draw_frame": "Rysuj ramkę",
+    "draw_building": "Rysuj budynek",
+    "medium_electrical": "Prąd",
+    "medium_water": "Woda",
+    "medium_ventilation": "Wentylacja",
+    "wire_style_normal": "Zwykły",
+    "wire_style_bus": "Szyna",
+    "routing_direct": "Bezpośrednio",
+    "routing_avoid": "Omijaj przeszkody",
+    "bring_front": "Przenieś na wierzch",
+    "send_back": "Przenieś na spód",
+    "align_left": "Wyrównaj do lewej",
+    "align_center": "Wyrównaj do środka",
+    "align_right": "Wyrównaj do prawej",
+    "align_middle": "Wyrównaj w pionie",
+    "lock": "Zablokuj",
+    "unlock": "Odblokuj",
+    "rotate_left": "Obróć w lewo",
+    "rotate_right": "Obróć w prawo",
+    "background_color": "Kolor tła kanwy..."
+  },
+  "color_picker": {
+    "title": "Kolor",
+    "hex_label": "Szesnastkowo:",
+    "current_label": "Obecny",
+    "new_label": "Nowy",
+    "presets_label": "Próbki",
+    "ok": "OK",
+    "cancel": "Anuluj"
+  },
   "about": {
     "studio_text": "EPW Studio\n\nWspólna powłoka projektowa platformy EPW — Schemat synoptyczny (Synoptic Editor) i Logika (Logic Studio) w jednym oknie, jednej szacie graficznej."
   }

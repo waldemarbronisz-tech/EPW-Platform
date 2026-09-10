@@ -77,6 +77,30 @@ type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
   };
 };
 
+// Task "Studio: wyostrzenie stylu" Problem 4.3 - a second, equally
+// narrow read-only bridge function, same convention as the one above:
+// Studio's own color picker (studio/shell/color_picker.py) needs the
+// CURRENT canvasConfig.background to open already showing it (4.1's
+// own "podgląd: obecny kolor obok nowego"), and there is still no
+// general window.useStore exposure - reading it means one more single-
+// purpose getter, not widening the existing one's stated scope.
+type CanvasBackgroundBridge = { __synopticCanvasBackground?: () => string };
+(window as unknown as CanvasBackgroundBridge).__synopticCanvasBackground = (): string =>
+  useStore.getState().canvasConfig.background;
+
+// The write half of the same feature - GRANICE's own pre-approved
+// exception ("jeśli w Synoptiku wymaga to zmiany [...] MINIMALNEJ i
+// opisanej, tak jak przy moście stanu") for exactly this: Studio's own
+// color picker has no DOM element to click (trigger_menu_item()/
+// trigger_toolbar_button() only work for parameterless actions) - one
+// explicit setter, taking the one argument it needs, calling the real
+// store action so isDirty/history behave exactly as any other project
+// edit would.
+type CanvasBackgroundSetter = { __synopticSetCanvasBackground?: (color: string) => void };
+(window as unknown as CanvasBackgroundSetter).__synopticSetCanvasBackground = (color: string): void => {
+  useStore.getState().setCanvasBackground(color);
+};
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

@@ -146,11 +146,27 @@ def action_icon(name: str, size: int = 20) -> QIcon:
         ])
         painter.drawPolygon(folder)
 
-    elif name == "save":
+    elif name in ("save", "save_as"):
         painter.drawRect(rect)
         inner = QRectF(rect.left() + rect.width() * 0.2, rect.top(), rect.width() * 0.6, rect.height() * 0.45)
         painter.drawRect(inner)
         painter.drawRect(QRectF(rect.left() + rect.width() * 0.2, rect.bottom() - rect.height() * 0.35, rect.width() * 0.6, rect.height() * 0.3))
+        if name == "save_as":
+            # Task "Studio: wyostrzenie stylu" Problem 3 - Studio's fixed
+            # toolbar needed a "Save As" icon distinct from "Save" but in
+            # the exact same hand (this file's own established
+            # convention: reused, not invented, for every icon Studio's
+            # own chrome needs - see studio/shell/main_window.py). Same
+            # disk, plus a small pencil stroke over the bottom-right
+            # corner - the usual "editing this copy's name" metaphor.
+            painter.drawLine(
+                QPointF(rect.right() - rect.width() * 0.05, rect.bottom() - rect.height() * 0.05),
+                QPointF(rect.right() + rect.width() * 0.12, rect.bottom() - rect.height() * 0.28),
+            )
+            painter.drawLine(
+                QPointF(rect.right() + rect.width() * 0.12, rect.bottom() - rect.height() * 0.28),
+                QPointF(rect.right() + rect.width() * 0.2, rect.bottom() - rect.height() * 0.18),
+            )
 
     elif name in ("undo", "redo"):
         flip = -1 if name == "redo" else 1
@@ -223,6 +239,16 @@ def action_icon(name: str, size: int = 20) -> QIcon:
         f.setBold(True)
         painter.setFont(f)
         painter.drawText(rect, Qt.AlignCenter, "i")
+
+    elif name == "help":
+        # Task "Studio: wyostrzenie stylu" Problem 3 - same circle-badge
+        # convention as "about" just above, swapped to "?" - Studio's
+        # fixed toolbar's own Pomoc button (studio/shell/main_window.py).
+        painter.drawEllipse(rect)
+        f = painter.font()
+        f.setBold(True)
+        painter.setFont(f)
+        painter.drawText(rect, Qt.AlignCenter, "?")
 
     elif name == "settings":
         painter.drawRect(rect.adjusted(0, rect.height() * 0.15, 0, -rect.height() * 0.15))

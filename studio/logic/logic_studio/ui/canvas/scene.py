@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QGraphicsScene
-from PySide6.QtGui import QPen, QCursor
+from PySide6.QtGui import QPen, QCursor, QColor
 from PySide6.QtCore import Qt, QLineF, QPointF, Signal
 
 from logic_studio.ui.canvas import style
@@ -45,6 +45,19 @@ class LogicScene(QGraphicsScene):
         self.grid_size = style.GRID_SNAP
         self.grid_visible = True
         self.snap_enabled = True
+
+        # Task "Studio: wyostrzenie stylu" Problem 4.2/4.3 - Studio's own
+        # canvas-background color picker needs something real to read
+        # and write; there was nothing before this (see drawBackground()'s
+        # own comment). White matches the exact look every project had
+        # before this field existed - not a new default, a name for the
+        # old one. Deliberately NOT persisted here or anywhere in
+        # logic_studio itself: this scene has no notion of "the current
+        # project's own settings" independent of Project (core/project.py)
+        # gaining a real field for it one day - until then Studio's own
+        # LogicPanel is what remembers this across sessions (QSettings,
+        # not a Logic Studio project file - see logic_panel.py).
+        self.background_color = QColor(255, 255, 255)
 
         # Industrial visual style for grid: fine dots everywhere at
         # GRID_MINOR (== the snap unit blocks/ports actually align to),
@@ -659,11 +672,23 @@ class LogicScene(QGraphicsScene):
         return None
 
     def drawBackground(self, painter, rect):
-        """Draws an industrial engineering dot grid background: fine dots
-        every GRID_MINOR (the actual block-placement/port-alignment unit),
-        with a stronger dot every GRID_MAJOR (every other fine one, §1.1) —
-        a visual rhythm aid only; GRID_MAJOR is not itself a snap unit."""
-        super().drawBackground(painter, rect)
+        """Draws the canvas fill, then an industrial engineering dot grid
+        on top of it: fine dots every GRID_MINOR (the actual block-
+        placement/port-alignment unit), with a stronger dot every
+        GRID_MAJOR (every other fine one, §1.1) — a visual rhythm aid
+        only; GRID_MAJOR is not itself a snap unit.
+
+        Task "Studio: wyostrzenie stylu" Problem 4.2/4.3 - the fill used
+        to come from super().drawBackground() alone, i.e. whichever
+        QGraphicsView happens to display this scene's own inherited
+        palette background (white, via apply_classic_style()'s
+        QPalette.Base) - checked empirically before this task: there was
+        no per-scene or per-project background color concept at all,
+        just that inherited default. self.background_color (below,
+        __init__) makes it a real, explicit, settable property instead -
+        defaulting to the exact same white, so a project that never
+        touches it looks identical to before."""
+        painter.fillRect(rect, self.background_color)
 
         if not self.grid_visible:
             return

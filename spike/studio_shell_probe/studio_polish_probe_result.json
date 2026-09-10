@@ -1,0 +1,12 @@
+{
+  "logic_toolbar_visible_before_check": "n/a (screens active)",
+  "synoptic_menu_bar_hidden": true,
+  "synoptic_toolbar_hidden": true,
+  "logic_own_menu_bar_visible": false,
+  "logic_own_toolbar_visible": false,
+  "logic_canvas_background_before": "#ffffff",
+  "dialog_new_swatch_color": "#ffd9a0",
+  "logic_canvas_background_after": "#ffd9a0",
+  "synoptic_canvas_background_before": "#00CFCF",
+  "synoptic_canvas_background_after": "#C9E8FF"
+}
