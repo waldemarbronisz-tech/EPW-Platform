@@ -1,0 +1,1514 @@
+{
+  "generated_at": "2026-09-09T21:05:14.137Z",
+  "generated_by": "spike/geometry_export/extract.mjs",
+  "method": "Executes the real .tsx component as a plain function (esbuild JSX transform against stub react/react-konva modules - see stubs/*.js) - never a real Konva/canvas render. useState/useEffect are stubbed to freeze each symbol at its own declared initial pose; animation is a hand-authored directive (ANIMATION_DIRECTIVES in this script), not traced.",
+  "extraction_time_ms": {
+    "electrical.circuit_breaker": 17.291200000000003,
+    "electrical.indicator_lamp": 4.401600000000002,
+    "hvac.fan": 4.42240000000001,
+    "water.valve": 5.9147000000000105
+  },
+  "symbols": {
+    "electrical.circuit_breaker": {
+      "label": "Circuit Breaker",
+      "category": "Electrical",
+      "difficulty_class": "a) purely static, multi-state",
+      "reference_width": 64,
+      "reference_height": 64,
+      "allowed_states": [
+        "OPEN",
+        "CLOSED",
+        "TRIPPED",
+        "FAULT"
+      ],
+      "terminal_count": 2,
+      "animation": null,
+      "states": {
+        "OPEN": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "transparent",
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0,
+                0.5,
+                0.3
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                1,
+                0.5,
+                0.7
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.2,
+                0.65,
+                0.4
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.4,
+                0.65,
+                0.2
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0.7,
+                0.8,
+                0.4
+              ]
+            }
+          ]
+        },
+        "CLOSED": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "transparent",
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0,
+                0.5,
+                0.3
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                1,
+                0.5,
+                0.7
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.2,
+                0.65,
+                0.4
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.4,
+                0.65,
+                0.2
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "green",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0.3,
+                0.5,
+                0.7
+              ]
+            }
+          ]
+        },
+        "TRIPPED": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "transparent",
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0,
+                0.5,
+                0.3
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                1,
+                0.5,
+                0.7
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.2,
+                0.65,
+                0.4
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.4,
+                0.65,
+                0.2
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#f39c12",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0.7,
+                0.7,
+                0.5
+              ]
+            }
+          ]
+        },
+        "FAULT": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "transparent",
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0,
+                0.5,
+                0.3
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                1,
+                0.5,
+                0.7
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.2,
+                0.65,
+                0.4
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.35,
+                0.4,
+                0.65,
+                0.2
+              ]
+            },
+            {
+              "primitive": "line",
+              "stroke": "#2c3e50",
+              "strokeWidth": 5,
+              "points": [
+                0.5,
+                0.7,
+                0.8,
+                0.4
+              ]
+            },
+            {
+              "primitive": "rect",
+              "stroke": "#e74c3c",
+              "strokeWidth": 5,
+              "dash": [
+                4,
+                2
+              ],
+              "x": 0.1,
+              "y": 0.1,
+              "width": 0.8,
+              "height": 0.8
+            }
+          ]
+        }
+      }
+    },
+    "electrical.indicator_lamp": {
+      "label": "Indicator Lamp",
+      "category": "Electrical",
+      "difficulty_class": "b) animated - blink",
+      "reference_width": 32,
+      "reference_height": 32,
+      "allowed_states": [
+        "OFF",
+        "ON",
+        "BLINK",
+        "FAULT"
+      ],
+      "terminal_count": 1,
+      "animation": {
+        "type": "blink",
+        "trigger_state": "BLINK",
+        "half_period_ms": 500,
+        "measured": true,
+        "note": "IndicatorLampSymbol.tsx: setInterval(() => setBlinkOn(b => !b), 500) - an explicit, fixed constant in source."
+      },
+      "states": {
+        "OFF": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "circle",
+              "fill": "gray",
+              "stroke": "#000",
+              "strokeWidth": 5,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.5
+            }
+          ]
+        },
+        "ON": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "circle",
+              "fill": "green",
+              "stroke": "#000",
+              "strokeWidth": 5,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.5
+            }
+          ]
+        },
+        "BLINK": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "circle",
+              "fill": "green",
+              "stroke": "#000",
+              "strokeWidth": 5,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.5
+            }
+          ]
+        },
+        "FAULT": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "circle",
+              "fill": "gray",
+              "stroke": "#000",
+              "strokeWidth": 5,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.5
+            },
+            {
+              "primitive": "rect",
+              "fill": "rgba(255, 0, 0, 0.3)",
+              "stroke": "red",
+              "strokeWidth": 5,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            }
+          ]
+        }
+      }
+    },
+    "hvac.fan": {
+      "label": "Fan",
+      "category": "HVAC",
+      "difficulty_class": "c) animated - rotation",
+      "reference_width": 64,
+      "reference_height": 64,
+      "allowed_states": [
+        "OFF",
+        "RUNNING",
+        "FAULT"
+      ],
+      "terminal_count": 1,
+      "animation": {
+        "type": "rotate",
+        "trigger_state": "RUNNING",
+        "rate_deg_per_sec": 900,
+        "measured": false,
+        "note": "FanSymbol.tsx increments its angle by 15deg per requestAnimationFrame callback, not per fixed time unit - real-world speed is coupled to the browser's display refresh rate (typically ~60Hz), which is NOT a constant recorded anywhere in source. 900deg/s (=150rpm) here ASSUMES 60fps - this is the one animation number in this export that is genuinely an assumption, not a measurement."
+      },
+      "states": {
+        "OFF": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "#bdc3c7",
+              "stroke": "#7f8c8d",
+              "strokeWidth": 5,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "circle",
+              "fill": "#34495e",
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.46875
+            },
+            {
+              "primitive": "group",
+              "x": 0.5,
+              "y": 0.5,
+              "rotation_deg": 0,
+              "children": [
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 0
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 90
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 180
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 270
+                }
+              ]
+            }
+          ]
+        },
+        "RUNNING": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "#bdc3c7",
+              "stroke": "#7f8c8d",
+              "strokeWidth": 5,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "circle",
+              "fill": "#34495e",
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.46875
+            },
+            {
+              "primitive": "group",
+              "x": 0.5,
+              "y": 0.5,
+              "rotation_deg": 0,
+              "children": [
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 0
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 90
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 180
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 270
+                }
+              ]
+            }
+          ]
+        },
+        "FAULT": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "rect",
+              "fill": "#bdc3c7",
+              "stroke": "#7f8c8d",
+              "strokeWidth": 5,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            {
+              "primitive": "circle",
+              "fill": "#34495e",
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.46875
+            },
+            {
+              "primitive": "group",
+              "x": 0.5,
+              "y": 0.5,
+              "rotation_deg": 0,
+              "children": [
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 0
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 90
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 180
+                },
+                {
+                  "primitive": "arc",
+                  "fill": "#ecf0f1",
+                  "x": 0,
+                  "y": 0,
+                  "inner_radius": 0,
+                  "outer_radius": 0.4,
+                  "angle_deg": 45,
+                  "rotation_deg": 270
+                }
+              ]
+            },
+            {
+              "primitive": "rect",
+              "fill": "rgba(255, 0, 0, 0.3)",
+              "stroke": "red",
+              "strokeWidth": 5,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            }
+          ]
+        }
+      }
+    },
+    "water.valve": {
+      "label": "Valve",
+      "category": "Water",
+      "difficulty_class": "d) terminals + multiple states",
+      "reference_width": 50,
+      "reference_height": 40,
+      "allowed_states": [
+        "CLOSED",
+        "OPENING",
+        "OPEN",
+        "CLOSING",
+        "FAULT"
+      ],
+      "terminal_count": 0,
+      "animation": null,
+      "states": {
+        "CLOSED": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.02,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.044000000000000004,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.86,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.884,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "path",
+              "fill": "#7f8c8d",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "data_raw": "M 10 0 L 40 40 L 40 0 L 10 40 Z",
+              "data_normalized": "M 0.2 0 L 0.8 1 L 0.8 0 L 0.2 1 Z"
+            },
+            {
+              "primitive": "circle",
+              "fill": "#95a5a6",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.24
+            },
+            {
+              "primitive": "rect",
+              "fill": "#000",
+              "x": 0.46,
+              "y": 0,
+              "width": 0.08,
+              "height": 0.5
+            }
+          ]
+        },
+        "OPENING": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.02,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.044000000000000004,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.86,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.884,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "path",
+              "fill": "#f1c40f",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "data_raw": "M 10 0 L 40 40 L 40 0 L 10 40 Z",
+              "data_normalized": "M 0.2 0 L 0.8 1 L 0.8 0 L 0.2 1 Z"
+            },
+            {
+              "primitive": "circle",
+              "fill": "#27ae60",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.24
+            },
+            {
+              "primitive": "rect",
+              "fill": "#000",
+              "x": 0.46,
+              "y": -0.3,
+              "width": 0.08,
+              "height": 0.5
+            }
+          ]
+        },
+        "OPEN": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.02,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.044000000000000004,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.86,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.884,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "path",
+              "fill": "#2ecc71",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "data_raw": "M 10 0 L 40 40 L 40 0 L 10 40 Z",
+              "data_normalized": "M 0.2 0 L 0.8 1 L 0.8 0 L 0.2 1 Z"
+            },
+            {
+              "primitive": "circle",
+              "fill": "#27ae60",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.24
+            },
+            {
+              "primitive": "rect",
+              "fill": "#000",
+              "x": 0.46,
+              "y": -0.3,
+              "width": 0.08,
+              "height": 0.5
+            }
+          ]
+        },
+        "CLOSING": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.02,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.044000000000000004,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.86,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.884,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "path",
+              "fill": "#f1c40f",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "data_raw": "M 10 0 L 40 40 L 40 0 L 10 40 Z",
+              "data_normalized": "M 0.2 0 L 0.8 1 L 0.8 0 L 0.2 1 Z"
+            },
+            {
+              "primitive": "circle",
+              "fill": "#27ae60",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.24
+            },
+            {
+              "primitive": "rect",
+              "fill": "#000",
+              "x": 0.46,
+              "y": -0.3,
+              "width": 0.08,
+              "height": 0.5
+            }
+          ]
+        },
+        "FAULT": {
+          "primitive": "group",
+          "children": [
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M10,20 L0,20",
+                      "data_normalized": "M 0.2 0.5 L 0 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.02,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.044000000000000004,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "group",
+              "listening": false,
+              "children": [
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#000000",
+                      "strokeWidth": 18,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#C0C0C0",
+                      "strokeWidth": 13,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#808080",
+                      "strokeWidth": 3.5,
+                      "opacity": 0.45,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    },
+                    {
+                      "primitive": "path",
+                      "fill": "none",
+                      "stroke": "#F0F0F0",
+                      "strokeWidth": 3.5,
+                      "data_raw": "M40,20 L50,20",
+                      "data_normalized": "M 0.8 0.5 L 1 0.5"
+                    }
+                  ]
+                },
+                {
+                  "primitive": "group",
+                  "listening": false,
+                  "children": [
+                    {
+                      "primitive": "rect",
+                      "fill": "#C0C0C0",
+                      "stroke": "#000000",
+                      "strokeWidth": 2,
+                      "x": 0.86,
+                      "y": 0.2,
+                      "width": 0.12,
+                      "height": 0.6
+                    },
+                    {
+                      "primitive": "rect",
+                      "fill": "#F0F0F0",
+                      "x": 0.884,
+                      "y": 0.22999999999999998,
+                      "width": 0.07200000000000001,
+                      "height": 0.075
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "primitive": "path",
+              "fill": "#2ecc71",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "data_raw": "M 10 0 L 40 40 L 40 0 L 10 40 Z",
+              "data_normalized": "M 0.2 0 L 0.8 1 L 0.8 0 L 0.2 1 Z"
+            },
+            {
+              "primitive": "circle",
+              "fill": "#27ae60",
+              "stroke": "#2c3e50",
+              "strokeWidth": 1,
+              "x": 0.5,
+              "y": 0.5,
+              "radius": 0.24
+            },
+            {
+              "primitive": "rect",
+              "fill": "#000",
+              "x": 0.46,
+              "y": -0.3,
+              "width": 0.08,
+              "height": 0.5
+            },
+            {
+              "primitive": "rect",
+              "fill": "rgba(255, 0, 0, 0.3)",
+              "stroke": "red",
+              "strokeWidth": 2,
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+}

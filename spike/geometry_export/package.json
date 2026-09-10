@@ -1,0 +1,14 @@
+{
+  "name": "epw-geometry-export-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Reconnaissance spike only - NOT part of the runtime or the editor build. Isolated package.json/node_modules, does not touch studio/synoptic's own dependencies.",
+  "devDependencies": {
+    "canvas": "^3.2.3",
+    "esbuild": "^0.24.0",
+    "konva": "^10.5.0",
+    "react": "^19.3.0",
+    "react-konva": "^19.2.7"
+  }
+}
