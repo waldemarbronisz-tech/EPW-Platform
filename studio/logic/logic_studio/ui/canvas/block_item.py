@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QMenu
 from PySide6.QtCore import Qt, QRectF, QPointF
 
 from logic_studio.ui.canvas import style, shapes
+from logic_studio.ui.window_lookup import logic_main_window
 
 GATE_SHAPES = ("AND", "OR", "NOT", "XOR", "NAND", "NOR", "XNOR", "BUFFER", "GATE_GENERIC")
 
@@ -493,10 +494,10 @@ class BlockItem(QGraphicsItem):
         not attached to a real scene/view (mid-construction, or a test
         that never adds it to a real window). feat/duplicate-address-
         hyperlink: pulled out once every method below reaching for
-        `self.scene().views()[0].window()` needed the exact same guard a
-        third time."""
+        `logic_main_window(self.scene().views()[0])` needed the exact
+        same guard a third time."""
         try:
-            return self.scene().views()[0].window()
+            return logic_main_window(self.scene().views()[0])
         except Exception:
             return None
 
@@ -535,7 +536,7 @@ class BlockItem(QGraphicsItem):
         if not name:
             return None
         try:
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             project = getattr(window, 'project', None)
             if project is None:
                 return None
@@ -559,7 +560,7 @@ class BlockItem(QGraphicsItem):
         Project, so this is automatically correct after every recompile
         with no separate "clear the marker" step needed."""
         try:
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             engine = getattr(window, 'engine', None)
             program = getattr(engine, 'program', None) if engine else None
             if program is None:
@@ -693,7 +694,7 @@ class BlockItem(QGraphicsItem):
         if not address:
             return ""
         try:
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             project = getattr(window, 'project', None)
             if project is None:
                 return ""
@@ -711,7 +712,7 @@ class BlockItem(QGraphicsItem):
         if not address:
             return ""
         try:
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             project = getattr(window, 'project', None)
             if project is None:
                 return ""
@@ -867,7 +868,7 @@ class BlockItem(QGraphicsItem):
 
     def _push_state_if_possible(self):
         if self.scene() and self.scene().views():
-            window = self.scene().views()[0].window()
+            window = logic_main_window(self.scene().views()[0])
             project = getattr(window, 'project', None)
             if project:
                 project.push_state()

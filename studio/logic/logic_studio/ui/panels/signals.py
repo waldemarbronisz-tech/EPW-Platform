@@ -26,6 +26,7 @@ from PySide6.QtCore import Qt, QSettings
 from PySide6.QtGui import QFont, QColor, QBrush, QPixmap, QPainter, QIcon
 
 from logic_studio.ui.qt_lifetime import create_owned_timer
+from logic_studio.ui.window_lookup import logic_main_window
 from logic_studio.core.crossref import (
     build_crossref, find_issues,
     KIND_PHYSICAL_DI, KIND_PHYSICAL_DO, KIND_ANALOG_IN, KIND_ANALOG_OUT,
@@ -514,7 +515,7 @@ class SignalsPanel(QWidget):
         # signal reference) can call the exact same "select + center +
         # pulse" behavior instead of duplicating it.
         from logic_studio.ui.canvas.navigation import jump_to_block
-        window = self.window()
+        window = logic_main_window(self)
         scene = getattr(window, "scene", None)
         view = getattr(window, "view", None)
         jump_to_block(scene, view, block_uuid)

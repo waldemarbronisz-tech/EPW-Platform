@@ -6,6 +6,7 @@ from PySide6.QtGui import QDrag
 from PySide6.QtCore import Qt, QMimeData, QSettings, Signal
 
 from logic_studio.ui.icons import block_icon
+from logic_studio.ui.window_lookup import logic_main_window
 
 # feat/editor-modes-and-geometry §3: these six categories used to appear in
 # the tree, grayed out and unexpandable, labeled "(w przygotowaniu)" —
@@ -365,7 +366,7 @@ class LibraryPanel(QWidget):
             QMessageBox.critical(self, "Błąd eksportu", str(e))
             return
 
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'statusBar'):
             window.statusBar().showMessage(f"Wyeksportowano makroblok do {path}", 5000)
 
@@ -391,7 +392,7 @@ class LibraryPanel(QWidget):
         self._project.push_state()
         macro_library.import_bundle(self._project, bundle)
 
-        window = self.window()
+        window = logic_main_window(self)
         if hasattr(window, 'set_dirty'):
             window.set_dirty()
         self.set_project(self._project)
@@ -411,7 +412,7 @@ class LibraryPanel(QWidget):
         type_id = item.data(0, TYPE_ID_ROLE)
         if not type_id:
             return
-        window = self.window()
+        window = logic_main_window(self)
         view = getattr(window, 'view', None)
         if view is None:
             return

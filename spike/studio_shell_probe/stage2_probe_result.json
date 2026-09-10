@@ -55,9 +55,9 @@
   "logic_active_value": "logic",
   "logic_undo_enabled_before_edit": false,
   "logic_undo_stack_len_before": 0,
-  "logic_undo_stack_len_after": 0,
-  "logic_undo_enabled_after_edit": false,
-  "logic_save_enabled_after_edit": false,
+  "logic_undo_stack_len_after": 1,
+  "logic_undo_enabled_after_edit": true,
+  "logic_save_enabled_after_edit": true,
   "synoptic_bridge_state_fresh_project": {
     "canUndo": false,
     "canRedo": false,

@@ -4,7 +4,7 @@ three documentation block types (doc.text/doc.note/doc.section).
 import pytest
 from PySide6.QtCore import Qt, QPoint, QPointF, QRectF
 from PySide6.QtGui import QWheelEvent
-from PySide6.QtWidgets import QApplication, QSpinBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QSpinBox
 
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
@@ -13,6 +13,7 @@ from logic_studio.ui.canvas import style
 from logic_studio.ui.canvas.block_item import BlockItem
 from logic_studio.ui.canvas.scene import LogicScene
 from logic_studio.ui.canvas.view import LogicView
+from logic_studio.ui.main_window import MainWindow
 from logic_studio.ui.panels.property_grid import PropertyGridPanel
 
 register_builtin_blocks()
@@ -218,6 +219,15 @@ def test_doc_note_manual_size_already_big_enough_is_left_alone():
 # ---- §B1/§B3: property-panel-driven edits also refresh the canvas item ---
 
 def test_editing_text_size_via_the_property_panel_refits_the_canvas_item(qsettings):
+    """§B3's own regression coverage for _refresh_doc_block_geometry() -
+    reached through property_grid.py's logic_main_window(self), which
+    (task "EPW Studio: jedna szata graficzna", Stage 2) replaced the old
+    self.window() Qt call. logic_main_window() finds its answer by
+    WALKING parentWidget() looking for a real MainWindow instance - it
+    can't be satisfied by monkeypatching `panel.window` the way the old
+    Qt-method version could, so the fake window this test used to hand
+    _commit_property() is now a minimal real MainWindow subclass instead
+    of a duck-typed stand-in, reparented under it for real."""
     _app()
     p = Project()
     block = BlockRegistry.create_block("doc.text")
@@ -229,8 +239,23 @@ def test_editing_text_size_via_the_property_panel_refits_the_canvas_item(qsettin
     scene.addItem(item)
     original_width = item.width
 
-    panel = PropertyGridPanel(settings=qsettings)
-    panel.window = lambda: type("W", (), {"project": p, "scene": scene, "set_dirty": lambda self: None})()
+    class _FakeMainWindow(MainWindow):
+        """Deliberately skips MainWindow.__init__ (which builds the
+        whole real UI - status bar, menus, toolbar, every panel) - this
+        test only needs something logic_main_window() will recognize by
+        type, carrying just the three attributes _commit_property()
+        actually reads."""
+
+        def __init__(self):
+            QMainWindow.__init__(self)
+            self.project = p
+            self.scene = scene
+
+        def set_dirty(self):
+            pass
+
+    fake_window = _FakeMainWindow()
+    panel = PropertyGridPanel(settings=qsettings, parent=fake_window)
     panel.load_block_properties(block, p)
     panel._commit_property(_KEY, 40)
 
