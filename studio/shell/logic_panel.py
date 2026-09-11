@@ -75,7 +75,7 @@ class LogicPanel(QWidget):
     is lazy (only happens the first time LOGIKA/LOGIC is actually
     clicked - see main_window.py), same reasoning as SynopticPanel."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, settings=None):
         super().__init__(parent)
         _ensure_logic_studio_importable()
 
@@ -90,11 +90,15 @@ class LogicPanel(QWidget):
         apply_classic_style(QApplication.instance())
 
         from logic_studio.ui.main_window import MainWindow
-        # settings=None (the default) intentionally NOT overridden here:
-        # this is real usage, not a test - the same QSettings("BroniszLabs",
-        # "EPW Logic Studio") the standalone app already reads/writes
-        # (tree-expand-state etc.) should carry over into the shell too.
-        self._main_window = MainWindow()
+        # settings=None (the default) means "real usage" - MainWindow
+        # itself then falls back to the real QSettings("BroniszLabs",
+        # "EPW Logic Studio") store (tree-expand-state etc.), which
+        # should carry over into the shell too. Injectable (unlike
+        # before) so a test can pass a scratch QSettings instead, same
+        # "settings=None defaults to the real store" pattern
+        # StudioMainWindow itself already uses - see
+        # [[logic-studio-tests-must-inject-qsettings]].
+        self._main_window = MainWindow(settings=settings)
 
         # Task "EPW Studio: jedna szata graficzna" 2.1/2.2, extended by
         # "Studio: wyostrzenie stylu" Problem 1 - this embedded
@@ -127,6 +131,34 @@ class LogicPanel(QWidget):
 
     def main_window(self):
         return self._main_window
+
+    def sync_cards_from_studio(self, studio_project) -> None:
+        """Task "jedno źródło listy kart": mirrors Studio's real Card list
+        (studio/shell/project_format.py's Card - id/kind/channels) into
+        the embedded Logic Studio project's `external_cards`, which
+        logic_studio.core.device_model.DeviceModel then treats as the
+        ONLY source for get_ela_devices()/get_ada_devices()/get_ela_
+        addresses()/etc. - see that module's own docstring. Call after
+        every Studio project change (main_window.py's own
+        _on_project_changed(), cheap - just this list rebuild) AND every
+        time the Logic tab is opened (in case it's the very first sync).
+
+        Etap-4 concern (jank switching to Logika): rebuilding
+        device_explorer's tree/simulation grid is the EXPENSIVE part, not
+        this list comparison - only actually triggers that rebuild
+        (MainWindow._refresh_project_dependent_panels()) when the
+        computed card list is DIFFERENT from what was already set, not on
+        every unrelated project edit (point renamed, metadata changed,
+        ...) that leaves project.cards itself untouched."""
+        new_cards = [
+            {"id": c.id, "kind": c.kind, "channels": c.channels}
+            for c in studio_project.cards
+        ]
+        project = self._main_window.project
+        if project.external_cards == new_cards:
+            return
+        project.external_cards = new_cards
+        self._main_window._refresh_project_dependent_panels()
 
     def canvas_background(self) -> str:
         """Current canvas background color, "#RRGGBB" - the picker's

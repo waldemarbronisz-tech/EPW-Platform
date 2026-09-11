@@ -12,6 +12,9 @@ def test_e2e_simulation_loop(qsettings):
 
     register_builtin_blocks()
     m = MainWindow(settings=qsettings)
+    from logic_studio.core.device_model import DeviceModel
+    DeviceModel.set_ela_devices(m.project, ["ELA01"])
+    DeviceModel.set_ada_devices(m.project, ["ADA01"])
 
     # 1. Start clean
     m.scene.clear()
@@ -61,6 +64,7 @@ def test_e2e_simulation_loop(qsettings):
 
 def test_headless_fat():
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -74,6 +78,8 @@ def test_headless_fat():
     register_builtin_blocks()
 
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     # Create Program:
     # ELA01.DI01 -> NOT -> TON (200ms) -> SR -> ADA01.DO01
@@ -146,6 +152,7 @@ def test_stop_drives_outputs_to_safe_state():
     value — every output ever written this session goes to its safe state
     (digital False) in the IOProvider itself, not just in block memory."""
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -155,6 +162,8 @@ def test_stop_drives_outputs_to_safe_state():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
@@ -184,6 +193,7 @@ def test_fault_transition_drives_outputs_to_safe_state():
     """AUDIT_REPORT.md §0.1: a transition to FAULT (start() with no valid
     compiled program) must fail-safe outputs the same way stop() does."""
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine, ExecutionState
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -193,6 +203,8 @@ def test_fault_transition_drives_outputs_to_safe_state():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
@@ -222,6 +234,7 @@ def test_pause_does_not_touch_outputs():
     """AUDIT_REPORT.md §0.1: pause() freezes the scan, it must not fail-safe
     outputs the way stop()/FAULT do."""
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -231,6 +244,8 @@ def test_pause_does_not_touch_outputs():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
@@ -258,6 +273,7 @@ def test_pause_does_not_touch_outputs():
 
 def _stopped_step_project():
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -267,6 +283,8 @@ def _stopped_step_project():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
     do = DigitalOutputBlock()
@@ -336,6 +354,7 @@ def test_step_in_stopped_still_advances_diagnostics():
 
 def test_same_scan_input_fat():
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -346,6 +365,8 @@ def test_same_scan_input_fat():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     # ELA01.DI01 -> NOT -> ADA01.DO01
     di = DigitalInputBlock()
@@ -386,6 +407,7 @@ def test_same_scan_input_fat():
 
 def test_stop_restart_fat():
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -397,6 +419,8 @@ def test_stop_restart_fat():
 
     register_builtin_blocks()
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
 
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"

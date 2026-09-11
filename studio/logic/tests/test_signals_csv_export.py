@@ -36,6 +36,8 @@ def _read_csv_rows(path):
 def test_export_writes_utf8_bom(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["name"] = "Test"
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -49,6 +51,8 @@ def test_export_writes_utf8_bom(tmp_path, qsettings):
 def test_export_first_line_is_a_comment_with_project_name_and_date(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["name"] = "Instalacja Testowa"
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -75,6 +79,8 @@ def test_export_header_matches_table_plus_problemy(tmp_path, qsettings):
 def test_export_includes_a_real_row(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1")
     panel = SignalsPanel(settings=qsettings)
@@ -92,6 +98,8 @@ def test_export_includes_a_real_row(tmp_path, qsettings):
 def test_export_includes_problem_text_for_flagged_rows(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     ghost = BlockRegistry.create_block("virtual.input")
     ghost.properties["Bit"] = "GHOST"
     p.add_block(ghost)
@@ -112,6 +120,8 @@ def test_export_includes_problem_text_for_flagged_rows(tmp_path, qsettings):
 def test_export_respects_the_search_filter(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     p.add_block(_di("ELA01.DI.2"))
     panel = SignalsPanel(settings=qsettings)
@@ -129,6 +139,8 @@ def test_export_respects_the_search_filter(tmp_path, qsettings):
 def test_export_respects_the_only_issues_filter(tmp_path, qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))  # clean
     ghost = BlockRegistry.create_block("virtual.input")
     ghost.properties["Bit"] = "GHOST"
@@ -155,6 +167,8 @@ def test_polish_characters_and_semicolon_in_label_round_trip(tmp_path, qsettings
     this file's own field delimiter)."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False, "description": "Ostrzeżenie; wyłącznik główny zwarty"},
     ]
@@ -176,6 +190,8 @@ def test_export_signal_id_with_polish_characters(tmp_path, qsettings):
     containing Polish diacritics survives the round trip too."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     vi = BlockRegistry.create_block("virtual.input")
     vi.properties["Bit"] = "BŁĄD_ŹRÓDŁA"
     p.add_block(vi)

@@ -17,6 +17,7 @@ from logic_studio.blocks.analog_io import AnalogInputBlock
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.exporter import Exporter, verify_checksum, CHECKSUM_FIELDS
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 
 # fix/logic-tests-regression: both uses below were resolved against the
 # process's CWD (a bare "examples/..." string), which only ever worked
@@ -38,6 +39,8 @@ def _project_with_one_of_every_block():
     validator only warns on unconnected inputs, it doesn't fail compilation
     over them)."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.CONTRACT", "name": "Contract In", "unit": "u", "min": 0.0, "max": 100.0, "direction": "input"},
         {"address": "AO.CONTRACT", "name": "Contract Out", "unit": "u", "min": 0.0, "max": 100.0, "direction": "output"},
@@ -117,6 +120,8 @@ def test_runtime_reconstructable_without_project():
     in-memory analog_points list. From that dict alone it must be able to
     reconstruct an input.ai block's quality-check range and unit."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.STANDALONE", "name": "Standalone", "unit": "°C", "min": -10.0, "max": 60.0, "direction": "input"},
     ]
@@ -154,6 +159,8 @@ def _exported_data_with_populated_fields():
     non-trivial, tamperable value (a real execution_order, a real analog
     point, contains_forced_io actually True, ...)."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["name"] = "Contract Project"
     p.settings["analog_points"] = [
         {"address": "AI.X", "name": "X", "unit": "bar", "min": 0.0, "max": 10.0, "direction": "input"},
@@ -227,6 +234,8 @@ def test_export_roundtrip_through_disk_preserves_checksum(tmp_path):
     non-ASCII handling through the default (ensure_ascii=True) json.dump used
     by MainWindow._export_runtime()."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TR1", "name": "Temperatura uzwojeń TR1", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
     ]
@@ -261,6 +270,8 @@ def test_runtime_reconstructable_internal_signal_type_and_retentive(tmp_path):
     from logic_studio.core.internal_bits import internal_bit_id
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "BLOKADA_ZS", "type": "BOOL", "retentive": True, "description": "", "label": "", "category": ""},
         {"name": "USTAWKA", "type": "REAL", "retentive": False, "description": "", "label": "", "category": ""},
@@ -295,6 +306,8 @@ def test_runtime_reconstructable_internal_signal_type_and_retentive(tmp_path):
 def test_export_carries_system_catalog_version():
     from logic_studio.core import system_signals
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     c = Compiler(p)
     # Compile trivially succeeds even with zero blocks (a warning, not an error).
     res = c.compile()

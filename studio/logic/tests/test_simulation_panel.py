@@ -13,6 +13,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
 from logic_studio.ui.panels.simulation import SimulationPanel, GROUP_SIZE, _short_address
@@ -56,10 +57,22 @@ def test_short_address_passthrough_when_no_dot():
 
 # ---- §0A.7 (1): all 32+32 channel widgets always exist, at any width -----
 
+def _default_project():
+    """Task "jedno źródło listy kart": a fresh Project() has zero ELA/ADA
+    devices now - this suite's own generic "one of each, 32 channels"
+    fixture, declared explicitly rather than relied on as a hidden
+    default."""
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
+    return p
+
+
 @pytest.mark.parametrize("viewport_width", [150, 300, 900])
 def test_all_channels_present_at_every_viewport_width(qsettings, viewport_width):
     _app()
     panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
     panel.only_used_btn.setChecked(False)  # "wszystkie" — the grouped view §0A.4 governs
     panel.resize(viewport_width, 600)
     panel._recompute_group_columns()
@@ -95,6 +108,8 @@ def test_group_columns_never_exceed_viewport_width(qsettings, viewport_width):
 def test_only_used_filter_counts_blocks_referencing_the_address(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di_block("ELA01.DI.1"))
     p.add_block(_di_block("ELA01.DI.2"))
     p.add_block(_di_block("ELA01.DI.3"))
@@ -117,6 +132,8 @@ def test_only_used_is_on_by_default(qsettings):
 def test_empty_project_shows_placeholder_message(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
 
@@ -160,8 +177,8 @@ def test_channel_order_within_groups_is_stable_across_widths(qsettings):
 
 def test_first_group_is_di01_through_di08_in_order(qsettings):
     _app()
-    from logic_studio.core.device_model import DeviceModel
     panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
     first_group = panel._di_group_widgets[0]
     rows = [first_group.layout().itemAt(i).widget() for i in range(1, first_group.layout().count())]
     # Task "migracja adresacji": short_address keeps "DI.<n>" now (see
@@ -174,6 +191,7 @@ def test_first_group_is_di01_through_di08_in_order(qsettings):
 def test_clicking_anywhere_on_an_input_row_toggles_it(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
     row = panel._di_detail_rows["ELA01.DI.1"]
     assert panel.get_ela_state(0) is False
 
@@ -192,6 +210,7 @@ def test_clicking_anywhere_on_an_input_row_toggles_it(qsettings):
 def test_clicking_an_output_row_does_nothing(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
     row = panel._do_detail_rows["ADA01.DO.1"]
 
     from PySide6.QtGui import QMouseEvent
@@ -214,6 +233,7 @@ def test_clicking_an_output_row_does_nothing(qsettings):
 def test_get_ela_state_and_set_ada_state_are_index_based(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
     panel.set_ada_state(3, True)
     assert panel._do_state["ADA01.DO.4"] is True
 
@@ -231,6 +251,8 @@ def test_get_ela_state_and_set_ada_state_are_index_based(qsettings):
 def test_grid_rebuilds_when_a_second_device_is_defined(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
     assert len(panel._di_detail_rows) == 32
@@ -249,6 +271,8 @@ def test_grid_rebuilds_when_a_second_device_is_defined(qsettings):
 def test_forced_state_survives_a_device_list_change_for_still_present_channels(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
     panel._toggle_di("ELA01.DI.1")
@@ -267,6 +291,8 @@ def test_no_rebuild_widgets_recreated_when_device_list_is_unchanged(qsettings):
     the engineer had just clicked."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di_block("ELA01.DI.1"))
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)

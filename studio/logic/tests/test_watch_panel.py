@@ -35,6 +35,8 @@ def test_empty_project_shows_placeholder(qsettings):
     # directly (see test_signals_panel.py for the same reasoning).
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
     assert panel.table.isHidden() is True
@@ -43,6 +45,8 @@ def test_empty_project_shows_placeholder(qsettings):
 def test_set_project_builds_a_row_per_watch(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1")
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
 
@@ -59,6 +63,8 @@ def test_set_project_builds_a_row_per_watch(qsettings):
 def test_boolean_kind_gets_a_boolean_sparkline(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -68,6 +74,8 @@ def test_boolean_kind_gets_a_boolean_sparkline(qsettings):
 def test_analog_kind_gets_a_non_boolean_sparkline(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI01", "name": "Temp", "unit": "°C", "min": 0.0, "max": 100.0, "direction": "input"},
     ]
@@ -83,6 +91,8 @@ def test_analog_kind_gets_a_non_boolean_sparkline(qsettings):
 def test_refresh_values_updates_value_cell_and_sparkline(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -100,6 +110,8 @@ def test_refresh_values_shows_dash_for_unresolved_value(qsettings):
     resolves to None (core/watch.py::read_value) — never a crash."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["watched_signals"] = [{"kind": "internal_bit", "signal_id": "GONE"}]
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -122,6 +134,8 @@ def test_add_via_dialog_creates_a_watch_and_pushes_undo(qsettings, monkeypatch):
     from logic_studio.ui.signal_picker import SignalPickerDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
 
@@ -150,6 +164,8 @@ def test_add_via_dialog_cancelled_changes_nothing(qsettings, monkeypatch):
     from logic_studio.ui.signal_picker import SignalPickerDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
     monkeypatch.setattr(SignalPickerDialog, "exec", lambda self: QDialog.Rejected)
@@ -164,6 +180,8 @@ def test_add_via_dialog_cancelled_changes_nothing(qsettings, monkeypatch):
 def test_remove_selected_deletes_the_watch_and_pushes_one_undo_entry(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     watch.add_watch(p, KIND_SYSTEM, "SYS.READY")
     panel = WatchPanel(settings=qsettings)
@@ -180,6 +198,8 @@ def test_remove_selected_deletes_the_watch_and_pushes_one_undo_entry(qsettings):
 def test_remove_button_disabled_without_selection(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -209,6 +229,9 @@ def test_run_scan_refreshes_the_watch_panel(qsettings):
     from logic_studio.blocks.registry import BlockRegistry
 
     m = MainWindow(settings=qsettings)
+    from logic_studio.core.device_model import DeviceModel
+    DeviceModel.set_ela_devices(m.project, ["ELA01"])
+    m.simulation_panel.set_project(m.project)
     di = BlockRegistry.create_block("input.di")
     di.properties["Address"] = "ELA01.DI.1"
     m.project.add_block(di)
@@ -244,6 +267,8 @@ def test_resizing_the_trend_column_resizes_the_sparkline_widget(qsettings):
     padding, defeating the point of making it resizable at all."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -259,6 +284,8 @@ def test_resizing_the_trend_column_resizes_the_sparkline_widget(qsettings):
 def test_double_click_trend_cell_opens_a_popup(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -277,6 +304,8 @@ def test_double_click_trend_cell_opens_a_popup(qsettings):
 def test_double_click_non_trend_column_does_nothing(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -287,6 +316,8 @@ def test_double_click_non_trend_column_does_nothing(qsettings):
 def test_double_click_again_reuses_the_open_dialog(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -299,6 +330,8 @@ def test_double_click_again_reuses_the_open_dialog(qsettings):
 def test_refresh_values_feeds_an_open_trend_dialog(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -314,6 +347,8 @@ def test_refresh_values_feeds_an_open_trend_dialog(qsettings):
 def test_removing_a_watched_row_closes_its_open_trend_dialog(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -347,6 +382,8 @@ def test_trend_dialog_finished_connection_does_not_keep_the_panel_alive(qsetting
 
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel_ref = weakref.ref(panel)
@@ -366,6 +403,8 @@ def test_trend_dialog_finished_connection_does_not_keep_the_panel_alive(qsetting
 def test_set_project_closes_all_open_trend_dialogs(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -378,6 +417,8 @@ def test_set_project_closes_all_open_trend_dialogs(qsettings):
 def test_boolean_trend_dialog_has_no_manual_scale_controls(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -388,6 +429,8 @@ def test_boolean_trend_dialog_has_no_manual_scale_controls(qsettings):
 def test_analog_trend_dialog_manual_scale_overrides_the_chart_range(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI01", "name": "Temp", "unit": "°C", "min": 0.0, "max": 100.0, "direction": "input"},
     ]
@@ -409,6 +452,8 @@ def test_analog_trend_dialog_manual_scale_overrides_the_chart_range(qsettings):
 def test_trend_dialog_clear_button_empties_the_chart_buffer(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -431,6 +476,8 @@ def test_trend_dialog_clear_button_empties_the_chart_buffer(qsettings):
 def test_trend_dialog_has_a_time_window_selector_defaulting_to_one_minute(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -444,6 +491,8 @@ def test_trend_dialog_has_a_time_window_selector_defaulting_to_one_minute(qsetti
 def test_changing_the_time_window_updates_the_chart(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -464,6 +513,8 @@ def test_trend_chart_visible_samples_filters_by_window():
 def test_seeded_dialog_receives_watchpanels_timestamped_history(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -488,6 +539,8 @@ def test_engine_clock_rollback_resets_history(qsettings):
     starts over rather than trying to reconcile two incomparable clocks."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -503,6 +556,8 @@ def test_engine_clock_rollback_resets_history(qsettings):
 def test_removing_a_watched_row_also_clears_its_history(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -520,6 +575,8 @@ def test_history_survives_reselecting_the_same_project(qsettings):
     project (e.g. an unrelated undo/redo) must no longer lose it."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -539,6 +596,8 @@ def _open_dialog_with_samples(qsettings, samples):
     (so both the persisted history AND the live popup wiring are exercised,
     not just the chart's own set_samples())."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)
@@ -629,6 +688,8 @@ def test_recorded_history_survives_saving_and_reloading_the_project_file(qsettin
     lives only in memory."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     watch.add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     panel = WatchPanel(settings=qsettings)
     panel.set_project(p)

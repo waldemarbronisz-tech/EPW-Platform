@@ -213,13 +213,15 @@ class ProjectSettingsDialog(QDialog):
         list_widget.addItem(DeviceModel.next_device_name(prefix, existing))
 
     def _remove_selected_devices(self, list_widget):
-        # A project must always have at least one device of each kind —
-        # every existing DI/DO block's Address depends on SOME device
-        # existing; removing the last one would make every physical block
-        # permanently invalid with no way to fix it from this same dialog.
+        # Task "jedno źródło listy kart": no floor of 1 anymore - a
+        # project with zero ELA/ADA devices is now a real, correct state
+        # (DeviceModel.get_ela_devices() returns [] rather than a fake
+        # "ELA01"), same as Studio's own Cards panel allows removing its
+        # last card. A block whose Address then points at nothing is
+        # caught at compile time (Validator - see etap 1.2), not silently
+        # tolerated here.
         for item in list_widget.selectedItems():
-            if list_widget.count() > 1:
-                list_widget.takeItem(list_widget.row(item))
+            list_widget.takeItem(list_widget.row(item))
 
     def _current_devices(self, list_widget) -> list:
         return [list_widget.item(i).text() for i in range(list_widget.count())]

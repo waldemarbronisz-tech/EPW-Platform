@@ -102,30 +102,46 @@ class DeviceExplorerPanel(QWidget):
         root.setExpanded(True)
 
         # feat/multi-device-io: one branch PER DEVICE the project actually
-        # defines (project.settings["ela_devices"]/["ada_devices"]) rather
-        # than a single hardcoded "ELA-01"/"ADA-01" — a project with
-        # ELA01+ELA02 gets two separate, independently-expandable Input
-        # Module branches, each with its own 32 channels.
-        # Task "migracja adresacji": address string and channel count both
-        # come from DeviceModel now (platform grammar, project-defined
-        # count) - was an inline f"{dev}.DI{i:02d}" + the ELA_CHANNELS
-        # constant used directly, an independent copy of exactly what
-        # DeviceModel.get_ela_addresses() already computes.
-        ela_channels = DeviceModel.get_ela_channels(self.project)
-        for dev in DeviceModel.get_ela_devices(self.project):
+        # defines rather than a single hardcoded "ELA-01"/"ADA-01" — a
+        # project with ELA01+ELA02 gets two separate, independently-
+        # expandable Input Module branches. Task "jedno źródło listy kart":
+        # the device list AND each device's own channel count now come
+        # from get_ela_device_channels()/get_ada_device_channels() - when
+        # Studio's real Cards are bridged in (LogicPanel), different cards
+        # can have different channel counts, so this can no longer use one
+        # shared count for every branch the way get_ela_channels() alone
+        # would (see DeviceModel's own module docstring).
+        ela_pairs = DeviceModel.get_ela_device_channels(self.project)
+        for dev, channels in ela_pairs:
             ela_module = QTreeWidgetItem(root, [f"{dev} (Input Module / Acquisition)"])
             ela_module.setExpanded(True)
-            for i in range(1, ela_channels + 1):
+            for i in range(1, channels + 1):
                 addr = DeviceModel.format_ela_address(dev, i)
                 self._add_leaf(ela_module, addr, "input.di", addr)
 
-        ada_channels = DeviceModel.get_ada_channels(self.project)
-        for dev in DeviceModel.get_ada_devices(self.project):
+        ada_pairs = DeviceModel.get_ada_device_channels(self.project)
+        for dev, channels in ada_pairs:
             ada_module = QTreeWidgetItem(root, [f"{dev} (Output Module / Actuator)"])
             ada_module.setExpanded(True)
-            for i in range(1, ada_channels + 1):
+            for i in range(1, channels + 1):
                 addr = DeviceModel.format_ada_address(dev, i)
                 self._add_leaf(ada_module, addr, "output.do", addr)
+
+        # Task "jedno źródło listy kart" 1.3: no ELA/ADA card at all (a
+        # brand-new standalone project, or an embedded one whose Studio
+        # project genuinely has no I/O cards yet) is now a real, correct
+        # state (see DeviceModel's own docstring - no more silent
+        # "ELA01"/"ADA01"). Say so plainly instead of showing a tree that
+        # just... has nothing under "EPW Controller", which reads as a
+        # bug, not as "go add a card". No i18n here (see module note
+        # below) - matches the rest of this tree's own hardcoded strings,
+        # Logic Studio has no tr()/i18n mechanism at all today (checked;
+        # building one is a much larger, separate change, out of this
+        # task's own "podłączasz źródło danych, nie przebudowujesz
+        # edytorów" scope).
+        if not ela_pairs and not ada_pairs:
+            hint = QTreeWidgetItem(root, ["Brak kart wejść/wyjść — dodaj kartę w projekcie"])
+            hint.setDisabled(True)
 
         # Analog points — fully project-defined, empty tree when the project
         # has none. No example/placeholder entries.

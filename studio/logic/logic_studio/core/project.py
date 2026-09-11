@@ -416,15 +416,19 @@ class Project:
             # is added here lazily by the first block ever added to the
             # project — not seeded here, since an empty project needs none.
             "io_labels": {},
-            # feat/multi-device-io: the ELA/ADA modules THIS project
-            # addresses — a new project starts with the same single-device
-            # default every project always had (DeviceModel.ELA_CHANNELS/
-            # ADA_CHANNELS fixed channels-per-device stays a platform
-            # constant, not project-defined — only the DEVICE COUNT is).
-            # Always read/written through DeviceModel.get_ela_devices()/
-            # get_ada_devices(), never this list directly.
-            "ela_devices": ["ELA01"],
-            "ada_devices": ["ADA01"],
+            # feat/multi-device-io / task "jedno źródło listy kart": the
+            # ELA/ADA modules THIS project addresses, for STANDALONE use
+            # only (Project Settings -> Urządzenia) - a fresh project
+            # starts with NONE, not the old silent "ELA01"/"ADA01"
+            # single-device default (that default is exactly the disease
+            # this task's own report described: a project shows blocks
+            # for a card it doesn't have). When embedded in Studio
+            # (LogicPanel), `external_cards` below is the real source and
+            # these two lists are ignored entirely. Always read/written
+            # through DeviceModel.get_ela_devices()/get_ada_devices(),
+            # never this list directly.
+            "ela_devices": [],
+            "ada_devices": [],
             # feat/signal-watch: signals an engineer pinned to the Watch
             # panel for continuous monitoring during simulation, independent
             # of canvas selection. Always read/written through
@@ -451,6 +455,18 @@ class Project:
         self.undo_stack = []
         self.redo_stack = []
         self.is_recording = False
+
+        # Task "jedno źródło listy kart": set by the HOST, never by this
+        # project itself, never serialized (not part of `settings`, not
+        # touched by serialize()/deserialize()) - Studio's own live Card
+        # list (studio/shell/logic_panel.py's LogicPanel), mirrored in
+        # here as [{"id", "kind", "channels"}, ...] whenever Studio's
+        # project changes. None (the default, e.g. every standalone
+        # studio/logic/main.py project) means "no host - use this
+        # project's OWN settings["ela_devices"/"ela_channels"/...]
+        # instead", see DeviceModel's own module docstring for the full
+        # "which source wins" rule.
+        self.external_cards = None
 
     # ---- feat/undo-diff-storage: each stack's memory is proportional to
     # the SIZE OF EACH EDIT, not to the size of the whole project — see

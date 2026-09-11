@@ -2,6 +2,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 
 
 def _app():
@@ -18,6 +19,8 @@ def test_project_settings_dialog_validates_rows():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
 
     # Empty table -> valid, no points.
@@ -63,6 +66,8 @@ def test_project_settings_dialog_apply_pushes_undo_and_sets_analog_points():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert len(p.undo_stack) == 0
 
     dialog = ProjectSettingsDialog(p)
@@ -84,6 +89,8 @@ def test_device_explorer_analog_branch_empty_and_populated():
     from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     panel = DeviceExplorerPanel()
     panel.set_project(p)
 
@@ -112,6 +119,8 @@ def test_device_explorer_leaves_carry_type_id_and_address():
     from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel, TYPE_ID_ROLE, ADDRESS_ROLE
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TEMP", "name": "Temp", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
         {"address": "AO.SP", "name": "Setpoint", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "output"},
@@ -150,6 +159,8 @@ def test_device_explorer_shows_one_branch_per_device(qsettings):
     from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     panel = DeviceExplorerPanel(project=p)
 
@@ -159,6 +170,39 @@ def test_device_explorer_shows_one_branch_per_device(qsettings):
     for branch in ela_branches:
         assert branch.childCount() == 32
 
+def test_device_explorer_shows_devices_with_different_channel_counts(qsettings):
+    """Task "jedno źródło listy kart": once external_cards bridges in
+    Studio's own real Cards (per-card channel counts), device_explorer's
+    tree must show EACH device's own count, not one shared number."""
+    _app()
+    from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel
+
+    p = Project()
+    p.external_cards = [
+        {"id": "ELA1", "kind": "DI", "channels": 8},
+        {"id": "ELA2", "kind": "DI", "channels": 16},
+    ]
+    panel = DeviceExplorerPanel(project=p)
+
+    root = panel.tree.topLevelItem(0)
+    ela1 = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0).startswith("ELA1"))
+    ela2 = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0).startswith("ELA2"))
+    assert ela1.childCount() == 8
+    assert ela2.childCount() == 16
+
+def test_device_explorer_shows_a_hint_when_no_cards_are_defined(qsettings):
+    """Task "jedno źródło listy kart" 1.3: zero ELA/ADA cards (fresh
+    standalone project, or an embedded one whose Studio project has none
+    yet) must say so plainly, not show a silently-empty "EPW Controller"
+    tree that reads as broken."""
+    _app()
+    from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel
+
+    panel = DeviceExplorerPanel(project=Project())
+    root = panel.tree.topLevelItem(0)
+    labels = [root.child(i).text(0) for i in range(root.childCount())]
+    assert any("kart" in label.lower() for label in labels)
+
 def test_device_explorer_folder_items_are_not_draggable():
     """feat/multi-device-io: leaves sit directly under their device's own
     branch now (no separate "Digital Inputs" sub-group node in between) —
@@ -166,8 +210,12 @@ def test_device_explorer_folder_items_are_not_draggable():
     but a device branch's OWN children are real, draggable leaves."""
     _app()
     from logic_studio.ui.panels.device_explorer import DeviceExplorerPanel, TYPE_ID_ROLE
+    from logic_studio.core.device_model import DeviceModel
 
-    panel = DeviceExplorerPanel(project=Project())
+    project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
+    panel = DeviceExplorerPanel(project=project)
     root = panel.tree.topLevelItem(0)
     assert root.data(0, TYPE_ID_ROLE) is None
     ela = root.child(0)
@@ -233,6 +281,8 @@ def test_simulation_panel_analog_widgets_rebuild_on_set_project(qsettings):
     from logic_studio.ui.panels.simulation import SimulationPanel
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.A", "name": "A", "unit": "", "min": 0.0, "max": 100.0, "direction": "input"},
         {"address": "AO.B", "name": "B", "unit": "", "min": 0.0, "max": 10.0, "direction": "output"},
@@ -258,6 +308,8 @@ def test_simulation_panel_analog_widgets_rebuild_on_set_project(qsettings):
 
     # Rebuild with a different point set: old widgets must be gone.
     p2 = Project()
+    DeviceModel.set_ela_devices(p2, ["ELA01"])
+    DeviceModel.set_ada_devices(p2, ["ADA01"])
     p2.settings["analog_points"] = []
     panel.set_project(p2)
     assert panel.ai_spinboxes == {}
@@ -268,6 +320,8 @@ def test_simulation_panel_slider_spinbox_sync(qsettings):
     from logic_studio.ui.panels.simulation import SimulationPanel
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.A", "name": "A", "unit": "", "min": -10.0, "max": 10.0, "direction": "input"},
     ]
@@ -428,6 +482,8 @@ def test_property_grid_analog_address_combobox(qsettings):
     from logic_studio.blocks.analog_io import AnalogInputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.A", "name": "A", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"},
         {"address": "AI.B", "name": "B", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"},

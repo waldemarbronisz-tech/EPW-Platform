@@ -33,6 +33,8 @@ def _block(type_id, address=None, bit=None, sygnal=None):
 
 def test_empty_project_has_empty_index():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     index = build_crossref(p)
     assert index == {}
     assert find_issues(index) == []
@@ -42,6 +44,8 @@ def test_empty_project_has_empty_index():
 
 def test_di_block_is_a_reader_of_a_physical_di_signal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _block("input.di", address="ELA01.DI.1")
     p.add_block(di)
 
@@ -55,6 +59,8 @@ def test_di_block_is_a_reader_of_a_physical_di_signal():
 
 def test_do_block_is_a_writer_of_a_physical_do_signal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     do = _block("output.do", address="ADA01.DO.1")
     p.add_block(do)
 
@@ -66,6 +72,8 @@ def test_do_block_is_a_writer_of_a_physical_do_signal():
 
 def test_ai_block_is_a_reader_of_an_analog_in_signal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TEMP", "name": "Temp", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
     ]
@@ -80,6 +88,8 @@ def test_ai_block_is_a_reader_of_an_analog_in_signal():
 
 def test_ao_block_is_a_writer_of_an_analog_out_signal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AO.OUT", "name": "Out", "unit": "", "min": 0.0, "max": 10.0, "direction": "output"},
     ]
@@ -93,6 +103,8 @@ def test_ao_block_is_a_writer_of_an_analog_out_signal():
 
 def test_virtual_input_reads_an_internal_bool_bit():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False, "description": "Blokada"}]
     vi = _block("virtual.input", bit="BLOKADA_ZS")
     p.add_block(vi)
@@ -105,6 +117,8 @@ def test_virtual_input_reads_an_internal_bool_bit():
 
 def test_virtual_output_writes_an_internal_bool_bit():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False}]
     vo = _block("virtual.output", bit="BLOKADA_ZS")
     p.add_block(vo)
@@ -115,6 +129,8 @@ def test_virtual_output_writes_an_internal_bool_bit():
 
 def test_reg_in_reads_an_internal_real_register_with_prefix():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "USTAWA", "type": "REAL", "retentive": True}]
     ri = _block("internal.reg_in", bit="USTAWA")
     p.add_block(ri)
@@ -126,6 +142,8 @@ def test_reg_in_reads_an_internal_real_register_with_prefix():
 
 def test_system_signal_block_reads_a_catalog_signal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     from logic_studio.core import system_signals
     any_signal = system_signals.get_all_signals()[0]
     sig = _block("system.signal", sygnal=any_signal["id"])
@@ -142,6 +160,8 @@ def test_gate_is_never_indexed():
     never meaningful — it must never be scanned as a physical/analog
     signal reference."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(BlockRegistry.create_block("logic.and"))
     index = build_crossref(p)
     assert index == {}
@@ -151,6 +171,8 @@ def test_gate_is_never_indexed():
 
 def test_internal_bit_with_two_writers_is_an_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vo1 = _block("virtual.output", bit="X")
     vo2 = _block("virtual.output", bit="X")
@@ -171,6 +193,8 @@ def test_internal_bit_with_two_writers_is_an_error():
 
 def test_reference_to_unregistered_internal_bit_is_an_error_and_stays_indexed():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     vi = _block("virtual.input", bit="GHOST")
     p.add_block(vi)
 
@@ -187,6 +211,8 @@ def test_reference_to_unregistered_internal_bit_is_an_error_and_stays_indexed():
 
 def test_reference_to_unregistered_address_is_an_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     do = _block("output.do", address="ADA01.DO.99")  # not a real ADA address in DeviceModel? actually within range
     # Use an address structurally invalid instead, to guarantee "not found".
     do.properties["Address"] = "ADA99.DO.1"
@@ -204,6 +230,8 @@ def test_orphaned_signal_does_not_also_report_unused_or_writer_count_rules():
     "multiple writers" rules aren't meaningful for something that doesn't
     exist in any registry."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     vo1 = _block("virtual.output", bit="GHOST")
     vo2 = _block("virtual.output", bit="GHOST")
     p.add_block(vo1)
@@ -219,6 +247,8 @@ def test_orphaned_signal_does_not_also_report_unused_or_writer_count_rules():
 
 def test_di_block_with_no_address_is_flagged():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = BlockRegistry.create_block("input.di")
     di.properties["Address"] = ""
     p.add_block(di)
@@ -238,6 +268,8 @@ def test_gate_with_empty_address_is_not_flagged_unassigned():
     """A gate's Address is always "" too, but it's not an addressable
     block type — must not trigger the unassigned-address rule."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(BlockRegistry.create_block("logic.and"))
     index = build_crossref(p)
     assert UNASSIGNED_SIGNAL_ID not in index
@@ -247,6 +279,8 @@ def test_gate_with_empty_address_is_not_flagged_unassigned():
 
 def test_same_input_address_read_by_three_blocks_is_info_not_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     for _ in range(3):
         p.add_block(_block("input.di", address="ELA01.DI.5"))
 
@@ -265,6 +299,8 @@ def test_same_input_address_read_by_three_blocks_is_info_not_error():
 
 def test_analog_point_defined_but_unused_is_a_warning():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.UNUSED", "name": "Unused", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"},
     ]
@@ -275,6 +311,8 @@ def test_analog_point_defined_but_unused_is_a_warning():
 
 def test_internal_bit_defined_but_unused_is_a_warning():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "UNUSED", "type": "BOOL", "retentive": False}]
     index = build_crossref(p)
     issues = find_issues(index)
@@ -282,6 +320,8 @@ def test_internal_bit_defined_but_unused_is_a_warning():
 
 def test_internal_bit_read_but_never_written_is_a_warning():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     p.add_block(_block("virtual.input", bit="X"))
 
@@ -290,6 +330,8 @@ def test_internal_bit_read_but_never_written_is_a_warning():
 
 def test_multiple_addresses_do_not_cross_contaminate():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_block("input.di", address="ELA01.DI.1"))
     p.add_block(_block("input.di", address="ELA01.DI.2"))
     index = build_crossref(p)
@@ -304,14 +346,20 @@ def test_multiple_addresses_do_not_cross_contaminate():
 
 def test_classify_signal_id_physical_di():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert crossref.classify_signal_id(p, "physical", "ELA01.DI.1") == KIND_PHYSICAL_DI
 
 def test_classify_signal_id_physical_do():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert crossref.classify_signal_id(p, "physical", "ADA01.DO.1") == KIND_PHYSICAL_DO
 
 def test_classify_signal_id_physical_analog_in_and_out():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI01", "name": "", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"},
         {"address": "AO01", "name": "", "unit": "", "min": 0.0, "max": 1.0, "direction": "output"},
@@ -321,6 +369,8 @@ def test_classify_signal_id_physical_analog_in_and_out():
 
 def test_classify_signal_id_internal_bit_vs_reg():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "M_BIT", "type": "BOOL", "retentive": False},
         {"name": "M_REG", "type": "REAL", "retentive": False},
@@ -330,8 +380,12 @@ def test_classify_signal_id_internal_bit_vs_reg():
 
 def test_classify_signal_id_system():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert crossref.classify_signal_id(p, "system", "SYS.READY") == KIND_SYSTEM
 
 def test_classify_signal_id_unknown_coarse_kind():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert crossref.classify_signal_id(p, "bogus", "whatever") == KIND_UNASSIGNED

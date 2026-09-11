@@ -11,6 +11,7 @@ import pytest
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.core.wire import Wire
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.label_merge import (
@@ -48,6 +49,8 @@ def _free_end_wire(pin, label, is_source: bool):
 
 def _labeled_project():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di()
     do = _do()
     p.add_block(di)
@@ -59,6 +62,8 @@ def _labeled_project():
 
 def _directly_wired_project():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di()
     do = _do()
     p.add_block(di)
@@ -103,6 +108,8 @@ def test_source_declared_after_receiver_still_sorts_before_it():
     source, so a topological sort that (bug) relied on insertion order
     instead of the actual Pin.connections graph would get this wrong."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     receiver = BlockRegistry.create_block("logic.buffer")  # added FIRST
     p.add_block(receiver)
     source = _di()  # added SECOND -- but must still execute FIRST
@@ -126,6 +133,8 @@ def test_one_source_three_receivers_matches_direct_fanout_wiring():
     inputs -- only an INPUT is single-driver)."""
     def _labeled_fanout():
         p = Project()
+        DeviceModel.set_ela_devices(p, ["ELA01"])
+        DeviceModel.set_ada_devices(p, ["ADA01"])
         source = _di()
         r1 = BlockRegistry.create_block("logic.buffer")
         r2 = BlockRegistry.create_block("logic.buffer")
@@ -140,6 +149,8 @@ def test_one_source_three_receivers_matches_direct_fanout_wiring():
 
     def _direct_fanout():
         p = Project()
+        DeviceModel.set_ela_devices(p, ["ELA01"])
+        DeviceModel.set_ada_devices(p, ["ADA01"])
         source = _di()
         r1 = BlockRegistry.create_block("logic.buffer")
         r2 = BlockRegistry.create_block("logic.buffer")
@@ -219,6 +230,8 @@ def test_a_fully_connected_wire_with_a_unique_label_changes_nothing():
     purely documentary on its own -- merging it with nothing produces no
     new edge, no error, no warning."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     src = _di()
     a = BlockRegistry.create_block("logic.not")
     b = BlockRegistry.create_block("logic.buffer")
@@ -257,6 +270,8 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
     from logic_studio.engine.time_provider import SimulationTimeProvider
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     src = _di()
     mid_a = BlockRegistry.create_block("logic.buffer")
     mid_b = BlockRegistry.create_block("logic.buffer")
@@ -303,6 +318,8 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
 
 def test_label_with_no_source_is_an_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     do = _do()
     p.add_block(do)
     p.add_wire(_free_end_wire(do.inputs[0], "Orphan", is_source=False))
@@ -314,6 +331,8 @@ def test_label_with_no_source_is_an_error():
 
 def test_label_with_two_sources_is_an_error_naming_both_blocks():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di1 = _di("ELA01.DI.1")
     di2 = _di("ELA01.DI.2")
     p.add_block(di1)
@@ -331,6 +350,8 @@ def test_label_with_two_sources_is_an_error_naming_both_blocks():
 
 def test_label_with_source_but_no_receiver_is_a_warning_not_an_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di()
     p.add_block(di)
     p.add_wire(_free_end_wire(di.outputs[0], "Unheard", is_source=True))
@@ -346,6 +367,8 @@ def test_incompatible_types_across_a_label_is_an_error_naming_the_label():
     Pin.connect() already gives a direct wire, surfaced with the label
     named so the mismatch is locatable (§A1.3)."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     ai = BlockRegistry.create_block("input.ai")
     ai.properties["Address"] = "AI.CONTRACT"
     cmp_block = BlockRegistry.create_block("logic.not")  # BOOL input
@@ -364,6 +387,8 @@ def test_incompatible_types_across_a_label_is_an_error_naming_the_label():
 
 def test_multiple_receivers_on_one_label_is_legal():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di()
     do1 = _do("ADA01.DO.1")
     do2 = _do("ADA01.DO.2")
@@ -392,6 +417,8 @@ def test_describe_label_groups_never_mutates_pin_connections():
 
 def test_describe_label_groups_reports_source_position_and_receiver_count():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di()
     di.set_position(300.0, 500.0)
     do1 = _do("ADA01.DO.1")
@@ -418,6 +445,8 @@ def test_describe_label_groups_flags_no_source_as_an_error():
 
 def test_describe_label_groups_flags_multiple_sources_as_an_error():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di1 = _di("ELA01.DI.1")
     di2 = _di("ELA01.DI.2")
     p.add_block(di1)

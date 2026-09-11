@@ -32,6 +32,8 @@ def test_table_lists_every_ela_ada_and_analog_address():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.X", "name": "X", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"},
     ]
@@ -47,6 +49,8 @@ def test_label_column_prefilled_from_existing_registry():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
     dialog = ProjectSettingsDialog(p)
 
@@ -58,6 +62,8 @@ def test_usage_column_counts_referencing_blocks():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di1 = BlockRegistry.create_block("input.di"); di1.properties["Address"] = "ELA01.DI.1"
     di2 = BlockRegistry.create_block("input.di"); di2.properties["Address"] = "ELA01.DI.1"
     p.add_block(di1)
@@ -75,6 +81,8 @@ def test_address_and_usage_columns_are_read_only():
     from PySide6.QtCore import Qt
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     row = _find_row(dialog, "ELA01.DI.1")
 
@@ -87,6 +95,8 @@ def test_only_used_filter_defaults_on_and_hides_unused_rows():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = BlockRegistry.create_block("input.di"); di.properties["Address"] = "ELA01.DI.1"
     p.add_block(di)
     dialog = ProjectSettingsDialog(p)
@@ -102,6 +112,8 @@ def test_unchecking_only_used_shows_every_row():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     dialog.io_labels_only_used_check.setChecked(False)
 
@@ -113,6 +125,8 @@ def test_filter_matches_address_and_label():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.5", "Blokada bramy")
     dialog = ProjectSettingsDialog(p)
     dialog.io_labels_only_used_check.setChecked(False)
@@ -131,6 +145,8 @@ def test_editing_a_label_and_accepting_writes_the_registry():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("Wyłącznik Q1 zamknięty")
@@ -145,6 +161,8 @@ def test_clearing_a_label_and_accepting_removes_it():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Old label")
     dialog = ProjectSettingsDialog(p)
     row = _find_row(dialog, "ELA01.DI.1")
@@ -161,6 +179,8 @@ def test_apply_to_project_pushes_exactly_one_undo_snapshot():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("X")
@@ -178,6 +198,8 @@ def test_export_then_import_round_trips(tmp_path):
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("Wyłącznik Q1 zamknięty")
@@ -199,6 +221,8 @@ def test_import_reports_added_changed_skipped_counts(monkeypatch, tmp_path):
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.2", "Existing label")
     dialog = ProjectSettingsDialog(p)
 
@@ -233,6 +257,8 @@ def test_import_never_applies_without_confirmation(monkeypatch, tmp_path):
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
 
     path = tmp_path / "import.json"
