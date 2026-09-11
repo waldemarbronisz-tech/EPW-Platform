@@ -7,6 +7,7 @@ simulation does, with nothing left implicit in a live Project or
 CompiledProgram that never leaves this process.
 """
 import json
+from pathlib import Path
 
 import pytest
 
@@ -16,6 +17,17 @@ from logic_studio.blocks.analog_io import AnalogInputBlock
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.exporter import Exporter, verify_checksum, CHECKSUM_FIELDS
 from logic_studio.core.project import Project
+
+# fix/logic-tests-regression: both uses below were resolved against the
+# process's CWD (a bare "examples/..." string), which only ever worked
+# because CWD happened to be this package's own root - true when Logic
+# Studio was its own standalone repo, silently false after the monorepo
+# merge (c250b02) moved studio/logic one level down. Anchored to this
+# file's own location instead - see this branch's own report for the
+# full bisection, including how the parametrize below degraded (not to
+# a visible failure, but to a SINGLE always-skipped "[NOTSET]" case,
+# silently dropping 10 of its 11 real per-example round-trip checks).
+EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
 
 register_builtin_blocks()
 
@@ -296,7 +308,7 @@ def test_examples_migrate_and_export_without_mass_rewrite(tmp_path):
     never written to."""
     from logic_studio.core.project import EPWLOGIC_SCHEMA_VERSION
 
-    src = "examples/EPW_LOGIC_PRIORITY_A_TEST.epwlogic"
+    src = str(EXAMPLES_DIR / "EPW_LOGIC_PRIORITY_A_TEST.epwlogic")
     with open(src, "r", encoding="utf-8") as f:
         on_disk = json.load(f)
     assert on_disk["schema_version"] == 1, "fixture assumption: still v1 on disk"
@@ -315,9 +327,20 @@ def test_examples_migrate_and_export_without_mass_rewrite(tmp_path):
     p2 = Project.load_from_file(str(out_path))
     assert len(p2.blocks) == len(p.blocks)
 
-import glob
+_EXAMPLE_FILES = sorted(EXAMPLES_DIR.glob("*.epwlogic"))
+# A silently empty list here doesn't fail loudly - it degrades pytest's
+# own parametrize to a single always-SKIPPED "[NOTSET]" case, exactly the
+# failure mode this branch's own report found already happened once (see
+# EXAMPLES_DIR's own comment above). Fail collection outright instead, so
+# an empty examples/ directory (a real find-nothing, or this path
+# breaking again some other way) can never again pass for "nothing to
+# check here".
+assert _EXAMPLE_FILES, f"no example files found under {EXAMPLES_DIR}"
 
-@pytest.mark.parametrize("path", sorted(glob.glob("examples/*.epwlogic")))
+
+@pytest.mark.parametrize(
+    "path", [str(p) for p in _EXAMPLE_FILES], ids=[p.name for p in _EXAMPLE_FILES]
+)
 def test_every_example_loads_compiles_and_exports(path):
     """General-rules hard requirement, re-checked as a standing regression
     test rather than only a one-off manual pass: every examples/*.epwlogic

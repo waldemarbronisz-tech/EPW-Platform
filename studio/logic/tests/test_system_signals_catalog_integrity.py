@@ -10,7 +10,17 @@ that loader expects.
 import json
 from pathlib import Path
 
-CATALOG_PATH = Path("logic_studio/core/system_signals_catalog.json")
+# fix/logic-tests-regression: was Path("logic_studio/core/...") - resolved
+# against the process's CWD, which happened to always be this package's
+# own root (studio/logic/) as long as Logic Studio was its own standalone
+# repo. The monorepo merge (c250b02, "EPW Platform: runtime + studio w
+# jednym repozytorium") moved studio/logic one level down without
+# touching this file, so any invocation from the new repo root (the
+# natural way to run "all of studio/logic's tests" in a monorepo) silently
+# failed with FileNotFoundError - see this branch's own report for the
+# full bisection. Anchored to this file's own location instead, so it
+# resolves the same regardless of the caller's CWD.
+CATALOG_PATH = Path(__file__).resolve().parent.parent / "logic_studio" / "core" / "system_signals_catalog.json"
 REQUIRED_FIELDS = {"id", "description", "label", "type", "source", "safety_relevant"}
 # core/system_signals.py's own _device_signals() and every static entry
 # in the catalog today only ever use these values -- an entry using
