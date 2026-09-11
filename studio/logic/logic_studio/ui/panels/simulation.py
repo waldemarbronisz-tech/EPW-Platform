@@ -16,7 +16,7 @@ hand while building and testing logic offline.
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QGroupBox, QScrollArea,
-    QSlider, QDoubleSpinBox, QPushButton
+    QSlider, QDoubleSpinBox, QPushButton, QComboBox
 )
 from PySide6.QtGui import QPainter, QPen, QBrush, QFontMetrics
 from PySide6.QtCore import Qt, Signal, QSettings
@@ -97,7 +97,16 @@ class ChannelRow(QWidget):
         layout.addWidget(self.dot)
 
         self.addr_label = QLabel(short_address)
-        self.addr_label.setMinimumWidth(QFontMetrics(self.addr_label.font()).horizontalAdvance("DO32") + 4)
+        # Task "migracja adresacji" follow-up: was a hardcoded "DO32" -
+        # the old flat scheme's own fixed 4-character shape (2 letters +
+        # always-2-digit zero-padded channel). The platform grammar has
+        # no such fixed width (a compact row's own short_address can be
+        # "DI.9" or "DI.100"; a "tylko używane" row's is the full,
+        # card-qualified address, which can be much longer still) - the
+        # minimum now comes from THIS row's own actual text, so every
+        # row reserves exactly what it needs instead of assuming
+        # everyone's shape matches the old scheme's.
+        self.addr_label.setMinimumWidth(QFontMetrics(self.addr_label.font()).horizontalAdvance(short_address) + 4)
         layout.addWidget(self.addr_label)
 
         if not compact:
@@ -296,13 +305,31 @@ class SimulationPanel(QWidget):
         self.only_used_btn.setChecked(self._only_used)
         self.only_used_btn.toggled.connect(self._on_only_used_toggled)
         row.addWidget(self.only_used_btn)
+
+        # User report ("jeżeli nie mieści się wszystko [...] listę
+        # rozwijalną i wybór konkretnej karty"): the "wszystkie" grouped
+        # view (GROUP_SIZE=8 tiles per card) is exactly what gets
+        # unwieldy once a project has several ELA/ADA cards - 4 cards of
+        # 32 channels each is 128 rows in one scroll area. Hidden
+        # (_rebuild_card_filter()) whenever there's only the usual one-
+        # card-per-kind project, so the common case stays exactly as
+        # simple as before this existed.
+        self.card_filter = QComboBox()
+        self.card_filter.currentIndexChanged.connect(self._on_card_filter_changed)
+        row.addWidget(self.card_filter)
+
         row.addStretch()
         return row
 
     def _build_di_do_rows(self):
         for addr in self._di_addrs:
             short = _short_address(addr)
-            detail = ChannelRow(addr, short, is_output=False, compact=False)
+            # User report ("musi być wszędzie w Logic konsekwencja"): the
+            # "tylko używane" flat list has no group header to lean on
+            # (unlike the "wszystkie" grouped view below) - the FULL,
+            # card-qualified address is its own label, or two devices'
+            # "DI.9" would be indistinguishable in this view.
+            detail = ChannelRow(addr, addr, is_output=False, compact=False)
             detail.on_click = self._toggle_di
             self._di_detail_rows[addr] = detail
 
@@ -312,7 +339,7 @@ class SimulationPanel(QWidget):
 
         for addr in self._do_addrs:
             short = _short_address(addr)
-            detail = ChannelRow(addr, short, is_output=True, compact=False)
+            detail = ChannelRow(addr, addr, is_output=True, compact=False)
             self._do_detail_rows[addr] = detail
 
             compact = ChannelRow(addr, short, is_output=True, compact=True)
@@ -357,9 +384,19 @@ class SimulationPanel(QWidget):
             # anymore (1, 10, or 100 are all valid) - _channel_number()
             # takes the real trailing number segment instead of the
             # last two characters of the string.
-            header = f"{_short_address(chunk[0])}-{_channel_number(chunk[-1])}"
+            #
+            # User report ("musi być wszędzie w Logic konsekwencja"):
+            # names the CARD this group belongs to - individual compact
+            # rows underneath stay short ("DI.9", no card, §0A.3's own
+            # reasoning still applies row-by-row) but with more than one
+            # ELA/ADA device in the project, "DI.1-8" alone no longer
+            # says which one; the header is the one place per group that
+            # can say it without repeating on every row.
+            header = f"{card}: {_short_address(chunk[0])}-{_channel_number(chunk[-1])}"
             rows = [compact_rows[a] for a in chunk]
-            groups.append(_ChannelGroup(header, rows))
+            group = _ChannelGroup(header, rows)
+            group.card = card  # read by the card-filter dropdown below
+            groups.append(group)
             start = end
         return groups
 
@@ -399,12 +436,50 @@ class SimulationPanel(QWidget):
         self._build_di_do_rows()
         self._di_group_widgets = self._build_channel_groups(self._di_addrs, self._di_compact_rows)
         self._do_group_widgets = self._build_channel_groups(self._do_addrs, self._do_compact_rows)
+        self._rebuild_card_filter()
         # Force the _recompute_group_columns() that set_project() triggers
         # right after this (via _apply_view_mode()) to actually place the
         # brand-new group widgets into the grid, even if the computed
         # column count happens to equal the stale one from before rebuild
         # (its early-return guard compares against this value).
         self._group_columns = None
+
+    def _rebuild_card_filter(self):
+        """Populates card_filter from the cards actually present among
+        the just-rebuilt groups, in first-seen order (DI cards, then any
+        ADA-only card) - "Wszystkie karty" always first.
+
+        Visibility is decided PER KIND, not by the combined DI+ADA card
+        count: an ordinary project (one ELA, one ADA) already has two
+        DIFFERENT cards between its DI and DO sections, which would make
+        a combined count > 1 permanently - showing the filter for every
+        project, not just the crowded ones it exists for. Shown only
+        once picking a specific card would actually hide something
+        real - more than one ELA (DI) card, or more than one ADA (DO)
+        card."""
+        di_cards, do_cards = [], []
+        for group in self._di_group_widgets:
+            if group.card not in di_cards:
+                di_cards.append(group.card)
+        for group in self._do_group_widgets:
+            if group.card not in do_cards:
+                do_cards.append(group.card)
+        cards = di_cards + [c for c in do_cards if c not in di_cards]
+
+        current = self.card_filter.currentData()
+        self.card_filter.blockSignals(True)
+        self.card_filter.clear()
+        self.card_filter.addItem("Wszystkie karty", None)
+        for card in cards:
+            self.card_filter.addItem(card, card)
+        idx = self.card_filter.findData(current)
+        self.card_filter.setCurrentIndex(idx if idx >= 0 else 0)
+        self.card_filter.blockSignals(False)
+        self.card_filter.setVisible(len(di_cards) > 1 or len(do_cards) > 1)
+
+    def _on_card_filter_changed(self, _index):
+        self._group_columns = None  # force _recompute_group_columns() to re-place groups
+        self._recompute_group_columns()
 
     def _teardown_di_do_widgets(self):
         """Discards every row/group widget derived from the current DI/DO
@@ -487,14 +562,21 @@ class SimulationPanel(QWidget):
 
     def _group_tile_width(self) -> int:
         """§0A.1: derived from QFontMetrics for the widest label a group can
-        show (its header, e.g. "DI25-32", or a row's own short address),
-        never a hardcoded guess."""
+        show, never a hardcoded guess. User report follow-up ("musi być
+        wszędzie w Logic konsekwencja"): a group header now names its own
+        card ("ELA01: DI.25-32", not just "DI25-32") - a card id is
+        arbitrary project text with no length ceiling, so the widest
+        REAL header currently built is what this measures, not a
+        hardcoded example that a longer card id would silently outgrow
+        (cramped/overlapping tiles, not a visible error - exactly the
+        kind of bug this task's own "measure, don't guess" etap-4 lesson
+        was about)."""
         fm = QFontMetrics(self.font())
-        widest = max(
-            fm.horizontalAdvance("DI25-32"),
-            fm.horizontalAdvance("DO25-32"),
-            fm.horizontalAdvance("DO32"),
-        )
+        headers = [
+            g.layout().itemAt(0).widget().text()
+            for g in (self._di_group_widgets + self._do_group_widgets)
+        ]
+        widest = max((fm.horizontalAdvance(h) for h in headers), default=fm.horizontalAdvance("DI25-32"))
         return widest + _StateDot.DIAMETER + 24  # dot + margins/spacing
 
     def _recompute_group_columns(self):
@@ -516,14 +598,24 @@ class SimulationPanel(QWidget):
         self._relayout_groups(self.di_all_grid, self._di_group_widgets, columns)
         self._relayout_groups(self.do_all_grid, self._do_group_widgets, columns)
 
-    @staticmethod
-    def _relayout_groups(grid_layout, group_widgets, columns):
+    def _relayout_groups(self, grid_layout, group_widgets, columns):
         """Only the GROUP's position moves — never a channel's position
         within its group (§0A.4's central rule): each _ChannelGroup is a
-        single opaque widget here, its own internal QVBoxLayout untouched."""
+        single opaque widget here, its own internal QVBoxLayout untouched.
+
+        User report's card-filter dropdown: a group whose OWN card
+        doesn't match the current selection is hidden outright (still
+        exists, just not laid out or shown) rather than removed - the
+        same channel toggled while a filter is active must keep its
+        live state, it just isn't ON SCREEN until the filter widens
+        again."""
         while grid_layout.count():
             grid_layout.takeAt(0)
-        for i, group in enumerate(group_widgets):
+        selected_card = self.card_filter.currentData()
+        visible = [g for g in group_widgets if selected_card is None or g.card == selected_card]
+        for group in group_widgets:
+            group.setVisible(group in visible)
+        for i, group in enumerate(visible):
             grid_layout.addWidget(group, i // columns, i % columns)
 
     # ---- Row toggling / state --------------------------------------------
