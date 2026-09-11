@@ -75,8 +75,8 @@ def test_export_header_matches_table_plus_problemy(tmp_path, qsettings):
 def test_export_includes_a_real_row(tmp_path, qsettings):
     _app()
     p = Project()
-    p.add_block(_di("ELA01.DI01"))
-    DeviceModel.set_io_label(p, "ELA01.DI01", "Wyłącznik Q1")
+    p.add_block(_di("ELA01.DI.1"))
+    DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1")
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
 
@@ -85,7 +85,7 @@ def test_export_includes_a_real_row(tmp_path, qsettings):
 
     _comment, rows = _read_csv_rows(path)
     data_row = rows[1]
-    assert data_row[1] == "ELA01.DI01"
+    assert data_row[1] == "ELA01.DI.1"
     assert data_row[3] == "Wyłącznik Q1"
     assert data_row[4] == "urządzenie"
 
@@ -112,24 +112,24 @@ def test_export_includes_problem_text_for_flagged_rows(tmp_path, qsettings):
 def test_export_respects_the_search_filter(tmp_path, qsettings):
     _app()
     p = Project()
-    p.add_block(_di("ELA01.DI01"))
-    p.add_block(_di("ELA01.DI02"))
+    p.add_block(_di("ELA01.DI.1"))
+    p.add_block(_di("ELA01.DI.2"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
-    panel.search_edit.setText("DI01")
+    panel.search_edit.setText("DI.1")
 
     path = tmp_path / "out.csv"
     panel.export_csv(str(path))
 
     comment, rows = _read_csv_rows(path)
     signal_ids = [r[1] for r in rows[1:]]
-    assert signal_ids == ["ELA01.DI01"]
+    assert signal_ids == ["ELA01.DI.1"]
     assert "Filtr zastosowany: tak" in comment
 
 def test_export_respects_the_only_issues_filter(tmp_path, qsettings):
     _app()
     p = Project()
-    p.add_block(_di("ELA01.DI01"))  # clean
+    p.add_block(_di("ELA01.DI.1"))  # clean
     ghost = BlockRegistry.create_block("virtual.input")
     ghost.properties["Bit"] = "GHOST"
     p.add_block(ghost)

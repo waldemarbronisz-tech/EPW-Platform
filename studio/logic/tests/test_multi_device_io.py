@@ -32,8 +32,10 @@ def _app():
 def test_no_project_defaults_to_a_single_device():
     assert DeviceModel.get_ela_devices() == ["ELA01"]
     assert DeviceModel.get_ada_devices() == ["ADA01"]
-    assert DeviceModel.get_ela_addresses() == [f"ELA01.DI{i:02d}" for i in range(1, 33)]
-    assert DeviceModel.get_ada_addresses() == [f"ADA01.DO{i:02d}" for i in range(1, 33)]
+    # Task "migracja adresacji": grammar is now "<card>.<KIND>.<channel>",
+    # no leading zeros - "DI{i:02d}" was the old two-segment shape.
+    assert DeviceModel.get_ela_addresses() == [f"ELA01.DI.{i}" for i in range(1, 33)]
+    assert DeviceModel.get_ada_addresses() == [f"ADA01.DO.{i}" for i in range(1, 33)]
 
 def test_new_project_defaults_to_a_single_device():
     """A brand-new Project() must behave EXACTLY like every pre-multi-
@@ -49,8 +51,8 @@ def test_addresses_span_every_defined_device():
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     addrs = DeviceModel.get_ela_addresses(p)
     assert len(addrs) == 64
-    assert "ELA01.DI01" in addrs and "ELA01.DI32" in addrs
-    assert "ELA02.DI01" in addrs and "ELA02.DI32" in addrs
+    assert "ELA01.DI.1" in addrs and "ELA01.DI.32" in addrs
+    assert "ELA02.DI.1" in addrs and "ELA02.DI.32" in addrs
 
 def test_devices_setting_survives_serialize_deserialize():
     p = Project()
@@ -130,24 +132,24 @@ def test_validator_rejects_address_on_an_undefined_device():
     from logic_studio.compiler.validator import Validator
     p = Project()
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA02.DI01"  # ELA02 doesn't exist yet
+    di.properties["Address"] = "ELA02.DI.1"  # ELA02 doesn't exist yet
     p.add_block(di)
 
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
-    assert any("ELA02.DI01" in e for e in errors)
+    assert any("ELA02.DI.1" in e for e in errors)
 
 def test_validator_accepts_address_once_the_device_is_defined():
     from logic_studio.compiler.validator import Validator
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA02.DI01"
+    di.properties["Address"] = "ELA02.DI.1"
     p.add_block(di)
 
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
-    assert not any("ELA02.DI01" in e for e in errors)
+    assert not any("ELA02.DI.1" in e for e in errors)
 
 
 # ---- core/crossref.py: classifies an address on any defined device --------
@@ -157,12 +159,12 @@ def test_crossref_classifies_second_device_address_as_physical_di():
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA02.DI05"
+    di.properties["Address"] = "ELA02.DI.5"
     p.add_block(di)
 
     crossref = build_crossref(p)
-    assert crossref["ELA02.DI05"].kind == KIND_PHYSICAL_DI
-    assert crossref["ELA02.DI05"].defined is True
+    assert crossref["ELA02.DI.5"].kind == KIND_PHYSICAL_DI
+    assert crossref["ELA02.DI.5"].defined is True
 
 
 # ---- property_grid.py: Address combobox spans every defined device --------
@@ -179,8 +181,8 @@ def test_property_grid_address_combobox_includes_every_device(qsettings):
 
     combo = panel.field_widget("Address")
     items = [combo.itemText(i) for i in range(combo.count())]
-    assert "ELA01.DI01" in items
-    assert "ELA02.DI01" in items
+    assert "ELA01.DI.1" in items
+    assert "ELA02.DI.1" in items
     assert len(items) == 64
 
 
@@ -243,7 +245,7 @@ def test_removing_a_used_device_prompts_for_confirmation(qsettings, monkeypatch)
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA02.DI01"
+    di.properties["Address"] = "ELA02.DI.1"
     p.add_block(di)
 
     dialog = ProjectSettingsDialog(p)

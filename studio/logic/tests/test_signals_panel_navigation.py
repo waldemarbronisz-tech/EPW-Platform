@@ -45,10 +45,10 @@ def test_double_click_jumps_to_writer_and_selects_it(qsettings):
     # add_block_from_library doesn't return the item in the current API —
     # find it back via the project's own block list instead.
     do_block = window.project.blocks[0]
-    do_block.properties["Address"] = "ADA01.DO01"
+    do_block.properties["Address"] = "ADA01.DO.1"
     window.signals_panel.set_project(window.project)
 
-    row = _row_of(window.signals_panel, "ADA01.DO01")
+    row = _row_of(window.signals_panel, "ADA01.DO.1")
     assert row is not None
     window.signals_panel._on_item_double_clicked(row, 0)
 
@@ -65,10 +65,10 @@ def test_double_click_with_no_writer_jumps_to_first_reader(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
     di_block = window.project.blocks[0]
-    di_block.properties["Address"] = "ELA01.DI01"
+    di_block.properties["Address"] = "ELA01.DI.1"
     window.signals_panel.set_project(window.project)
 
-    row = _row_of(window.signals_panel, "ELA01.DI01")
+    row = _row_of(window.signals_panel, "ELA01.DI.1")
     window.signals_panel._on_item_double_clicked(row, 0)
 
     from logic_studio.ui.canvas.block_item import BlockItem
@@ -81,10 +81,10 @@ def test_double_click_centers_the_view_on_the_block(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("output.do", 500, 500)
-    window.project.blocks[0].properties["Address"] = "ADA01.DO01"
+    window.project.blocks[0].properties["Address"] = "ADA01.DO.1"
     window.signals_panel.set_project(window.project)
 
-    row = _row_of(window.signals_panel, "ADA01.DO01")
+    row = _row_of(window.signals_panel, "ADA01.DO.1")
     window.signals_panel._on_item_double_clicked(row, 0)
 
     center = window.view.mapToScene(window.view.viewport().rect().center())
@@ -102,10 +102,10 @@ def test_reader_menu_is_none_when_no_readers(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("output.do", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ADA01.DO01"
+    window.project.blocks[0].properties["Address"] = "ADA01.DO.1"
     window.signals_panel.set_project(window.project)
 
-    menu = window.signals_panel._build_reader_menu("ADA01.DO01")
+    menu = window.signals_panel._build_reader_menu("ADA01.DO.1")
     assert menu is None
     _close(window)
 
@@ -115,10 +115,10 @@ def test_reader_menu_lists_every_reader(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 100, 0)
     for b in window.project.blocks:
-        b.properties["Address"] = "ELA01.DI01"
+        b.properties["Address"] = "ELA01.DI.1"
     window.signals_panel.set_project(window.project)
 
-    menu = window.signals_panel._build_reader_menu("ELA01.DI01")
+    menu = window.signals_panel._build_reader_menu("ELA01.DI.1")
     assert menu is not None
     assert len(menu.actions()) == 2
     texts = [a.text() for a in menu.actions()]
@@ -131,11 +131,11 @@ def test_reader_menu_label_includes_tag_when_set(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
     block = window.project.blocks[0]
-    block.properties["Address"] = "ELA01.DI01"
+    block.properties["Address"] = "ELA01.DI.1"
     block.properties["Tag"] = "Wyłącznik główny"
     window.signals_panel.set_project(window.project)
 
-    menu = window.signals_panel._build_reader_menu("ELA01.DI01")
+    menu = window.signals_panel._build_reader_menu("ELA01.DI.1")
     assert f"{block.short_id} — Wyłącznik główny" == menu.actions()[0].text()
     _close(window)
 
@@ -145,10 +145,10 @@ def test_choosing_a_reader_menu_action_jumps_to_that_block(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 300, 0)
     for b in window.project.blocks:
-        b.properties["Address"] = "ELA01.DI01"
+        b.properties["Address"] = "ELA01.DI.1"
     window.signals_panel.set_project(window.project)
 
-    menu = window.signals_panel._build_reader_menu("ELA01.DI01")
+    menu = window.signals_panel._build_reader_menu("ELA01.DI.1")
     target_block = window.project.blocks[1]
     target_action = next(a for a in menu.actions() if target_block.short_id in a.text())
     target_action.trigger()
@@ -167,17 +167,17 @@ def test_selecting_a_block_highlights_its_signal_row(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("output.do", 0, 0)
     window.scene.add_block_from_library("output.do", 200, 0)
-    window.project.blocks[0].properties["Address"] = "ADA01.DO01"
-    window.project.blocks[1].properties["Address"] = "ADA01.DO02"
+    window.project.blocks[0].properties["Address"] = "ADA01.DO.1"
+    window.project.blocks[1].properties["Address"] = "ADA01.DO.2"
     window.signals_panel.set_project(window.project)
 
     from logic_studio.ui.canvas.block_item import BlockItem
     items = [i for i in window.scene.items() if isinstance(i, BlockItem)]
-    target = next(i for i in items if i.logic_block.properties["Address"] == "ADA01.DO01")
+    target = next(i for i in items if i.logic_block.properties["Address"] == "ADA01.DO.1")
     target.setSelected(True)  # triggers scene.selectionChanged -> highlight_blocks wiring
 
-    leaf_hit = _row_of(window.signals_panel, "ADA01.DO01")
-    leaf_miss = _row_of(window.signals_panel, "ADA01.DO02")
+    leaf_hit = _row_of(window.signals_panel, "ADA01.DO.1")
+    leaf_miss = _row_of(window.signals_panel, "ADA01.DO.2")
     from PySide6.QtGui import QColor
     assert leaf_hit.background(0).color() == QColor(200, 220, 255)
     assert leaf_miss.background(0).color() != QColor(200, 220, 255)

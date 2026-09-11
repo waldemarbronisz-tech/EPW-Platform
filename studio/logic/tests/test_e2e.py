@@ -27,8 +27,8 @@ def test_e2e_simulation_loop(qsettings):
     do = m.project.blocks[2]
 
     # 3. Configure
-    di.update_property("Address", "ELA01.DI01")
-    do.update_property("Address", "ADA01.DO01")
+    di.update_property("Address", "ELA01.DI.1")
+    do.update_property("Address", "ADA01.DO.1")
     no.update_property("Name", "NEGATE_TEST")
 
     # 4. Connect
@@ -41,14 +41,14 @@ def test_e2e_simulation_loop(qsettings):
 
     # 6. Simulate step 1
     # Mocking ELA1 input to False
-    m.io_provider.set_digital_input("ELA01.DI01", False)
+    m.io_provider.set_digital_input("ELA01.DI.1", False)
     m.engine.step() # Manual tick evaluates and propagates
 
     # Assert
     assert m.engine.get_block_state(do.uuid).simulation_state.get("sim_value") == True # NOT False -> True
 
     # 7. Simulate step 2
-    m.io_provider.set_digital_input("ELA01.DI01", True)
+    m.io_provider.set_digital_input("ELA01.DI.1", True)
     m.engine.step()
 
     # Assert
@@ -79,7 +79,7 @@ def test_headless_fat():
     # ELA01.DI01 -> NOT -> TON (200ms) -> SR -> ADA01.DO01
 
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     no = NotGate()
 
@@ -89,7 +89,7 @@ def test_headless_fat():
     sr = SR()
 
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
 
     # Connect
     di.outputs[0].connect(no.inputs[0])
@@ -117,10 +117,10 @@ def test_headless_fat():
     # Step 1: ELA is FALSE
     # NOT evaluates to TRUE
     # TON begins timing (but needs 200ms)
-    io.set_digital_input("ELA01.DI01", False)
+    io.set_digital_input("ELA01.DI.1", False)
     engine.step()
 
-    assert io.output_image["digital"].get("ADA01.DO01") in [False, None]
+    assert io.output_image["digital"].get("ADA01.DO.1") in [False, None]
 
     # Step 2: Advance time 200ms. ELA still FALSE.
     # TON should complete and output TRUE.
@@ -129,17 +129,17 @@ def test_headless_fat():
     time.advance(200)
     engine.step()
 
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     # Step 3: Change ELA to TRUE.
     # NOT becomes FALSE.
     # TON resets to FALSE.
     # SR should retain its state (SET dominant, but since S is false and R is false, it holds).
     # ADA should remain TRUE.
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
 
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
 def test_stop_drives_outputs_to_safe_state():
     """AUDIT_REPORT.md §0.1: stop() must NOT latch outputs at their last
@@ -157,9 +157,9 @@ def test_stop_drives_outputs_to_safe_state():
     project = Project()
 
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     di.outputs[0].connect(do.inputs[0])
 
     project.add_block(di)
@@ -173,12 +173,12 @@ def test_stop_drives_outputs_to_safe_state():
     engine = ExecutionEngine(res.get("program"), io, SimulationTimeProvider())
     engine.start()
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     engine.stop()
-    assert io.output_image["digital"].get("ADA01.DO01") is False
+    assert io.output_image["digital"].get("ADA01.DO.1") is False
 
 def test_fault_transition_drives_outputs_to_safe_state():
     """AUDIT_REPORT.md §0.1: a transition to FAULT (start() with no valid
@@ -195,9 +195,9 @@ def test_fault_transition_drives_outputs_to_safe_state():
     project = Project()
 
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     di.outputs[0].connect(do.inputs[0])
     project.add_block(di)
     project.add_block(do)
@@ -208,15 +208,15 @@ def test_fault_transition_drives_outputs_to_safe_state():
     io = SimulationIOProvider()
     engine = ExecutionEngine(res.get("program"), io, SimulationTimeProvider())
     engine.start()
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     # Force an invalid program, then attempt to (re)start -> FAULT.
     engine.program = None
     engine.start()
     assert engine.state == ExecutionState.FAULT
-    assert io.output_image["digital"].get("ADA01.DO01") is False
+    assert io.output_image["digital"].get("ADA01.DO.1") is False
 
 def test_pause_does_not_touch_outputs():
     """AUDIT_REPORT.md §0.1: pause() freezes the scan, it must not fail-safe
@@ -233,9 +233,9 @@ def test_pause_does_not_touch_outputs():
     project = Project()
 
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     di.outputs[0].connect(do.inputs[0])
     project.add_block(di)
     project.add_block(do)
@@ -246,12 +246,12 @@ def test_pause_does_not_touch_outputs():
     io = SimulationIOProvider()
     engine = ExecutionEngine(res.get("program"), io, SimulationTimeProvider())
     engine.start()
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     engine.pause()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
 
 # ---- fix/safety-block-semantics §9: step() in STOPPED is a dry run -------
@@ -268,9 +268,9 @@ def _stopped_step_project():
     register_builtin_blocks()
     project = Project()
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     di.outputs[0].connect(do.inputs[0])
     project.add_block(di)
     project.add_block(do)
@@ -289,9 +289,9 @@ def test_step_in_stopped_never_writes_outputs():
     from logic_studio.engine.execution import ExecutionState
     assert engine.state == ExecutionState.STOPPED
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") in (False, None)
+    assert io.output_image["digital"].get("ADA01.DO.1") in (False, None)
 
 def test_step_in_paused_still_writes_outputs():
     """§9's own required test, the other half: PAUSED steps normally."""
@@ -299,9 +299,9 @@ def test_step_in_paused_still_writes_outputs():
     engine.start()
     engine.pause()
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
 def test_step_runs_the_full_scan_under_dry_run_just_skips_the_write():
     """§9.2: dry_run doesn't mean "do nothing" -- blocks still evaluate
@@ -310,10 +310,10 @@ def test_step_runs_the_full_scan_under_dry_run_just_skips_the_write():
     engine, io = _stopped_step_project()
     do_block = next(b for b in engine.program.blocks if b.type_id == "output.do")
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()  # STOPPED -> auto dry-run
     assert do_block.inputs[0].value is True  # the scan DID run
-    assert io.output_image["digital"].get("ADA01.DO01") in (False, None)  # just not written
+    assert io.output_image["digital"].get("ADA01.DO.1") in (False, None)  # just not written
 
 def test_explicit_dry_run_true_skips_writes_even_while_paused():
     """§9.1/§9.2: the dry_run PARAMETER works independently of state, not
@@ -322,9 +322,9 @@ def test_explicit_dry_run_true_skips_writes_even_while_paused():
     engine.start()
     engine.pause()
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step(dry_run=True)
-    assert io.output_image["digital"].get("ADA01.DO01") in (False, None)
+    assert io.output_image["digital"].get("ADA01.DO.1") in (False, None)
 
 def test_step_in_stopped_still_advances_diagnostics():
     """A dry run is still a real scan for diagnostic purposes (scan
@@ -349,12 +349,12 @@ def test_same_scan_input_fat():
 
     # ELA01.DI01 -> NOT -> ADA01.DO01
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     no = NotGate()
 
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
 
     di.outputs[0].connect(no.inputs[0])
     no.outputs[0].connect(do.inputs[0])
@@ -371,18 +371,18 @@ def test_same_scan_input_fat():
     engine.start()
 
     # Set FALSE, execute ONE scan
-    io.set_digital_input("ELA01.DI01", False)
+    io.set_digital_input("ELA01.DI.1", False)
     engine.step()
 
     # DO01 must be TRUE IMMEDIATELY after that scan
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     # Set TRUE, execute ONE scan
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
 
     # DO01 must be FALSE IMMEDIATELY after that scan
-    assert io.output_image["digital"].get("ADA01.DO01") is False
+    assert io.output_image["digital"].get("ADA01.DO.1") is False
 
 def test_stop_restart_fat():
     from logic_studio.core.project import Project
@@ -399,7 +399,7 @@ def test_stop_restart_fat():
     project = Project()
 
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     ton = TON()
     ton.properties["Preset (ms)"] = 200
@@ -407,7 +407,7 @@ def test_stop_restart_fat():
     sr = SR()
 
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
 
     di.outputs[0].connect(ton.inputs[0])
     ton.outputs[0].connect(sr.inputs[0])
@@ -426,13 +426,13 @@ def test_stop_restart_fat():
     engine = ExecutionEngine(res.get("program"), io, time)
     engine.start()
 
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
 
     # Advance 200 to trigger TON and set SR
     time.advance(200)
     engine.step()
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
     # STOP engine
     engine.stop()
@@ -449,8 +449,8 @@ def test_stop_restart_fat():
     engine.start()
 
     # Re-evaluate
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
 
     # Because TON just started again, SR is not yet set, ADA01 should now be overwritten to False
-    assert io.output_image["digital"].get("ADA01.DO01") is False
+    assert io.output_image["digital"].get("ADA01.DO.1") is False

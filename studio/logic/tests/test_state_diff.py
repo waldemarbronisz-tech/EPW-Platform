@@ -83,10 +83,10 @@ def test_round_trip_settings_changed():
 
 def test_round_trip_settings_key_added_and_removed():
     base = _state([], settings={"name": "P"})
-    target = _state([], settings={"name": "P", "io_labels": {"ELA01.DI01": "Q1"}})
+    target = _state([], settings={"name": "P", "io_labels": {"ELA01.DI.1": "Q1"}})
     diff = diff_project_state(base, target)
     assert apply_project_diff(base, diff) == target
-    assert diff["settings"]["set"] == {"io_labels": {"ELA01.DI01": "Q1"}}
+    assert diff["settings"]["set"] == {"io_labels": {"ELA01.DI.1": "Q1"}}
 
     # and the reverse direction: a key present in base, absent in target
     diff_back = diff_project_state(target, base)

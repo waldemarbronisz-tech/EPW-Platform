@@ -41,9 +41,9 @@ def test_address_based_block_reference_is_the_address():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("input.di")
-    block.properties["Address"] = "ELA01.DI01"
+    block.properties["Address"] = "ELA01.DI.1"
     item = BlockItem(block)
-    assert item._current_signal_reference() == "ELA01.DI01"
+    assert item._current_signal_reference() == "ELA01.DI.1"
 
 def test_gate_has_no_signal_reference():
     _app()
@@ -107,7 +107,7 @@ def test_show_signal_usage_switches_to_signals_tab_and_focuses_row(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ELA01.DI01"
+    window.project.blocks[0].properties["Address"] = "ELA01.DI.1"
     window.signals_panel.set_project(window.project)
 
     from logic_studio.ui.canvas.block_item import BlockItem as BI
@@ -115,7 +115,7 @@ def test_show_signal_usage_switches_to_signals_tab_and_focuses_row(qsettings):
     item._show_signal_usage(item._current_signal_reference())
 
     assert window.left_tabs.currentWidget() is window.signals_panel
-    assert window.signals_panel.search_edit.text() == "ELA01.DI01"
+    assert window.signals_panel.search_edit.text() == "ELA01.DI.1"
     _close(window)
 
 def test_show_signal_usage_with_empty_signal_id_does_nothing(qsettings):
@@ -138,7 +138,7 @@ def test_focus_signal_resets_stale_filters_so_the_row_stays_visible(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ELA01.DI01"
+    window.project.blocks[0].properties["Address"] = "ELA01.DI.1"
     window.signals_panel.set_project(window.project)
     window.signals_panel.only_issues_check.setChecked(True)  # this DI has no issue -> would hide it
     window.signals_panel._category_items["Fizyczne"].setExpanded(False)  # collapsed too
@@ -149,7 +149,7 @@ def test_focus_signal_resets_stale_filters_so_the_row_stays_visible(qsettings):
 
     leaf = next(
         leaf for leaf in window.signals_panel._iter_leaves()
-        if window.signals_panel._signal_id_of(leaf) == "ELA01.DI01"
+        if window.signals_panel._signal_id_of(leaf) == "ELA01.DI.1"
     )
     assert leaf.isHidden() is False
     _close(window)

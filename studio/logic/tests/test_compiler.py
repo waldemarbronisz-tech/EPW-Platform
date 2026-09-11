@@ -267,7 +267,7 @@ def test_ai_comparator_do_with_quality_unconnected_warns():
     ai.properties["Address"] = "AI.LEVEL"
     cmp = GreaterBlock()
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     ai.outputs[0].connect(cmp.inputs[0])  # Value -> comparator In1 (Quality left unconnected)
     cmp.outputs[0].connect(do.inputs[0])
     for b in (ai, cmp, do):

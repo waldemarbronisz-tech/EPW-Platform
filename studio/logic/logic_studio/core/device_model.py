@@ -1,3 +1,6 @@
+from logic_studio.core.addressing import format_address
+
+
 class DeviceModel:
     """Centralized definition of EPW Controller IO topology.
 
@@ -5,10 +8,22 @@ class DeviceModel:
     project addresses) is project-defined — project.settings["ela_devices"]/
     ["ada_devices"], defaulting to the single-device ["ELA01"]/["ADA01"]
     every project used to be permanently fixed to (Project.__init__,
-    core/project.py's v4->v5 migration). The CHANNEL COUNT per device
-    (ELA_CHANNELS/ADA_CHANNELS) stays a fixed platform constant, not
-    project-defined — every module of a given kind has the same number of
-    channels; only how many modules exist varies.
+    core/project.py's v4->v5 migration).
+
+    Task "migracja adresacji": the CHANNEL COUNT per kind
+    (ELA_CHANNELS/ADA_CHANNELS) is now ALSO project-defined -
+    project.settings["ela_channels"]/["ada_channels"], defaulting to
+    these same class constants when the project doesn't override them
+    (same "constant is the DEFAULT, not the only source" relationship
+    _DEFAULT_ELA_DEVICES already has to get_ela_devices()). One count
+    per KIND, not per individual device - every ELA module in a given
+    project still has the same channel count as every other ELA module
+    in that project; only how many MODULES exist varies per-device
+    (the device LIST), not how many channels each one has. A genuinely
+    per-device channel count (a project mixing a 16-channel and a
+    32-channel ELA card) is a real, larger data-model change this task
+    does not make - project.settings["ela_devices"] stays a plain list
+    of device-name strings, not upgraded to per-device dicts.
 
     Every method below accepts an OPTIONAL `project` — omitted (or None),
     it falls back to the single-device default, so a call site that
@@ -17,6 +32,7 @@ class DeviceModel:
 
     ELA_CHANNELS = 32
     ADA_CHANNELS = 32
+    MAX_CHANNELS = 256  # a sanity ceiling for set_ela_channels/set_ada_channels, not a platform limit
 
     _DEFAULT_ELA_DEVICES = ["ELA01"]
     _DEFAULT_ADA_DEVICES = ["ADA01"]
@@ -34,21 +50,69 @@ class DeviceModel:
         return list(project.settings.get("ada_devices", cls._DEFAULT_ADA_DEVICES))
 
     @classmethod
+    def get_ela_channels(cls, project=None) -> int:
+        """Task "migracja adresacji": ELA_CHANNELS is now a DEFAULT, not
+        the only source - a project may override it via
+        project.settings["ela_channels"] (see set_ela_channels())."""
+        if project is None:
+            return cls.ELA_CHANNELS
+        return project.settings.get("ela_channels", cls.ELA_CHANNELS)
+
+    @classmethod
+    def get_ada_channels(cls, project=None) -> int:
+        if project is None:
+            return cls.ADA_CHANNELS
+        return project.settings.get("ada_channels", cls.ADA_CHANNELS)
+
+    @classmethod
+    def set_ela_channels(cls, project, count: int) -> int:
+        """Validates and stores the project's ELA channel count. Returns
+        the value actually stored (falls back to ELA_CHANNELS for
+        anything not a positive int within MAX_CHANNELS, same "never
+        store garbage, never raise on a bad UI value" stance
+        _set_devices() already has for device names)."""
+        return cls._set_channels(project, "ela_channels", count, cls.ELA_CHANNELS)
+
+    @classmethod
+    def set_ada_channels(cls, project, count: int) -> int:
+        return cls._set_channels(project, "ada_channels", count, cls.ADA_CHANNELS)
+
+    @classmethod
+    def _set_channels(cls, project, settings_key: str, count, default: int) -> int:
+        if not isinstance(count, int) or isinstance(count, bool) or not (1 <= count <= cls.MAX_CHANNELS):
+            count = default
+        project.settings[settings_key] = count
+        return count
+
+    @classmethod
+    def format_ela_address(cls, dev: str, channel: int) -> str:
+        return format_address(dev, "DI", channel)
+
+    @classmethod
+    def format_ada_address(cls, dev: str, channel: int) -> str:
+        return format_address(dev, "DO", channel)
+
+    @classmethod
     def get_ela_addresses(cls, project=None):
-        """Returns device-qualified zero-padded ELA inputs, across EVERY
-        ELA device the project defines."""
+        """Returns device-qualified ELA inputs (platform grammar -
+        addressing.format_address()), across EVERY ELA device the
+        project defines, using the project's own channel count (see
+        get_ela_channels())."""
         addrs = []
+        channels = cls.get_ela_channels(project)
         for dev in cls.get_ela_devices(project):
-            addrs.extend([f"{dev}.DI{i:02d}" for i in range(1, cls.ELA_CHANNELS + 1)])
+            addrs.extend([cls.format_ela_address(dev, i) for i in range(1, channels + 1)])
         return addrs
 
     @classmethod
     def get_ada_addresses(cls, project=None):
-        """Returns device-qualified zero-padded ADA outputs, across EVERY
-        ADA device the project defines."""
+        """Returns device-qualified ADA outputs (platform grammar), across
+        EVERY ADA device the project defines, using the project's own
+        channel count (see get_ada_channels())."""
         addrs = []
+        channels = cls.get_ada_channels(project)
         for dev in cls.get_ada_devices(project):
-            addrs.extend([f"{dev}.DO{i:02d}" for i in range(1, cls.ADA_CHANNELS + 1)])
+            addrs.extend([cls.format_ada_address(dev, i) for i in range(1, channels + 1)])
         return addrs
 
     _DEVICE_NAME_RE_CACHE = {}

@@ -192,7 +192,7 @@ def test_validator_message_uses_short_id_not_uuid_or_display_name():
     assert not any(gate.uuid in e for e in errors)
 
 def test_compiler_message_includes_address_and_label_for_io_block():
-    """§3.3's exact required format: "i3 (ELA01.DI01 — <label>)". Uses a DO
+    """§3.3's exact required format: "i3 (ELA01.DI.1 — <label>)". Uses a DO
     block (not DI) because DI has no input pins at all — nothing about it
     can ever be flagged "unconnected"; a DO block's own input, left
     unwired, is the natural way to get a real message referencing it."""
@@ -201,14 +201,14 @@ def test_compiler_message_includes_address_and_label_for_io_block():
 
     p = Project()
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     p.add_block(do)
-    DeviceModel.set_io_label(p, "ADA01.DO01", "Załącz Q1")
+    DeviceModel.set_io_label(p, "ADA01.DO.1", "Załącz Q1")
 
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
 
-    expected_ref = f"{do.short_id} (ADA01.DO01 — Załącz Q1)"
+    expected_ref = f"{do.short_id} (ADA01.DO.1 — Załącz Q1)"
     assert any(expected_ref in w for w in warnings), warnings
 
 

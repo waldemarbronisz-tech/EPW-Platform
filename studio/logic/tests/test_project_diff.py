@@ -103,10 +103,10 @@ def test_color_and_execution_priority_changes():
 # ---- changed: properties -------------------------------------------------
 
 def test_property_change():
-    base = _state([_block("a", properties={"Address": "ELA01.DI01", "Tag": "", "Comment": ""})])
-    target = _state([_block("a", properties={"Address": "ELA01.DI02", "Tag": "", "Comment": ""})])
+    base = _state([_block("a", properties={"Address": "ELA01.DI.1", "Tag": "", "Comment": ""})])
+    target = _state([_block("a", properties={"Address": "ELA01.DI.2", "Tag": "", "Comment": ""})])
     change = compare_projects(base, target)["blocks_changed"][0]
-    assert {"field": "properties.Address", "old": "ELA01.DI01", "new": "ELA01.DI02"} in change["field_changes"]
+    assert {"field": "properties.Address", "old": "ELA01.DI.1", "new": "ELA01.DI.2"} in change["field_changes"]
 
 def test_property_added_and_removed_keys():
     base = _state([_block("a", properties={"Address": ""})])

@@ -242,7 +242,7 @@ def test_macro_internal_label_does_not_merge_with_a_same_named_top_level_label()
     neither one ever sees the other, and compilation succeeds cleanly."""
     p = Project()
     top_di = BlockRegistry.create_block("input.di")
-    top_di.properties["Address"] = "ELA01.DI01"
+    top_di.properties["Address"] = "ELA01.DI.1"
     p.add_block(top_di)
     top_wire_out = Wire()
     top_wire_out.source_pin = top_di.outputs[0].uuid
@@ -251,7 +251,7 @@ def test_macro_internal_label_does_not_merge_with_a_same_named_top_level_label()
     p.add_wire(top_wire_out)
 
     macro_di = BlockRegistry.create_block("input.di")
-    macro_di.properties["Address"] = "ELA01.DI02"
+    macro_di.properties["Address"] = "ELA01.DI.2"
     macro_not = BlockRegistry.create_block("logic.not")
     macro_wire_out = Wire()
     macro_wire_out.source_pin = macro_di.outputs[0].uuid
@@ -279,7 +279,7 @@ def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
     definition dict."""
     p = Project()
     macro_di = BlockRegistry.create_block("input.di")
-    macro_di.properties["Address"] = "ELA01.DI01"
+    macro_di.properties["Address"] = "ELA01.DI.1"
     macro_do_stub = BlockRegistry.create_block("logic.buffer")
     src_wire = Wire()
     src_wire.source_pin = macro_di.outputs[0].uuid

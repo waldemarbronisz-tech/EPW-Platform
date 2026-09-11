@@ -667,6 +667,36 @@ class Project:
 
         block_data_list = data.get("blocks", [])
 
+        # Task "migracja adresacji" (GRANICE: "istniejące pliki .epwlogic
+        # mają stare adresy... NIE konwertuj po cichu, NIE wczytuj z
+        # pustymi adresami"): a block saved under the old two-segment,
+        # zero-padded addressing convention ("ELA01.DI01") would silently
+        # never match anything DeviceModel.get_ela_addresses()/
+        # get_ada_addresses() now produce (the new "ELA01.DI.1" grammar) -
+        # every DI/DO/AI/AO reference in the whole project would compile
+        # and load "successfully" while quietly pointing at nothing,
+        # exactly the kind of failure this migration exists to make loud
+        # instead of silent. Checked BEFORE any block is constructed - a
+        # schema/type_id problem already fails this early (see
+        # unknown_type_ids below); an addressing problem gets the same
+        # treatment, not a quieter one.
+        from logic_studio.core.addressing import is_old_style_address
+        old_style_addresses = sorted({
+            addr for b_data in block_data_list
+            for addr in [(b_data.get("properties") or {}).get("Address")]
+            if is_old_style_address(addr)
+        })
+        if old_style_addresses:
+            example = old_style_addresses[0]
+            rest = f" (and {len(old_style_addresses) - 1} more)" if len(old_style_addresses) > 1 else ""
+            raise ValueError(
+                f"This project uses an unsupported addressing format: {example!r}{rest}. "
+                f"Logic Studio now uses the platform-wide <card>.<KIND>.<channel> grammar "
+                f"(e.g. \"ELA01.DI.1\", not \"ELA01.DI01\") - see the project's own point "
+                f"registry in Studio. This file is not converted automatically; update its "
+                f"addresses before opening it here."
+            )
+
         # feat/io-labels-and-ids §4.2: fast-forward the short_id counters
         # (core/short_id.py) past every short_id already present in the
         # FILE ITSELF before any block is constructed/added — so if some

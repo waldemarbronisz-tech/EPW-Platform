@@ -106,18 +106,25 @@ class DeviceExplorerPanel(QWidget):
         # than a single hardcoded "ELA-01"/"ADA-01" — a project with
         # ELA01+ELA02 gets two separate, independently-expandable Input
         # Module branches, each with its own 32 channels.
+        # Task "migracja adresacji": address string and channel count both
+        # come from DeviceModel now (platform grammar, project-defined
+        # count) - was an inline f"{dev}.DI{i:02d}" + the ELA_CHANNELS
+        # constant used directly, an independent copy of exactly what
+        # DeviceModel.get_ela_addresses() already computes.
+        ela_channels = DeviceModel.get_ela_channels(self.project)
         for dev in DeviceModel.get_ela_devices(self.project):
             ela_module = QTreeWidgetItem(root, [f"{dev} (Input Module / Acquisition)"])
             ela_module.setExpanded(True)
-            for i in range(1, DeviceModel.ELA_CHANNELS + 1):
-                addr = f"{dev}.DI{i:02d}"
+            for i in range(1, ela_channels + 1):
+                addr = DeviceModel.format_ela_address(dev, i)
                 self._add_leaf(ela_module, addr, "input.di", addr)
 
+        ada_channels = DeviceModel.get_ada_channels(self.project)
         for dev in DeviceModel.get_ada_devices(self.project):
             ada_module = QTreeWidgetItem(root, [f"{dev} (Output Module / Actuator)"])
             ada_module.setExpanded(True)
-            for i in range(1, DeviceModel.ADA_CHANNELS + 1):
-                addr = f"{dev}.DO{i:02d}"
+            for i in range(1, ada_channels + 1):
+                addr = DeviceModel.format_ada_address(dev, i)
                 self._add_leaf(ada_module, addr, "output.do", addr)
 
         # Analog points — fully project-defined, empty tree when the project

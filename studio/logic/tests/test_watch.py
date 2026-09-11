@@ -25,8 +25,8 @@ def test_new_project_has_no_watches():
 
 def test_add_watch_appends_and_reports_added():
     p = Project()
-    assert add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") is True
-    assert get_watches(p) == [{"kind": KIND_PHYSICAL_DI, "signal_id": "ELA01.DI01"}]
+    assert add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is True
+    assert get_watches(p) == [{"kind": KIND_PHYSICAL_DI, "signal_id": "ELA01.DI.1"}]
 
 def test_add_watch_rejects_empty_signal_id():
     p = Project()
@@ -35,8 +35,8 @@ def test_add_watch_rejects_empty_signal_id():
 
 def test_add_watch_is_idempotent_for_the_same_kind_and_id():
     p = Project()
-    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01")
-    assert add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") is False
+    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
+    assert add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is False
     assert len(get_watches(p)) == 1
 
 def test_same_signal_id_different_kind_is_a_separate_watch():
@@ -47,30 +47,30 @@ def test_same_signal_id_different_kind_is_a_separate_watch():
 
 def test_is_watched():
     p = Project()
-    assert is_watched(p, KIND_PHYSICAL_DI, "ELA01.DI01") is False
-    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01")
-    assert is_watched(p, KIND_PHYSICAL_DI, "ELA01.DI01") is True
+    assert is_watched(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is False
+    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
+    assert is_watched(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is True
 
 def test_remove_watch_reports_removed():
     p = Project()
-    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01")
-    assert remove_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") is True
+    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
+    assert remove_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is True
     assert get_watches(p) == []
 
 def test_remove_watch_no_op_when_absent():
     p = Project()
-    assert remove_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") is False
+    assert remove_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is False
 
 def test_get_watches_returns_a_copy_not_the_live_list():
     p = Project()
-    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01")
+    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     watches = get_watches(p)
-    watches.append({"kind": KIND_PHYSICAL_DI, "signal_id": "ELA01.DI02"})
+    watches.append({"kind": KIND_PHYSICAL_DI, "signal_id": "ELA01.DI.2"})
     assert len(get_watches(p)) == 1  # the live list is untouched
 
 def test_watches_survive_serialize_deserialize():
     p = Project()
-    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01")
+    add_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     add_watch(p, KIND_SYSTEM, "SYS.READY")
     reloaded = Project.deserialize(p.serialize())
     assert get_watches(reloaded) == get_watches(p)
@@ -93,12 +93,12 @@ def test_v5_project_migrates_with_empty_watch_list():
 
 def test_describe_watch_physical_uses_io_label():
     p = Project()
-    DeviceModel.set_io_label(p, "ELA01.DI01", "Wyłącznik Q1 zamknięty")
-    assert describe_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") == "Wyłącznik Q1 zamknięty"
+    DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
+    assert describe_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == "Wyłącznik Q1 zamknięty"
 
 def test_describe_watch_physical_empty_when_no_label():
     p = Project()
-    assert describe_watch(p, KIND_PHYSICAL_DI, "ELA01.DI01") == ""
+    assert describe_watch(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == ""
 
 def test_describe_watch_analog_prefers_label_falls_back_to_point_name():
     p = Project()
@@ -130,8 +130,8 @@ def test_describe_watch_system_uses_catalog_description():
 
 def test_is_boolean_kind_physical_always_true():
     p = Project()
-    assert is_boolean_kind(p, KIND_PHYSICAL_DI, "ELA01.DI01") is True
-    assert is_boolean_kind(p, KIND_PHYSICAL_DO, "ADA01.DO01") is True
+    assert is_boolean_kind(p, KIND_PHYSICAL_DI, "ELA01.DI.1") is True
+    assert is_boolean_kind(p, KIND_PHYSICAL_DO, "ADA01.DO.1") is True
 
 def test_is_boolean_kind_analog_always_false():
     p = Project()
@@ -157,10 +157,10 @@ def test_is_boolean_kind_system_follows_catalog_type():
 def test_read_value_physical_di_do():
     p = Project()
     io = SimulationIOProvider()
-    io.set_digital_input("ELA01.DI01", True)
-    io.write_digital_output("ADA01.DO01", True)
-    assert read_value(p, io, KIND_PHYSICAL_DI, "ELA01.DI01") is True
-    assert read_value(p, io, KIND_PHYSICAL_DO, "ADA01.DO01") is True
+    io.set_digital_input("ELA01.DI.1", True)
+    io.write_digital_output("ADA01.DO.1", True)
+    assert read_value(p, io, KIND_PHYSICAL_DI, "ELA01.DI.1") is True
+    assert read_value(p, io, KIND_PHYSICAL_DO, "ADA01.DO.1") is True
 
 def test_read_value_analog_in_out():
     p = Project()
@@ -210,62 +210,62 @@ def test_read_value_system_signal_uses_now_ms_for_pulse_generators():
 
 def test_new_project_has_no_history():
     p = Project()
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == []
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == []
 
 def test_append_and_get_history():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, False)
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 2000, True)
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == [(1000, False), (2000, True)]
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, False)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 2000, True)
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(1000, False), (2000, True)]
 
 def test_get_history_returns_a_copy_not_the_live_list():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, False)
-    history = get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01")
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, False)
+    history = get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
     history.append((2000, True))
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == [(1000, False)]
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(1000, False)]
 
 def test_different_kind_or_signal_id_keeps_separate_history():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, True)
-    append_history_sample(p, KIND_SYSTEM, "ELA01.DI01", 1000, False)  # same signal_id, different kind
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI02", 1000, False)
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == [(1000, True)]
-    assert get_history(p, KIND_SYSTEM, "ELA01.DI01") == [(1000, False)]
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI02") == [(1000, False)]
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, True)
+    append_history_sample(p, KIND_SYSTEM, "ELA01.DI.1", 1000, False)  # same signal_id, different kind
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.2", 1000, False)
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(1000, True)]
+    assert get_history(p, KIND_SYSTEM, "ELA01.DI.1") == [(1000, False)]
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.2") == [(1000, False)]
 
 def test_append_prunes_samples_older_than_max_history_ms():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 0, False)
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", watch.MAX_HISTORY_MS + 1, True)
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == [(watch.MAX_HISTORY_MS + 1, True)]
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 0, False)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", watch.MAX_HISTORY_MS + 1, True)
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(watch.MAX_HISTORY_MS + 1, True)]
 
 def test_clear_history_removes_only_that_watchs_entry():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, True)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, True)
     append_history_sample(p, KIND_SYSTEM, "SYS.READY", 1000, True)
-    clear_history(p, KIND_PHYSICAL_DI, "ELA01.DI01")
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == []
+    clear_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1")
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == []
     assert get_history(p, KIND_SYSTEM, "SYS.READY") == [(1000, True)]
 
 def test_clear_history_on_an_unwatched_signal_is_a_no_op():
     p = Project()
-    clear_history(p, KIND_PHYSICAL_DI, "ELA01.DI01")  # must not raise
+    clear_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1")  # must not raise
 
 def test_clear_all_history_wipes_every_watch():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, True)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, True)
     append_history_sample(p, KIND_SYSTEM, "SYS.READY", 1000, True)
     clear_all_history(p)
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == []
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == []
     assert get_history(p, KIND_SYSTEM, "SYS.READY") == []
 
 def test_history_survives_serialize_deserialize():
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, False)
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 2000, True)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, False)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 2000, True)
     reloaded = Project.deserialize(p.serialize())
-    assert get_history(reloaded, KIND_PHYSICAL_DI, "ELA01.DI01") == [(1000, False), (2000, True)]
+    assert get_history(reloaded, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(1000, False), (2000, True)]
 
 def test_history_survives_a_json_round_trip_through_disk(tmp_path):
     """serialize()/deserialize() alone stay in-memory (lists of tuples
@@ -274,14 +274,14 @@ def test_history_survives_a_json_round_trip_through_disk(tmp_path):
     persistence, since JSON has no tuples (lists come back, not tuples) and
     True/False/None must round-trip exactly."""
     p = Project()
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 1000, False)
-    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI01", 2000, True)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 1000, False)
+    append_history_sample(p, KIND_PHYSICAL_DI, "ELA01.DI.1", 2000, True)
     append_history_sample(p, KIND_INTERNAL_BIT, "GONE", 3000, None)
     path = str(tmp_path / "project.epwlogic")
     p.save_to_file(path)
 
     reloaded = Project.load_from_file(path)
-    assert get_history(reloaded, KIND_PHYSICAL_DI, "ELA01.DI01") == [(1000, False), (2000, True)]
+    assert get_history(reloaded, KIND_PHYSICAL_DI, "ELA01.DI.1") == [(1000, False), (2000, True)]
     assert get_history(reloaded, KIND_INTERNAL_BIT, "GONE") == [(3000, None)]
 
 def test_v6_project_migrates_with_empty_watch_history():
@@ -291,5 +291,5 @@ def test_v6_project_migrates_with_empty_watch_history():
         "blocks": [],
     }
     p = Project.deserialize(data)
-    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI01") == []
+    assert get_history(p, KIND_PHYSICAL_DI, "ELA01.DI.1") == []
     assert p.settings.get("watch_history") == {}

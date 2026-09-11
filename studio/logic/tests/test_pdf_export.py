@@ -68,13 +68,13 @@ def test_signal_list_rows_reflects_a_real_project(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
     di = window.project.blocks[0]
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     rows = signal_list_rows(build_crossref(window.project))
 
     assert len(rows) == 1
     signal_id, kind, data_type, label, writers, readers = rows[0]
-    assert signal_id == "ELA01.DI01"
+    assert signal_id == "ELA01.DI.1"
     assert kind == "DI"
     assert readers == di.short_id
     _close(window)
@@ -85,8 +85,8 @@ def test_signal_list_rows_sorted_by_signal_id(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 200, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI05"
-    di2.properties["Address"] = "ELA01.DI02"
+    di1.properties["Address"] = "ELA01.DI.5"
+    di2.properties["Address"] = "ELA01.DI.2"
 
     rows = signal_list_rows(build_crossref(window.project))
     ids = [r[0] for r in rows]
@@ -181,7 +181,7 @@ def test_export_with_signal_list_produces_a_larger_file(qsettings, tmp_path):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
     di = window.project.blocks[0]
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     path_without = str(tmp_path / "without.pdf")
     export_schematic_to_pdf(window.scene, window.project, path_without, include_signal_list=False)

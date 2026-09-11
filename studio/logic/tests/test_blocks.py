@@ -152,7 +152,7 @@ def test_tp_start_with_active_input_no_keyerror():
 
     project = Project()
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     tp = TP()
     di.outputs[0].connect(tp.inputs[0])
     project.add_block(di)
@@ -163,7 +163,7 @@ def test_tp_start_with_active_input_no_keyerror():
     assert res is not None, f"Compile failed: {compiler.errors}"
 
     io = SimulationIOProvider()
-    io.set_digital_input("ELA01.DI01", True)  # IN already True before start()
+    io.set_digital_input("ELA01.DI.1", True)  # IN already True before start()
     engine = ExecutionEngine(res.get("program"), io, SimulationTimeProvider())
 
     engine.start()

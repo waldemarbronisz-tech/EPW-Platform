@@ -35,6 +35,36 @@ def test_missing_block_raises_instead_of_silently_dropping():
     with pytest.raises(ValueError, match="logic.missing_xyz"):
         Project.deserialize(data)
 
+def test_old_style_address_raises_instead_of_loading_silently():
+    """Task "migracja adresacji" GRANICE: an .epwlogic file saved under
+    the old two-segment, zero-padded addressing convention
+    ("ELA01.DI01") must fail loudly, with a clear message naming the
+    address, never load silently (the address would otherwise point at
+    nothing DeviceModel now produces) and never be converted in place -
+    same "loud, not silent" bar test_missing_block_raises_instead_of_
+    silently_dropping above already sets for an unrecognized type_id."""
+    p = Project()
+    b = DigitalInputBlock()
+    p.add_block(b)
+
+    data = p.serialize()
+    data["blocks"][0]["properties"]["Address"] = "ELA01.DI01"
+
+    with pytest.raises(ValueError, match="ELA01.DI01"):
+        Project.deserialize(data)
+
+def test_new_style_address_loads_normally():
+    """Companion to the guard above - proves it doesn't also reject the
+    CURRENT, correct grammar."""
+    p = Project()
+    b = DigitalInputBlock()
+    b.properties["Address"] = "ELA01.DI.1"
+    p.add_block(b)
+
+    data = p.serialize()
+    p2 = Project.deserialize(data)
+    assert p2.blocks[0].properties["Address"] == "ELA01.DI.1"
+
 def test_duplicate_pointers():
     # If we duplicate a block in scene, it must get a new UUID
     # to avoid pointer collisions

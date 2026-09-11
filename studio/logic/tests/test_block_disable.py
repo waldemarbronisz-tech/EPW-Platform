@@ -47,10 +47,10 @@ def _and_project():
     """DI -> AND -> DO, a trivially compilable chain."""
     p = Project()
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     gate = BlockRegistry.create_block("logic.and")
     do = BlockRegistry.create_block("output.do")
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     p.add_block(di)
     p.add_block(gate)
     p.add_block(do)
@@ -119,7 +119,7 @@ def test_enabled_blocks_still_evaluate_normally_alongside_a_disabled_one(qsettin
     result = Compiler(p).compile()
     io = SimulationIOProvider()
     engine = ExecutionEngine(result["program"], io, SimulationTimeProvider())
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.start()
     engine.step()
     engine.step()
