@@ -140,8 +140,14 @@ def test_switching_counters_disable_stops_thread_and_detaches(core):
 
 
 def test_switching_counters_disable_preserves_recorded_counts(core):
-    core.tag_manager.update_tag("DI1", False)
-    core.tag_manager.update_tag("DI1", True)
+    # Task "migracja adresacji": this fixture's own `core` never
+    # configures any project devices, so no DI tag exists by default any
+    # more (the flat DI1..DI64 fallback is gone) - register one directly,
+    # using the platform-wide grammar, same as a real ELA card's channel
+    # would be named.
+    core.tag_manager.add_tag("ELA01.DI.1", False, TagType.BOOL, source="HARDWARE")
+    core.tag_manager.update_tag("ELA01.DI.1", False)
+    core.tag_manager.update_tag("ELA01.DI.1", True)
     # flush_to_project() normally only runs periodically (every 60s) or
     # on stop() - force one now so "before" reflects what was just
     # counted, same as stop()'s own final flush (called inside

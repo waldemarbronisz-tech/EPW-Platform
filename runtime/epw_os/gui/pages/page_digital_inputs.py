@@ -11,6 +11,7 @@ from epw_os.gui.table_helpers import (
     apply_table_button_style, style_transparent_cell_container,
 )
 from epw_os.core.access_manager import AccessLevel
+from epw_os.core.addressing import is_address, parse_address
 from epw_os.core.switching_counters import format_duration
 from epw_os.gui.theme_manager import current_colors
 from epw_os.i18n import tr
@@ -104,7 +105,9 @@ class PageDigitalInputs(QWidget):
         title.setObjectName("PageHeader")
         layout.addWidget(title)
 
-        self.table = QTableWidget(64, 10)  # Address, Tag, Description, State, LED, Timestamp, Closes, Opens, Closed Time, Notes
+        # Row count set below, once self._tags (task "migracja
+        # adresacji" - one row per real DI tag) is known.
+        self.table = QTableWidget(0, 10)  # Address, Tag, Description, State, LED, Timestamp, Closes, Opens, Closed Time, Notes
         self.table.setHorizontalHeaderLabels([
             tr("pages.common.col_address"), tr("pages.common.col_tag"),
             tr("pages.common.col_description"), tr("pages.common.col_state"),
@@ -136,13 +139,29 @@ class PageDigitalInputs(QWidget):
         self.leds = {}
         self.notes_buttons = {}
 
-        for i in range(64):
-            di_num = i + 1
-            tag_name = f"DI{di_num}"
+        # Task "migracja adresacji": was a fixed QTableWidget(64, 10) +
+        # `for i in range(64)` (ADDRESSING_INVENTORY.md §3.1's own #4/#5
+        # hardcoded-64 sites) - one row per DI tag TagManager actually
+        # has right now, however many cards/channels a project's
+        # configure() call produced (zero, one card, or several).
+        # Row <-> tag name is a real dict/list (self._row_by_tag/
+        # self._tags), not string-slicing arithmetic on the tag name
+        # (`int(tag_name[2:])`) the way every method below used to do it -
+        # that arithmetic assumed "DI<n>" was the ENTIRE tag name, which
+        # is no longer true for "<card>.DI.<n>".
+        self._tags = sorted(
+            (t.name for t in self.tag_manager.list_tags() if is_address(t.name, "DI")),
+            key=lambda name: (parse_address(name)[0], parse_address(name)[2]),
+        )
+        self._row_by_tag = {name: row for row, name in enumerate(self._tags)}
+        self.table.setRowCount(len(self._tags))
+
+        for row, tag_name in enumerate(self._tags):
+            i = row  # kept as `i` below only because the rest of this loop body predates this task
             addr_item = QTableWidgetItem(f"%IX0.{i}")
             tag_item = QTableWidgetItem(tag_name)
             tag = self.tag_manager.get_tag(tag_name)
-            desc_text = tag.description if tag else f"Digital Input Channel {di_num}"
+            desc_text = tag.description if tag else tag_name
             desc_item = QTableWidgetItem(desc_text)
 
             state_item = QTableWidgetItem(tr("pages.common.state_off"))
@@ -171,7 +190,7 @@ class PageDigitalInputs(QWidget):
             led = Lamp("green")
             led.setFixedSize(20, 20)
             led.update_state(0)
-            self.leds[f"DI{di_num}"] = led
+            self.leds[tag_name] = led
             led_layout.addWidget(led)
             self.table.setCellWidget(i, 4, led_container)
 
@@ -273,8 +292,7 @@ class PageDigitalInputs(QWidget):
 
         row = self.table.rowAt(pos.y())
         if row >= 0:
-            di_num = row + 1
-            tag_name = f"DI{di_num}"
+            tag_name = self._tags[row]
 
             from PySide6.QtWidgets import QMenu
             menu = QMenu(self)
@@ -308,7 +326,7 @@ class PageDigitalInputs(QWidget):
         row = self.table.rowAt(pos.y())
         if row < 0:
             return
-        tag_name = f"DI{row + 1}"
+        tag_name = self._tags[row]
 
         # Reset/threshold are maintenance actions, not simulation tools -
         # available in any mode (GRANICE doesn't restrict this to
@@ -383,7 +401,7 @@ class PageDigitalInputs(QWidget):
         devices do). Opening it (viewing) needs no access check at all
         (Task: "podglad: dla kazdego, bez ograniczen") - only adding a
         note inside it is gated, by ServiceNotesWidget itself."""
-        idx = int(tag_name[2:]) - 1
+        idx = self._row_by_tag[tag_name]
         properties = {
             "Tag": tag_name,
             "Description": self.table.item(idx, 2).text() if self.table.item(idx, 2) else "",
@@ -410,16 +428,13 @@ class PageDigitalInputs(QWidget):
         theme's warning color once the (optional) threshold is reached
         (Task 7). Safe to call even with no switching_counters wired up,
         or before the row's items exist yet (construction time)."""
-        try:
-            idx = int(tag_name[2:]) - 1
-        except (ValueError, IndexError):
-            # Deliberate, not logged: `tag_name` is expected to be a
-            # DIn/DOn-shaped name (callers already filter for that), but
-            # this is defensive against anything else reaching here
+        idx = self._row_by_tag.get(tag_name)
+        if idx is None:
+            # Deliberate, not logged: `tag_name` is expected to be one of
+            # this page's own DI tags (callers already filter for that),
+            # but this is defensive against anything else reaching here
             # anyway - would fire routinely, not a problem worth
             # surfacing.
-            return
-        if idx < 0 or idx >= self.table.rowCount():
             return
         closes_item = self.table.item(idx, _COL_CLOSES)
         opens_item = self.table.item(idx, _COL_OPENS)
@@ -445,24 +460,21 @@ class PageDigitalInputs(QWidget):
             closes_item.setBackground(QColor(c["field_bg"]))
 
     def on_tag_changed(self, tag_name, new_value, quality):
-        if tag_name.startswith("DI"):
-            try:
-                idx = int(tag_name[2:]) - 1
-                state_str = tr("pages.common.state_on") if new_value == 1 else tr("pages.common.state_off")
-                self.table.item(idx, 3).setText(state_str)
-                self.leds[tag_name].update_state(new_value)
+        # Task "migracja adresacji": was `tag_name.startswith("DI")` +
+        # `int(tag_name[2:])` - a real dict lookup against THIS page's
+        # own rows now, rather than a prefix guess plus arithmetic that
+        # assumed the whole tag name was "DI<n>".
+        idx = self._row_by_tag.get(tag_name)
+        if idx is not None:
+            state_str = tr("pages.common.state_on") if new_value == 1 else tr("pages.common.state_off")
+            self.table.item(idx, 3).setText(state_str)
+            self.leds[tag_name].update_state(new_value)
 
-                from datetime import datetime
-                t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                self.table.item(idx, 5).setText(t)
+            from datetime import datetime
+            t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.table.item(idx, 5).setText(t)
 
-                self._refresh_counter_row(tag_name)
-            except ValueError:
-                # Deliberate, not logged: only a tag literally named
-                # "DI<non-numeric>" could reach int() here (the prefix
-                # check just above already filters everything else) -
-                # harmless no-op, not worth surfacing.
-                pass
+            self._refresh_counter_row(tag_name)
 
     def on_item_edited(self, item):
         # Only the Description column (2) is user-editable; State/Timestamp
@@ -471,8 +483,7 @@ class PageDigitalInputs(QWidget):
         # lost), never per keystroke, so this is already the "final value".
         if item.column() != 2:
             return
-        di_num = item.row() + 1
-        tag_name = f"DI{di_num}"
+        tag_name = self._tags[item.row()]
         new_desc = item.text()
 
         tag = self.tag_manager.get_tag(tag_name)

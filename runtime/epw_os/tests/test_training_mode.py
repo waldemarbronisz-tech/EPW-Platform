@@ -291,26 +291,51 @@ def test_feedback_is_simulated_realistically_in_training_mode(db):
 
 def test_self_referential_command_reaches_the_same_command_manager_state_either_way(db):
     """Parity check (GRANICE: "sciezka decyzyjna ma byc identyczna jak w
-    trybie normalnym"): this project's own default DO01-04/DO05-64
-    command definitions are self-referential (output_tag == feedback_tag -
-    see epw_core.py's startup()), so both a same-process
-    SimulatorDriver.write_tag() and Training Mode's own driver-boundary
-    cutoff (driver_manager.py) resolve a command's feedback SYNCHRONOUSLY,
-    inside route_command() itself, either way - command_manager.py's
-    request_command_ex() now registers the command as pending BEFORE
-    calling route_command() specifically so that synchronous, same-
-    call-stack feedback is never missed (a real bug this task's own
-    Presentation Mode scenarios found: it used to always land at
-    FEEDBACK_PENDING, resolving only via an unnecessary timeout, never
-    via genuine feedback - see command_manager.py's own comment on this
-    for the full story). Only the immediate states (checked right after
-    request_command_ex() returns, before the 1500ms timeout timer could
-    ever matter) are compared here - a real wall-clock timeout is a
-    separate, unrelated concern from what this test is about."""
+    trybie normalnym"): every default DO command definition configure()
+    produces is self-referential (output_tag == feedback_tag - see
+    epw_core.py's startup(), task "migracja adresacji" - the old flat
+    scheme's own DO01-04/DO05-64 split is gone, but DO05-64's already-
+    self-contained pattern is now the ONLY pattern, for every real DO
+    channel), so both a same-process SimulatorDriver.write_tag() and
+    Training Mode's own driver-boundary cutoff (driver_manager.py)
+    resolve a command's feedback SYNCHRONOUSLY, inside route_command()
+    itself, either way - command_manager.py's request_command_ex() now
+    registers the command as pending BEFORE calling route_command()
+    specifically so that synchronous, same-call-stack feedback is never
+    missed (a real bug this task's own Presentation Mode scenarios
+    found: it used to always land at FEEDBACK_PENDING, resolving only
+    via an unnecessary timeout, never via genuine feedback - see
+    command_manager.py's own comment on this for the full story). Only
+    the immediate states (checked right after request_command_ex()
+    returns, before the 1500ms timeout timer could ever matter) are
+    compared here - a real wall-clock timeout is a separate, unrelated
+    concern from what this test is about."""
     def run(training_active):
         import dataclasses
+        import json
+        import os
+        import tempfile
         core = EPWCore()
+        # Task "migracja adresacji": a project with zero configured
+        # devices now gets zero default DO command definitions (no flat
+        # DO01-64 fallback left to fall back to) - a real ADA card is
+        # needed for this test's own "a default command definition
+        # exists out of the box" premise to hold at all. Mutating
+        # project_manager.config directly BEFORE startup() would be
+        # thrown away - startup() calls load_project() first, which
+        # REPLACES self.config wholesale (from a real file, or a fresh
+        # default if project_file doesn't exist) - so the devices list
+        # has to actually be on disk, at a scratch path, for
+        # load_project() to pick it up.
+        project_file = os.path.join(tempfile.mkdtemp(), "project.json")
+        with open(project_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "format": "EPW_OS_PROJECT", "schema_version": 1, "project_id": "TEST",
+                "devices": [{"id": "ADA1", "type": "ADA", "channels": 4}],
+            }, f)
+        core.project_manager.project_file = project_file
         core.startup()
+        core.device_manager.update_comm("ADA1")  # tracked now (unlike the old flat "DO01") - bring it online
         class AllowAll:
             ready = True
             is_running = True
@@ -326,22 +351,22 @@ def test_self_referential_command_reaches_the_same_command_manager_state_either_
         # in which the background threading.Timer could fire mid-test
         # and race the immediate-state read below (CommandDefinition is
         # a frozen dataclass - replace() swaps in a copy, not a mutation).
-        key = "DO01.CLOSE"
+        key = "ADA1.DO.1.CLOSE"
         core.command_manager._definitions[key] = dataclasses.replace(
             core.command_manager._definitions[key], timeout_ms=3_600_000
         )
-        # The tag route_command() actually writes to - for DO01.CLOSE this
-        # is "DI1", not "DO01" (self-referential definition: output_tag ==
-        # feedback_tag, see the comment above and epw_core.py's startup()).
-        # Read it straight from the definition rather than hardcoding it,
-        # so this stays correct if that mapping ever changes.
+        # The tag route_command() actually writes to - "ADA1.DO.1" itself
+        # (self-referential definition: output_tag == feedback_tag, see
+        # the comment above and epw_core.py's startup()). Read it
+        # straight from the definition rather than hardcoding it, so
+        # this stays correct if that mapping ever changes.
         output_tag = core.command_manager._definitions[key].output_tag
         write_calls = []
         real_write_tag = core.sim_driver.write_tag
         core.sim_driver.write_tag = lambda t, v: (write_calls.append((t, v)), real_write_tag(t, v))[1]
-        rec = core.command_manager.request_command_ex("DO01", "CLOSE")
+        rec = core.command_manager.request_command_ex("ADA1.DO.1", "CLOSE")
         immediate_state = rec.state
-        value = core.tag_manager.get_value("DI1")
+        value = core.tag_manager.get_value(output_tag)
         core.command_manager._pending_commands.pop(rec.id, None)  # already resolved to SUCCESS by now; harmless if so
         core.shutdown()
         return immediate_state, value, write_calls, output_tag

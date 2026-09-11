@@ -42,7 +42,7 @@ class _RecordingCommandManager:
     test."""
     def __init__(self, known_targets=None):
         self.calls = []
-        self.known_targets = known_targets if known_targets is not None else {"DO02"}
+        self.known_targets = known_targets if known_targets is not None else {"ADA01.DO.2"}
 
     def request_command_ex(self, target, action, user="Operator", source="GUI"):
         self.calls.append((target, action, user, source))
@@ -71,10 +71,10 @@ def _make_env(with_command_target=True):
     bus = EventBus()
     tm = TagManager(bus)
     tm.add_tag("Meas.L1", 230.1, TagType.REAL, quality=TagQuality.SIMULATED)
-    tm.add_tag("DI2", False, TagType.BOOL)
+    tm.add_tag("ELA01.DI.2", False, TagType.BOOL)
     am = AlarmManager(bus)
     training = TrainingModeManager(bus)
-    cmd = _RecordingCommandManager(known_targets={"DO02"} if with_command_target else set())
+    cmd = _RecordingCommandManager(known_targets={"ADA01.DO.2"} if with_command_target else set())
     audit = _RecordingAuditLogger()
     pm = PresentationMode(bus, tm, cmd, am, training, audit_logger=audit)
     return bus, tm, am, training, cmd, audit, pm
@@ -102,7 +102,25 @@ class _FullEnv:
     def __init__(self, tmp_path):
         self.bus = EventBus()
         self.tm = TagManager(self.bus)
-        self.tm.init_default_tags()
+        # Task "migracja adresacji": init_default_tags()'s own flat
+        # DI1..DI64/DO05..DO64 scheme is gone - this test only ever
+        # needed a handful of real DI/DO tags to drive its own scenario
+        # fixtures against (ELA01.DI.1-4/ADA01.DO.1-4 below, matching the
+        # shipped presentation_scenarios/*.json fixtures' own device ids,
+        # not a made-up test-only name), so configure() with the same two
+        # devices this env already tracks for comm-status is the direct
+        # replacement, not a workaround.
+        self.tm.configure([
+            {"id": "ELA01", "type": "ELA", "channels": 4},
+            {"id": "ADA01", "type": "ADA", "channels": 4},
+        ])
+        # Shipped scenario JSON fixtures (DEFAULT_SCENARIOS_DIR below)
+        # reference Meas.L1/Sim.Voltage/etc, same as a real EPWCore.
+        # startup() would provide - configure() only ever creates DI/DO
+        # channel tags, not these (unconditional, unrelated to devices -
+        # see tag_manager.py's own docstring for why they're a separate
+        # method now).
+        self.tm.init_simulation_and_cabinet_tags()
         self.training = TrainingModeManager(self.bus)
         self.training.set_active(True)
         self.device_manager = DeviceManager(self.bus)
@@ -141,15 +159,21 @@ class _FullEnv:
         )
         self.command_manager = CommandManager(self.tm, self.logic_engine, self.safety_kernel, self.bus)
         self.command_manager.set_driver_manager(self.driver_manager)
-        # Same DO01-04 definitions epw_core.py's own default command set
-        # uses (self-referential output_tag == feedback_tag, real
-        # feedback DI1-4) - just the subset these tests actually need.
+        # Task "migracja adresacji": now self-contained (own tag is both
+        # the command output and its own feedback), matching
+        # epw_core.py's own default command definitions exactly. This
+        # fixture used to route each DO's command to a SEPARATE DI
+        # feedback tag (mirroring the old flat scheme's own DO01-04
+        # special case), which has no equivalent to mirror anymore once
+        # every real DO channel is self-contained - see epw_core.py's
+        # own docstring on why that special case had no natural
+        # multi-device generalization.
         defs = {}
-        for tag, feedback_tag in [("DO01", "DI1"), ("DO02", "DI2"), ("DO03", "DI3"), ("DO04", "DI4")]:
-            defs[f"{tag}.CLOSE"] = {"driver_id": "SIM_DRIVER", "output_tag": feedback_tag, "output_value": True,
-                                     "feedback_tag": feedback_tag, "feedback_value": True, "timeout_ms": 1500}
-            defs[f"{tag}.OPEN"] = {"driver_id": "SIM_DRIVER", "output_tag": feedback_tag, "output_value": False,
-                                    "feedback_tag": feedback_tag, "feedback_value": False, "timeout_ms": 1500}
+        for tag in ("ADA01.DO.1", "ADA01.DO.2", "ADA01.DO.3", "ADA01.DO.4"):
+            defs[f"{tag}.CLOSE"] = {"driver_id": "SIM_DRIVER", "output_tag": tag, "output_value": True,
+                                     "feedback_tag": tag, "feedback_value": True, "timeout_ms": 1500}
+            defs[f"{tag}.OPEN"] = {"driver_id": "SIM_DRIVER", "output_tag": tag, "output_value": False,
+                                    "feedback_tag": tag, "feedback_value": False, "timeout_ms": 1500}
         self.command_manager.load_definitions(defs)
         self.project_manager = ProjectManager(project_file=os.path.join(str(tmp_path), "scratch_project.json"))
         self.switching_counters = SwitchingCounterManager(self.bus, self.project_manager)
@@ -353,13 +377,13 @@ def test_command_step_does_not_bypass_rejection():
     # A 3rd, far-future step keeps the scenario running after the tag
     # step - see the identical note on the other tests that add one.
     scenario = PresentationScenario(name="Blocked", steps=[
-        PresentationStep(time_s=0, type="command", target="DO02", action="OPEN"),
+        PresentationStep(time_s=0, type="command", target="ADA01.DO.2", action="OPEN"),
         PresentationStep(time_s=100, type="tag", tag="Meas.L1", value=42.0),
         PresentationStep(time_s=999, type="tag", tag="Meas.L1", value=43.0),
     ])
     pm.start(scenario)
     time.sleep(0.05)  # let the t=0 command step auto-fire
-    assert cmd.calls == [("DO02", "OPEN", "Engineer", "Presentation")]
+    assert cmd.calls == [("ADA01.DO.2", "OPEN", "Engineer", "Presentation")]
     assert pm.active is True  # rejection did not crash/abort the scenario
     pm.step_forward()  # advance past the 100s wait to the tag step
     assert tm.get_value("Meas.L1") == 42.0  # scenario continued past the rejection
@@ -371,11 +395,11 @@ def test_command_step_uses_the_real_command_manager_path():
     bus, tm, am, training, cmd, audit, pm = _make_env()
     training.set_active(True)
     scenario = PresentationScenario(name="Cmd", steps=[
-        PresentationStep(time_s=0, type="command", target="DO02", action="CLOSE"),
+        PresentationStep(time_s=0, type="command", target="ADA01.DO.2", action="CLOSE"),
     ])
     pm.start(scenario)
     pm.step_forward()
-    assert cmd.calls == [("DO02", "CLOSE", "Engineer", "Presentation")]
+    assert cmd.calls == [("ADA01.DO.2", "CLOSE", "Engineer", "Presentation")]
     pm.stop()
 
 
@@ -453,22 +477,42 @@ def test_none_of_the_five_scenarios_start_without_training_mode(tmp_path):
 # --- scenario 1: normal operation and manual control ----------------------
 
 def test_scenario1_shipped_file_runs_with_real_feedback_and_restores(tmp_path):
+    # Task "migracja adresacji": normal_operation_manual_control.json's
+    # own CLOSE command targets "ADA01.DO.1" - self-contained (own tag
+    # is both the command output and its own feedback, see
+    # epw_core.py's own default command definitions), not a separate
+    # DI feedback tag the way the old flat DO01-04 special case used to
+    # provide. The real feedback this test observes is therefore the DO
+    # tag itself now.
     env = _FullEnv(str(tmp_path))
+    # Task "migracja adresacji": "ADA01.DO.1" (unlike the old flat "DO01")
+    # names a channel ON a DeviceManager-tracked device (ADA01) - a real,
+    # intended consequence of card-based addressing (safety_kernel.py's
+    # own comm-status gate now correctly applies to it, reading
+    # Device.ADA01.Status directly, where the old flat name accidentally
+    # bypassed that gate entirely - see safety_kernel.py's own comment on
+    # standalone output channels). In a real app, EPWCore's own
+    # device_status_changed -> Device.<id>.Status bridge (epw_core.py's
+    # _on_device_status_changed()) keeps that tag current automatically;
+    # this env is deliberately NOT a full EPWCore (see its own docstring)
+    # and never wires that bridge, so the tag is set directly here,
+    # exactly what the gate actually reads.
+    env.tm.update_tag("Device.ADA01.Status", "ONLINE")
     path = os.path.join(DEFAULT_SCENARIOS_DIR, "normal_operation_manual_control.json")
     scenario = load_scenario(path)
-    original_di1 = env.tm.get_value("DI1")
+    original_do1 = env.tm.get_value("ADA01.DO.1")
 
     env.pm.start(scenario)
     deadline = time.time() + 6.0
-    while env.tm.get_value("DI1") == original_di1 and time.time() < deadline:
+    while env.tm.get_value("ADA01.DO.1") == original_do1 and time.time() < deadline:
         time.sleep(0.02)
-    assert env.tm.get_value("DI1") is True, "the CLOSE command's real feedback should confirm the state change"
+    assert env.tm.get_value("ADA01.DO.1") is True, "the CLOSE command's real feedback should confirm the state change"
 
     deadline = time.time() + 8.0
     while env.pm.active and time.time() < deadline:
         time.sleep(0.05)
     assert env.pm.active is False, "the scenario should finish on its own"
-    assert env.tm.get_value("DI1") == original_di1, "finishing restores the pre-start state"
+    assert env.tm.get_value("ADA01.DO.1") == original_do1, "finishing restores the pre-start state"
 
 
 # --- scenario 2: communication loss and the fault latch --------------------
@@ -533,7 +577,7 @@ def test_scenario3_overcurrent_ramp_alarms_trips_and_restores(tmp_path):
         PresentationStep(time_s=0.10, type="alarm", alarm_id="DEMO_I1_WARN", message="warn", priority=2, source_tag="Meas.I1"),
         PresentationStep(time_s=0.15, type="tag", tag="Meas.I1", value=61.0, quality="SIMULATED"),
         PresentationStep(time_s=0.20, type="alarm", alarm_id="DEMO_I1_TRIP", message="trip", priority=3, source_tag="Meas.I1"),
-        PresentationStep(time_s=0.25, type="command", target="DO03", action="OPEN"),
+        PresentationStep(time_s=0.25, type="command", target="ADA01.DO.3", action="OPEN"),
         PresentationStep(time_s=0.30, type="tag", tag="Meas.I1", value=0.0, quality="SIMULATED"),
         PresentationStep(time_s=999, type="tag", tag="Meas.I1", value=0.0, quality="SIMULATED"),
     ])
@@ -598,6 +642,15 @@ def test_scenario4_command_never_confirmed_times_out_and_restores(tmp_path):
 
 def test_scenario5_counters_and_threshold_restore_after_stop(tmp_path):
     env = _FullEnv(str(tmp_path))
+    # Task "migracja adresacji": this scenario used to drive the DI
+    # counter via DO commands (the old flat DO01-04 special case wrote
+    # straight to a separate DI feedback tag) - no longer possible now
+    # that every DO channel is self-contained (see _FullEnv's own defs
+    # comment). Drives "ELA01.DI.1" directly via "tag" steps instead -
+    # the presentation_scenarios/mechanical_wear_and_service_history.json
+    # shipped fixture was fixed the identical way, for the identical
+    # reason.
+    #
     # SwitchingCounterManager never counts a tag's FIRST-ever observed
     # transition (see its own _on_tag_changed() docstring: nothing to
     # call it a transition FROM yet) - a real installation always has
@@ -606,32 +659,32 @@ def test_scenario5_counters_and_threshold_restore_after_stop(tmp_path):
     # would already have before any demo ever runs. Ends back at DI1's
     # natural default (open/False), so this doesn't shift the baseline
     # `original` captures below.
-    env.command_manager.request_command_ex("DO01", "CLOSE", user="Test", source="Test")
-    env.command_manager.request_command_ex("DO01", "OPEN", user="Test", source="Test")
+    env.tm.update_tag("ELA01.DI.1", True)
+    env.tm.update_tag("ELA01.DI.1", False)
 
-    original = env.switching_counters.get_snapshot("DI1")
+    original = env.switching_counters.get_snapshot("ELA01.DI.1")
     scenario = PresentationScenario(name="Wear", steps=[
-        PresentationStep(time_s=0, type="counter_threshold", target="DI1", value=3),
-        PresentationStep(time_s=0.05, type="command", target="DO01", action="CLOSE"),
-        PresentationStep(time_s=0.10, type="command", target="DO01", action="OPEN"),
-        PresentationStep(time_s=0.15, type="command", target="DO01", action="CLOSE"),
-        PresentationStep(time_s=0.20, type="command", target="DO01", action="OPEN"),
-        PresentationStep(time_s=0.25, type="command", target="DO01", action="CLOSE"),
-        PresentationStep(time_s=999, type="command", target="DO01", action="OPEN"),
+        PresentationStep(time_s=0, type="counter_threshold", target="ELA01.DI.1", value=3),
+        PresentationStep(time_s=0.05, type="tag", tag="ELA01.DI.1", value=True, quality="GOOD"),
+        PresentationStep(time_s=0.10, type="tag", tag="ELA01.DI.1", value=False, quality="GOOD"),
+        PresentationStep(time_s=0.15, type="tag", tag="ELA01.DI.1", value=True, quality="GOOD"),
+        PresentationStep(time_s=0.20, type="tag", tag="ELA01.DI.1", value=False, quality="GOOD"),
+        PresentationStep(time_s=0.25, type="tag", tag="ELA01.DI.1", value=True, quality="GOOD"),
+        PresentationStep(time_s=999, type="tag", tag="ELA01.DI.1", value=False, quality="GOOD"),
     ])
     env.pm.start(scenario)
     deadline = time.time() + 3.0
     while env.pm.step_index < 6 and time.time() < deadline:
         time.sleep(0.02)
 
-    during = env.switching_counters.get_snapshot("DI1")
+    during = env.switching_counters.get_snapshot("ELA01.DI.1")
     assert during["closes"] == 3
-    assert env.switching_counters.is_over_threshold("DI1") is True
+    assert env.switching_counters.is_over_threshold("ELA01.DI.1") is True
     assert env.pm.active is True  # still waiting on the far-future step
 
     env.pm.stop()
-    restored = env.switching_counters.get_snapshot("DI1")
+    restored = env.switching_counters.get_snapshot("ELA01.DI.1")
     assert restored["closes"] == original["closes"]
     assert restored["opens"] == original["opens"]
     assert restored["warning_threshold"] == original["warning_threshold"]
-    assert env.switching_counters.is_over_threshold("DI1") is False
+    assert env.switching_counters.is_over_threshold("ELA01.DI.1") is False

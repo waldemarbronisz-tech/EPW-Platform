@@ -12,7 +12,7 @@
     {"time_s": 12, "type": "tag", "tag": "Meas.I1", "value": 55.0, "quality": "SIMULATED", "description": "Current keeps rising"},
     {"time_s": 14, "type": "tag", "tag": "Meas.I1", "value": 61.0, "quality": "SIMULATED", "description": "Crosses the Stage 2 trip threshold (60 A)"},
     {"time_s": 14.5, "type": "alarm", "alarm_id": "DEMO_I1_OVERCURRENT_TRIP", "message": "Meas.I1 at 61.0 A - exceeds the 51 Time Overcurrent Stage 2 trip threshold (60 A)", "priority": 3, "source_tag": "Meas.I1", "description": "Trip-level alarm raised"},
-    {"time_s": 15, "type": "command", "target": "DO03", "action": "OPEN", "description": "Protective trip: the feeder breaker (KM1 / DO03) opens"},
+    {"time_s": 15, "type": "command", "target": "ADA01.DO.3", "action": "OPEN", "description": "Protective trip: the feeder breaker (KM1 / DO03) opens"},
     {"time_s": 16, "type": "tag", "tag": "Meas.I1", "value": 6.0, "quality": "SIMULATED", "description": "Current collapsing now that the load is disconnected"},
     {"time_s": 17, "type": "tag", "tag": "Meas.I1", "value": 0.0, "quality": "SIMULATED", "description": "Current settled at zero"},
     {"time_s": 19, "type": "alarm_clear", "alarm_id": "DEMO_I1_OVERCURRENT_TRIP", "description": "Trip alarm cleared"},

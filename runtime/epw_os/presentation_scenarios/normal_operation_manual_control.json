@@ -13,14 +13,14 @@
     {
       "time_s": 3,
       "type": "command",
-      "target": "DO01",
+      "target": "ADA01.DO.1",
       "action": "CLOSE",
       "description": "Close command for the main isolator (DO01) - the exact same permission/interlock path a real Force button uses. Feedback confirms the state change immediately (see Digital Inputs / Control Outputs), and the command is recorded on the Events page."
     },
     {
       "time_s": 8,
       "type": "command",
-      "target": "DO01",
+      "target": "ADA01.DO.1",
       "action": "OPEN",
       "description": "Open command - the device returns to its resting state"
     }

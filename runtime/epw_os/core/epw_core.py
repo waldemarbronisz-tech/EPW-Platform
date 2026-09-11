@@ -335,24 +335,37 @@ class EPWCore:
         if is_feature_enabled(self.enabled_features, "service_notes"):
             self._start_service_notes()
 
-        # Configure dynamically from project config
+        # Configure dynamically from project config (task "migracja
+        # adresacji" - configure() is now the ONLY path, called
+        # unconditionally; an empty `devices` list correctly produces
+        # zero DI/DO tags - see configure()'s own docstring).
         devices = self.project_manager.config.get("devices", [])
-        if devices:
-            self.tag_manager.configure(devices)
-            for dev in devices:
-                self.device_manager.register_device(dev.get("id"), dev.get("driver", "SIM_DRIVER"), dev.get("timeout", 5.0))
-            sim_device_ids = [dev.get("id") for dev in devices if dev.get("driver", "SIM_DRIVER") == "SIM_DRIVER"]
-        else:
-            self.tag_manager.init_default_tags()
-            # No project file configured any devices yet, but the default
-            # tag set (Device.OrangePi.Status / .ELA01. / .ADA01. / .Modbus.)
-            # still expects live comm status. Register those same four
-            # devices against the simulator so the status pipeline is real
-            # instead of a permanently-stale hardcoded default.
-            default_devices = ["OrangePi", "ELA01", "ADA01", "Modbus"]
-            for dev_id in default_devices:
-                self.device_manager.register_device(dev_id, "SIM_DRIVER", timeout=5.0)
-            sim_device_ids = default_devices
+        self.tag_manager.configure(devices)
+        for dev in devices:
+            self.device_manager.register_device(dev.get("id"), dev.get("driver", "SIM_DRIVER"), dev.get("timeout", 5.0))
+        sim_device_ids = [dev.get("id") for dev in devices if dev.get("driver", "SIM_DRIVER") == "SIM_DRIVER"]
+
+        # Main View's cabinet-status panel and electricity-simulation
+        # tags (Cabinet.*, Device.*.Status, Sim.*, Meas.*) - unconditional,
+        # same as before this task (previously bundled into
+        # init_default_tags(), which only ran in the "no devices" branch
+        # this if/else used to have - see tag_manager.py's own docstring
+        # for why splitting them apart rather than also making them
+        # conditional preserves EXACTLY the same behavior for both cases,
+        # not a new one).
+        self.tag_manager.init_simulation_and_cabinet_tags()
+        # The four legacy simulated cabinet-status devices (Device.OrangePi.
+        # Status / .ELA01. / .ADA01. / .Modbus., just seeded above) still
+        # expect live comm status - registered here, unconditionally, same
+        # as init_simulation_and_cabinet_tags() itself, so the status
+        # pipeline is real instead of a permanently-stale hardcoded default.
+        # A real project device sharing one of these four ids is registered
+        # twice (register_device()/set_devices() below are both idempotent
+        # on id) - harmless, not a new collision this task introduces.
+        default_devices = ["OrangePi", "ELA01", "ADA01", "Modbus"]
+        for dev_id in default_devices:
+            self.device_manager.register_device(dev_id, "SIM_DRIVER", timeout=5.0)
+        sim_device_ids = sim_device_ids + [d for d in default_devices if d not in sim_device_ids]
 
         # SimulatorDriver polls these device IDs on its own cycle and reports
         # comm-ok heartbeats for each, which _on_driver_comm_ok() turns into
@@ -430,50 +443,32 @@ class EPWCore:
         if commands:
             self.command_manager.load_definitions(commands)
         else:
-            # Mirrors the default DI/device registration above: without a
-            # project file there are no command definitions at all, so
-            # manual dispatch from Control Outputs would always fail with
-            # "Unknown command definition" before even reaching the safety
-            # kernel. DO01-DO04 are the four channels with real feedback
-            # wired to existing DI tags (DI1/DI2/DI3/DI4) rather than their
-            # own DO tag - there's no separate simulated DO/DI plant model
-            # for these, so this is the simplest definition that makes the
-            # full dispatch pipeline (safety_kernel -> logic_engine ->
-            # driver_manager -> tag update) actually work end to end.
-            #
-            # The routing key is the generic DO0N tag itself (matching
-            # page_control_outputs.py's `designation`, and
-            # page_entry_gate.py's synoptic widgets' tag_name) - not a
-            # project-specific device name. The real names an operator
-            # gives these four physical devices (main isolator, generator
-            # contactor, two load feeders, or whatever a different site's
-            # equivalent devices are) live entirely in project.json's
-            # output_descriptions, editable through the UI - see
-            # SESSION_REPORT.md.
+            # Task "migracja adresacji": the old DO01-DO04-wired-to-DI1-DI4
+            # special case is GONE along with the flat scheme itself - it
+            # had no natural generalization to a real, multi-device ADA
+            # card (there is no structural "first four channels are
+            # special" concept once channel numbers aren't project-wide
+            # slots anymore, only per-card). Every real DO channel
+            # configure() just created is now self-contained instead -
+            # each tag is both the command output and its own feedback -
+            # the same pattern the old flat scheme already used for its
+            # OWN majority case (DO05-DO64). Built from whatever DO tags
+            # actually exist (addressing.is_address(), not a range()), so
+            # this scales to any number of ADA cards/channels a project
+            # has, or none at all (an empty `devices` project correctly
+            # gets zero default command definitions - nothing to route to).
+            from epw_os.core.addressing import is_address
             default_commands = {}
-            for tag, feedback_tag in [("DO01", "DI1"), ("DO02", "DI2"), ("DO03", "DI3"), ("DO04", "DI4")]:
-                default_commands[f"{tag}.CLOSE"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": feedback_tag, "output_value": True,
-                    "feedback_tag": feedback_tag, "feedback_value": True, "timeout_ms": 1500
+            for tag in self.tag_manager.list_tags():
+                if not is_address(tag.name, "DO"):
+                    continue
+                default_commands[f"{tag.name}.CLOSE"] = {
+                    "driver_id": "SIM_DRIVER", "output_tag": tag.name, "output_value": True,
+                    "feedback_tag": tag.name, "feedback_value": True, "timeout_ms": 1500
                 }
-                default_commands[f"{tag}.OPEN"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": feedback_tag, "output_value": False,
-                    "feedback_tag": feedback_tag, "feedback_value": False, "timeout_ms": 1500
-                }
-            # DO05-DO64: new, fully self-contained output channels (see
-            # page_control_outputs.py) - each channel's own tag is both the
-            # command output and its own feedback, same self-referential
-            # pattern as DO01-DO04 above (just against its own tag instead
-            # of a separate DI).
-            for i in range(5, 65):
-                do_tag = f"DO{i:02d}"
-                default_commands[f"{do_tag}.CLOSE"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": do_tag, "output_value": True,
-                    "feedback_tag": do_tag, "feedback_value": True, "timeout_ms": 1500
-                }
-                default_commands[f"{do_tag}.OPEN"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": do_tag, "output_value": False,
-                    "feedback_tag": do_tag, "feedback_value": False, "timeout_ms": 1500
+                default_commands[f"{tag.name}.OPEN"] = {
+                    "driver_id": "SIM_DRIVER", "output_tag": tag.name, "output_value": False,
+                    "feedback_tag": tag.name, "feedback_value": False, "timeout_ms": 1500
                 }
             self.command_manager.load_definitions(default_commands)
 

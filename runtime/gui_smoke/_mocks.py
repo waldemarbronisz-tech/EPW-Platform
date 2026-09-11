@@ -91,12 +91,20 @@ class MockTagManager(QObject):
 
     def list_tags(self):
         # Task: signal-list export - a small, fixed, representative set
-        # (one plain hardware input, the one genuinely logic-writable
-        # tag, one SIMULATED measurement) so a test can assert on real
-        # content, not just "didn't crash".
+        # (one plain hardware input, one hardware output, the one
+        # genuinely logic-writable tag, one SIMULATED measurement) so a
+        # test can assert on real content, not just "didn't crash".
+        #
+        # Task "migracja adresacji": DI/DO tag names use the platform
+        # grammar (<card>.<KIND>.<channel>) - PageDigitalInputs/
+        # PageControlOutputs now build their tables FROM list_tags()
+        # (addressing.is_address()), not a fixed range(64), so a
+        # flat-shaped name like the old "DI1" would silently produce
+        # zero rows here, same as it would against a real TagManager.
         from epw_os.core.tag_manager import Tag, TagType, TagQuality
         return [
-            Tag(name="DI1", value=True, data_type=TagType.BOOL, description="Feeder 1", quality=TagQuality.GOOD),
+            Tag(name="ELA1.DI.1", value=True, data_type=TagType.BOOL, description="Feeder 1", quality=TagQuality.GOOD),
+            Tag(name="ADA1.DO.1", value=False, data_type=TagType.BOOL, description="Output 1", quality=TagQuality.GOOD),
             Tag(name="System.Theme", value=0, data_type=TagType.INT, description="Active theme",
                 quality=TagQuality.GOOD),
             Tag(name="Meas.L1", value=230.0, data_type=TagType.REAL, description="Sim voltage",
