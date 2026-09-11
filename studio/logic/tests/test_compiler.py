@@ -451,6 +451,7 @@ def test_compiler_deterministic_execution_order():
     # Same block instances (and therefore the same UUIDs) reused across every
     # project below — only the insertion order into `blocks` changes.
     di = DigitalOutputBlock()  # stand-in leaf; not actually wired
+    di.properties["Address"] = "ADA01.DO.1"  # task "jedno źródło listy kart": no more a hardcoded default
     gate1 = AndGate()
     gate2 = OrGate()
     timer = TON()
@@ -531,7 +532,10 @@ def test_compile_expands_a_macro_instance_before_validating():
     set_definition(p, "andmacro", definition)
 
     di1, di2 = DigitalInputBlock(), DigitalInputBlock()
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.2"
     do = DigitalOutputBlock()
+    do.properties["Address"] = "ADA01.DO.1"
     inst = MacroInstanceBlock(def_id="andmacro")
     inst.configure(get_definition(p, "andmacro"))
     di1.outputs[0].connect(inst.inputs[0])

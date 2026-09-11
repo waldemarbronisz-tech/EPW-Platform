@@ -185,6 +185,29 @@ def test_first_group_is_di01_through_di08_in_order(qsettings):
     # _short_address's own docstring) - "DI01" was the old two-segment shape.
     assert [r.short_address for r in rows] == [f"DI.{n}" for n in range(1, 9)]
 
+def test_group_header_names_the_card(qsettings):
+    """User report: "musi być wszędzie w Logic konsekwencja, czyli tam
+    po prawej też musi być podpisana karta" - a group header on its own
+    ("DI.1-8") doesn't say which device once a project has more than
+    one; the card is the one thing every row under it shares."""
+    _app()
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
+    first_group = panel._di_group_widgets[0]
+    header = first_group.layout().itemAt(0).widget()
+    assert header.text() == "ELA01: DI.1-8"
+
+def test_used_channel_rows_show_the_full_card_qualified_address(qsettings):
+    """The "tylko używane" flat list has no group header to lean on -
+    its own rows must name the card themselves."""
+    _app()
+    project = _default_project()
+    project.add_block(_di_block("ELA01.DI.3"))
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(project)
+    row = panel._di_detail_rows["ELA01.DI.3"]
+    assert row.addr_label.text() == "ELA01.DI.3"
+
 
 # ---- §0A.7 (4): row click behavior -----------------------------------------
 
@@ -267,6 +290,53 @@ def test_grid_rebuilds_when_a_second_device_is_defined(qsettings):
     # The compact ("wszystkie") grouped view grows too — a full extra bank
     # of 4 groups-of-8 for ELA02's 32 channels.
     assert len(panel._di_group_widgets) == 8
+
+def test_card_filter_hidden_for_the_common_one_card_project(qsettings):
+    """User report's own framing: the dropdown is only worth showing
+    once it's solving a real problem - a single ELA/ADA card is not
+    that problem."""
+    _app()
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(_default_project())
+    assert panel.card_filter.isHidden() is True
+
+def test_card_filter_visible_and_populated_with_multiple_cards(qsettings):
+    _app()
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01", "ELA02"])
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(p)
+
+    assert panel.card_filter.isHidden() is False
+    labels = [panel.card_filter.itemText(i) for i in range(panel.card_filter.count())]
+    assert labels == ["Wszystkie karty", "ELA01", "ELA02"]
+
+def test_selecting_a_card_shows_only_its_own_groups(qsettings):
+    _app()
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01", "ELA02"])
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(p)
+    panel.only_used_btn.setChecked(False)  # "wszystkie" - the grouped view
+
+    idx = panel.card_filter.findData("ELA02")
+    panel.card_filter.setCurrentIndex(idx)
+
+    for group in panel._di_group_widgets:
+        assert group.isHidden() == (group.card != "ELA02")
+
+def test_selecting_all_cards_again_shows_every_group(qsettings):
+    _app()
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01", "ELA02"])
+    panel = SimulationPanel(settings=qsettings)
+    panel.set_project(p)
+    panel.only_used_btn.setChecked(False)
+
+    panel.card_filter.setCurrentIndex(panel.card_filter.findData("ELA02"))
+    panel.card_filter.setCurrentIndex(panel.card_filter.findData(None))
+
+    assert all(not group.isHidden() for group in panel._di_group_widgets)
 
 def test_forced_state_survives_a_device_list_change_for_still_present_channels(qsettings):
     _app()

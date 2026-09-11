@@ -671,10 +671,8 @@ class BlockItem(QGraphicsItem):
             if not text:
                 continue
 
-            size = style.FONT_SIZE_TAG if bold else style.FONT_SIZE_PIN_LABEL
-            font = QFont(style.FONT_FAMILY, size)
-            font.setBold(bold)
-            fm = QFontMetricsF(font)
+            base_size = style.FONT_SIZE_TAG if bold else style.FONT_SIZE_PIN_LABEL
+            font, fm = self._fit_io_text_font(text, base_size, bold, available_width)
             line_height = fm.height()
 
             if y + line_height > self.height - 2:
@@ -685,6 +683,29 @@ class BlockItem(QGraphicsItem):
             elided = fm.elidedText(text, Qt.ElideRight, available_width)
             painter.drawText(QRectF(start_x, y, available_width, line_height), Qt.AlignLeft | Qt.AlignTop, elided)
             y += line_height
+
+    _MIN_IO_TEXT_FONT_SIZE = 6
+
+    def _fit_io_text_font(self, text, base_size, bold, available_width):
+        """User report: "ELA01.DI.9" (single-digit channel) fit fine at
+        the normal size, but "ELA01.DI.10" (two-digit - every channel
+        from 10 up, once the platform grammar dropped the old fixed-
+        width zero-padded channel) silently got ellipsis'd instead -
+        inconsistent block-to-block for a reason nothing on screen
+        explained. Shrinks the font a point at a time (down to
+        _MIN_IO_TEXT_FONT_SIZE) before the caller's own elidedText() -
+        that stays the last resort for a genuinely long custom Tag/
+        label, not the routine case of one extra digit."""
+        size = base_size
+        while size > self._MIN_IO_TEXT_FONT_SIZE:
+            font = QFont(style.FONT_FAMILY, size)
+            font.setBold(bold)
+            if QFontMetricsF(font).horizontalAdvance(text) <= available_width:
+                return font, QFontMetricsF(font)
+            size -= 1
+        font = QFont(style.FONT_FAMILY, self._MIN_IO_TEXT_FONT_SIZE)
+        font.setBold(bold)
+        return font, QFontMetricsF(font)
 
     def _io_label_for_display(self, address: str) -> str:
         """Best-effort lookup of this address's descriptive label (§1) for

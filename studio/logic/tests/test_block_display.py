@@ -2,7 +2,7 @@
 5 (text layout), 6 (documentation blocks)."""
 import pytest
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QRectF
+from PySide6.QtCore import QRectF, Qt
 
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
@@ -30,6 +30,26 @@ def test_di_without_address_reports_no_identifier():
     assert item._io_identifier() == ""
     getter = item._REQUIRED_IDENTIFIER_GETTERS[item.shape_style]
     assert not getter(item)
+
+def test_a_freshly_placed_di_do_block_shows_missing_config_by_default():
+    """User report: "jak nie ma dodanej karty to niech przy wstawianiu
+    DO albo DI będą ??? niech nie sugeruje nie podpowiada, my
+    konsekwentnie przypisujemy" - a DI/DO block dropped from the
+    Library (not dragged from Device Explorer, which sets a real
+    address explicitly via its own drop payload) used to start with a
+    hardcoded "ELA01.DI.1"/"ADA01.DO.1" - a plausible-looking guess
+    that may not correspond to any card the project actually has, and
+    which nothing on screen flagged as unreviewed. Now starts empty, so
+    the existing "???" missing-config warning (§1) fires immediately -
+    same "loud, not silent" bar the rest of this task's own address
+    work already sets."""
+    _app()
+    for type_id in ("input.di", "output.do"):
+        block = BlockRegistry.create_block(type_id)
+        assert block.properties.get("Address", "") == ""
+        item = BlockItem(block)
+        getter = item._REQUIRED_IDENTIFIER_GETTERS[item.shape_style]
+        assert not getter(item), type_id
 
 def test_di_with_address_reports_it_and_clears_warning():
     _app()
@@ -66,6 +86,7 @@ def test_generic_tag_not_duplicated_above_virtual_input():
     # A DI/DO/AI/AO-style block (uses "Address") DOES get its generic Tag
     # shown above — different code path, contrast case.
     di = BlockRegistry.create_block("input.di")
+    di.properties["Address"] = "ELA01.DI.1"  # task "jedno źródło listy kart": no more a hardcoded default
     di.properties["Tag"] = "C1"
     item_di = BlockItem(di)
     assert item_di.boundingRect().top() < -style.BOUNDING_RECT_MARGIN
@@ -79,6 +100,7 @@ def test_generic_tag_not_duplicated_above_virtual_input():
 def test_generic_tag_shown_above_address_based_io_block():
     _app()
     do = BlockRegistry.create_block("output.do")
+    do.properties["Address"] = "ADA01.DO.1"  # task "jedno źródło listy kart": no more a hardcoded default
     do.properties["Tag"] = "Q1"
     item = BlockItem(do)
     assert item.boundingRect().top() < -style.BOUNDING_RECT_MARGIN
@@ -93,6 +115,57 @@ def test_long_identifier_widens_block_instead_of_overflowing():
     item = BlockItem(di)
     assert item.width > 80
     assert item.width % style.GRID_SIZE == 0
+
+def test_fit_io_text_font_shrinks_before_the_caller_would_have_to_elide():
+    """User report (real screenshot): "ELA01.DI.9" fit, "ELA01.DI.10"
+    (one more digit - every channel from 10 up, unavoidable once the
+    platform grammar dropped the old fixed-width zero-padded channel)
+    silently got ellipsis'd - inconsistent block-to-block for a reason
+    nothing on screen explained."""
+    _app()
+    di = BlockRegistry.create_block("input.di")
+    item = BlockItem(di)
+    text = "ELA01.DI.10"
+    from PySide6.QtGui import QFont, QFontMetricsF
+    base_font = QFont(style.FONT_FAMILY, style.FONT_SIZE_TAG)
+    base_font.setBold(True)
+    base_needs = QFontMetricsF(base_font).horizontalAdvance(text)
+    # An available width that the base size genuinely cannot satisfy.
+    available_width = base_needs - 5
+
+    font, fm = item._fit_io_text_font(text, style.FONT_SIZE_TAG, True, available_width)
+
+    assert font.pointSize() < style.FONT_SIZE_TAG
+    assert font.bold() is True
+    # Either it now fits, or the shrink bottomed out at the documented
+    # floor - elidedText() (the caller's own last resort) only kicks in
+    # past that point.
+    assert fm.horizontalAdvance(text) <= available_width or font.pointSize() == item._MIN_IO_TEXT_FONT_SIZE
+
+def test_fit_io_text_font_keeps_the_base_size_when_it_already_fits():
+    _app()
+    di = BlockRegistry.create_block("input.di")
+    item = BlockItem(di)
+    font, fm = item._fit_io_text_font("DI.1", style.FONT_SIZE_TAG, True, 1000)
+    assert font.pointSize() == style.FONT_SIZE_TAG
+
+def test_a_two_digit_channel_address_is_not_elided_on_a_freshly_placed_block():
+    """End-to-end version of the two tests above: a real DI block, its
+    real (construction-time-computed) width, and a real two-digit
+    address - the identifier text must fit inside the block's own
+    identifier text box without eliding."""
+    _app()
+    di = BlockRegistry.create_block("input.di")
+    di.properties["Address"] = "ELA01.DI.10"
+    item = BlockItem(di)
+
+    from logic_studio.ui.canvas.block_item import io_identifier_text_box, pin_labels_suppressed
+    direction = item._io_direction()
+    _start_x, available_width = io_identifier_text_box(item.width, direction, pin_labels_suppressed(item))
+    font, fm = item._fit_io_text_font(item._io_identifier(), style.FONT_SIZE_TAG, True, available_width)
+
+    assert fm.elidedText(item._io_identifier(), Qt.ElideRight, available_width) == item._io_identifier()
+
 
 def test_io_text_lines_never_drawn_outside_bounding_rect():
     """Even a pathologically long identifier must not produce a drawn line

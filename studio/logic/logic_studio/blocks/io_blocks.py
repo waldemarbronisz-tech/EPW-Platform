@@ -14,7 +14,17 @@ class DigitalInputBlock(BaseLogicBlock):
         self.color = "#008000" # Classic dark green
         self.width = 100
         self.height = 60
-        self.properties["Address"] = "ELA01.DI.1"  # task "migracja adresacji" - was "ELA01.DI01"
+        # Task "jedno źródło listy kart": no more a hardcoded default
+        # address (was "ELA01.DI.1") - a fresh block dropped from the
+        # Library (not dragged from Device Explorer with a real address
+        # already attached) has no way to know whether ANY "ELA01" card
+        # even exists in this project. Empty here means block_item.py's
+        # own "???" missing-config warning (§1) fires immediately -
+        # honest, not a plausible-looking guess the user has to notice
+        # is wrong. Dragging from Device Explorer still sets a real
+        # address explicitly (LogicView.dropEvent's own mime payload),
+        # unaffected by this default.
+        self.properties["Address"] = ""
         self.is_source = True
 
         out1 = Pin("State", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN)
@@ -52,7 +62,9 @@ class DigitalOutputBlock(BaseLogicBlock):
         self.color = "#800000" # Classic dark red
         self.width = 100
         self.height = 60
-        self.properties["Address"] = "ADA01.DO.1"  # task "migracja adresacji" - was "ADA01.DO01"
+        # Task "jedno źródło listy kart": see DigitalInputBlock's own
+        # comment above - no more a hardcoded default (was "ADA01.DO.1").
+        self.properties["Address"] = ""
 
         in1 = Pin("Cmd", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN)
         self.inputs = [in1]
