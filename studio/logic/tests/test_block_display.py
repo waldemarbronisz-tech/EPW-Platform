@@ -31,6 +31,26 @@ def test_di_without_address_reports_no_identifier():
     getter = item._REQUIRED_IDENTIFIER_GETTERS[item.shape_style]
     assert not getter(item)
 
+def test_a_freshly_placed_di_do_block_shows_missing_config_by_default():
+    """User report: "jak nie ma dodanej karty to niech przy wstawianiu
+    DO albo DI będą ??? niech nie sugeruje nie podpowiada, my
+    konsekwentnie przypisujemy" - a DI/DO block dropped from the
+    Library (not dragged from Device Explorer, which sets a real
+    address explicitly via its own drop payload) used to start with a
+    hardcoded "ELA01.DI.1"/"ADA01.DO.1" - a plausible-looking guess
+    that may not correspond to any card the project actually has, and
+    which nothing on screen flagged as unreviewed. Now starts empty, so
+    the existing "???" missing-config warning (§1) fires immediately -
+    same "loud, not silent" bar the rest of this task's own address
+    work already sets."""
+    _app()
+    for type_id in ("input.di", "output.do"):
+        block = BlockRegistry.create_block(type_id)
+        assert block.properties.get("Address", "") == ""
+        item = BlockItem(block)
+        getter = item._REQUIRED_IDENTIFIER_GETTERS[item.shape_style]
+        assert not getter(item), type_id
+
 def test_di_with_address_reports_it_and_clears_warning():
     _app()
     di = BlockRegistry.create_block("input.di")
@@ -66,6 +86,7 @@ def test_generic_tag_not_duplicated_above_virtual_input():
     # A DI/DO/AI/AO-style block (uses "Address") DOES get its generic Tag
     # shown above — different code path, contrast case.
     di = BlockRegistry.create_block("input.di")
+    di.properties["Address"] = "ELA01.DI.1"  # task "jedno źródło listy kart": no more a hardcoded default
     di.properties["Tag"] = "C1"
     item_di = BlockItem(di)
     assert item_di.boundingRect().top() < -style.BOUNDING_RECT_MARGIN
@@ -79,6 +100,7 @@ def test_generic_tag_not_duplicated_above_virtual_input():
 def test_generic_tag_shown_above_address_based_io_block():
     _app()
     do = BlockRegistry.create_block("output.do")
+    do.properties["Address"] = "ADA01.DO.1"  # task "jedno źródło listy kart": no more a hardcoded default
     do.properties["Tag"] = "Q1"
     item = BlockItem(do)
     assert item.boundingRect().top() < -style.BOUNDING_RECT_MARGIN

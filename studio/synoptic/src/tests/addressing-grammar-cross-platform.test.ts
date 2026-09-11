@@ -23,16 +23,22 @@
 // immediately. Done once, by hand, while writing this test, then
 // reverted - see the etap-3 report for the transcript.
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { parseChannelAddress } from '../project/DeviceValidation';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// src/tests -> src -> studio/synoptic -> studio -> repo root
-const vectorsPath = join(__dirname, '..', '..', '..', '..', 'shared', 'addressing_grammar_vectors.json');
-const vectors = JSON.parse(readFileSync(vectorsPath, 'utf-8')) as {
+// CI fix: `node:fs`/`node:url`/`node:path` compile fine under vitest's own
+// module resolution (that's why "Test" passed) but `tsc -b` (the "Build"
+// step, a SEPARATE type-check with no Node globals in its own tsconfig -
+// see interface-language-commit4.test.ts's own header comment for the
+// exact same constraint) rejects them outright - a real, CI-breaking gap
+// this file shipped with. Vite's own import.meta.glob (eager, ?raw) is
+// the Node-free way every other test in this tree already reads a file
+// from disk - src/tests -> src -> studio/synoptic -> studio -> repo root.
+const vectorsFile = import.meta.glob('../../../../shared/addressing_grammar_vectors.json', {
+  query: '?raw', import: 'default', eager: true,
+}) as Record<string, string>;
+const vectorsRaw = Object.values(vectorsFile)[0];
+const vectors = JSON.parse(vectorsRaw) as {
   cases: Array<{ input: unknown; valid: boolean; card?: string; kind?: string; channel?: number }>;
 };
 
