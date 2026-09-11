@@ -66,14 +66,21 @@ jobs:
   # ==========================================================
   # STUDIO / LOGIC — edytor logiki (Python / PySide6)
   # ==========================================================
+  # fix/logic-tests-regression: this job used to run with
+  # working-directory: studio/logic - the exact reason 12 tests (all
+  # CWD-relative hardcoded paths - "examples/...", "logic_studio/core/
+  # ...") passed here for over a year while silently failing whenever
+  # anyone ran `pytest studio/logic` from the repo root instead. CI
+  # itself could never have caught its own regression as long as it
+  # kept invoking things the one way that happened to hide it. Now runs
+  # from the repo root - the same way this branch's own report was
+  # produced - so a future reintroduction of a CWD-relative path fails
+  # here too, not just in a human's own local invocation.
   studio-logic:
     name: Studio — Logic Editor
     runs-on: ubuntu-latest
     env:
       QT_QPA_PLATFORM: offscreen
-    defaults:
-      run:
-        working-directory: studio/logic
 
     steps:
       - uses: actions/checkout@v4
@@ -96,13 +103,11 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r studio/logic/requirements.txt
           pip install pytest
 
       - name: Pytest suite
-        run: |
-          export PYTHONPATH=$PYTHONPATH:.
-          pytest -q tests/
+        run: pytest -q studio/logic/tests/
 
   # ==========================================================
   # STUDIO / SYNOPTIC — edytor ekranów (React / TypeScript)
