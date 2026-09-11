@@ -146,6 +146,29 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     studio_window.act_menu_save = _add(file_menu, tr("menu.file.save"), studio_window._shared_save)
     studio_window.act_menu_save_as = _add(file_menu, tr("menu.file.save_as"), studio_window._shared_save_as)
     file_menu.addSeparator()
+    # Task point 8.1 - "Ostatnio otwarte projekty" - projekt.epw itself
+    # (this menu's act_menu_open/save above are the SEPARATE Logic/
+    # Synoptic document lifecycle - see _shared_open's own docstring),
+    # so this submenu's own entries call _open_recent_project(), never
+    # act_menu_open. Built once, refreshed by content (menu.clear() +
+    # rebuild), same "shape never changes, content does" split every
+    # other fixed-menu item in this function already follows.
+    studio_window.menu_recent_projects = file_menu.addMenu(tr("menu.file.recent_projects"))
+    studio_window._refresh_recent_projects_menu()
+    file_menu.addSeparator()
+    # Task "fix/project-format-integrity" point 6 - "Sprawdź projekt":
+    # not tied to any one aspect (unlike New/Open/Save above), so no
+    # act_* enabled-state juggling needed - it operates on
+    # studio_window._project directly, always available.
+    studio_window.act_menu_check_project = _add(
+        file_menu, tr("menu.file.check_project"), studio_window._check_project
+    )
+    # Task point 7 - "Eksportuj listę punktów" - same "not tied to any
+    # one aspect" reasoning as "Sprawdź projekt" just above.
+    studio_window.act_menu_export_points = _add(
+        file_menu, tr("menu.file.export_points"), studio_window._export_point_list
+    )
+    file_menu.addSeparator()
     _add_exit(studio_window, file_menu)
 
     view_menu = menubar.addMenu(tr("menu.titles.view"))
@@ -321,6 +344,15 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
 # forcing that shape onto a table editor would be a facade (buttons that
 # do nothing here), not consistency.
 # ----------------------------------------------------------------------
+
+def build_modules_toolbar(toolbar, _panel, _studio_window):
+    """"Skład urządzenia" - a FIXED, real list mirrored from runtime's
+    own feature_config.py (see project_panels.MODULE_CATALOG's own
+    docstring) - no add/remove, same "the catalog is not a choice"
+    stance build_electrical_protection_toolbar() already has for its
+    own fixed ANSI function catalog."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
 
 def build_project_info_toolbar(toolbar, _panel, studio_window):
     """Project lifecycle (Nowy/Otwórz/Zapisz/Zapisz jako projekt) lives

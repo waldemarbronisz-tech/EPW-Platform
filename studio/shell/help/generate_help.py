@@ -103,9 +103,14 @@ project (see "Controller Connection").
 )
 
 topic(
-    "devices", "Skład urządzenia", "Device Composition",
+    # Task "fix/project-format-integrity" point 2.1 - this topic key
+    # used to be "devices" (titled "Skład urządzenia"); that name and
+    # this content (the physical ELA/ADA/EPM card registry) now belong
+    # to the "io_cards" tree leaf - "Skład urządzenia"/"devices" is a
+    # NEW, separate topic below (see its own docstring for why).
+    "io_cards", "Karty wejść/wyjść", "I/O Cards",
     """
-# Skład urządzenia
+# Karty wejść/wyjść
 
 Rejestr fizycznych modułów wejść/wyjść: ELA (cyfrowe), ADA (analogowe/
 zabezpieczenia), EPM i podobne. Dla każdego modułu:
@@ -129,7 +134,7 @@ modułami — dziś zapisywane w projekcie, gotowe na przyszły sterownik
 Modbus w runtime (jeszcze nie zaimplementowany).
 """,
     """
-# Device Composition
+# I/O Cards
 
 The registry of physical I/O modules: ELA (digital), ADA (analog/
 protection), EPM and similar. For each module:
@@ -500,6 +505,167 @@ any endpoint for uploading/downloading project configuration or
 checking a revision — clicking either shows this fact plainly instead
 of pretending a sync succeeded. This needs a runtime-side extension,
 outside Studio's own scope.
+""",
+)
+
+topic(
+    # Task "fix/project-format-integrity" point 5.2 - "Skład urządzenia
+    # [...] nie ma dziś tematu pomocy. Dopisz." The REAL contract
+    # concept (point 2/3) - not to be confused with "io_cards" above
+    # (the physical ELA/ADA/EPM card registry, a completely different
+    # thing this same rename made room for - see main_window.py's own
+    # comment on why the two names collided before this task).
+    "devices", "Skład urządzenia", "Device Composition",
+    """
+# Skład urządzenia
+
+Lista funkcjonalnych modułów tego sterownika - Alarmówka, Zabezpieczenia
+elektryczne, Trendy i tak dalej - PRZEPISANA z realnego mechanizmu
+runtime (`epw_os/core/feature_config.py`), nie wymyślona na potrzeby
+Studio.
+
+**To nie jest lista przełączników "włącz/wyłącz funkcję tymczasowo".**
+To skład urządzenia, ustalany raz, przy zakładaniu projektu - sterownik
+podlewania **nie ma** alarmówki, tak samo jak nie ma jej termostat, nie
+jako "wyłączona", tylko jako fakt o tym, z czego to urządzenie się
+składa.
+
+Każdy wiersz: nazwa, opis jednym zdaniem, i przełącznik dwustanowy
+[0][I] ze słownym stanem TAK/NIE obok (żeby stan było widać, nie tylko
+domyślać się z ikony).
+
+**Moduł spoza składu znika z drzewa projektu CAŁKOWICIE** - gałąź
+Alarmówki czy Zabezpieczeń elektrycznych po prostu nie istnieje,
+dopóki nie zaznaczysz tego modułu tutaj. Wyłączenie modułu, który ma
+już dane (np. skonfigurowane strefy), pyta wprost o potwierdzenie -
+dane nigdy nie są kasowane, tylko chowane; ponowne włączenie modułu
+przywraca je bez zmian.
+
+Kilka pozycji na liście (Trendy, Jakość zasilania, Diagnostyka
+magistrali...) odpowiada realnym funkcjom runtime, dla których Studio
+nie ma jeszcze własnego panelu konfiguracji - zaznaczenie ich zapisuje
+się w projekcie uczciwie, po prostu jeszcze bez widocznego efektu w
+drzewie.
+""",
+    """
+# Device Composition
+
+The list of this controller's functional modules - Intrusion Alarm,
+Electrical Protection, Trends and so on - COPIED from the real runtime
+mechanism (`epw_os/core/feature_config.py`), not invented for Studio.
+
+**This is NOT a "temporarily enable/disable a feature" switch list.**
+It is the device's composition, decided once, when the project is
+created - a watering controller **does not have** an intrusion alarm,
+the same way a thermostat doesn't, not as "disabled" but as a fact
+about what the device consists of.
+
+Each row: a name, a one-sentence description, and a two-state [0][I]
+switch with its state also spelled out in words (TAK/NIE) next to it -
+so the state is visible, not just implied by an icon.
+
+**A module outside the composition disappears from the project tree
+ENTIRELY** - the Intrusion Alarm or Electrical Protection branch simply
+does not exist until you check that module here. Disabling a module
+that already has data (e.g. configured zones) asks for confirmation
+first - data is never deleted, only hidden; re-enabling the module
+restores it unchanged.
+
+A few entries (Trends, Power Quality, Bus Diagnostics...) correspond to
+real runtime functions Studio doesn't have its own configuration panel
+for yet - checking them is saved honestly in the project, simply
+without a visible effect in the tree yet.
+""",
+)
+
+topic(
+    # Task 5.1 - the About dialog's own scrollable body, same "long
+    # text is documentation, not tr()" mechanism runtime/epw_os/gui/
+    # widgets/about_dialog.py already uses (HelpContentStore reading
+    # help/<lang>/about.md) - mirrored here, own words, not copied:
+    # Studio is its OWN program (a shell, not the controller OS this
+    # session's own about.md describes), sharing an author and a visual
+    # identity, not a body of text.
+    "about", "O programie EPW Studio", "About EPW Studio",
+    """
+# EPW Studio
+
+**Wersja {version}**
+
+Jedna aplikacja inżynierska do projektowania instalacji na platformie
+EPW - schemat synoptyczny, logika sterowania, rejestr punktów, aparaty,
+alarmówka, zabezpieczenia, połączenie ze sterownikiem.
+
+## Skąd się wziął
+
+Synoptic Editor i Logic Studio zaczynały jako dwa osobne programy,
+uruchamiane osobno. Studio powstało, żeby to skończyć - jedno okno,
+jedno drzewo projektu, jedna szata graficzna. Ekrany i Logika są dziś
+działami Studio, nie osobnymi produktami.
+
+## Czym się różni
+
+Wiele narzędzi inżynierskich do automatyki wymaga osobnego programu do
+każdego aspektu projektu - inny do rysowania ekranów, inny do logiki,
+inny do konfiguracji alarmów. Studio trzyma to wszystko w jednym
+miejscu, w jednym pliku projektu (`projekt.epw`), z jednym rejestrem
+punktów, który widzi każdy dział naraz.
+
+## Skąd ten wygląd
+
+Ta sama estetyka lat dziewięćdziesiątych co EPW OS (runtime) - z tego
+samego powodu: czytelność, nie sentyment sam w sobie, choć ten też ma
+tu miejsce.
+
+## Autor
+
+mgr inż. Waldemar Bronisz, BroniszLabs - ten sam autor co EPW OS, ten
+sam projekt, inna warstwa: tam sterownik, tutaj narzędzie, którym się
+go projektuje.
+
+## Licencja i dostępność
+
+Tak jak EPW OS - darmowe, do korzystania i rozwijania.
+""",
+    """
+# EPW Studio
+
+**Version {version}**
+
+A single engineering application for designing EPW platform
+installations - synoptic diagram, control logic, point registry,
+apparatus, intrusion alarm, protection, controller connection.
+
+## Where it came from
+
+Synoptic Editor and Logic Studio started as two separate programs,
+launched separately. Studio exists to end that - one window, one
+project tree, one skin. Screens and Logic are departments of Studio
+today, not separate products.
+
+## What makes it different
+
+Many automation engineering toolchains need a separate program per
+aspect of a project - one for drawing screens, one for logic, one for
+alarm configuration. Studio keeps all of it in one place, one project
+file (`projekt.epw`), with one point registry every department can see
+at once.
+
+## Where the look comes from
+
+The same 1990s aesthetic as EPW OS (runtime) - for the same reason:
+legibility, not nostalgia for its own sake, though that has a place
+here too.
+
+## Author
+
+Waldemar Bronisz, MSc Eng., BroniszLabs - the same author as EPW OS,
+the same project, a different layer: there the controller, here the
+tool used to design it.
+
+## License and availability
+
+Same as EPW OS - free, to use and to build on.
 """,
 )
 

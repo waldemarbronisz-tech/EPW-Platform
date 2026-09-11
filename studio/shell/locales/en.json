@@ -18,6 +18,7 @@
     "group_controller": "CONTROLLER",
     "info": "Project Information",
     "devices": "Device Composition",
+    "io_cards": "I/O Cards",
     "locations": "Locations",
     "point_registry": "Point Registry",
     "apparatus_registry": "Apparatus Registry",
@@ -34,7 +35,8 @@
     "screens": "Project → Configuration → Synoptic Diagram",
     "logic": "Project → Configuration → Logic",
     "info": "Project → Project Information",
-    "devices": "Project → Configuration → Device Composition",
+    "devices": "Project → Device Composition",
+    "io_cards": "Project → Configuration → I/O Cards",
     "locations": "Project → Configuration → Locations",
     "point_registry": "Project → Configuration → Point Registry",
     "apparatus_registry": "Project → Configuration → Apparatus Registry",
@@ -72,6 +74,10 @@
       "open": "Open...",
       "save": "Save",
       "save_as": "Save As...",
+      "recent_projects": "Recent Projects",
+      "recent_projects_empty": "(none)",
+      "check_project": "Check Project",
+      "export_points": "Export Point List...",
       "exit": "Exit",
       "compare_saved": "Compare with Saved File...",
       "compare_files": "Compare Two Projects..."
@@ -181,6 +187,9 @@
     "cancel": "Cancel"
   },
   "about": {
+    "title": "About EPW Studio",
+    "version_label": "Version",
+    "btn_close": "Close",
     "studio_text": "EPW Studio\n\nThe EPW platform's shared design shell - the Synoptic Diagram (Synoptic Editor) and Logic (Logic Studio) in one window, one skin."
   },
   "project_info": {
@@ -384,5 +393,49 @@
     "error_no_host": "No controller address configured.",
     "error_http": "HTTP error {code}: {reason}",
     "error_connection": "Could not connect: {reason}"
+  },
+  "modules": {
+    "col_name": "Name",
+    "col_description": "Description",
+    "col_active": "Active",
+    "active_yes": "YES",
+    "active_no": "NO",
+    "confirm_disable_title": "Remove Module From Composition?",
+    "confirm_disable_text": "Module \"{name}\" already has data in this project. Disabling it will remove its branch from the tree, but the data will NOT be deleted - re-enabling the module restores it. Disable anyway?"
+  },
+  "validation": {
+    "dialog_title": "Check Project",
+    "section_errors": "Errors",
+    "section_warnings": "Warnings",
+    "none_found": "No inconsistencies found.",
+    "summary": "Errors: {errors} - Warnings: {warnings}",
+    "close": "Close",
+    "hint_double_click": "Double-click an entry to jump to the problem.",
+    "msg_device_missing_point": "Apparatus \"{device}\" points to point {address}, which is not in the point registry.",
+    "msg_device_point_deleted_card": "Apparatus \"{device}\" points to point {address} on card \"{card}\", which is no longer in the hardware composition.",
+    "msg_point_double_owned": "Point {address} is assigned to more than one apparatus at once: {devices}.",
+    "msg_point_unknown_location": "Point {address} has location \"{location}\" assigned, which is not on the location list.",
+    "msg_line_missing_point": "Supervised line \"{line}\" points to point {address}, which is not in the point registry.",
+    "msg_process_missing_point": "Process protection \"{protection}\" points to point {address}, which is not in the point registry.",
+    "msg_process_not_ai_point": "Process protection \"{protection}\" points to point {address}, which is not an analog input (AI).",
+    "msg_module_has_orphan_data": "Module \"{module}\" has data saved in the project but is not in the device composition - its branch is hidden, the data was not deleted."
+  },
+  "export": {
+    "dialog_title": "Export Point List",
+    "document_title": "Terminal Block Table",
+    "no_points": "The point registry is empty - there is nothing to export.",
+    "filter_csv": "CSV (*.csv)",
+    "filter_html": "HTML (*.html)",
+    "no_location": "(no location)",
+    "col_address": "Address",
+    "col_description": "Description",
+    "col_location": "Location",
+    "col_technical_note": "Technical Note",
+    "col_device": "Apparatus",
+    "col_raw_range": "Raw Range",
+    "col_eng_range": "Engineering Range",
+    "col_unit": "Unit",
+    "error_write": "Could not write the file: {error}",
+    "done": "Exported the point list to {path}"
   }
 }

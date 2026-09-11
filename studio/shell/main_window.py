@@ -28,7 +28,7 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QSettings, QSize, QTimer
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
     QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
@@ -40,9 +40,9 @@ from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
-    build_locations_toolbar, build_logic_context_toolbar, build_point_registry_toolbar,
-    build_process_protection_toolbar, build_project_info_toolbar, build_synoptic_context_toolbar,
-    build_zones_toolbar,
+    build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
+    build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
+    build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -55,23 +55,33 @@ _TREE_ITEM_LOGIC = "logic"
 # _INACTIVE_CONFIG_CHILDREN below, same "active" leaf pattern as
 # Screens/Logic above - real panels, not another placeholder sentence.
 _TREE_ITEM_INFO = "info"
-# Task "ostatnie dwa działy" - "io_cards" now surfaces under the
-# "devices"/"Skład urządzenia" label (see _BREADCRUMB_KEYS below): the
-# user's own description of what belongs there - "ustawianie adresów
-# ELA/ADA, opisywanie ich, określanie wejść/wyjść" - IS CardsPanel's own
-# id/model/kind/channels, not a second, separate registry. The internal
-# key stays "io_cards" (no behavior tied to the string itself), only the
-# LABEL changes - this decision is flagged, not silently made: SPEC's
-# OWN "Skład urządzenia" meaning ("modules: lista nazw modułów... NIE
-# JEST lista przełączników") is a different, narrower concept (which
-# functional subsystems this controller has) that this does NOT build -
-# still open, unrelated to the ELA/ADA registry now living at this leaf.
+# Task "fix/project-format-integrity" point 2.1 - REVERTED the previous
+# session's rename: this leaf is "Karty wejść/wyjść" again ("tree.
+# io_cards"), freeing "Skład urządzenia"/"devices" for its OWN,
+# different, real meaning - the contract's own one (SPEC_PROJEKT_EPW.md:
+# "modules: lista nazw modułów... TO NIE JEST lista przełączników" -
+# which FUNCTIONAL subsystems this controller has, not which physical
+# ELA/ADA cards). The previous rename conflated the two because nothing
+# used `modules` yet; now something does (_TREE_ITEM_MODULES below).
+# "Karty wejść/wyjść" over the task's other offered option ("Moduły
+# sprzętowe"): it matches project_format.Card's own field names/SPEC
+# wording directly, and "moduły" would collide in READER'S HEAD with
+# the new "Skład urządzenia" - which is exactly about "moduły" in the
+# functional sense. Two different "moduły" one screen apart is the
+# confusion this rename exists to remove, not reintroduce.
 _TREE_ITEM_IO_CARDS = "io_cards"
 _TREE_ITEM_LOCATIONS = "locations"
 _TREE_ITEM_POINT_REGISTRY = "point_registry"
 # "Co jeszcze możemy dorobić" follow-up - SPEC's next section, Aparaty
 # (a device's feedback/command point lists), same "active" leaf pattern.
 _TREE_ITEM_DEVICES = "apparatus_registry"
+# Task "fix/project-format-integrity" point 2/3 - "Skład urządzenia":
+# the REAL contract concept, mirrored from runtime/epw_os/core/
+# feature_config.py's own ALWAYS_ON_FEATURES/TOGGLABLE_FEATURES (see
+# project_panels.MODULE_CATALOG's own docstring) - which FUNCTIONAL
+# subsystems (Alarmówka, Zabezpieczenia...) this controller has at all.
+# First leaf under PROJEKT, above KONFIGURACJA (task's own placement).
+_TREE_ITEM_MODULES = "devices"
 
 # Every branch that used to live under KONFIGURACJA as a placeholder
 # (task 1.4's own "a click shows one explanatory sentence" GRANICE) is
@@ -100,7 +110,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_SCREENS: "breadcrumb.screens",
     _TREE_ITEM_LOGIC: "breadcrumb.logic",
     _TREE_ITEM_INFO: "breadcrumb.info",
-    _TREE_ITEM_IO_CARDS: "breadcrumb.devices",
+    _TREE_ITEM_IO_CARDS: "breadcrumb.io_cards",
+    _TREE_ITEM_MODULES: "breadcrumb.devices",
     _TREE_ITEM_LOCATIONS: "breadcrumb.locations",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
@@ -110,6 +121,31 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
     _TREE_ITEM_HELP: "breadcrumb.help",
+}
+
+# Task point 5.3 - "Mapowanie gałąź drzewa -> temat pomocy." Tree keys
+# (left column) are this file's own _TREE_ITEM_* constants; help-topic
+# keys (right column) are generate_help.py's TOPICS keys (see that
+# file's own _manifest.py). Deliberately NOT the same string in every
+# row - e.g. _TREE_ITEM_DEVICES is "apparatus_registry" on the tree
+# side but "apparatus" on the help side, and _TREE_ITEM_INFO ("info")
+# happens to match both. _TREE_ITEM_HELP itself is omitted - F1 while
+# already on the Pomoc department has no "surrounding" topic to jump
+# to, so it's a no-op there (see _open_contextual_help's None guard).
+_HELP_TOPIC_BY_TREE_KEY = {
+    _TREE_ITEM_INFO: "info",
+    _TREE_ITEM_MODULES: "devices",
+    _TREE_ITEM_IO_CARDS: "io_cards",
+    _TREE_ITEM_LOCATIONS: "locations",
+    _TREE_ITEM_POINT_REGISTRY: "points",
+    _TREE_ITEM_DEVICES: "apparatus",
+    _TREE_ITEM_SCREENS: "screens",
+    _TREE_ITEM_LOGIC: "logic",
+    _TREE_ITEM_ZONES: "zones",
+    _TREE_ITEM_LINES: "lines",
+    _TREE_ITEM_ELECTRICAL_PROTECTION: "protection_electrical",
+    _TREE_ITEM_PROCESS_PROTECTION: "protection_process",
+    _TREE_ITEM_CONTROLLER: "controller",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -310,6 +346,7 @@ class StudioMainWindow(QMainWindow):
         self._synoptic_panel = None
         self._logic_panel = None
         self._project_info_panel = None
+        self._modules_panel = None
         self._cards_panel = None
         self._locations_panel = None
         self._point_registry_panel = None
@@ -320,6 +357,7 @@ class StudioMainWindow(QMainWindow):
         self._process_protection_panel = None
         self._controller_panel = None
         self._help_panel = None
+        self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
         self._tree_label_refs = []  # [(QTreeWidgetItem, tr key), ...] for language switches
@@ -356,6 +394,14 @@ class StudioMainWindow(QMainWindow):
         self._state_timer.setInterval(400)
         self._state_timer.timeout.connect(self._refresh_shared_toolbar_state)
         self._state_timer.start()
+
+        # Task point 5.3 - "F1 otwiera temat DOTYCZĄCY aktywnego
+        # działu, nie spis treści." A window-wide shortcut (not per-
+        # panel) so it works no matter which widget inside the active
+        # aspect happens to have focus - see _HELP_TOPIC_BY_TREE_KEY
+        # and _open_contextual_help above for the actual mapping/logic.
+        self._help_shortcut = QShortcut(QKeySequence("F1"), self)
+        self._help_shortcut.activated.connect(self._open_contextual_help)
 
     # ------------------------------------------------------------------
     # Layout
@@ -400,6 +446,16 @@ class StudioMainWindow(QMainWindow):
         status_bar = self.statusBar()
         status_bar.addWidget(self._status_project)
         status_bar.addPermanentWidget(self._status_editor)
+        # Task point 8.3 - "Wersja Studio widoczna w pasku stanu albo
+        # tytule" - status bar chosen over the title (the title already
+        # carries app.title, retranslated on every language switch;
+        # tacking a version number onto that string is one more thing
+        # that string would have to keep consistent forever). Rightmost
+        # permanent widget - never covered by a transient showMessage()
+        # (see _export_point_list's own status message).
+        from studio.shell.version import STUDIO_VERSION
+        self._status_version = QLabel(f"EPW Studio {STUDIO_VERSION}")
+        status_bar.addPermanentWidget(self._status_version)
         # Problem 2's own status-bar bullet: "uchwyt rozmiaru w rogu" -
         # QStatusBar draws one natively once told to; Qt just doesn't
         # enable it by default.
@@ -437,6 +493,10 @@ class StudioMainWindow(QMainWindow):
         # exist for exactly "a list of hardware" / "a table of
         # registers", no new icon needed.
         icon_info = icons.icon("about")
+        # "add_group_command" (cascading overlapping squares - "a group
+        # of things") reads as "a set of installed modules", distinct
+        # from "device_list" (a flat list - the physical card registry).
+        icon_modules = icons.icon("add_group_command")
         icon_io_cards = icons.icon("device_list")
         icon_point_registry = icons.icon("project_registers")
         # "draw_building" (a house) reads plainly as "a place" - reused
@@ -501,9 +561,11 @@ class StudioMainWindow(QMainWindow):
         self._tree_label_refs.append((root, "tree.root"))
 
         self._item_info = add_active_leaf(root, _TREE_ITEM_INFO, "tree.info", icon_info)
+        # "Pierwszy pod PROJEKT, nad Konfiguracją" (task's own placement).
+        self._item_modules = add_active_leaf(root, _TREE_ITEM_MODULES, "tree.devices", icon_modules)
 
         config = add_group(root, "tree.group_config")
-        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.devices", icon_io_cards)
+        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
         self._item_locations = add_active_leaf(config, _TREE_ITEM_LOCATIONS, "tree.locations", icon_locations)
         self._item_point_registry = add_active_leaf(
             config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
@@ -524,16 +586,25 @@ class StudioMainWindow(QMainWindow):
         config.addChild(self._item_logic)
         self._tree_label_refs.append((self._item_logic, "tree.logic"))
 
-        alarm = add_group(root, "tree.group_alarm")
-        self._item_zones = add_active_leaf(alarm, _TREE_ITEM_ZONES, "tree.security_zones", icon_zones)
-        self._item_lines = add_active_leaf(alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines)
+        # Task "fix/project-format-integrity" point 2.3 - these two
+        # groups' own children are shown/hidden by _refresh_module_
+        # visibility() below, based on self._project.modules - kept as
+        # instance attrs (not local vars) so that method can reach them
+        # after _build_tree() returns.
+        self._group_alarm = add_group(root, "tree.group_alarm")
+        self._item_zones = add_active_leaf(
+            self._group_alarm, _TREE_ITEM_ZONES, "tree.security_zones", icon_zones
+        )
+        self._item_lines = add_active_leaf(
+            self._group_alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines
+        )
 
-        protection = add_group(root, "tree.group_protection")
+        self._group_protection = add_group(root, "tree.group_protection")
         self._item_electrical_protection = add_active_leaf(
-            protection, _TREE_ITEM_ELECTRICAL_PROTECTION, "tree.protection_electrical", icon_electrical
+            self._group_protection, _TREE_ITEM_ELECTRICAL_PROTECTION, "tree.protection_electrical", icon_electrical
         )
         self._item_process_protection = add_active_leaf(
-            protection, _TREE_ITEM_PROCESS_PROTECTION, "tree.protection_process", icon_process
+            self._group_protection, _TREE_ITEM_PROCESS_PROTECTION, "tree.protection_process", icon_process
         )
 
         controller = add_group(root, "tree.group_controller")
@@ -821,8 +892,106 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Help Topics")
 
+    def _open_contextual_help(self):
+        """Task point 5.3 - F1 opens the help TOPIC for whatever
+        department is on screen, not the help table of contents (the
+        toolbar "?" button/_help_topics above still does the old
+        Logic/Synoptic-only thing - kept as-is, F1 is a new, separate
+        path that covers every department, not a rewrite of that one).
+        _HELP_TOPIC_BY_TREE_KEY is a real mapping (not an identity
+        function) because tree keys and help-topic keys genuinely
+        differ for several panels (e.g. "apparatus_registry" -> "apparatus")."""
+        topic_key = _HELP_TOPIC_BY_TREE_KEY.get(self._active)
+        if topic_key is None:
+            return
+        self.tree.setCurrentItem(self._item_help)
+        self._open_help()
+        self._help_panel.select_topic(topic_key)
+
     def _show_about_studio(self):
-        QMessageBox.about(self, tr("menu.help.about_studio"), tr("about.studio_text"))
+        from studio.shell.project_panels import AboutDialog
+        AboutDialog(self).exec()
+
+    # Task point 6 - "Sprawdź projekt": target string -> (tree item to
+    # open, the open_* method that lazily constructs/shows that panel,
+    # the panel attribute to call the issue's own `selector` on). Kept
+    # here (not in project_panels.py) precisely because it's the one
+    # place that legitimately knows both this file's _TREE_ITEM_*
+    # constants and project_panels.ValidationIssue's own `target`
+    # strings - see ValidationIssue's own docstring for why that module
+    # doesn't (and shouldn't) know this mapping itself.
+    _VALIDATION_TARGETS = {
+        "devices": ("_devices_panel", "_open_devices"),
+        "points": ("_point_registry_panel", "_open_point_registry"),
+        "lines": ("_lines_panel", "_open_lines"),
+        "process_protection": ("_process_protection_panel", "_open_process_protection"),
+        "modules": ("_modules_panel", "_open_modules"),
+    }
+
+    def _check_project(self):
+        from studio.shell.project_panels import ValidationReportDialog, validate_project
+        issues = validate_project(self._project)
+        dialog = ValidationReportDialog(issues, self._navigate_to_validation_issue, parent=self)
+        dialog.show()
+        # Kept alive past this method's return (a non-modal dialog with
+        # no other reference would otherwise be garbage-collected the
+        # instant Python's GC runs) - re-running "Sprawdź projekt"
+        # simply replaces this reference, closing the previous window's
+        # Python object but not its already-shown, already-closed self.
+        self._validation_dialog = dialog
+
+    def _navigate_to_validation_issue(self, issue):
+        target = self._VALIDATION_TARGETS.get(issue.target)
+        if target is None:
+            return
+        panel_attr, open_method_name = target
+        getattr(self, open_method_name)()
+        panel = getattr(self, panel_attr, None)
+        if panel is not None and issue.selector:
+            selector = getattr(panel, issue.selector, None)
+            if selector is not None:
+                selector(issue.arg)
+
+    def _export_point_list(self):
+        """Task point 7 - "Eksportuj listę punktów": Waldek's own
+        technical notes in the point registry, turned into a printable
+        terminal-block table (HTML) or a spreadsheet (CSV) - no new
+        data entry, just a different view of project.points that
+        already exists. Both formats built by project_panels.py's own
+        export_points_csv()/export_points_html() (pure, no Qt - see
+        their docstrings), this method is only the file-picker/write."""
+        if not self._project.points:
+            QMessageBox.information(self, tr("export.dialog_title"), tr("export.no_points"))
+            return
+        path, selected_filter = QFileDialog.getSaveFileName(
+            self, tr("export.dialog_title"), "",
+            f"{tr('export.filter_csv')};;{tr('export.filter_html')}",
+        )
+        if not path:
+            return
+        from studio.shell.project_panels import export_points_csv, export_points_html
+        is_html = ".html" in selected_filter.lower() or path.lower().endswith(".html")
+        if is_html:
+            if not path.lower().endswith(".html"):
+                path += ".html"
+            content = export_points_html(self._project)
+        else:
+            if not path.lower().endswith(".csv"):
+                path += ".csv"
+            content = export_points_csv(self._project)
+        try:
+            # utf-8-sig (BOM) for CSV - the task's own stated audience
+            # is Excel, which otherwise mis-renders Polish diacritics in
+            # a plain utf-8 CSV; HTML declares its own charset in the
+            # <head> instead, no BOM needed there.
+            encoding = "utf-8-sig" if not is_html else "utf-8"
+            newline = "" if not is_html else None
+            with open(path, "w", encoding=encoding, newline=newline) as f:
+                f.write(content)
+        except OSError as e:
+            QMessageBox.warning(self, tr("export.dialog_title"), tr("export.error_write", error=str(e)))
+            return
+        self.statusBar().showMessage(tr("export.done", path=path), 5000)
 
     def _set_language(self, code):
         set_language(code)
@@ -874,6 +1043,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_logic()
             elif key == _TREE_ITEM_INFO:
                 self._open_info()
+            elif key == _TREE_ITEM_MODULES:
+                self._open_modules()
             elif key == _TREE_ITEM_IO_CARDS:
                 self._open_io_cards()
             elif key == _TREE_ITEM_LOCATIONS:
@@ -992,6 +1163,20 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_INFO
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_modules(self):
+        if self._modules_panel is None:
+            from studio.shell.project_panels import ModuleCompositionPanel
+            self._modules_panel = ModuleCompositionPanel(self)
+        else:
+            self._modules_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_MODULES, self._modules_panel, build_modules_toolbar, self._modules_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_MODULES
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
@@ -1155,6 +1340,61 @@ class StudioMainWindow(QMainWindow):
         self._status_project.setText(f"{name}{marker}")
         if self._project_info_panel is not None:
             self._project_info_panel.refresh()
+        self._refresh_module_visibility()
+
+    def _refresh_module_visibility(self):
+        """Task "fix/project-format-integrity" point 2.3 - "Moduł spoza
+        składu NIE ISTNIEJE" (a module outside the composition doesn't
+        exist - not merely disabled): a branch whose module isn't in
+        self._project.modules is REMOVED from the tree outright (not
+        just hidden/grayed - that convention is reserved for "this
+        editor doesn't have it", a different situation from "this
+        controller doesn't have this module at all"). Runs on every
+        project change (called from _on_project_changed(), not just
+        from the module-toggle panel) so a brand-new/just-opened project
+        starts correct without a separate call site to remember.
+
+        Always removes then re-adds the active items of each group in a
+        FIXED, canonical order (not whatever order toggles happened in)
+        - stable, predictable tree order regardless of click sequence.
+        A group with zero visible children hides itself too, rather
+        than showing an empty bold header."""
+        modules = set(self._project.modules)
+
+        def _sync_group(group, ordered):
+            for _feature_id, item in ordered:
+                parent = item.parent()
+                if parent is not None:
+                    parent.removeChild(item)
+            visible_count = 0
+            for feature_id, item in ordered:
+                if feature_id in modules:
+                    group.addChild(item)
+                    visible_count += 1
+            group.setHidden(visible_count == 0)
+
+        _sync_group(self._group_alarm, [
+            ("intrusion", self._item_zones),
+            ("intrusion", self._item_lines),
+        ])
+        _sync_group(self._group_protection, [
+            ("protection_settings", self._item_electrical_protection),
+            ("protection_process", self._item_process_protection),
+        ])
+
+        # If the branch currently open just became invisible (its
+        # module was removed from composition while the user was
+        # looking at it), don't leave the content area showing an
+        # orphaned panel with no matching tree selection - fall back to
+        # "Skład urządzenia" itself, the obvious place to go fix that.
+        active_item = {
+            _TREE_ITEM_ZONES: self._item_zones,
+            _TREE_ITEM_LINES: self._item_lines,
+            _TREE_ITEM_ELECTRICAL_PROTECTION: self._item_electrical_protection,
+            _TREE_ITEM_PROCESS_PROTECTION: self._item_process_protection,
+        }.get(self._active)
+        if active_item is not None and active_item.parent() is None:
+            self.tree.setCurrentItem(self._item_modules)
 
     def _confirm_discard_project(self) -> bool:
         """True = caller may proceed (nothing unsaved, or the user chose
@@ -1170,12 +1410,15 @@ class StudioMainWindow(QMainWindow):
             return self._save_project()
         return reply == QMessageBox.StandardButton.Discard
 
-    def _new_project(self):
-        if not self._confirm_discard_project():
-            return
-        self._project = new_project(tr("project_info.default_name"))
-        self._project_path = None
-        self._on_project_changed()
+    def _refresh_all_project_panels(self):
+        """Every panel that reads project.* eagerly at construction
+        time (unlike ModuleCompositionPanel/etc's own lazy _open_*())
+        needs a real refresh() after a wholesale project swap
+        (Nowy/Otwórz/Ostatnio otwarte) - factored out of _new_project()/
+        _open_project() (task point 8.1's own _open_recent_project()
+        needs the exact same sequence a third time) so the list can't
+        drift between call sites the way three independent copies
+        eventually would."""
         if self._cards_panel is not None:
             self._cards_panel.refresh()
         if self._locations_panel is not None:
@@ -1193,6 +1436,14 @@ class StudioMainWindow(QMainWindow):
         if self._process_protection_panel is not None:
             self._process_protection_panel.refresh()
 
+    def _new_project(self):
+        if not self._confirm_discard_project():
+            return
+        self._project = new_project(tr("project_info.default_name"))
+        self._project_path = None
+        self._on_project_changed()
+        self._refresh_all_project_panels()
+
     def _open_project(self):
         if not self._confirm_discard_project():
             return
@@ -1202,31 +1453,69 @@ class StudioMainWindow(QMainWindow):
         )
         if not path:
             return
+        self._load_project_from_path(path)
+
+    def _load_project_from_path(self, path: str):
+        """Shared by _open_project() (file dialog) and
+        _open_recent_project() (task 8.1, no dialog - the path is
+        already known) - the ONE place that actually calls
+        load_project() and reacts to it, so the two entry points can
+        never drift on error handling/panel refresh/recent-list update."""
         try:
             project = load_project(path)
         except (ProjectFormatError, OSError) as exc:
             QMessageBox.critical(self, tr("project_info.open_failed_title"), str(exc))
+            self._remove_recent_project(path)  # a saved-but-now-broken/missing entry is worse than none
             return
         self._project = project
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
         self._on_project_changed()
-        if self._cards_panel is not None:
-            self._cards_panel.refresh()
-        if self._locations_panel is not None:
-            self._locations_panel.refresh()
-        if self._point_registry_panel is not None:
-            self._point_registry_panel.refresh()
-        if self._devices_panel is not None:
-            self._devices_panel.refresh()
-        if self._zones_panel is not None:
-            self._zones_panel.refresh()
-        if self._lines_panel is not None:
-            self._lines_panel.refresh()
-        if self._electrical_protection_panel is not None:
-            self._electrical_protection_panel.refresh()
-        if self._process_protection_panel is not None:
-            self._process_protection_panel.refresh()
+        self._refresh_all_project_panels()
+
+    def _open_recent_project(self, path: str):
+        if not self._confirm_discard_project():
+            return
+        self._load_project_from_path(path)
+
+    # ------------------------------------------------------------------
+    # Task point 8.1 - "Ostatnio otwarte projekty - menu Plik, pięć
+    # pozycji, QSettings." A submenu (not five flat top-level entries) -
+    # Plik already grew two new items this session (points 6/7); five
+    # more flat entries there would make it the least scannable menu in
+    # the whole app for no real gain over one more level.
+    # ------------------------------------------------------------------
+    _RECENT_PROJECTS_KEY = "project/recent_files"
+    _RECENT_PROJECTS_MAX = 5
+
+    def _recent_projects(self) -> list:
+        return list(self.settings.value(self._RECENT_PROJECTS_KEY, []) or [])
+
+    def _remember_recent_project(self, path: str):
+        recent = [p for p in self._recent_projects() if p != path]
+        recent.insert(0, path)
+        del recent[self._RECENT_PROJECTS_MAX:]
+        self.settings.setValue(self._RECENT_PROJECTS_KEY, recent)
+        self._refresh_recent_projects_menu()
+
+    def _remove_recent_project(self, path: str):
+        recent = [p for p in self._recent_projects() if p != path]
+        self.settings.setValue(self._RECENT_PROJECTS_KEY, recent)
+        self._refresh_recent_projects_menu()
+
+    def _refresh_recent_projects_menu(self):
+        menu = getattr(self, "menu_recent_projects", None)
+        if menu is None:
+            return  # called once before build_fixed_menu() builds the menu itself - harmless no-op
+        menu.clear()
+        recent = self._recent_projects()
+        if not recent:
+            empty_action = menu.addAction(tr("menu.file.recent_projects_empty"))
+            empty_action.setEnabled(False)
+            return
+        for path in recent:
+            menu.addAction(path, lambda checked=False, p=path: self._open_recent_project(p))
 
     def _save_project(self) -> bool:
         if self._project_path is None:
@@ -1255,6 +1544,7 @@ class StudioMainWindow(QMainWindow):
             return False
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
         self._on_project_changed()
         return True
 

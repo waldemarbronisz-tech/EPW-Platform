@@ -87,6 +87,7 @@ assumption turns out wrong.
 """
 import gzip
 import json
+import shutil
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -187,8 +188,8 @@ class Device:
     id: str
     behavior: str  # SWITCHED | SIGNAL | MEASURED | MODULATED | SELECTOR
     kind: str = ""
-    feedback: list = field(default_factory=list)
-    command: list = field(default_factory=list)
+    feedback: list[str] = field(default_factory=list)
+    command: list[str] = field(default_factory=list)
     supervision: dict = field(default_factory=dict)
     safe_state: dict = field(default_factory=dict)  # onStartup, onLinkLoss
 
@@ -360,16 +361,16 @@ class Project:
     what's deliberately still missing and why)."""
 
     metadata: ProjectMetadata
-    modules: list = field(default_factory=list)  # list[str]
-    cards: list = field(default_factory=list)  # list[Card]
-    locations: list = field(default_factory=list)  # list[Location]
-    points: list = field(default_factory=list)  # list[Point]
-    devices: list = field(default_factory=list)  # list[Device]
-    zones: list = field(default_factory=list)  # list[Zone]
-    lines: list = field(default_factory=list)  # list[Line]
+    modules: list[str] = field(default_factory=list)
+    cards: list[Card] = field(default_factory=list)
+    locations: list[Location] = field(default_factory=list)
+    points: list[Point] = field(default_factory=list)
+    devices: list[Device] = field(default_factory=list)
+    zones: list[Zone] = field(default_factory=list)
+    lines: list[Line] = field(default_factory=list)
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
-    electrical_protection_stages: list = field(default_factory=list)  # list[ElectricalProtectionStage]
-    process_protections: list = field(default_factory=list)  # list[ProcessProtection]
+    electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
+    process_protections: list[ProcessProtection] = field(default_factory=list)
     modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
@@ -474,13 +475,29 @@ def save_project(project: Project, path) -> None:
     """Writes `project` to `path` as projekt.epw (gzip+JSON - see
     module docstring). Bumps `revision` and `modified_at`/`modified_by`
     and clears `is_dirty` - the same "a save is what actually commits a
-    revision" rule new_project()/touch() above already document."""
+    revision" rule new_project()/touch() above already document.
+
+    Task point 8.2 - "Kopia zapasowa przy zapisie - poprzednia wersja
+    jako projekt.epw.bak, jedna generacja wstecz." Whatever is on disk
+    at `path` BEFORE this write (the previous save's own output) is
+    copied to `path` + ".bak" first - each save overwrites that one
+    backup file rather than accumulating a history, which is exactly
+    "jedna generacja wstecz", not a version history. A missing source
+    file (first-ever save to this path) or a copy failure (e.g. a
+    read-only backup left over from something else) is never allowed to
+    block the actual save - the backup is a nicety layered on top of
+    the real operation, not a precondition for it."""
+    path = Path(path)
+    if path.exists():
+        try:
+            shutil.copy2(path, str(path) + ".bak")
+        except OSError:
+            pass
     project.revision += 1
     project.metadata.modified_at = _utc_now_iso()
     project.modified_by = "studio"
     data = _to_json_dict(project)
     payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(path, "wb") as f:
         f.write(payload)

@@ -2,7 +2,7 @@
 TOPICS = [
     ('welcome', 'EPW Studio', 'EPW Studio'),
     ('info', 'Informacje o projekcie', 'Project Information'),
-    ('devices', 'Skład urządzenia', 'Device Composition'),
+    ('io_cards', 'Karty wejść/wyjść', 'I/O Cards'),
     ('locations', 'Lokalizacje', 'Locations'),
     ('points', 'Rejestr punktów', 'Point Registry'),
     ('apparatus', 'Rejestr aparatów', 'Apparatus Registry'),
@@ -13,4 +13,6 @@ TOPICS = [
     ('protection_electrical', 'Zabezpieczenia elektryczne', 'Electrical Protection'),
     ('protection_process', 'Zabezpieczenia procesowe', 'Process Protection'),
     ('controller', 'Połączenie ze sterownikiem', 'Controller Connection'),
+    ('devices', 'Skład urządzenia', 'Device Composition'),
+    ('about', 'O programie EPW Studio', 'About EPW Studio'),
 ]

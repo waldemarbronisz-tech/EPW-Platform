@@ -1,0 +1,7 @@
+﻿Adres,Opis,Lokalizacja,Notatka techniczna,Aparat,Zakres surowy,Zakres inżynieryjny,Jednostka
+ELA1.DI.1,Czujnik drzwi kotlowni,KOT,"Styk NC, kabel 2x0.5",,,,
+ELA1.DI.2,Presostat gazu,KOT,"Styk NC, wyzwalanie < 15 mbar",ZAWOR_GAZU,,,
+ELA1.DI.3,Rezerwa,(bez lokalizacji),,,,,
+ELA2.DO.1,Zawor gazu - sterowanie,KOT,"24V DC, cewka zaworu YV1",ZAWOR_GAZU,,,
+ADA1.AI.1,Temperatura wody zasilajacej,KOT,"Czujnik PT1000, przetwornik 4-20mA",,4…20,0…120,degC
+ADA1.AI.2,Cisnienie w hali,HALA,,,4…20,0…10,bar

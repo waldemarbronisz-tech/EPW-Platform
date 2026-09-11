@@ -361,6 +361,45 @@ def test_modbus_bus_round_trip(tmp_path):
     assert loaded.modbus_bus == p.modbus_bus
 
 
+# Task point 8.2 - "Kopia zapasowa przy zapisie - poprzednia wersja
+# jako projekt.epw.bak, jedna generacja wstecz."
+def test_first_save_creates_no_backup_file(tmp_path):
+    path = tmp_path / "projekt.epw"
+    save_project(new_project("Test"), path)
+    assert not (tmp_path / "projekt.epw.bak").exists()
+
+
+def test_second_save_backs_up_the_first_saves_own_content(tmp_path):
+    path = tmp_path / "projekt.epw"
+    bak_path = tmp_path / "projekt.epw.bak"
+    p = new_project("Pierwsza wersja")
+    save_project(p, path)
+    first_save_bytes = path.read_bytes()
+
+    p.metadata.name = "Druga wersja"
+    save_project(p, path)
+
+    assert bak_path.exists()
+    assert bak_path.read_bytes() == first_save_bytes
+    # the live file moved on to the new content, the backup did not
+    assert load_project(bak_path).metadata.name == "Pierwsza wersja"
+    assert load_project(path).metadata.name == "Druga wersja"
+
+
+def test_backup_holds_only_one_generation_not_a_history(tmp_path):
+    path = tmp_path / "projekt.epw"
+    bak_path = tmp_path / "projekt.epw.bak"
+    p = new_project("V1")
+    save_project(p, path)
+    p.metadata.name = "V2"
+    save_project(p, path)
+    p.metadata.name = "V3"
+    save_project(p, path)
+    # .bak holds V2 (the version just before the LAST save), not V1
+    assert load_project(bak_path).metadata.name == "V2"
+    assert load_project(path).metadata.name == "V3"
+
+
 def _decompress_saved(project) -> str:
     """Saves `project` to a throwaway in-memory-ish path and returns the
     raw JSON text - a lighter-weight check than a full load_project()

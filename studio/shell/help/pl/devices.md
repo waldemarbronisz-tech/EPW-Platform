@@ -1,22 +1,29 @@
 # Skład urządzenia
 
-Rejestr fizycznych modułów wejść/wyjść: ELA (cyfrowe), ADA (analogowe/
-zabezpieczenia), EPM i podobne. Dla każdego modułu:
+Lista funkcjonalnych modułów tego sterownika - Alarmówka, Zabezpieczenia
+elektryczne, Trendy i tak dalej - PRZEPISANA z realnego mechanizmu
+runtime (`epw_os/core/feature_config.py`), nie wymyślona na potrzeby
+Studio.
 
-- **Id** — adres logiczny nadany przez Ciebie (np. `ELA1`) — to on
-  tworzy prefiks adresów punktów (`ELA1.DI.1`, `ELA1.DI.2`, ...).
-- **Model** — opis/oznaczenie fizyczne (np. `ELA01`).
-- **Rodzaj** — DI / DO / AI / AO — jaki typ kanałów ma ten moduł.
-- **Kanały** — ile kanałów tego rodzaju moduł udostępnia.
-- **Adres Modbus** — numer urządzenia (unit id, 1–247) na magistrali
-  Modbus, którą sterownik (Orange Pi) rozmawia z modułami.
+**To nie jest lista przełączników "włącz/wyłącz funkcję tymczasowo".**
+To skład urządzenia, ustalany raz, przy zakładaniu projektu - sterownik
+podlewania **nie ma** alarmówki, tak samo jak nie ma jej termostat, nie
+jako "wyłączona", tylko jako fakt o tym, z czego to urządzenie się
+składa.
 
-**Dodanie karty automatycznie tworzy jej punkty** w Rejestrze punktów —
-nie wpisujesz ich ręcznie. Zmiana rodzaju/liczby kanałów przelicza je
-na nowo, zachowując opisy już wpisane.
+Każdy wiersz: nazwa, opis jednym zdaniem, i przełącznik dwustanowy
+[0][I] ze słownym stanem TAK/NIE obok (żeby stan było widać, nie tylko
+domyślać się z ikony).
 
-Na dole panelu: **Magistrala Modbus** — jedna, wspólna dla wszystkich
-modułów: RTU (port szeregowy, prędkość, parzystość) albo TCP (adres
-bramki, port). To ustawienie, jak sterownik ma w ogóle mówić z
-modułami — dziś zapisywane w projekcie, gotowe na przyszły sterownik
-Modbus w runtime (jeszcze nie zaimplementowany).
+**Moduł spoza składu znika z drzewa projektu CAŁKOWICIE** - gałąź
+Alarmówki czy Zabezpieczeń elektrycznych po prostu nie istnieje,
+dopóki nie zaznaczysz tego modułu tutaj. Wyłączenie modułu, który ma
+już dane (np. skonfigurowane strefy), pyta wprost o potwierdzenie -
+dane nigdy nie są kasowane, tylko chowane; ponowne włączenie modułu
+przywraca je bez zmian.
+
+Kilka pozycji na liście (Trendy, Jakość zasilania, Diagnostyka
+magistrali...) odpowiada realnym funkcjom runtime, dla których Studio
+nie ma jeszcze własnego panelu konfiguracji - zaznaczenie ich zapisuje
+się w projekcie uczciwie, po prostu jeszcze bez widocznego efektu w
+drzewie.

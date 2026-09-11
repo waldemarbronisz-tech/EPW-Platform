@@ -18,6 +18,7 @@
     "group_controller": "STEROWNIK",
     "info": "Informacje o projekcie",
     "devices": "Skład urządzenia",
+    "io_cards": "Karty wejść/wyjść",
     "locations": "Lokalizacje",
     "point_registry": "Rejestr punktów",
     "apparatus_registry": "Rejestr aparatów",
@@ -34,7 +35,8 @@
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
     "logic": "Projekt → Konfiguracja → Logika",
     "info": "Projekt → Informacje o projekcie",
-    "devices": "Projekt → Konfiguracja → Skład urządzenia",
+    "devices": "Projekt → Skład urządzenia",
+    "io_cards": "Projekt → Konfiguracja → Karty wejść/wyjść",
     "locations": "Projekt → Konfiguracja → Lokalizacje",
     "point_registry": "Projekt → Konfiguracja → Rejestr punktów",
     "apparatus_registry": "Projekt → Konfiguracja → Rejestr aparatów",
@@ -72,6 +74,10 @@
       "open": "Otwórz...",
       "save": "Zapisz",
       "save_as": "Zapisz jako...",
+      "recent_projects": "Ostatnio otwarte projekty",
+      "recent_projects_empty": "(brak)",
+      "check_project": "Sprawdź projekt",
+      "export_points": "Eksportuj listę punktów...",
       "exit": "Zamknij",
       "compare_saved": "Porównaj z zapisanym plikiem...",
       "compare_files": "Porównaj dwa projekty..."
@@ -181,6 +187,9 @@
     "cancel": "Anuluj"
   },
   "about": {
+    "title": "O programie EPW Studio",
+    "version_label": "Wersja",
+    "btn_close": "Zamknij",
     "studio_text": "EPW Studio\n\nWspólna powłoka projektowa platformy EPW — Schemat synoptyczny (Synoptic Editor) i Logika (Logic Studio) w jednym oknie, jednej szacie graficznej."
   },
   "project_info": {
@@ -384,5 +393,49 @@
     "error_no_host": "Nie podano adresu sterownika.",
     "error_http": "Błąd HTTP {code}: {reason}",
     "error_connection": "Nie można połączyć się: {reason}"
+  },
+  "modules": {
+    "col_name": "Nazwa",
+    "col_description": "Opis",
+    "col_active": "Aktywność",
+    "active_yes": "TAK",
+    "active_no": "NIE",
+    "confirm_disable_title": "Usunąć moduł ze składu?",
+    "confirm_disable_text": "Moduł \"{name}\" ma już dane w tym projekcie. Po wyłączeniu jego gałąź zniknie z drzewa, ale dane NIE zostaną skasowane — ponowne włączenie modułu przywróci je. Wyłączyć mimo to?"
+  },
+  "validation": {
+    "dialog_title": "Sprawdź projekt",
+    "section_errors": "Błędy",
+    "section_warnings": "Ostrzeżenia",
+    "none_found": "Nie znaleziono żadnych niespójności.",
+    "summary": "Błędy: {errors} · Ostrzeżenia: {warnings}",
+    "close": "Zamknij",
+    "hint_double_click": "Kliknij dwukrotnie pozycję, żeby przejść do miejsca problemu.",
+    "msg_device_missing_point": "Aparat \"{device}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_device_point_deleted_card": "Aparat \"{device}\" wskazuje punkt {address} z karty \"{card}\", której nie ma już w składzie sprzętu.",
+    "msg_point_double_owned": "Punkt {address} jest przypisany do więcej niż jednego aparatu naraz: {devices}.",
+    "msg_point_unknown_location": "Punkt {address} ma przypisaną lokalizację \"{location}\", której nie ma na liście lokalizacji.",
+    "msg_line_missing_point": "Linia dozorowa \"{line}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_process_missing_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
+    "msg_process_not_ai_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, który nie jest wejściem analogowym (AI).",
+    "msg_module_has_orphan_data": "Moduł \"{module}\" ma zapisane dane w projekcie, ale nie jest w składzie urządzenia — jego gałąź jest ukryta, dane nie zostały skasowane."
+  },
+  "export": {
+    "dialog_title": "Eksportuj listę punktów",
+    "document_title": "Tabela zacisków",
+    "no_points": "Rejestr punktów jest pusty — nie ma czego eksportować.",
+    "filter_csv": "CSV (*.csv)",
+    "filter_html": "HTML (*.html)",
+    "no_location": "(bez lokalizacji)",
+    "col_address": "Adres",
+    "col_description": "Opis",
+    "col_location": "Lokalizacja",
+    "col_technical_note": "Notatka techniczna",
+    "col_device": "Aparat",
+    "col_raw_range": "Zakres surowy",
+    "col_eng_range": "Zakres inżynieryjny",
+    "col_unit": "Jednostka",
+    "error_write": "Nie udało się zapisać pliku: {error}",
+    "done": "Wyeksportowano listę punktów do {path}"
   }
 }

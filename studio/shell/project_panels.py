@@ -55,12 +55,14 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
 """
 import os
 import re
+from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -98,6 +100,225 @@ from studio.shell.project_format import (
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
 _ANALOG_KINDS = {"AI", "AO"}
 DEVICE_BEHAVIORS = ["SWITCHED", "SIGNAL", "MEASURED", "MODULATED", "SELECTOR"]
+
+# "Skład urządzenia" (task "fix/project-format-integrity", point 2/3) -
+# mirrored from runtime/epw_os/core/feature_config.py's own
+# TOGGLABLE_FEATURES (GRANICE forbids importing runtime/, so this is a
+# hand-copy, same convention as ELECTRICAL_PROTECTION_CATALOG above -
+# re-check against that file if it ever changes). ALWAYS_ON_FEATURES
+# (main_view/digital_inputs/control_outputs/alarms/events/audit_log)
+# are deliberately NOT listed here at all - runtime's own docstring:
+# "cannot be disabled by this dialog" - they aren't a CHOICE, so they
+# don't belong in a table whose whole point is choosing.
+#
+# Each entry: (feature_id, name_pl, name_en, description_pl,
+# description_en, tree_group). `tree_group` is one of "alarm",
+# "protection", or None - which of _refresh_module_visibility()'s
+# groups this toggle gates a REAL Studio branch for; None means the
+# toggle is real and saved (matches a real runtime feature) but Studio
+# has no panel for it yet - shown honestly as such, not hidden.
+MODULE_CATALOG = [
+    ("intrusion", "Alarmówka", "Intrusion Alarm",
+     "Wykrywanie włamań: strefy, linie dozorowe, uzbrajanie/rozbrajanie.",
+     "Burglar detection: zones, supervised lines, arming/disarming.", "alarm"),
+    ("protection_settings", "Zabezpieczenia elektryczne", "Electrical Protection",
+     "Nastawy przekaźnikowe ANSI (napięcie/częstotliwość/prąd/zasilanie), realizowane przez ADA01.",
+     "ANSI relay settings (voltage/frequency/current/power supply), executed by ADA01.", "protection"),
+    ("protection_process", "Zabezpieczenia procesowe", "Process Protection",
+     "Progi górny/dolny na punktach analogowych, oceniane na żywo w runtime.",
+     "Upper/lower thresholds on analog points, evaluated live in runtime.", "protection"),
+    ("trends", "Trendy", "Trends",
+     "Historia wartości punktów procesowych w czasie (Historian).",
+     "Historical logging of process point values over time (Historian).", None),
+    ("power_quality", "Jakość zasilania", "Power Quality",
+     "Monitorowanie parametrów sieci zasilającej (napięcie, THD, asymetria).",
+     "Monitoring of mains power parameters (voltage, THD, imbalance).", None),
+    ("bus_diagnostics", "Diagnostyka magistrali", "Bus Diagnostics",
+     "Liczniki ramek/błędów komunikacji z modułami ELA/ADA/EPM.",
+     "Frame/error counters for communication with ELA/ADA/EPM modules.", None),
+    ("system_topology", "Topologia systemu", "System Topology",
+     "Widok, z jakich modułów i połączeń faktycznie składa się instalacja.",
+     "A view of which modules and links the installation actually consists of.", None),
+    ("engineer_mode", "Tryb inżynierski", "Engineer Mode",
+     "Dodatkowe narzędzia weryfikacyjne dostępne na poziomie dostępu Engineer.",
+     "Additional verification tools available at Engineer access level.", None),
+    ("analog_inputs", "Wejścia analogowe", "Analog Inputs",
+     "Czy ten sterownik w ogóle obsługuje punkty analogowe (AI).",
+     "Whether this controller handles analog (AI) points at all.", None),
+    ("switching_counters", "Liczniki łączeń", "Switching Counters",
+     "Liczba załączeń/wyłączeń i czas pracy aparatów łączeniowych.",
+     "Switch/close counts and running time for switching apparatus.", None),
+    ("service_notes", "Notatki serwisowe", "Service Notes",
+     "Miejsce na wolny tekst serwisanta przy urządzeniach/punktach.",
+     "Free-text space for a technician's notes on devices/points.", None),
+    ("intrusion_history", "Historia alarmów", "Alarm History",
+     "Dziennik zdarzeń alarmówki (uzbrojenia, naruszenia, bypassy) - podstrona Alarmówki w runtime.",
+     "The intrusion alarm's own event log (arming, violations, bypasses) - a runtime Alarmówka subpage.", None),
+    ("intrusion_config", "Podgląd alarmówki", "Alarm Live View",
+     "Żywy podgląd stanu stref i linii na sterowniku - podstrona Alarmówki w runtime.",
+     "A live view of zone/line state on the controller - a runtime Alarmówka subpage.", None),
+]
+
+MODULE_IDS = [entry[0] for entry in MODULE_CATALOG]
+
+
+def _module_entry(feature_id):
+    for entry in MODULE_CATALOG:
+        if entry[0] == feature_id:
+            return entry
+    return None
+
+
+def _module_has_data(project, feature_id: str) -> bool:
+    """Task 2.4: "gdy projekt ma już dane tego modułu — ostrzeż wprost".
+    Only the three modules with a real Studio panel today can HAVE
+    Studio-side data at all; the rest (no panel yet) trivially don't."""
+    if feature_id == "intrusion":
+        return bool(project.zones or project.lines)
+    if feature_id == "protection_settings":
+        return bool(project.electrical_protection_stages)
+    if feature_id == "protection_process":
+        return bool(project.process_protections)
+    return False
+
+
+class _ZeroOneSwitch(QWidget):
+    """The e²TANGO reference's own two-state switch - "[0][I]", pressed
+    segment shows state. The TAK/NIE word is a SEPARATE label the
+    caller places next to this (task 3: "stan widoczny słowem, nie samą
+    ikoną") - this widget only ever renders the two segments."""
+
+    toggled = Signal(bool)
+
+    def __init__(self, checked: bool = False, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.btn_off = QPushButton("0")
+        self.btn_on = QPushButton("I")
+        for b in (self.btn_off, self.btn_on):
+            b.setCheckable(True)
+            b.setFixedWidth(26)
+            layout.addWidget(b)
+        self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
+        self._group.addButton(self.btn_off)
+        self._group.addButton(self.btn_on)
+        self.set_checked(checked)
+        self.btn_on.clicked.connect(lambda: self.toggled.emit(True))
+        self.btn_off.clicked.connect(lambda: self.toggled.emit(False))
+
+    def set_checked(self, value: bool):
+        (self.btn_on if value else self.btn_off).setChecked(True)
+
+
+class ModuleCompositionPanel(QWidget):
+    """"Skład urządzenia" (task "fix/project-format-integrity", points
+    2+3) - SPEC_PROJEKT_EPW.md's own concept, in the e²TANGO layout the
+    user pointed at: one table, Nazwa/Opis/Aktywność, [0][I] switches,
+    scrollable. Backed by MODULE_CATALOG above (mirrored from runtime's
+    real feature_config.py, not guessed) and Project.modules (a plain
+    list of enabled feature ids - "moduł spoza składu NIE ISTNIEJE",
+    matching presence/absence rather than a stored False).
+
+    Toggling a module OFF that already has real Studio data warns first
+    (task 2.4) but never deletes - see _module_has_data()/main_window.
+    _refresh_module_visibility(), which is the ONLY thing that reacts to
+    a change here (removing/restoring a tree branch), never this panel
+    itself touching project.zones/lines/etc."""
+
+    _COLS = ["name", "description", "active"]
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels(
+            [tr("modules.col_name"), tr("modules.col_description"), tr("modules.col_active")]
+        )
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 0, 190)
+        _make_column_resizable(self.table, 1, 420)
+        layout.addWidget(self.table)
+
+        self.refresh()
+
+    def refresh(self):
+        from studio.shell.i18n import get_language
+        lang = get_language()
+        self._loading = True
+        self.table.setRowCount(0)
+        enabled = set(self._studio_window._project.modules)
+        for feature_id, name_pl, name_en, desc_pl, desc_en, _group in MODULE_CATALOG:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+
+            name_item = QTableWidgetItem(name_pl if lang == "pl" else name_en)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 0, name_item)
+
+            desc_item = QTableWidgetItem(desc_pl if lang == "pl" else desc_en)
+            desc_item.setFlags(desc_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 1, desc_item)
+
+            cell = QWidget()
+            cell_layout = QHBoxLayout(cell)
+            cell_layout.setContentsMargins(6, 0, 6, 0)
+            cell_layout.setSpacing(8)
+            is_on = feature_id in enabled
+            label = QLabel(tr("modules.active_yes") if is_on else tr("modules.active_no"))
+            label.setMinimumWidth(40)
+            switch = _ZeroOneSwitch(checked=is_on)
+            switch.toggled.connect(lambda value, fid=feature_id, lbl=label: self._on_toggled(fid, value, lbl))
+            cell_layout.addWidget(label)
+            cell_layout.addWidget(switch)
+            cell_layout.addStretch(1)
+            self.table.setCellWidget(row, 2, cell)
+        self._loading = False
+
+    def _on_toggled(self, feature_id: str, value: bool, label: QLabel):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        currently_enabled = feature_id in project.modules
+        if value == currently_enabled:
+            return
+        if not value and _module_has_data(project, feature_id):
+            entry = _module_entry(feature_id)
+            from studio.shell.i18n import get_language
+            display_name = (entry[1] if get_language() == "pl" else entry[2]) if entry else feature_id
+            reply = QMessageBox.question(
+                self, tr("modules.confirm_disable_title"),
+                tr("modules.confirm_disable_text", name=display_name),
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                self.refresh()  # snaps the switch back to its real state
+                return
+        if value:
+            project.modules.append(feature_id)
+        else:
+            project.modules = [m for m in project.modules if m != feature_id]
+        label.setText(tr("modules.active_yes") if value else tr("modules.active_no"))
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def select_module(self, feature_id: str):
+        """Task point 6 - validation report navigation target (the
+        "moduł ma dane, ale nie jest w składzie" warning). Row order is
+        always MODULE_CATALOG's own fixed order - see refresh() above -
+        so no text lookup is needed, unlike the other panels' tables."""
+        if feature_id in MODULE_IDS:
+            row = MODULE_IDS.index(feature_id)
+            if row < self.table.rowCount():
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(self.table.item(row, 0))
 
 # "Alarmówka" - state sets per parametrization, same source of truth as
 # project_format.default_value_windows() (which state names exist at
@@ -832,6 +1053,23 @@ class PointRegistryPanel(QWidget):
             device_item.setToolTip(owner_id)
         self.table.setItem(row, 11, device_item)
 
+    def select_address(self, address: str):
+        """Task point 6 - "klik przenosi do miejsca problemu": the
+        validation report's own navigation target for every point-
+        registry-related issue. Clears the card filter first (the
+        offending point might belong to a card the filter is currently
+        hiding), then finds the row by address - same string this
+        panel's own column 0 always holds, see _append_point_row above."""
+        idx = self.card_filter.findData(None)
+        if idx >= 0:
+            self.card_filter.setCurrentIndex(idx)
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == address:
+                self.table.setCurrentCell(row, 1)
+                self.table.scrollToItem(item)
+                return
+
     def _on_location_changed(self, row):
         if self._loading:
             return
@@ -989,6 +1227,15 @@ class DevicesPanel(QWidget):
             return tr("devices.none")
         return tr("devices.n_points", n=len(addresses))
 
+    def select_device(self, device_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == device_id:
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(item)
+                return
+
     def add_device(self):
         project = self._studio_window._project
         existing_ids = {d.id for d in project.devices}
@@ -1066,6 +1313,147 @@ def points_of_kind(project, kind: str):
         if kind_by_card.get(card_id) == kind:
             result.append(point)
     return result
+
+
+def _grouped_export_points(project):
+    """Task point 7 - "Grupowanie po karcie, potem po lokalizacji."
+    Shared by both export_points_csv()/export_points_html() below so
+    the two formats can never silently disagree on row order. Returns
+    [(Card, [(location_label, [Point, ...]), ...]), ...] - only cards
+    that actually have points appear at all (an empty card contributes
+    nothing to a terminal documentation table); a point with no
+    location assigned is its own group, always LAST within its card
+    (real, named locations first, in the project's own Lokalizacje
+    order - matching how a reader would expect a printed table to
+    read, not raw alphabetical)."""
+    location_order = {loc.code: i for i, loc in enumerate(project.locations)}
+
+    def _card_id_of(address):
+        return address.split(".", 1)[0] if "." in address else address
+
+    points_by_card = {}
+    for point in project.points:
+        points_by_card.setdefault(_card_id_of(point.address), []).append(point)
+
+    groups = []
+    for card in project.cards:
+        card_points = points_by_card.get(card.id, [])
+        if not card_points:
+            continue
+        by_location = {}
+        for point in card_points:
+            by_location.setdefault(point.location, []).append(point)
+        location_labels = sorted(
+            by_location.keys(),
+            key=lambda loc: (loc == "", location_order.get(loc, 999), loc),
+        )
+        location_groups = [
+            (label, sorted(by_location[label], key=lambda p: p.address))
+            for label in location_labels
+        ]
+        groups.append((card, location_groups))
+    return groups
+
+
+def _analog_export_fields(point: Point, card_kind: str):
+    """The task's own "dla AI/AO zakresy i jednostka" column group -
+    empty for every non-analog card kind, same "wyszarzone/puste, nie
+    wymyślone" stance PointRegistryPanel's own analog columns already
+    take for a DI/DO row."""
+    if card_kind not in _ANALOG_KINDS:
+        return "", "", ""
+    raw_range = f"{_fmt(point.raw_min)}…{_fmt(point.raw_max)}" if (point.raw_min is not None or point.raw_max is not None) else ""
+    eng_range = f"{_fmt(point.eng_min)}…{_fmt(point.eng_max)}" if (point.eng_min is not None or point.eng_max is not None) else ""
+    return raw_range, eng_range, (point.unit or "")
+
+
+def export_points_csv(project) -> str:
+    """Task point 7 - "CSV (do Excela)". Columns verbatim, in the
+    task's own order: adres, opis, lokalizacja, notatka techniczna,
+    aparat korzystający z punktu, [AI/AO] zakres surowy/inżynieryjny/
+    jednostka. No separate "karta" column (not in the task's own list) -
+    "grupowanie po karcie" is expressed as ROW ORDER instead (every
+    address is already card-prefixed, so sorting by address in Excel
+    reproduces the same grouping) - see this module's own docstring
+    convention of using row order, not an invented column, wherever the
+    task's column list doesn't itself ask for one."""
+    import csv
+    import io
+
+    owners = point_owner_map(project)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        tr("export.col_address"), tr("export.col_description"), tr("export.col_location"),
+        tr("export.col_technical_note"), tr("export.col_device"),
+        tr("export.col_raw_range"), tr("export.col_eng_range"), tr("export.col_unit"),
+    ])
+    for card, location_groups in _grouped_export_points(project):
+        for location, points in location_groups:
+            location_label = location or tr("export.no_location")
+            for point in points:
+                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                writer.writerow([
+                    point.address, point.description, location_label, point.technical_note,
+                    owners.get(point.address, ""), raw_range, eng_range, unit,
+                ])
+    return output.getvalue()
+
+
+def export_points_html(project) -> str:
+    """Task point 7 - "Markdown albo HTML (do wydruku)" - HTML chosen:
+    directly printable from any browser (Ctrl+P), no separate renderer
+    needed, unlike Markdown. A REAL grouped document (H2 per card, H3
+    per location) - this is the "gotowa tabela zacisków do teczki
+    powykonawczej" the task describes, not a dump of the same flat CSV
+    rows with headers pasted on top."""
+    import html as html_lib
+
+    owners = point_owner_map(project)
+    title = tr("export.document_title")
+    parts = [
+        "<!doctype html><html><head><meta charset=\"utf-8\">",
+        f"<title>{html_lib.escape(title)}</title>",
+        "<style>",
+        "body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;margin:24px;}",
+        "h1{font-size:18px;margin-bottom:4px;}",
+        ".subtitle{color:#555;margin-top:0;margin-bottom:24px;}",
+        "h2{font-size:15px;margin-top:28px;border-bottom:2px solid #000;padding-bottom:2px;}",
+        "h3{font-size:13px;margin-top:14px;color:#333;}",
+        "table{border-collapse:collapse;width:100%;margin-bottom:10px;}",
+        "th,td{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top;}",
+        "th{background:#e8e8e8;}",
+        "@media print{h2{page-break-inside:avoid;}tr{page-break-inside:avoid;}}",
+        "</style></head><body>",
+        f"<h1>{html_lib.escape(title)}</h1>",
+        f"<p class=\"subtitle\">{html_lib.escape(project.metadata.name)}"
+        f" — {html_lib.escape(project.metadata.description)}</p>" if project.metadata.description
+        else f"<p class=\"subtitle\">{html_lib.escape(project.metadata.name)}</p>",
+    ]
+    cols = [
+        tr("export.col_location"), tr("export.col_address"), tr("export.col_description"),
+        tr("export.col_technical_note"), tr("export.col_device"),
+        tr("export.col_raw_range"), tr("export.col_eng_range"), tr("export.col_unit"),
+    ]
+    groups = _grouped_export_points(project)
+    if not groups:
+        parts.append(f"<p>{html_lib.escape(tr('export.no_points'))}</p>")
+    for card, location_groups in groups:
+        parts.append(f"<h2>{html_lib.escape(card.id)} — {html_lib.escape(card.model)} ({html_lib.escape(card.kind)})</h2>")
+        for location, points in location_groups:
+            location_label = location or tr("export.no_location")
+            parts.append(f"<h3>{html_lib.escape(location_label)}</h3>")
+            parts.append("<table><tr>" + "".join(f"<th>{html_lib.escape(c)}</th>" for c in cols) + "</tr>")
+            for point in points:
+                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                row_cells = [
+                    location_label, point.address, point.description, point.technical_note,
+                    owners.get(point.address, ""), raw_range, eng_range, unit,
+                ]
+                parts.append("<tr>" + "".join(f"<td>{html_lib.escape(str(v))}</td>" for v in row_cells) + "</tr>")
+            parts.append("</table>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
 
 
 class ZonesPanel(QWidget):
@@ -1454,6 +1842,15 @@ class LinesPanel(QWidget):
             return f"{line.parametrization} — {point}"
         return f"{tr(mode_key)} — {point}"
 
+    def select_line(self, line_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None and item.text() == line_id:
+                self.table.setCurrentCell(row, 0)
+                self.table.scrollToItem(item)
+                return
+
     def add_line(self):
         project = self._studio_window._project
         if not project.zones:
@@ -1813,6 +2210,15 @@ class ProcessProtectionPanel(QWidget):
                 return protection
         return None
 
+    def select_protection(self, protection_id: str):
+        """Task point 6 - validation report navigation target."""
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 1)
+            if item is not None and item.text() == protection_id:
+                self.table.setCurrentCell(row, 1)
+                self.table.scrollToItem(item)
+                return
+
     def add_protection(self):
         project = self._studio_window._project
         existing_ids = {p.id for p in project.process_protections}
@@ -2104,14 +2510,295 @@ class HelpPanel(QWidget):
             self.viewer.setMarkdown("")
             return
         key, _title_pl, _title_en = self._topics[row]
-        help_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "help")
-        path = os.path.join(help_dir, self._lang, f"{key}.md")
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-        except OSError:
-            text = f"*(brak pliku pomocy: {path})*"
-        self.viewer.setMarkdown(text)
+        self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+
+    def select_topic(self, key: str):
+        """Task 5.3 (pomoc kontekstowa, F1) - jumps straight to `key`
+        instead of making the caller know this panel's own row-index
+        bookkeeping. A silent no-op for an unknown key (same "don't
+        crash over a lookup miss" stance _on_topic_selected() above
+        already has for a missing .md file) rather than raising -
+        _HELP_TOPIC_BY_TREE_KEY in main_window.py is a hand-maintained
+        map that could in principle name a topic not in TOPICS."""
+        for row, (topic_key, _pl, _en) in enumerate(self._topics):
+            if topic_key == key:
+                self.topic_list.setCurrentRow(row)
+                return
+
+
+def load_help_topic_markdown(key: str, lang: str) -> str:
+    """Shared by HelpPanel and AboutDialog (task 5.1's own "about" topic
+    needs the exact same load-a-.md-file mechanism, not a second one) -
+    reads studio/shell/help/<lang>/<key>.md and substitutes `{version}`
+    where present (runtime/epw_os/gui/widgets/about_dialog.py's own
+    HelpContentStore.load_topic_markdown() does the same for its "about"
+    topic - mirrored here, not reinvented). A stray brace in some future
+    topic's own prose would make str.format() raise - caught and
+    returned unformatted rather than crashing the whole panel over it."""
+    help_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "help")
+    path = os.path.join(help_dir, lang, f"{key}.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return f"*(brak pliku pomocy: {path})*"
+    try:
+        from studio.shell.version import STUDIO_VERSION
+        return text.format(version=STUDIO_VERSION)
+    except (KeyError, IndexError):
+        return text
+
+
+class AboutDialog(QDialog):
+    """"Pomoc → O programie" (task 5.1) - same structure as runtime/
+    epw_os/gui/widgets/about_dialog.py's own AboutDialog (read before
+    writing this one, per the task's own instruction): logo, bold app
+    name, version line, a scrollable Markdown body (the "about" help
+    topic - same load_help_topic_markdown() HelpPanel itself uses, not
+    a second mechanism), a Close button. Logo is the REAL, full
+    runtime/epw_os/resources/about_logo.png (read-only) at the same
+    scale-down-never-up, null-safe stance that dialog already
+    established - not the cropped "EPW" plaque studio/shell/identity/
+    uses for the app/file icons (those are small-size derivatives;
+    this dialog has room for the real thing, same as runtime's own)."""
+
+    _LOGO_MAX_WIDTH = 320
+    _LOGO_MAX_HEIGHT = 160
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("about.title"))
+        self.setModal(True)
+        self.setMinimumSize(420, 480)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
+
+        logo_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "runtime", "epw_os", "resources", "about_logo.png",
+        )
+        pixmap = QPixmap(logo_path) if os.path.isfile(logo_path) else None
+        if pixmap is not None and not pixmap.isNull():
+            logo_label = QLabel()
+            scaled = pixmap.scaled(
+                self._LOGO_MAX_WIDTH, self._LOGO_MAX_HEIGHT,
+                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation,
+            )
+            logo_label.setPixmap(scaled)
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(logo_label)
+        # else: no logo file (or unreadable) - the dialog still works,
+        # just without the image, same as runtime's own.
+
+        header = QLabel(tr("app.title"))
+        f = header.font()
+        f.setBold(True)
+        f.setPointSize(f.pointSize() + 4)
+        header.setFont(f)
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        from studio.shell.version import STUDIO_VERSION
+        version_label = QLabel(f"{tr('about.version_label')}: {STUDIO_VERSION}")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        from studio.shell.i18n import get_language
+        text_browser = QTextBrowser()
+        text_browser.setOpenExternalLinks(False)
+        text_browser.setMarkdown(load_help_topic_markdown("about", get_language()))
+        layout.addWidget(text_browser, 1)
+
+        close_button = QPushButton(tr("about.btn_close"))
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+
+@dataclass
+class ValidationIssue:
+    """Task point 6 ("Sprawdź projekt") - one row of validate_project()'s
+    report. `target`/`selector`/`arg` are how "klik przenosi do miejsca
+    problemu" (not a one-sentence modal) actually works: `target` is a
+    small, main_window-independent kind string (see validate_project()'s
+    own docstring for the full list) that main_window.py's own
+    _navigate_to_validation_issue() maps to one of its own _TREE_ITEM_*
+    constants + panel - project_panels.py itself never imports
+    main_window (keeps this module importable standalone, same
+    "no upward import" stance every panel class here already keeps by
+    only ever reaching `self._studio_window`, never the module itself)."""
+
+    severity: str  # "error" | "warning"
+    message: str
+    target: str = ""
+    selector: str = ""
+    arg: str = ""
+
+
+def validate_project(project) -> list:
+    """Task point 6 - the seven checks verbatim from the task text,
+    each producing zero or more ValidationIssue rows instead of a
+    single modal sentence. ERROR = the project is not internally
+    consistent (a reference points at nothing, or two things claim the
+    same resource); WARNING = the project still hangs together but has
+    an omission worth a human's attention (a location typo, orphaned-
+    but-not-deleted module data) - the same "warn, never delete" stance
+    _module_has_data()/ModuleCompositionPanel._on_toggled() already
+    take for the module case is exactly check 7 below, reused, not
+    reimplemented.
+
+    `target` values, matched by main_window._navigate_to_validation_
+    issue(): "devices", "points", "lines", "process_protection",
+    "modules"."""
+    issues = []
+    point_addresses = {p.address for p in project.points}
+    card_ids = {c.id for c in project.cards}
+    location_codes = {loc.code for loc in project.locations}
+
+    def _card_id_of(address):
+        return address.split(".", 1)[0] if "." in address else address
+
+    # 1) "aparat wskazuje punkt, który nie istnieje"
+    # 2) "aparat wskazuje punkt z karty, która została usunięta"
+    # 3) "dwa aparaty na tym samym punkcie"
+    address_owners = {}
+    for device in project.devices:
+        for address in list(device.feedback) + list(device.command):
+            address_owners.setdefault(address, []).append(device.id)
+            if address not in point_addresses:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr("validation.msg_device_missing_point", device=device.id, address=address),
+                    "devices", "select_device", device.id,
+                ))
+            elif _card_id_of(address) not in card_ids:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr(
+                        "validation.msg_device_point_deleted_card",
+                        device=device.id, address=address, card=_card_id_of(address),
+                    ),
+                    "devices", "select_device", device.id,
+                ))
+    for address, owners in address_owners.items():
+        unique_owners = sorted(set(owners))
+        if len(unique_owners) > 1:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_point_double_owned", address=address, devices=", ".join(unique_owners)),
+                "devices", "select_device", unique_owners[0],
+            ))
+
+    # 4) "punkt z lokalizacją, której nie ma na liście"
+    for point in project.points:
+        if point.location and point.location not in location_codes:
+            issues.append(ValidationIssue(
+                "warning",
+                tr("validation.msg_point_unknown_location", address=point.address, location=point.location),
+                "points", "select_address", point.address,
+            ))
+
+    # 5) "linia dozorowa wskazująca nieistniejący punkt"
+    for line in project.lines:
+        if line.tag and line.tag not in point_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_line_missing_point", line=line.id, address=line.tag),
+                "lines", "select_line", line.id,
+            ))
+
+    # 6) "zabezpieczenie procesowe wskazujące nieistniejący punkt AI" -
+    # covers BOTH "nie istnieje" (missing outright) and "istnieje, ale
+    # to nie jest AI" (wrong kind) - points_of_kind() is the same
+    # DI/AI-only lookup LineConfigDialog's own point picker already uses.
+    ai_addresses = {p.address for p in points_of_kind(project, "AI")}
+    for pp in project.process_protections:
+        if not pp.analog_tag:
+            continue
+        if pp.analog_tag not in point_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_process_missing_point", protection=pp.id, address=pp.analog_tag),
+                "process_protection", "select_protection", pp.id,
+            ))
+        elif pp.analog_tag not in ai_addresses:
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_process_not_ai_point", protection=pp.id, address=pp.analog_tag),
+                "process_protection", "select_protection", pp.id,
+            ))
+
+    # 7) "moduł ma dane, ale nie jest w składzie urządzenia"
+    for feature_id in MODULE_IDS:
+        if feature_id not in project.modules and _module_has_data(project, feature_id):
+            entry = _module_entry(feature_id)
+            from studio.shell.i18n import get_language
+            name = (entry[1] if get_language() == "pl" else entry[2]) if entry else feature_id
+            issues.append(ValidationIssue(
+                "warning",
+                tr("validation.msg_module_has_orphan_data", module=name),
+                "modules", "select_module", feature_id,
+            ))
+
+    return issues
+
+
+class ValidationReportDialog(QDialog):
+    """Task point 6 - "Wynik: lista z podziałem BŁĄD/OSTRZEŻENIE, klik
+    przenosi do miejsca problemu. Nie modalne okno z jednym zdaniem."
+    Two always-visible sections (not tabs - the task's own complaint is
+    about a single terse sentence, not about section count), non-modal
+    (setModal(False)) so it can stay open while the user fixes things
+    in the panel underneath and re-runs "Sprawdź projekt" to check."""
+
+    def __init__(self, issues, on_navigate, parent=None):
+        super().__init__(parent)
+        self._on_navigate = on_navigate
+        self.setWindowTitle(tr("validation.dialog_title"))
+        self.setModal(False)
+        self.resize(720, 480)
+
+        errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
+
+        layout = QVBoxLayout(self)
+
+        summary = QLabel(tr("validation.summary", errors=len(errors), warnings=len(warnings)))
+        bold_font = summary.font()
+        bold_font.setBold(True)
+        summary.setFont(bold_font)
+        layout.addWidget(summary)
+
+        if not issues:
+            layout.addWidget(QLabel(tr("validation.none_found")))
+        else:
+            layout.addWidget(QLabel(tr("validation.hint_double_click")))
+            if errors:
+                layout.addWidget(self._build_section(tr("validation.section_errors"), errors), 1)
+            if warnings:
+                layout.addWidget(self._build_section(tr("validation.section_warnings"), warnings), 1)
+
+        close_button = QPushButton(tr("validation.close"))
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignRight)
+
+    def _build_section(self, title: str, section_issues) -> QGroupBox:
+        box = QGroupBox(f"{title} ({len(section_issues)})")
+        box_layout = QVBoxLayout(box)
+        listing = QListWidget()
+        for issue in section_issues:
+            item = QListWidgetItem(issue.message)
+            item.setData(Qt.ItemDataRole.UserRole, issue)
+            listing.addItem(item)
+        listing.itemDoubleClicked.connect(self._on_item_double_clicked)
+        box_layout.addWidget(listing)
+        return box
+
+    def _on_item_double_clicked(self, item):
+        issue = item.data(Qt.ItemDataRole.UserRole)
+        if issue is not None and self._on_navigate is not None:
+            self._on_navigate(issue)
 
 
 def _slug(text: str) -> str:
