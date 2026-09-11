@@ -6,12 +6,15 @@ left as placeholders: "Informacje o projekcie", "Karty wejść/wyjść",
 opisy" - built on top of step 1 (project_format.py, already done).
 
 Scope, stated plainly because it matters: this makes the point registry
-real WITHIN Studio's own Project object. It does NOT reach into today's
-separate Logic Studio (ELA01.DI01-style addressing, device_model.py) -
-unifying that address grammar with this one is the still-undecided
-"bridge vs migration" question ADDRESSING_INVENTORY.md already raised,
-and SPEC_PROJEKT_EPW.md's own rollout order schedules that for a LATER
-step (5: "Migracja adresacji"), after this one.
+real WITHIN Studio's own Project object. Update (task "migracja
+adresacji", step 5 mentioned below): that step has since happened -
+Logic Studio's device_model.py now generates the identical
+`<card>.<KIND>.<channel>` grammar this module does (both, along with
+runtime and Studio here, go through shared/addressing.py's
+format_address()/parse_address() - see that module's own docstring),
+not the old "ELA01.DI01" shape this comment used to describe. The
+"bridge vs migration" question ADDRESSING_INVENTORY.md raised is
+resolved: migration, no bridge, no old-name mapping.
 
 Follow-up ("co jeszcze możemy dorobić") added in the same file:
   - DevicesPanel/PointAssignDialog - SPEC's next section, "Aparaty":
@@ -90,6 +93,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from shared.addressing import format_address
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
@@ -423,8 +427,13 @@ def _card_channel_addresses(card: Card):
     """`<id>.<kind>.<channel>` for channel in 1..card.channels - the
     SPEC's own card-relative addressing rule (already the same shape
     Synoptic's own ChannelAddress uses, DeviceSchema.ts's own docstring:
-    'CARD.KIND.CHANNEL')."""
-    return [f"{card.id}.{card.kind}.{n}" for n in range(1, card.channels + 1)]
+    'CARD.KIND.CHANNEL'). Built through shared/addressing.py's own
+    format_address() rather than a hand-rolled f-string - task "migracja
+    adresacji" etap-3 follow-up ("jedna funkcja walidująca, nie trzy
+    kopie"): runtime and Logic Studio already build every address this
+    way, so this was the one remaining Python address-generation site
+    with its own independent copy of the same three-segment rule."""
+    return [format_address(card.id, card.kind, n) for n in range(1, card.channels + 1)]
 
 
 def points_for_card(project, card: Card):

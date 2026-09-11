@@ -331,17 +331,22 @@ class SimulationPanel(QWidget):
         # header like "DI.17-4" that goes backwards and names the wrong
         # device. addressing.parse_address()'s own `card` field is the
         # one place that already knows where one device's addresses end.
+        #
+        # Etap-3 follow-up: parse_address() now RAISES on a malformed
+        # address rather than returning None - deliberately not caught
+        # here. `addrs` only ever contains DeviceModel-generated
+        # addresses; if one doesn't parse, that is a real bug upstream
+        # and must surface loudly, not silently fall into a `card=None`
+        # bucket that would then merge unrelated devices' rows together.
         from logic_studio.core.addressing import parse_address
 
         groups = []
         start = 0
         while start < len(addrs):
-            parsed_start = parse_address(addrs[start])
-            card = parsed_start[0] if parsed_start else None
+            card = parse_address(addrs[start])[0]
             end = start + 1
             while end < len(addrs) and end - start < GROUP_SIZE:
-                parsed_next = parse_address(addrs[end])
-                if (parsed_next[0] if parsed_next else None) != card:
+                if parse_address(addrs[end])[0] != card:
                     break
                 end += 1
             chunk = addrs[start:end]

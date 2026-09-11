@@ -78,7 +78,16 @@ export function parseChannelAddress(addr: string): { card: string; kind: Channel
   const channelRaw = parts[2].trim();
   if (!card) return null;
   if (!(CHANNEL_KINDS as string[]).includes(kindRaw)) return null;
-  if (!/^[0-9]+$/.test(channelRaw)) return null;
+  // Task "migracja adresacji" (etap-3 follow-up): must match the platform
+  // grammar's channel rule exactly - a positive integer with NO leading
+  // zero. `/^[0-9]+$/` used to accept "05" (parsing to channel 5, same
+  // as "5" - a silent duplicate address) and "0" (not a real channel at
+  // all) - both are REJECTED outright by the canonical Python grammar
+  // (shared/addressing.py's `[1-9][0-9]*`), so an address Synoptic
+  // accepted here could fail to load anywhere else on the platform.
+  // Proven to match runtime/Logic Studio by
+  // test_addressing_grammar_cross_platform.py (etap 4).
+  if (!/^[1-9][0-9]*$/.test(channelRaw)) return null;
 
   return { card, kind: kindRaw as ChannelKind, channel: parseInt(channelRaw, 10) };
 }
@@ -634,11 +643,17 @@ export function validateDeviceRegistry(registry: unknown): ValidationResult {
     for (const { field, addr } of getDeviceChannelAddresses(device)) {
       issues.push(...validateChannelAddress(addr, cards));
 
-      // Collision detection must key on the RESOLVED channel, not the raw
-      // address text: 'ELA1.DI.12' and 'ELA1.DI.012' are the same physical
-      // terminal. An address that fails to parse already produced a format
-      // error above and cannot be meaningfully compared to anything else,
-      // so it is left out of the collision map entirely.
+      // Collision detection keys on the RESOLVED (card, kind, channel)
+      // tuple, not the raw address text - two DIFFERENTLY-WRITTEN but
+      // otherwise-equal addresses would otherwise slip past a naive
+      // string comparison. Task "migracja adresacji" (etap-3 follow-up):
+      // a leading-zero form like 'ELA1.DI.012' is no longer one of those
+      // - the platform grammar rejects it outright as invalid format
+      // (parseChannelAddress returns null for it), so it never reaches
+      // this comparison at all; an address that fails to parse already
+      // produced a format error above and cannot be meaningfully
+      // compared to anything else, so it is left out of the collision
+      // map entirely.
       const parsed = parseChannelAddress(addr);
       if (!parsed) continue;
 
