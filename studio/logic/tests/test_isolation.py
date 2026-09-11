@@ -1,4 +1,5 @@
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
 from logic_studio.engine.execution import ExecutionEngine
 from logic_studio.engine.io_provider import SimulationIOProvider
@@ -8,6 +9,8 @@ from logic_studio.blocks.logic_gates import NotGate
 
 def test_isolation():
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
 

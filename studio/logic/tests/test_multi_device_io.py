@@ -29,22 +29,26 @@ def _app():
 
 # ---- DeviceModel: defaults, project-awareness ----------------------------
 
-def test_no_project_defaults_to_a_single_device():
-    assert DeviceModel.get_ela_devices() == ["ELA01"]
-    assert DeviceModel.get_ada_devices() == ["ADA01"]
-    # Task "migracja adresacji": grammar is now "<card>.<KIND>.<channel>",
-    # no leading zeros - "DI{i:02d}" was the old two-segment shape.
-    assert DeviceModel.get_ela_addresses() == [f"ELA01.DI.{i}" for i in range(1, 33)]
-    assert DeviceModel.get_ada_addresses() == [f"ADA01.DO.{i}" for i in range(1, 33)]
+def test_no_project_defaults_to_empty():
+    """Task "jedno źródło listy kart": no project handy (the bare,
+    argument-less call) must NOT invent "ELA01"/"ADA01" - that silent
+    default is exactly the bug this task's own report described (Logic
+    Studio offering addresses for a card the project doesn't have)."""
+    assert DeviceModel.get_ela_devices() == []
+    assert DeviceModel.get_ada_devices() == []
+    assert DeviceModel.get_ela_addresses() == []
+    assert DeviceModel.get_ada_addresses() == []
 
-def test_new_project_defaults_to_a_single_device():
-    """A brand-new Project() must behave EXACTLY like every pre-multi-
-    device project — this is the regression test for that."""
+def test_new_project_starts_with_zero_devices():
+    """A brand-new Project() (no bridge, nothing configured yet) starts
+    with NO ELA/ADA devices at all - the old "always exactly one of
+    each" default is the bug this task fixes, not a regression test to
+    preserve."""
     p = Project()
-    assert DeviceModel.get_ela_devices(p) == ["ELA01"]
-    assert DeviceModel.get_ada_devices(p) == ["ADA01"]
-    assert len(DeviceModel.get_ela_addresses(p)) == 32
-    assert len(DeviceModel.get_ada_addresses(p)) == 32
+    assert DeviceModel.get_ela_devices(p) == []
+    assert DeviceModel.get_ada_devices(p) == []
+    assert DeviceModel.get_ela_addresses(p) == []
+    assert DeviceModel.get_ada_addresses(p) == []
 
 def test_addresses_span_every_defined_device():
     p = Project()
@@ -89,10 +93,12 @@ def test_set_ela_devices_validates_dedupes_and_normalizes(qsettings=None):
     assert result == ["ELA01", "ELA02"]
     assert p.settings["ela_devices"] == ["ELA01", "ELA02"]
 
-def test_set_ela_devices_falls_back_to_default_when_everything_invalid():
+def test_set_ela_devices_becomes_empty_when_everything_invalid():
+    """Task "jedno źródło listy kart": rejecting every invalid entry
+    must leave an honest empty list, not invent "ELA01" from nothing."""
     p = Project()
     result = DeviceModel.set_ela_devices(p, ["", "garbage", "ADA01"])
-    assert result == ["ELA01"]
+    assert result == []
 
 
 # ---- schema migration -----------------------------------------------------
@@ -151,6 +157,31 @@ def test_validator_accepts_address_once_the_device_is_defined():
     Validator(p).run(errors, warnings)
     assert not any("ELA02.DI.1" in e for e in errors)
 
+def test_validator_names_the_card_when_it_gets_removed():
+    """Task "jedno źródło listy kart" 1.2: a block whose card was
+    REMOVED (not merely never defined - the far more common real
+    scenario, a user deleting a card in Studio while a Logic block still
+    points at it) must fail loudly at compile time, NAMING the missing
+    card - never silently dropped, never its Address rewritten."""
+    from logic_studio.compiler.validator import Validator
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01", "ELA02"])
+    di = BlockRegistry.create_block("input.di")
+    di.properties["Address"] = "ELA02.DI.1"
+    p.add_block(di)
+
+    errors, warnings = [], []
+    Validator(p).run(errors, warnings)
+    assert not any("ELA02" in e and "nie istnieje" in e for e in errors)
+
+    DeviceModel.set_ela_devices(p, ["ELA01"])  # ELA02 removed from the project
+    di.properties["Address"] = "ELA02.DI.1"  # the block's own Address is untouched
+
+    errors, warnings = [], []
+    Validator(p).run(errors, warnings)
+    assert di.properties["Address"] == "ELA02.DI.1"  # never silently rewritten
+    assert any("ELA02" in e and "nie istnieje" in e for e in errors), errors
+
 
 # ---- core/crossref.py: classifies an address on any defined device --------
 
@@ -197,27 +228,37 @@ def test_dialog_starts_with_the_projects_current_devices(qsettings):
     assert [dialog.ela_list.item(i).text() for i in range(dialog.ela_list.count())] == ["ELA01", "ELA02"]
 
 def test_add_device_button_suggests_the_next_free_name(qsettings):
+    """Task "jedno źródło listy kart": a brand-new project starts with
+    ZERO devices now (not the old silent "ELA01" default) - the first
+    Add press suggests "ELA01" itself, the second "ELA02"."""
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     dialog = ProjectSettingsDialog(p)
     dialog._add_device(dialog.ela_list, "ELA")
+    dialog._add_device(dialog.ela_list, "ELA")
     assert [dialog.ela_list.item(i).text() for i in range(dialog.ela_list.count())] == ["ELA01", "ELA02"]
 
-def test_cannot_remove_the_last_remaining_device(qsettings):
+def test_removing_the_last_remaining_device_is_now_allowed(qsettings):
+    """Task "jedno źródło listy kart": the old "must keep at least one
+    device" floor is gone - a project with zero ELA/ADA devices is a
+    real, correct state (DeviceModel.get_ela_devices() == []), the same
+    way Studio's own Cards panel lets a user remove its last card."""
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     dialog = ProjectSettingsDialog(p)
+    dialog._add_device(dialog.ela_list, "ELA")
     dialog.ela_list.item(0).setSelected(True)
     dialog._remove_selected_devices(dialog.ela_list)
-    assert dialog.ela_list.count() == 1  # refused — would leave zero devices
+    assert dialog.ela_list.count() == 0
 
 def test_removing_a_non_last_device_works(qsettings):
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     dialog = ProjectSettingsDialog(p)
+    dialog._add_device(dialog.ela_list, "ELA")  # ELA01
     dialog._add_device(dialog.ela_list, "ELA")  # ELA01, ELA02
     dialog.ela_list.item(1).setSelected(True)
     dialog._remove_selected_devices(dialog.ela_list)
@@ -232,7 +273,7 @@ def test_apply_to_project_stores_the_edited_device_lists(qsettings):
     dialog._on_accept()
 
     dialog.apply_to_project()
-    assert p.settings["ela_devices"] == ["ELA01", "ELA02"]
+    assert p.settings["ela_devices"] == ["ELA01"]
 
 def test_removing_a_used_device_prompts_for_confirmation(qsettings, monkeypatch):
     """Mirrors the existing used-internal-signal-deletion confirmation —
@@ -275,12 +316,26 @@ def test_removing_a_used_device_prompts_for_confirmation(qsettings, monkeypatch)
 # no corresponding diagnostic signals. Generated instead from the project's
 # own ela_devices/ada_devices list (system_signals.py::_device_signals()).
 
-def test_no_project_generates_only_the_default_single_device_signals():
-    """project=None (or a project that never left the single-device
-    default) must reproduce the catalog's old static content exactly —
-    same ids, same text, same safety flags."""
+def test_no_project_generates_no_device_signals():
+    """Task "jedno źródło listy kart": project=None (or a project with
+    no ELA/ADA devices) must generate NO per-device diagnostic signals -
+    there is no device to generate one for, and no reason to keep
+    pretending "ELA01"/"ADA01" exist."""
     from logic_studio.core import system_signals
 
+    for sig_id in ("ELA01.ONLINE", "ELA01.FAULT", "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK"):
+        assert system_signals.get_signal(sig_id) is None, sig_id
+
+
+def test_project_with_devices_generates_their_signals():
+    """Companion to the above - a project that DOES define ELA01/ADA01
+    (its own real configuration, not a silent default) still gets
+    exactly the same diagnostic content the old static catalog had."""
+    from logic_studio.core import system_signals
+
+    p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     expected = {
         "ELA01.ONLINE": ("Moduł ELA01 komunikuje się poprawnie", "ELA OK", False),
         "ELA01.FAULT": ("Awaria modułu ELA01", "ELA AW", True),
@@ -289,7 +344,7 @@ def test_no_project_generates_only_the_default_single_device_signals():
         "ADA01.SAFE_PATH_OK": ("Sprzętowa droga wyłączenia sprawna", "DROGA OK", True),
     }
     for sig_id, (desc, label, safety) in expected.items():
-        entry = system_signals.get_signal(sig_id)
+        entry = system_signals.get_signal(sig_id, p)
         assert entry is not None, sig_id
         assert entry["description"] == desc
         assert entry["label"] == label

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QApplication
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.core.wire import Wire
 from logic_studio.core import macros as macros_module
 from logic_studio.core import macro_library
@@ -107,6 +108,8 @@ def test_instantiate_definition_wires_defaults_to_empty_for_a_pre_b1_definition(
 
 def test_update_definition_wires_round_trips_through_get_definition():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id = macros_module.new_def_id()
     macros_module.set_definition(p, def_id, {"name": "M", "blocks": [], "wires": [],
                                               "input_pins": [], "output_pins": []})
@@ -124,6 +127,8 @@ def test_update_definition_wires_round_trips_through_get_definition():
 
 def test_update_definition_wires_is_a_no_op_for_a_deleted_definition():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert macros_module.update_definition_wires(p, "does-not-exist", []) is False
 
 
@@ -137,6 +142,8 @@ def test_copy_definition_preserves_wires_across_a_get_set_round_trip():
     get_definition()/set_definition() round trip. This is the permanent
     regression test for that."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id = macros_module.new_def_id()
     macros_module.set_definition(p, def_id, {
         "name": "M", "blocks": [], "wires": [{"uuid": "w1", "label": "Survives"}],
@@ -241,6 +248,8 @@ def test_macro_internal_label_does_not_merge_with_a_same_named_top_level_label()
     would correctly reject as an ERROR. If scoping actually works,
     neither one ever sees the other, and compilation succeeds cleanly."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     top_di = BlockRegistry.create_block("input.di")
     top_di.properties["Address"] = "ELA01.DI.1"
     p.add_block(top_di)
@@ -278,6 +287,8 @@ def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
     or vice versa, even though both come from the literal same
     definition dict."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     macro_di = BlockRegistry.create_block("input.di")
     macro_di.properties["Address"] = "ELA01.DI.1"
     macro_do_stub = BlockRegistry.create_block("logic.buffer")
@@ -316,6 +327,8 @@ def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
 
 def test_export_import_bundle_carries_macro_internal_wires():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     a = BlockRegistry.create_block("logic.and")
     b = BlockRegistry.create_block("logic.not")
     wire = Wire()
@@ -330,6 +343,8 @@ def test_export_import_bundle_carries_macro_internal_wires():
     assert bundle["definitions"][def_id]["wires"][0]["label"] == "Carried"
 
     target = Project()
+    DeviceModel.set_ela_devices(target, ["ELA01"])
+    DeviceModel.set_ada_devices(target, ["ADA01"])
     new_id = macro_library.import_bundle(target, bundle)
     imported = macros_module.get_definition(target, new_id)
     assert imported["wires"][0]["label"] == "Carried"

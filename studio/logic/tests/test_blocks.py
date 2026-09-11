@@ -144,6 +144,7 @@ def test_tp_start_with_active_input_no_keyerror():
     simulation_state before calling reset_runtime_state(). TP must not depend
     on a key surviving that clear() to evaluate safely on the very first scan."""
     from logic_studio.core.project import Project
+    from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
     from logic_studio.engine.execution import ExecutionEngine
     from logic_studio.engine.io_provider import SimulationIOProvider
@@ -151,6 +152,8 @@ def test_tp_start_with_active_input_no_keyerror():
     from logic_studio.blocks.io_blocks import DigitalInputBlock
 
     project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
     di = DigitalInputBlock()
     di.properties["Address"] = "ELA01.DI.1"
     tp = TP()

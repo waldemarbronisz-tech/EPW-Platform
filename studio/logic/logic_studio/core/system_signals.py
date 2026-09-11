@@ -11,10 +11,11 @@ project.settings["ela_devices"]/["ada_devices"] DeviceModel already reads for
 everything else device-related (feat/multi-device-io), so a project defining
 ELA02/ADA02 gets their diagnostics too, without a second, independently-
 maintained device list. Every public function below takes an OPTIONAL
-`project` for exactly this reason — omitted (or None), it falls back to the
-single-device ELA01/ADA01 default, reproducing the catalog's pre-multi-device
-static content byte-for-byte (same ids/descriptions/labels/safety flags),
-the same "no project handy yet" degradation pattern DeviceModel itself uses.
+`project` for exactly this reason — omitted (or None), or a project with no
+ELA/ADA devices at all, correctly generates NO per-device diagnostics (task
+"jedno źródło listy kart": DeviceModel.get_ela_devices()/get_ada_devices()
+return [] rather than a silent "ELA01"/"ADA01" default, so there is no
+device to generate a diagnostic signal FOR).
 """
 import json
 import os

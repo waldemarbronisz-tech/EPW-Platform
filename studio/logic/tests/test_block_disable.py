@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
 from logic_studio.engine.execution import ExecutionEngine
 from logic_studio.engine.io_provider import SimulationIOProvider
@@ -44,8 +45,14 @@ def _block_item(window, block):
 
 
 def _and_project():
-    """DI -> AND -> DO, a trivially compilable chain."""
+    """DI -> AND -> DO, a trivially compilable chain. Task "jedno źródło
+    listy kart": a fresh Project() has zero ELA/ADA devices now (no more
+    silent "ELA01"/"ADA01" default), so this fixture declares them
+    explicitly - this test suite's own project, not a hidden platform
+    default."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = BlockRegistry.create_block("input.di")
     di.properties["Address"] = "ELA01.DI.1"
     gate = BlockRegistry.create_block("logic.and")

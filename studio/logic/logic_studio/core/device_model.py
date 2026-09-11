@@ -4,56 +4,81 @@ from logic_studio.core.addressing import format_address
 class DeviceModel:
     """Centralized definition of EPW Controller IO topology.
 
-    feat/multi-device-io: the DEVICE LIST (how many ELA/ADA modules a
-    project addresses) is project-defined — project.settings["ela_devices"]/
-    ["ada_devices"], defaulting to the single-device ["ELA01"]/["ADA01"]
-    every project used to be permanently fixed to (Project.__init__,
-    core/project.py's v4->v5 migration).
+    Task "jedno źródło listy kart": cards are now defined ONCE, in the
+    Studio project (studio/shell/project_format.py's Card list) - every
+    other program only READS them. When Logic Studio is embedded in
+    Studio (LogicPanel), `project.external_cards` (set by LogicPanel,
+    never serialized - see Project.__init__'s own comment) is a live
+    mirror of Studio's real Card list: [{"id", "kind", "channels"}, ...],
+    `kind` one of "DI"/"DO" (Studio's AI/AO cards have no Logic Studio
+    module-list equivalent - analog points remain their own, separate,
+    address-based mechanism, project.settings["analog_points"], untouched
+    by this task). Every getter below checks `_external_family()` FIRST -
+    when present, it is the ONLY source, entirely superseding
+    project.settings["ela_devices"/"ela_channels"/...] for that project
+    instance; the old settings are left in place on disk (never migrated
+    away, GRANICE) but simply unused while a host is bridged in.
 
-    Task "migracja adresacji": the CHANNEL COUNT per kind
-    (ELA_CHANNELS/ADA_CHANNELS) is now ALSO project-defined -
-    project.settings["ela_channels"]/["ada_channels"], defaulting to
-    these same class constants when the project doesn't override them
-    (same "constant is the DEFAULT, not the only source" relationship
-    _DEFAULT_ELA_DEVICES already has to get_ela_devices()). One count
-    per KIND, not per individual device - every ELA module in a given
-    project still has the same channel count as every other ELA module
-    in that project; only how many MODULES exist varies per-device
-    (the device LIST), not how many channels each one has. A genuinely
-    per-device channel count (a project mixing a 16-channel and a
-    32-channel ELA card) is a real, larger data-model change this task
-    does not make - project.settings["ela_devices"] stays a plain list
-    of device-name strings, not upgraded to per-device dicts.
+    project.settings["ela_devices"]/["ada_devices"] remain the source for
+    a project with NO bridge (Logic Studio run standalone via
+    studio/logic/main.py, still editable through Project Settings ->
+    Urządzenia) - a real, user-typed device list, not a hidden default.
+    A genuinely UNCONFIGURED project (nothing in `ela_devices` at all)
+    now returns an EMPTY list rather than silently inventing "ELA01" -
+    exactly the disease this task's own report described ("adresy,
+    których w jego projekcie NIE MA"). Project.__init__ seeds both lists
+    empty for this reason; Project.deserialize()'s own migration default
+    for pre-multi-device FILES (which really did always mean exactly one
+    implicit ELA01/ADA01 before this feature existed) is unaffected -
+    see that method's own comment.
 
-    Every method below accepts an OPTIONAL `project` — omitted (or None),
-    it falls back to the single-device default, so a call site that
-    genuinely has no project handy (or hasn't been updated yet) degrades
-    to exactly today's pre-multi-device behavior rather than raising."""
+    ONE channel count per kind (ELA_CHANNELS/ADA_CHANNELS) remains the
+    rule for the project.settings-based (non-bridged) path - every ELA
+    module in a standalone project still shares one channel count, same
+    as before. A bridged project has NO such limit: each external card
+    carries its own `channels`, exactly matching Studio's own per-card
+    Card.channels (get_ela_device_channels()/get_ada_device_channels()
+    below are what both get_ela_addresses() and device_explorer.py's own
+    tree build from, so the two can never disagree)."""
 
     ELA_CHANNELS = 32
     ADA_CHANNELS = 32
     MAX_CHANNELS = 256  # a sanity ceiling for set_ela_channels/set_ada_channels, not a platform limit
 
-    _DEFAULT_ELA_DEVICES = ["ELA01"]
-    _DEFAULT_ADA_DEVICES = ["ADA01"]
+    @classmethod
+    def _external_family(cls, project, kind: str):
+        """None if `project` has no bridged Studio card list at all (the
+        project.settings-based mechanism applies) - otherwise the
+        {"id", "channels"} dicts for exactly this kind ("DI" or "DO"),
+        in Studio's own card order. See this class's own docstring."""
+        cards = getattr(project, "external_cards", None) if project is not None else None
+        if cards is None:
+            return None
+        return [{"id": c["id"], "channels": c["channels"]} for c in cards if c.get("kind") == kind]
 
     @classmethod
     def get_ela_devices(cls, project=None) -> list:
+        ext = cls._external_family(project, "DI")
+        if ext is not None:
+            return [c["id"] for c in ext]
         if project is None:
-            return list(cls._DEFAULT_ELA_DEVICES)
-        return list(project.settings.get("ela_devices", cls._DEFAULT_ELA_DEVICES))
+            return []
+        return list(project.settings.get("ela_devices", []))
 
     @classmethod
     def get_ada_devices(cls, project=None) -> list:
+        ext = cls._external_family(project, "DO")
+        if ext is not None:
+            return [c["id"] for c in ext]
         if project is None:
-            return list(cls._DEFAULT_ADA_DEVICES)
-        return list(project.settings.get("ada_devices", cls._DEFAULT_ADA_DEVICES))
+            return []
+        return list(project.settings.get("ada_devices", []))
 
     @classmethod
     def get_ela_channels(cls, project=None) -> int:
-        """Task "migracja adresacji": ELA_CHANNELS is now a DEFAULT, not
-        the only source - a project may override it via
-        project.settings["ela_channels"] (see set_ela_channels())."""
+        """The ONE shared channel count for the project.settings-based
+        (non-bridged) path only - a bridged project has no single count
+        at all, see get_ela_device_channels()."""
         if project is None:
             return cls.ELA_CHANNELS
         return project.settings.get("ela_channels", cls.ELA_CHANNELS)
@@ -63,6 +88,27 @@ class DeviceModel:
         if project is None:
             return cls.ADA_CHANNELS
         return project.settings.get("ada_channels", cls.ADA_CHANNELS)
+
+    @classmethod
+    def get_ela_device_channels(cls, project=None) -> list:
+        """[(device_id, channel_count), ...] for every ELA device, in
+        order - device_explorer.py's own tree build uses this directly
+        (instead of get_ela_channels()+get_ela_devices() separately) so
+        a bridged project's per-card channel counts are never flattened
+        back into one shared number."""
+        ext = cls._external_family(project, "DI")
+        if ext is not None:
+            return [(c["id"], c["channels"]) for c in ext]
+        channels = cls.get_ela_channels(project)
+        return [(dev, channels) for dev in cls.get_ela_devices(project)]
+
+    @classmethod
+    def get_ada_device_channels(cls, project=None) -> list:
+        ext = cls._external_family(project, "DO")
+        if ext is not None:
+            return [(c["id"], c["channels"]) for c in ext]
+        channels = cls.get_ada_channels(project)
+        return [(dev, channels) for dev in cls.get_ada_devices(project)]
 
     @classmethod
     def set_ela_channels(cls, project, count: int) -> int:
@@ -96,24 +142,24 @@ class DeviceModel:
     def get_ela_addresses(cls, project=None):
         """Returns device-qualified ELA inputs (platform grammar -
         addressing.format_address()), across EVERY ELA device the
-        project defines, using the project's own channel count (see
-        get_ela_channels())."""
-        addrs = []
-        channels = cls.get_ela_channels(project)
-        for dev in cls.get_ela_devices(project):
-            addrs.extend([cls.format_ela_address(dev, i) for i in range(1, channels + 1)])
-        return addrs
+        project defines, each using ITS OWN channel count (see
+        get_ela_device_channels())."""
+        return [
+            cls.format_ela_address(dev, i)
+            for dev, channels in cls.get_ela_device_channels(project)
+            for i in range(1, channels + 1)
+        ]
 
     @classmethod
     def get_ada_addresses(cls, project=None):
         """Returns device-qualified ADA outputs (platform grammar), across
-        EVERY ADA device the project defines, using the project's own
-        channel count (see get_ada_channels())."""
-        addrs = []
-        channels = cls.get_ada_channels(project)
-        for dev in cls.get_ada_devices(project):
-            addrs.extend([cls.format_ada_address(dev, i) for i in range(1, channels + 1)])
-        return addrs
+        EVERY ADA device the project defines, each using ITS OWN channel
+        count (see get_ada_device_channels())."""
+        return [
+            cls.format_ada_address(dev, i)
+            for dev, channels in cls.get_ada_device_channels(project)
+            for i in range(1, channels + 1)
+        ]
 
     _DEVICE_NAME_RE_CACHE = {}
 
@@ -152,6 +198,10 @@ class DeviceModel:
 
     @classmethod
     def _set_devices(cls, project, settings_key: str, prefix: str, devices: list) -> list:
+        """Task "jedno źródło listy kart": no more falling back to a
+        hardcoded "ELA01"/"ADA01" when every entry the caller passed was
+        invalid - an empty result is the honest answer (nothing valid
+        was provided), not an invented device the user never asked for."""
         seen = set()
         clean = []
         for name in devices or []:
@@ -159,8 +209,6 @@ class DeviceModel:
             if name and cls.is_valid_device_name(prefix, name) and name not in seen:
                 seen.add(name)
                 clean.append(name)
-        if not clean:
-            clean = list(getattr(cls, f"_DEFAULT_{prefix}_DEVICES"))
         project.settings[settings_key] = clean
         return clean
 

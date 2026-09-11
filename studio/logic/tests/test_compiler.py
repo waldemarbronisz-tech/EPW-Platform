@@ -1,5 +1,6 @@
 import pytest
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
 from logic_studio.blocks.logic_gates import AndGate, OrGate
 from logic_studio.blocks.io_blocks import DigitalOutputBlock
@@ -9,6 +10,8 @@ register_builtin_blocks()
 
 def test_compiler_cycle_detection():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     b1 = AndGate()
     b2 = OrGate()
 
@@ -28,6 +31,8 @@ def test_compiler_cycle_detection():
 
 def test_duplicate_ada_output():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     do1 = DigitalOutputBlock()
     do1.properties["Address"] = "ADA1"
 
@@ -49,6 +54,8 @@ def test_export_checksum_roundtrip():
     from logic_studio.compiler.exporter import Exporter, verify_checksum
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     a = AndGate()
     p.add_block(a)
 
@@ -77,6 +84,8 @@ def test_verify_checksum_ignores_non_schema_keys():
     from logic_studio.compiler.exporter import verify_checksum
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     a = AndGate()
     p.add_block(a)
 
@@ -101,6 +110,8 @@ def test_analog_point_validation_and_range_resolution():
     from logic_studio.blocks.analog_io import AnalogInputBlock, AnalogOutputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TEMP", "name": "Temp", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
         {"address": "AO.SETPOINT", "name": "Setpoint", "unit": "°C", "min": 0.0, "max": 100.0, "direction": "output"},
@@ -131,6 +142,8 @@ def test_quality_stuck_zero_tolerance_warns():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     q = QualityBlock()
     q.properties["Stuck Scans"] = 3
     q.properties["Range Source"] = "Własny"  # §4: unrelated to this test, avoid its own unconnected-AI error
@@ -145,6 +158,8 @@ def test_quality_stuck_nonzero_tolerance_does_not_warn():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     q = QualityBlock()
     q.properties["Stuck Scans"] = 3
     q.properties["Stuck Tolerance"] = 0.05
@@ -163,6 +178,8 @@ def test_quality_range_source_from_analog_point_resolves_and_exports():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TEMP", "name": "Temp", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
     ]
@@ -193,6 +210,8 @@ def test_quality_range_source_from_analog_point_ignores_own_min_max():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.TEMP", "name": "Temp", "unit": "°C", "min": -40.0, "max": 150.0, "direction": "input"},
     ]
@@ -221,6 +240,8 @@ def test_quality_range_source_requires_direct_ai_input():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     q = QualityBlock()  # default Range Source, In left unconnected
     p.add_block(q)
 
@@ -233,6 +254,8 @@ def test_quality_range_source_wlasny_uses_own_min_max_unaffected():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     q = QualityBlock()
     q.properties["Range Source"] = "Własny"
     q.properties["Min"] = 0.0
@@ -260,6 +283,8 @@ def test_ai_comparator_do_with_quality_unconnected_warns():
     from logic_studio.blocks.io_blocks import DigitalOutputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.LEVEL", "name": "Level", "unit": "m", "min": 0.0, "max": 10.0, "direction": "input"},
     ]
@@ -284,6 +309,8 @@ def test_ai_quality_connected_does_not_warn():
     from logic_studio.blocks.logic_gates import AndGate
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.LEVEL", "name": "Level", "unit": "m", "min": 0.0, "max": 10.0, "direction": "input"},
     ]
@@ -306,6 +333,8 @@ def test_quality_block_good_unconnected_warns():
     from logic_studio.blocks.analog_processing import QualityBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     q = QualityBlock()
     q.properties["Range Source"] = "Własny"  # unrelated to this test
     p.add_block(q)
@@ -321,6 +350,8 @@ def test_ai_hold_expired_unconnected_warns_independently_of_quality():
     from logic_studio.blocks.logic_gates import AndGate
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.LEVEL", "name": "Level", "unit": "m", "min": 0.0, "max": 10.0, "direction": "input"},
     ]
@@ -345,6 +376,8 @@ def test_unconnected_non_safety_output_never_warns():
     from logic_studio.blocks.logic_gates import AndGate
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(AndGate())
 
     c = Compiler(p)
@@ -356,6 +389,8 @@ def test_invalid_analog_input_address_fails_compilation():
     from logic_studio.blocks.analog_io import AnalogInputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     ai = AnalogInputBlock()
     ai.properties["Address"] = "AI.DOES_NOT_EXIST"
     p.add_block(ai)
@@ -369,6 +404,8 @@ def test_duplicate_analog_output_address_fails():
     from logic_studio.blocks.analog_io import AnalogOutputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AO.X", "name": "X", "unit": "", "min": 0.0, "max": 10.0, "direction": "output"},
     ]
@@ -388,6 +425,8 @@ def test_duplicate_analog_input_address_warns_not_fails():
     from logic_studio.blocks.analog_io import AnalogInputBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["analog_points"] = [
         {"address": "AI.X", "name": "X", "unit": "", "min": 0.0, "max": 10.0, "direction": "input"},
     ]
@@ -432,6 +471,8 @@ def test_compiler_deterministic_execution_order():
     results = []
     for ordering in orderings:
         p = Project()
+        DeviceModel.set_ela_devices(p, ["ELA01"])
+        DeviceModel.set_ada_devices(p, ["ADA01"])
         for name in ordering:
             p.add_block(blocks_by_name[name])
 
@@ -444,6 +485,8 @@ def test_compiler_deterministic_execution_order():
 
 def test_compiler_allows_stateful_cycles():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     from logic_studio.blocks.timers import TON
 
     b1 = AndGate()
@@ -483,6 +526,8 @@ def test_compile_expands_a_macro_instance_before_validating():
     definition, _ = build_definition("AndMacro", [gate])
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     set_definition(p, "andmacro", definition)
 
     di1, di2 = DigitalInputBlock(), DigitalInputBlock()
@@ -511,6 +556,8 @@ def test_compile_reports_missing_macro_definition_like_a_validator_error():
     from logic_studio.blocks.macro_instance import MacroInstanceBlock
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(MacroInstanceBlock(def_id="doesnotexist"))
 
     c = Compiler(p)
@@ -533,6 +580,8 @@ def test_compile_never_mutates_the_live_project_with_a_macro_instance():
     definition, _ = build_definition("AndMacro", [gate])
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     set_definition(p, "andmacro", definition)
     inst = MacroInstanceBlock(def_id="andmacro")
     inst.configure(get_definition(p, "andmacro"))

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from logic_studio.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 
 
 def _app():
@@ -22,6 +23,8 @@ register_builtin_blocks()
 
 def test_project_has_empty_internal_bits_by_default():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     assert p.settings["internal_bits"] == []
 
 def test_internal_bit_id_all_four_prefixes():
@@ -74,6 +77,8 @@ def test_validate_internal_bits_registry_accepts_valid_entries():
 def test_device_model_get_internal_bits_and_filter():
     from logic_studio.core.device_model import DeviceModel
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "A", "type": "BOOL", "retentive": False},
         {"name": "B", "type": "REAL", "retentive": False},
@@ -148,6 +153,8 @@ def test_virtual_output_to_virtual_input_same_scan_via_compiler():
     from logic_studio.engine.time_provider import SimulationTimeProvider
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
 
     const_true = BlockRegistry.create_block("const.true")
@@ -183,8 +190,14 @@ def test_catalog_loads_and_has_expected_categories():
     ]
 
 def test_catalog_contains_every_signal_from_the_spec():
+    """Task "jedno źródło listy kart": get_all_signals() no longer
+    invents ELA01/ADA01 out of nowhere - a project that actually DEFINES
+    them is what the spec's per-device diagnostics need."""
     from logic_studio.core import system_signals
-    ids = {s["id"] for s in system_signals.get_all_signals()}
+    project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
+    ids = {s["id"] for s in system_signals.get_all_signals(project)}
     expected = {
         "SYS.READY", "SYS.HEALTH", "SYS.FAULT", "SYS.SCAN_OVERRUN", "SYS.FIRST_SCAN",
         "SYS.TRAINING_MODE", "SYS.SCAN_TIME", "SYS.CYCLE_COUNT",
@@ -208,7 +221,10 @@ def test_catalog_contains_every_signal_from_the_spec():
 
 def test_catalog_safety_relevant_signals():
     from logic_studio.core import system_signals
-    safety = {s["id"] for s in system_signals.get_all_signals() if s["safety_relevant"]}
+    project = Project()
+    DeviceModel.set_ela_devices(project, ["ELA01"])
+    DeviceModel.set_ada_devices(project, ["ADA01"])
+    safety = {s["id"] for s in system_signals.get_all_signals(project) if s["safety_relevant"]}
     assert safety == {
         "SYS.HEALTH", "SYS.FAULT", "ELA01.FAULT", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
         "SSWIN.PANIC", "SSWIN.TAMPER", "SSWIN.FAULT", "SSWIN.CMD_DISARM",
@@ -315,6 +331,8 @@ def test_export_reports_correct_type_for_real_signal_without_ever_running_sim():
     from logic_studio.blocks.registry import BlockRegistry
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     sig = BlockRegistry.create_block("system.signal")
     sig.properties["Sygnał"] = "SYS.SCAN_TIME"
     p.add_block(sig)
@@ -339,6 +357,8 @@ def test_export_falls_back_to_live_pin_type_for_unrecognized_signal():
     from logic_studio.blocks.registry import BlockRegistry
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     sig = BlockRegistry.create_block("system.signal")
     sig.properties["Sygnał"] = "SYS_READY"  # old pre-catalog underscore format
     p.add_block(sig)
@@ -401,6 +421,8 @@ def test_validator_error_signal_not_in_registry():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     vi = BlockRegistry.create_block("virtual.input")
     vi.properties["Bit"] = "NIGDY_NIEZAREJESTROWANY"
     p.add_block(vi)
@@ -414,6 +436,8 @@ def test_validator_error_type_mismatch():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "REAL", "retentive": False}]
     vi = BlockRegistry.create_block("virtual.input")  # BOOL block
     vi.properties["Bit"] = "X"
@@ -427,6 +451,8 @@ def test_validator_error_multiple_writers():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False}]
     vo1 = BlockRegistry.create_block("virtual.output")
     vo1.properties["Bit"] = "BLOKADA_ZS"
@@ -449,6 +475,8 @@ def test_validator_single_writer_is_not_an_error():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False}]
     vo = BlockRegistry.create_block("virtual.output")
     vo.properties["Bit"] = "BLOKADA_ZS"
@@ -462,6 +490,8 @@ def test_validator_warning_read_without_write():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vi = BlockRegistry.create_block("virtual.input")
     vi.properties["Bit"] = "X"
@@ -475,6 +505,8 @@ def test_validator_warning_registered_but_unused():
     """§4.3: housekeeping warning for a defined-but-dead registry entry."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "NIEUZYWANY", "type": "BOOL", "retentive": False}]
 
     errors, warnings = _validate(p)
@@ -486,6 +518,8 @@ def test_validator_registry_name_errors_surface_as_compile_errors():
     appended directly."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BAD NAME", "type": "BOOL", "retentive": False}]
 
     errors, warnings = _validate(p)
@@ -497,6 +531,8 @@ def test_validator_matched_writer_reader_pair_is_clean():
     _app()
     from logic_studio.blocks.registry import BlockRegistry
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vo = BlockRegistry.create_block("virtual.output")
     vo.properties["Bit"] = "X"
@@ -526,6 +562,8 @@ def test_cycle_delay_detected_when_writer_is_scheduled_after_reader():
     from logic_studio.compiler.core import Compiler
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
 
     const_true = BlockRegistry.create_block("const.true")
@@ -566,6 +604,8 @@ def test_cycle_delay_not_flagged_when_writer_precedes_reader():
     from logic_studio.compiler.core import Compiler
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "Y", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
 
     vo = BlockRegistry.create_block("virtual.output")
@@ -610,6 +650,8 @@ def test_signal_picker_bool_shows_ela_ada_and_bool_internal_and_system():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": "Blokady"},
         {"name": "USTAWKA", "type": "REAL", "retentive": False, "description": "", "label": "", "category": ""},
@@ -629,6 +671,8 @@ def test_signal_picker_internal_only_scoping_for_bit_property():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("internal",))
     ids = _all_tree_ids(dialog)
@@ -640,6 +684,8 @@ def test_signal_picker_system_only_scoping_shows_both_types():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = SignalPickerDialog(p, value_type=None, sections=("system",))
     ids = _all_tree_ids(dialog)
     assert "SYS.READY" in ids       # BOOL
@@ -650,6 +696,8 @@ def test_signal_picker_search_filters_by_any_column():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False, "description": "Blokada szyn", "label": "BLOK", "category": ""}]
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("internal",))
 
@@ -667,6 +715,8 @@ def test_signal_picker_select_and_accept_returns_chosen_id():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("internal",))
 
@@ -684,6 +734,8 @@ def test_signal_picker_select_and_accept_returns_chosen_kind():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = SignalPickerDialog(p, value_type=None, sections=("system",))
 
     root = dialog.tree.topLevelItem(0)
@@ -697,6 +749,8 @@ def test_signal_picker_selected_kind_none_before_any_selection():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = SignalPickerDialog(p, value_type=None, sections=("system",))
     assert dialog.selected_kind() is None
 
@@ -706,6 +760,8 @@ def test_signal_picker_new_internal_signal_button_adds_to_registry():
     from logic_studio.ui.signal_picker import SignalPickerDialog, _NewInternalSignalDialog
     from PySide6.QtWidgets import QDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("internal",))
 
     sub = _NewInternalSignalDialog("BOOL", parent=dialog)
@@ -723,6 +779,8 @@ def test_signal_picker_ok_disabled_until_a_leaf_is_selected():
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("internal",))
     assert dialog.ok_button.isEnabled() is False
@@ -750,6 +808,8 @@ def test_project_settings_dialog_loads_existing_signals():
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [
         {"name": "X", "type": "BOOL", "retentive": True, "description": "opis", "label": "ET", "category": "Blokady"},
     ]
@@ -765,6 +825,8 @@ def test_project_settings_dialog_usage_column():
     from logic_studio.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     vo = BlockRegistry.create_block("virtual.output")
     vo.properties["Bit"] = "X"
@@ -797,6 +859,8 @@ def test_project_settings_dialog_add_signal_and_apply(monkeypatch):
     _refuse_any_blocking_messagebox(monkeypatch)
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     dialog._add_signal_row({"name": "NOWY", "type": "REAL", "retentive": False, "category": "", "label": "", "description": ""})
     dialog._on_accept()
@@ -818,6 +882,8 @@ def test_project_settings_dialog_rename_propagates_to_blocks(monkeypatch):
     from logic_studio.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "STARA_NAZWA", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     vo = BlockRegistry.create_block("virtual.output")
     vo.properties["Bit"] = "STARA_NAZWA"
@@ -842,6 +908,8 @@ def test_project_settings_dialog_deleting_used_signal_prompts_confirmation(monke
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "USUWANY", "type": "BOOL", "retentive": False, "description": "", "label": "", "category": ""}]
     vo = BlockRegistry.create_block("virtual.output")
     vo.properties["Bit"] = "USUWANY"
@@ -870,6 +938,8 @@ def test_project_settings_dialog_rejects_incompatible_type_change():
     from logic_studio.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "USTAWKA", "type": "REAL", "retentive": False, "description": "", "label": "", "category": ""}]
     ro = BlockRegistry.create_block("internal.reg_out")
     ro.properties["Bit"] = "USTAWKA"
@@ -887,6 +957,8 @@ def test_project_settings_dialog_type_change_without_usage_is_allowed():
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "NIEUZYWANY", "type": "REAL", "retentive": False, "description": "", "label": "", "category": ""}]
     dialog = ProjectSettingsDialog(p)
     dialog.signals_table.cellWidget(0, 1).setCurrentText("BOOL")
@@ -899,6 +971,8 @@ def test_project_settings_dialog_invalid_name_format_rejected():
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     dialog._add_signal_row({"name": "ZŁA NAZWA", "type": "BOOL", "retentive": False, "category": "", "label": "", "description": ""})
 
@@ -913,6 +987,8 @@ def test_project_settings_dialog_export_and_import_signals_roundtrip(tmp_path, m
     from PySide6.QtWidgets import QFileDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = ProjectSettingsDialog(p)
     dialog._add_signal_row({"name": "EKSPORTOWANY", "type": "BOOL", "retentive": True, "category": "Cat", "label": "L", "description": "D"})
 

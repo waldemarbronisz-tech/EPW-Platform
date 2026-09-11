@@ -440,14 +440,23 @@ def build_help_toolbar(toolbar, _panel, _studio_window):
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
 
-def build_point_registry_toolbar(toolbar, _panel, _studio_window):
+def build_point_registry_toolbar(toolbar, panel, _studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's
     only entry points are a card being added/resized (CardsPanel) or
     removed. The panel's own card filter combo lives in the widget
-    itself, not the toolbar - nothing to build here beyond the
-    breadcrumb _AspectContainer already adds."""
+    itself, not the toolbar.
+
+    Task "jedno źródło listy kart" 3.4: the one real action this
+    toolbar DOES need - bulk-setting the location of every selected row
+    (PointRegistryPanel.set_location_for_selected(), a no-op with
+    nothing selected). No dedicated icon exists for "location" in
+    icons.py - "settings" is the closest existing one ("configure a
+    property of the selection"), same reuse-over-invent reasoning
+    already applied elsewhere in this module rather than adding a new
+    icon asset for one button."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("points.set_location_for_selected"), panel.set_location_for_selected, icon_name="settings")
 
 
 def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):

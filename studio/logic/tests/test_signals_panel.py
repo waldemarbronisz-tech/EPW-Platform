@@ -61,6 +61,8 @@ def test_empty_project_shows_placeholder_not_a_table(qsettings):
 def test_project_with_signals_shows_the_table(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -77,6 +79,8 @@ def test_columns_are_in_spec_order(qsettings):
 def test_row_shows_label_from_io_labels(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
     panel = SignalsPanel(settings=qsettings)
@@ -88,6 +92,8 @@ def test_row_shows_label_from_io_labels(qsettings):
 def test_physical_input_shows_urzadzenie_as_writer(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di("ELA01.DI.1")
     p.add_block(di)
     panel = SignalsPanel(settings=qsettings)
@@ -99,6 +105,8 @@ def test_physical_input_shows_urzadzenie_as_writer(qsettings):
 def test_do_block_shows_its_short_id_as_writer(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     do = _do("ADA01.DO.1")
     p.add_block(do)
     panel = SignalsPanel(settings=qsettings)
@@ -109,6 +117,8 @@ def test_do_block_shows_its_short_id_as_writer(qsettings):
 
 def test_multiple_writers_shown_as_comma_list(qsettings):
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vo1 = BlockRegistry.create_block("virtual.output"); vo1.properties["Bit"] = "X"
     vo2 = BlockRegistry.create_block("virtual.output"); vo2.properties["Bit"] = "X"
@@ -125,6 +135,8 @@ def test_multiple_writers_shown_as_comma_list(qsettings):
 def test_status_icon_present_for_issue_rows_and_absent_for_clean_rows(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))  # clean
     ghost = BlockRegistry.create_block("virtual.input")
     ghost.properties["Bit"] = "GHOST"
@@ -147,6 +159,8 @@ def test_signals_are_grouped_under_the_correct_category(qsettings):
     "Wewnętrzne", regardless of anything else selected."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vi = BlockRegistry.create_block("virtual.input"); vi.properties["Bit"] = "X"
@@ -166,6 +180,8 @@ def test_signals_are_grouped_under_the_correct_category(qsettings):
 def test_category_label_shows_signal_count(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     p.add_block(_di("ELA01.DI.2"))
     panel = SignalsPanel(settings=qsettings)
@@ -183,6 +199,8 @@ def test_all_four_categories_always_present_even_when_empty(qsettings):
 def test_categories_default_to_expanded(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -191,6 +209,8 @@ def test_categories_default_to_expanded(qsettings):
 def test_collapsing_a_category_persists_across_instances(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -208,6 +228,8 @@ def test_children_sort_without_reordering_categories(qsettings):
     regardless of which column/direction was clicked."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.2"))
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
@@ -230,6 +252,8 @@ def test_children_sort_without_reordering_categories(qsettings):
 def test_search_matches_signal_id(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     p.add_block(_di("ELA01.DI.2"))
     panel = SignalsPanel(settings=qsettings)
@@ -242,6 +266,8 @@ def test_search_matches_signal_id(qsettings):
 def test_search_matches_label(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Blokada bramy")
     panel = SignalsPanel(settings=qsettings)
@@ -252,6 +278,8 @@ def test_search_matches_label(qsettings):
 def test_search_matches_reader_short_id(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     di = _di("ELA01.DI.1")
     p.add_block(di)
     panel = SignalsPanel(settings=qsettings)
@@ -266,6 +294,8 @@ def test_search_hides_the_non_matching_category_and_expands_the_matching_one(qse
     if the user had it collapsed."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     p.settings["internal_bits"] = [{"name": "X", "type": "BOOL", "retentive": False}]
     vi = BlockRegistry.create_block("virtual.input"); vi.properties["Bit"] = "X"
@@ -287,6 +317,8 @@ def test_search_hides_the_non_matching_category_and_expands_the_matching_one(qse
 def test_only_issues_toggle_hides_clean_rows(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))  # clean
     ghost = BlockRegistry.create_block("virtual.input")
     ghost.properties["Bit"] = "GHOST"
@@ -313,6 +345,8 @@ def test_collapsing_a_category_does_not_hide_its_children_from_filters_or_export
     export/counts must still see them."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
@@ -328,6 +362,8 @@ def test_collapsing_a_category_does_not_hide_its_children_from_filters_or_export
 def test_set_project_rebuilds_immediately(qsettings):
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     p.add_block(_di("ELA01.DI.1"))
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)

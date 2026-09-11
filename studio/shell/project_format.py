@@ -126,13 +126,22 @@ class Card:
     FOR a still-nonexistent future ModbusDriver). This is a standard
     Modbus unit/slave address (1-247, RTU/TCP alike) - `None` means
     "not addressed yet", same "absent = not configured" convention
-    every other optional field in this module already uses."""
+    every other optional field in this module already uses.
+
+    `location` (task "jedno źródło listy kart" 3.4) is where the MODULE
+    itself physically sits (the cabinet/panel) - a card in one cabinet
+    routinely feeds terminals in several different physical locations
+    (kotłownia, piwnica, brama), so this is only ever a DEFAULT for its
+    own points to inherit, never a claim about where every one of its
+    terminals actually goes - see Point.location's own docstring for
+    the inheritance rule itself."""
 
     id: str
     model: str
     kind: str
     channels: int
     modbus_unit_id: Optional[int] = None
+    location: str = ""
 
 
 @dataclass
@@ -159,11 +168,27 @@ class Point:
 
     The five analog-only fields are None for a digital point - the
     contract lists them as "dla punktów analogowych dodatkowo", not as
-    always-present-but-empty."""
+    always-present-but-empty.
+
+    `location` (task "jedno źródło listy kart" 3.4): `None` means
+    "inherit the owning card's own `location`" (Card.location above) -
+    the DEFAULT for every point, since most of a card's terminals really
+    do share its cabinet as their nearest useful location label. A real
+    string (including `""`) is an EXPLICIT override - a user who typed
+    something different for this one terminal, or deliberately cleared
+    it back to blank despite the card having a location. Distinguishing
+    None from "" is exactly what makes "changing the card's location
+    must never overwrite a point's own explicit choice" possible without
+    a second, parallel "is this overridden" flag - same "absent = not
+    configured, distinct from empty" convention Card.modbus_unit_id
+    already uses. Always resolve through project_panels.py's own
+    effective_location(), never read this field raw outside the one
+    place (the point registry table) that needs to tell inherited and
+    explicit apart."""
 
     address: str
     description: str = ""
-    location: str = ""
+    location: Optional[str] = None
     technical_note: str = ""
     signal_type: Optional[str] = None
     raw_min: Optional[float] = None

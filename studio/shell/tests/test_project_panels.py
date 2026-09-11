@@ -16,6 +16,7 @@ from studio.shell.project_panels import (
     MODULE_IDS,
     card_from_synoptic_dict,
     card_to_synoptic_dict,
+    effective_location,
     ensure_electrical_protection_seeded,
     export_points_csv,
     export_points_html,
@@ -29,8 +30,10 @@ from studio.shell.project_panels import (
     remove_points_for_card,
     sync_points_for_card,
     validate_project,
+    _id_prefix_for_model,
     _module_has_data,
     _module_entry,
+    _next_free_modbus_unit_id,
 )
 
 
@@ -45,6 +48,19 @@ def test_sync_points_for_card_creates_one_point_per_channel():
     sync_points_for_card(project, card)
     addresses = [p.address for p in project.points]
     assert addresses == ["ELA1.DI.1", "ELA1.DI.2", "ELA1.DI.3", "ELA1.DI.4"]
+
+
+def test_sync_points_for_card_orders_channels_numerically_not_alphabetically():
+    """User report #1: the point registry showed "DI.1, DI.10, DI.11
+    ... DI.2, DI.20 ..." - plain string sort on the address puts "10"
+    before "2". 12 channels is the smallest count that actually exposes
+    this (need a two-digit channel in the mix)."""
+    project = _project()
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=12)
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    addresses = [p.address for p in project.points]
+    assert addresses == [f"ELA1.DI.{n}" for n in range(1, 13)]
 
 
 def test_sync_points_for_card_preserves_existing_descriptions():
@@ -517,3 +533,137 @@ def test_export_points_html_escapes_user_supplied_text():
 
 def test_export_points_html_of_an_empty_project_has_no_group_headers():
     assert "<h2>" not in export_points_html(new_project("Test"))
+
+
+def test_export_points_csv_orders_channels_numerically_not_alphabetically():
+    """Same bug as test_sync_points_for_card_orders_channels_numerically_
+    not_alphabetically, but through the export path - _grouped_export_
+    points() has its own separate sort()."""
+    import csv
+    import io
+
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=12)
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    addresses = [row[0] for row in list(csv.reader(io.StringIO(export_points_csv(project))))[1:]]
+    assert addresses == [f"ELA1.DI.{n}" for n in range(1, 13)]
+
+
+def test_id_prefix_for_model_strips_trailing_digits():
+    """User report #2: id suggestion should follow the module family,
+    not repeat the model's own trailing revision/unit number."""
+    assert _id_prefix_for_model("ELA01") == "ELA"
+    assert _id_prefix_for_model("ADA01") == "ADA"
+    assert _id_prefix_for_model("EPM") == "EPM"
+
+
+def test_id_prefix_for_model_falls_back_to_karta_when_empty():
+    assert _id_prefix_for_model("") == "KARTA"
+    assert _id_prefix_for_model(None) == "KARTA"
+
+
+def test_next_free_modbus_unit_id_starts_at_one():
+    project = new_project("Test")
+    assert _next_free_modbus_unit_id(project) == 1
+
+
+def test_next_free_modbus_unit_id_skips_whats_taken():
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=1, modbus_unit_id=1))
+    project.cards.append(Card(id="ELA2", model="ELA01", kind="DI", channels=1, modbus_unit_id=2))
+    assert _next_free_modbus_unit_id(project) == 3
+
+
+def test_next_free_modbus_unit_id_excludes_the_given_card():
+    """A card editing its OWN address mustn't see itself as "taken"."""
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, modbus_unit_id=1)
+    project.cards.append(card)
+    assert _next_free_modbus_unit_id(project, exclude_card=card) == 1
+
+
+# ---- User report 3.4: location inherited from the owning card -----------
+
+def test_sync_points_for_card_creates_points_with_location_none():
+    """A freshly-created point has no EXPLICIT location of its own -
+    None means "inherit the card's", the correct default (not "" - see
+    Point.location's own docstring for why the two aren't the same)."""
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2, location="KOT")
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    assert all(p.location is None for p in project.points)
+
+
+def test_effective_location_inherits_from_the_card_by_default():
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    point = Point(address="ELA1.DI.1")  # location=None (default)
+    assert effective_location(point, card) == "KOT"
+
+
+def test_effective_location_explicit_override_wins():
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    point = Point(address="ELA1.DI.1", location="PIWNICA")
+    assert effective_location(point, card) == "PIWNICA"
+
+
+def test_effective_location_explicit_blank_beats_the_cards_location():
+    """A point can deliberately have NO location even though its card
+    has one - "" is a real, explicit override, not "unset"."""
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    point = Point(address="ELA1.DI.1", location="")
+    assert effective_location(point, card) == ""
+
+
+def test_effective_location_with_no_card_and_no_override_is_blank():
+    point = Point(address="ELA1.DI.1")
+    assert effective_location(point, None) == ""
+
+
+def test_changing_the_cards_location_does_not_touch_a_points_own_override():
+    """The requirement, verbatim: "zmiana lokalizacji karty NIE MOŻE
+    nadpisywać punktów, którym użytkownik ustawił własną." Since the
+    override lives on the Point (None vs a real string) and the card's
+    own location is only ever READ (never written back into points),
+    this holds by construction - no propagation code needed, which is
+    exactly what this test proves."""
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2, location="KOT")
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    project.points[0].location = "PIWNICA"  # explicit override on point 1
+
+    card.location = "BRAMA"  # module moved - card's own location changes
+
+    assert effective_location(project.points[0], card) == "PIWNICA"  # untouched
+    assert effective_location(project.points[1], card) == "BRAMA"  # still inherits, now the NEW value
+
+
+def test_grouped_export_points_uses_the_effective_location():
+    """export_points_csv/html group by RESOLVED location - otherwise
+    every card-default point would print under "no location"."""
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+
+    import csv
+    import io
+    rows = list(csv.reader(io.StringIO(export_points_csv(project))))
+    # Header order per export_points_csv's own docstring: address,
+    # description, location, technical_note, device, raw/eng range, unit.
+    assert rows[1][2] == "KOT"
+
+
+def test_validate_project_flags_a_stale_inherited_location():
+    """The card's own location can go stale too (a Lokalizacje entry
+    renamed/removed) - the warning must fire for an INHERITED value
+    exactly as it already does for an explicit one."""
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="GHOST")
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+
+    issues = validate_project(project)
+    assert any(i.target == "points" and "GHOST" in i.message for i in issues)

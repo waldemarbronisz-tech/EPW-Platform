@@ -12,6 +12,7 @@ from logic_studio.blocks import register_builtin_blocks
 from logic_studio.blocks.registry import BlockRegistry
 from logic_studio.blocks.macro_instance import MacroInstanceBlock
 from logic_studio.core.project import Project
+from logic_studio.core.device_model import DeviceModel
 from logic_studio.core import macros as M
 from logic_studio.compiler.core import Compiler
 
@@ -88,6 +89,8 @@ def test_fresh_definition_has_empty_parameters_and_bindings():
 
 def test_add_parameter_returns_a_stable_internal_name():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, bind=False)
     name = M.add_parameter(p, def_id, "Zwloka", "INT", 500, unit="ms", description="Czas opóźnienia")
     param = M.get_parameter(p, def_id, name)
@@ -99,6 +102,8 @@ def test_add_parameter_returns_a_stable_internal_name():
 
 def test_add_parameter_names_are_unique_and_sequential():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p, bind=False)
     n1 = M.add_parameter(p, def_id, "A", "INT", 1)
     n2 = M.add_parameter(p, def_id, "B", "INT", 2)
@@ -107,6 +112,8 @@ def test_add_parameter_names_are_unique_and_sequential():
 
 def test_remove_parameter_also_removes_its_bindings():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     assert M.get_parameter_bindings(p, def_id, param_name)
 
@@ -118,11 +125,15 @@ def test_remove_parameter_also_removes_its_bindings():
 
 def test_remove_parameter_returns_false_for_unknown_name():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p, bind=False)
     assert M.remove_parameter(p, def_id, "NOT_REAL") is False
 
 def test_update_parameter_edits_fields_in_place():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, param_name = _make_delay_macro(p)
     assert M.update_parameter(p, def_id, param_name, display_name="Nowa nazwa", unit="s") is True
     param = M.get_parameter(p, def_id, param_name)
@@ -132,6 +143,8 @@ def test_update_parameter_edits_fields_in_place():
 
 def test_reorder_parameters():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p, bind=False)
     a = M.add_parameter(p, def_id, "A", "INT", 1)
     b = M.add_parameter(p, def_id, "B", "INT", 2)
@@ -141,12 +154,16 @@ def test_reorder_parameters():
 
 def test_reorder_parameters_rejects_a_mismatched_set():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p, bind=False)
     M.add_parameter(p, def_id, "A", "INT", 1)
     assert M.reorder_parameters(p, def_id, ["NOT_REAL"]) is False
 
 def test_add_parameter_binding_rejects_unknown_block_or_property():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, bind=False)
     name = M.add_parameter(p, def_id, "Zwloka", "INT", 500)
     assert M.add_parameter_binding(p, def_id, name, "not-a-real-uuid", "Preset (ms)") is False
@@ -154,17 +171,23 @@ def test_add_parameter_binding_rejects_unknown_block_or_property():
 
 def test_add_parameter_binding_rejects_duplicate():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     assert M.add_parameter_binding(p, def_id, param_name, ton_uuid, "Preset (ms)") is False
 
 def test_remove_parameter_binding():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     assert M.remove_parameter_binding(p, def_id, ton_uuid, "Preset (ms)") is True
     assert M.get_parameter_bindings(p, def_id, param_name) == []
 
 def test_binding_for_property():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     assert M.binding_for_property(definition, ton_uuid, "Preset (ms)") == param_name
@@ -185,6 +208,8 @@ def test_value_matches_param_type():
 
 def test_sync_gives_a_fresh_instance_the_default_value():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     props = {"Address": "", "Tag": "", "Comment": ""}
@@ -194,6 +219,8 @@ def test_sync_gives_a_fresh_instance_the_default_value():
 
 def test_sync_preserves_an_existing_compatible_value():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     props = {"Zwloka": 777}
@@ -202,6 +229,8 @@ def test_sync_preserves_an_existing_compatible_value():
 
 def test_sync_removes_a_deleted_parameters_leftover_property():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, param_name = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     props = {"Zwloka": 777}
@@ -212,6 +241,8 @@ def test_sync_removes_a_deleted_parameters_leftover_property():
 
 def test_sync_resets_a_value_whose_type_no_longer_matches():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, param_name = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     props = {"Zwloka": 777}
@@ -223,6 +254,8 @@ def test_sync_resets_a_value_whose_type_no_longer_matches():
 
 def test_sync_never_touches_base_properties():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     props = {"Address": "ELA01.DI.1", "Tag": "T1", "Comment": "c"}
@@ -236,6 +269,8 @@ def test_sync_never_touches_base_properties():
 
 def test_configure_gives_the_instance_a_property_per_parameter():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     instance = MacroInstanceBlock(def_id)
@@ -244,6 +279,8 @@ def test_configure_gives_the_instance_a_property_per_parameter():
 
 def test_updating_the_parameter_property_uses_generic_type_casting():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     instance = MacroInstanceBlock(def_id)
@@ -261,6 +298,8 @@ def test_two_instances_of_the_same_macro_keep_independent_presets_and_timing():
     from logic_studio.engine.time_provider import SimulationTimeProvider
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
     inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
@@ -290,6 +329,8 @@ def test_two_instances_of_the_same_macro_keep_independent_presets_and_timing():
 
 def test_compiled_ton_properties_carry_each_instances_own_value():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
     inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
@@ -304,6 +345,8 @@ def test_unbound_instance_falls_back_to_the_definitions_own_value():
     the substituted value is just the default, same as if the property
     had never been a parameter at all."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")  # no param_value override
 
@@ -318,6 +361,8 @@ def test_unbound_instance_falls_back_to_the_definitions_own_value():
 def test_nested_macro_parameter_reaches_the_deepest_block():
     inner_def, inner_ton_uuid = _ton_macro_definition(preset_ms=111)
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     inner_id = M.new_def_id()
     M.set_definition(p, inner_id, inner_def)
     inner_pname = M.add_parameter(p, inner_id, "Zwloka", "INT", 111, unit="ms")
@@ -365,6 +410,8 @@ def test_nested_macro_parameter_reaches_the_deepest_block():
 
 def test_resync_gives_existing_instances_a_newly_added_parameter():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, bind=False)
     instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")
     assert "Zwloka" not in instance.properties
@@ -377,6 +424,8 @@ def test_resync_gives_existing_instances_a_newly_added_parameter():
 
 def test_resync_removes_a_deleted_parameters_property_from_instances():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=700)
     assert instance.properties["Zwloka"] == 700
@@ -388,6 +437,8 @@ def test_resync_removes_a_deleted_parameters_property_from_instances():
 
 def test_resync_reports_and_resets_a_type_change():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=700)
 
@@ -407,6 +458,8 @@ def test_resync_touches_a_nested_instance_embedded_as_dict_data():
     for the same case)."""
     inner_def, inner_ton_uuid = _ton_macro_definition()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     inner_id = M.new_def_id()
     M.set_definition(p, inner_id, inner_def)
     name = M.add_parameter(p, inner_id, "Zwloka", "INT", 500, unit="ms")
@@ -441,6 +494,8 @@ def test_resync_touches_a_nested_instance_embedded_as_dict_data():
 
 def test_serialize_deserialize_preserves_instance_parameter_values():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
     inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
@@ -457,6 +512,8 @@ def test_serialize_deserialize_preserves_instance_parameter_values():
 
 def test_round_tripped_project_still_compiles_with_the_right_presets():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
     _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
@@ -472,6 +529,8 @@ def test_round_tripped_project_still_compiles_with_the_right_presets():
 
 def test_validation_error_binding_to_a_nonexistent_block():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     definition["parameter_bindings"][0]["block_uuid"] = "not-a-real-uuid"
@@ -484,6 +543,8 @@ def test_validation_error_binding_to_a_nonexistent_block():
 
 def test_validation_error_binding_to_a_nonexistent_parameter():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
     definition["parameter_bindings"][0]["parameter"] = "NOT_REAL"
@@ -496,6 +557,8 @@ def test_validation_error_binding_to_a_nonexistent_parameter():
 
 def test_validation_error_type_mismatch_between_parameter_and_property():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     M.update_parameter(p, def_id, param_name, type="STRING")
 
@@ -506,6 +569,8 @@ def test_validation_error_type_mismatch_between_parameter_and_property():
 
 def test_validation_warning_unbound_parameter():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, bind=False)
     M.add_parameter(p, def_id, "Zwloka", "INT", 500)
 
@@ -516,6 +581,8 @@ def test_validation_warning_unbound_parameter():
 
 def test_validation_warning_two_parameters_bound_to_the_same_property():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, param_name = _make_delay_macro(p)
     second = M.add_parameter(p, def_id, "Zwloka2", "INT", 999)
     M.add_parameter_binding(p, def_id, second, ton_uuid, "Preset (ms)")
@@ -539,6 +606,8 @@ def test_validation_value_out_of_range_uses_the_blocks_own_existing_rule():
     definition, _ = M.build_definition("NegTest", [const_time])
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id = M.new_def_id()
     M.set_definition(p, def_id, definition)
     name = M.add_parameter(p, def_id, "Czas", "INT", 1000, unit="ms")
@@ -560,6 +629,8 @@ def test_validation_value_out_of_range_uses_the_blocks_own_existing_rule():
 
 def test_a_macro_with_no_parameters_compiles_and_behaves_unchanged():
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500, bind=False)
     _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")
 
@@ -577,6 +648,8 @@ def test_a_definition_missing_the_parameters_key_entirely_still_loads():
     "parameters"/"parameter_bindings" key at all, not even an empty list —
     _copy_definition() must default both rather than KeyError."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     raw = {"name": "Old", "blocks": [], "input_pins": [], "output_pins": []}
     M.set_definition(p, "old1", raw)
     definition = M.get_definition(p, "old1")
@@ -591,6 +664,8 @@ def test_export_runtime_carries_no_trace_of_macros_or_parameters():
     holding the live CompiledProgram, excluded here — it's not part of
     the export contract, see exporter.py's own CHECKSUM_FIELDS)."""
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
     _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
 

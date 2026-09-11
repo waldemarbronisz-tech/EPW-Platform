@@ -94,6 +94,8 @@ def test_comment_still_shown_above_virtual_io_block():
     suppression above only applies to the Address-configured case."""
     _app()
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     from logic_studio.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("virtual.input")
     block.properties["Comment"] = "Some usage note"
@@ -113,6 +115,8 @@ def test_signal_picker_opis_column_shows_label_when_set():
     from logic_studio.ui.signal_picker import SignalPickerDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("physical",))
 
@@ -125,6 +129,8 @@ def test_signal_picker_opis_column_falls_back_when_no_label():
     from logic_studio.ui.signal_picker import SignalPickerDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("physical",))
 
     found = _find_leaf_by_name(dialog.tree, "ELA01.DI.2")
@@ -136,6 +142,8 @@ def test_signal_picker_search_matches_label_text():
     from logic_studio.ui.signal_picker import SignalPickerDialog
 
     p = Project()
+    DeviceModel.set_ela_devices(p, ["ELA01"])
+    DeviceModel.set_ada_devices(p, ["ADA01"])
     DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("physical",))
     dialog._apply_filter("Wyłącznik Q1")

@@ -252,6 +252,24 @@ describe('Device registry validation (validateDeviceRegistry)', () => {
     { id: 'AIA1', model: 'AIA01', channelKind: 'AI', channelCount: 16 }
   ];
 
+  it('task "one shared card registry" 2.3: a device pointing at a card the registry does not have is a visible, named error - never silently dropped', () => {
+    const registry: DeviceRegistry = {
+      locations: REG_LOCATIONS,
+      cards: REG_CARDS,  // no "ELA9" here - as if that card was removed in Studio
+      devices: [
+        makeSignalDevice('KOT_Q1', '-Q1', 'ELA9.DI.1')
+      ]
+    };
+    const result = validateDeviceRegistry(registry);
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(i => i.code === 'CHANNEL_ADDRESS_UNKNOWN_CARD');
+    expect(issue).toBeDefined();
+    expect(issue!.message).toContain('ELA9');
+    // The device itself is untouched - the whole point of a visible
+    // error over a silent drop is that the engineer can go fix it.
+    expect(registry.devices[0]).toEqual(makeSignalDevice('KOT_Q1', '-Q1', 'ELA9.DI.1'));
+  });
+
   it('26. two devices with the same id is an error', () => {
     const registry: DeviceRegistry = {
       locations: REG_LOCATIONS,

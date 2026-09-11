@@ -293,6 +293,24 @@ class _AspectContainer(QWidget):
 
         layout.addWidget(editor_widget, 1)
 
+        # Task "jedno źródło listy kart" etap 4 - measured (spike/
+        # addressing_migration/... cache in the chat report): switching
+        # BACK to an already-open aspect (Logika above all - it embeds
+        # Logic Studio's whole MainWindow) cost ~135ms per switch, almost
+        # entirely `editor_widget` being RE-PARENTED into a brand new
+        # _AspectContainer's layout every single visit (main_window.py's
+        # own _show_aspect_container built one fresh every time - see its
+        # OWN prior docstring, now updated, for why: toolbar_builder's
+        # QActions pile up on a reused toolbar otherwise). The editor
+        # widget never actually needs to move once placed - only the
+        # toolbar's own aspect-specific actions need clearing and
+        # rebuilding on each re-visit, so this baseline (everything
+        # already on the toolbar right here, before toolbar_builder ever
+        # runs: the breadcrumb + separator) is what _show_aspect_
+        # container clears back down to instead of discarding this whole
+        # container and rebuilding it.
+        self._toolbar_baseline_action_count = len(self.context_toolbar.actions())
+
 
 class _InactivePlaceholder(QWidget):
     """Task 1.4's own boundary between a table of contents and a
@@ -1144,6 +1162,13 @@ class StudioMainWindow(QMainWindow):
         if self._logic_panel is None:
             from studio.shell.logic_panel import LogicPanel
             self._logic_panel = LogicPanel()
+        # Task "jedno źródło listy kart": cheap even when nothing changed
+        # (sync_cards_from_studio() own list-equality guard) - covers the
+        # case this is the first-ever open (the constructor above never
+        # saw the project's cards) and any card edit made while Logika
+        # wasn't the active tab (_on_project_changed() also calls this,
+        # but only while _logic_panel already exists).
+        self._logic_panel.sync_cards_from_studio(self._project)
         self._show_aspect_container(
             _TREE_ITEM_LOGIC, self._logic_panel, build_logic_context_toolbar, self._logic_panel
         )
@@ -1341,6 +1366,14 @@ class StudioMainWindow(QMainWindow):
         if self._project_info_panel is not None:
             self._project_info_panel.refresh()
         self._refresh_module_visibility()
+        # Task "jedno źródło listy kart": keeps Logic Studio's own card
+        # list current even while Logika isn't the active tab (e.g. a
+        # card added while looking at Rejestr punktów) - cheap when
+        # nothing actually changed, see sync_cards_from_studio()'s own
+        # list-equality guard (etap 4: this must NOT rebuild Logika's
+        # heavy panels on every unrelated edit).
+        if self._logic_panel is not None:
+            self._logic_panel.sync_cards_from_studio(self._project)
 
     def _refresh_module_visibility(self):
         """Task "fix/project-format-integrity" point 2.3 - "Moduł spoza
@@ -1549,25 +1582,43 @@ class StudioMainWindow(QMainWindow):
         return True
 
     def _show_aspect_container(self, key, editor_widget, toolbar_builder, panel_for_builder):
-        """Wraps `editor_widget` in a fresh _AspectContainer (breadcrumb
-        + contextual toolbar) and swaps it into the stack. Fresh every
-        time, same reasoning as menus.py's own docstring for the old
-        per-context QMenuBar: every QAction toolbar_builder creates is
-        parented to the toolbar it lives in, so replacing the whole
-        container is what lets Qt actually delete the previous one's
-        actions/connections instead of piling them up across repeated
-        tree clicks. `editor_widget` itself is NOT rebuilt - reparenting
-        an existing widget into a new layout is a normal, cheap Qt
-        operation, unlike reconstructing SynopticPanel/LogicPanel."""
-        old = self._aspect_containers.get(key)
-        container = _AspectContainer(tr(_BREADCRUMB_KEYS[key]), editor_widget)
+        """Wraps `editor_widget` in an _AspectContainer (breadcrumb +
+        contextual toolbar) and swaps it into the stack - built once per
+        `key`, then REUSED on every later visit (etap-4 fix: building a
+        fresh one every time meant re-parenting `editor_widget` into a
+        new layout on every single visit, ~135ms of measured jank for
+        Logika specifically - see _AspectContainer.__init__'s own
+        comment for the measurement and the full reasoning). Only the
+        toolbar's own aspect-specific actions are torn down and rebuilt
+        on a re-visit (back to `_toolbar_baseline_action_count` - the
+        breadcrumb + separator every container starts with, untouched) -
+        this is what actually prevents toolbar_builder's QActions from
+        piling up across repeated tree clicks, the concern the old
+        "rebuild the whole container" approach was solving the hard way.
+        `editor_widget` itself was already never rebuilt (still isn't) -
+        SynopticPanel/LogicPanel stay exactly as expensive to construct
+        as before, just no longer reparented on every re-visit."""
+        container = self._aspect_containers.get(key)
+        if container is None:
+            container = _AspectContainer(tr(_BREADCRUMB_KEYS[key]), editor_widget)
+            self.stack.addWidget(container)
+            self._aspect_containers[key] = container
+        else:
+            for action in container.context_toolbar.actions()[container._toolbar_baseline_action_count:]:
+                container.context_toolbar.removeAction(action)
+                # menus.py's own _add() parents every QAction it creates
+                # to the toolbar passed in (`QAction(label, container)`)
+                # - removeAction() alone only detaches it from the
+                # VISIBLE toolbar, it stays alive as container's child
+                # otherwise. Since container itself is now long-lived
+                # (reused, never deleted - the whole point of this fix),
+                # that would accumulate one full generation of orphaned
+                # QActions per re-visit instead of being cleaned up the
+                # old "whole container gets deleted" way used to do for
+                # free.
+                action.deleteLater()
         toolbar_builder(container.context_toolbar, panel_for_builder, self)
-        self.stack.addWidget(container)
         self.stack.setCurrentWidget(container)
-        self._aspect_containers[key] = container
-        if old is not None and old is not container:
-            self.stack.removeWidget(old)
-            old.deleteLater()
 
     def _open_inactive(self, key):
         self._inactive_placeholder.set_content(tr(_placeholder_breadcrumb_key(key)), tr(f"placeholder.{key}"))

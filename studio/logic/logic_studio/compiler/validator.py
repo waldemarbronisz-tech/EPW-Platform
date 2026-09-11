@@ -52,6 +52,28 @@ class Validator:
                 return f"{ref} ({addr} — {label})"
         return ref
 
+    def _missing_card_suffix(self, addr: str) -> str:
+        """Task "jedno źródło listy kart" 1.2: a block address invalid
+        because its CARD no longer exists (removed in Studio, or never
+        bridged in - the far more common case than a plain typo) must
+        NAME that card in the message, not just say "invalid address" -
+        the whole point of a compile error over a silently-dropped block
+        is that the engineer can go fix the actual cause. Returns "" for
+        a malformed address (nothing to name) or one whose card DOES
+        exist but whose channel number is simply out of range - that
+        case is already self-explanatory from the surrounding message."""
+        from logic_studio.core.addressing import parse_address, InvalidAddressError
+        from logic_studio.core.device_model import DeviceModel
+
+        try:
+            card, kind, _channel = parse_address(addr)
+        except InvalidAddressError:
+            return ""
+        known = DeviceModel.get_ela_devices(self.project) if kind == "DI" else DeviceModel.get_ada_devices(self.project)
+        if card in known:
+            return ""
+        return f" Karta '{card}' nie istnieje w projekcie."
+
     def run(self, errors: list, warnings: list):
         import math
         from logic_studio.core.device_model import DeviceModel
@@ -126,14 +148,27 @@ class Validator:
                     )
 
             # 3. Explicit IO Address Validation
+            # Task "jedno źródło listy kart" 1.2: an address whose CARD no
+            # longer exists in the project (removed in Studio, or never
+            # bridged in) must fail loudly, NAMING the missing card - never
+            # silently dropped or rewritten. _missing_card_suffix() below
+            # is what actually names it in the message.
             if block.type_id == "input.di":
                 addr = block.properties.get("Address", "")
                 if addr not in DeviceModel.get_ela_addresses(self.project):
-                    errors.append(f"[{self._block_ref(block)}] Invalid DI Address: '{addr}'. Must be valid DI01 to DI32 on a defined ELA device.")
+                    errors.append(
+                        f"[{self._block_ref(block)}] Invalid DI Address: '{addr}'. "
+                        f"Must be valid DI01 to DI32 on a defined ELA device."
+                        f"{self._missing_card_suffix(addr)}"
+                    )
             elif block.type_id == "output.do":
                 addr = block.properties.get("Address", "")
                 if addr not in DeviceModel.get_ada_addresses(self.project):
-                    errors.append(f"[{self._block_ref(block)}] Invalid DO Address: '{addr}'. Must be valid DO01 to DO32 on a defined ADA device.")
+                    errors.append(
+                        f"[{self._block_ref(block)}] Invalid DO Address: '{addr}'. "
+                        f"Must be valid DO01 to DO32 on a defined ADA device."
+                        f"{self._missing_card_suffix(addr)}"
+                    )
             elif block.type_id == "input.ai":
                 # Analog points are project-defined, not fixed hardware channels
                 # (AUDIT_REPORT.md §1) — the address must name a point with

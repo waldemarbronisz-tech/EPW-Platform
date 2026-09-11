@@ -83,16 +83,29 @@ niezadziałanie o trzeciej w nocy.
 
 ### Sprzęt
 
+**Karty definiuje się RAZ, w projekcie.** Wszystko inne (Logic Studio,
+Synoptic Editor) tylko je czyta — most, nie własna kopia z prawem
+istnienia niezależnie od tego, co jest tutaj. Dodanie karty w Studio ma
+być od razu widoczne jako dostępny adres wszędzie indziej; usunięcie
+karty ma być od razu widocznym błędem (nie cichym skasowaniem bloku)
+wszędzie, gdzie ktoś do niej się odwoływał.
+
 ```
-cards      id (nadane przez użytkownika), model, rodzaj kanałów, liczba kanałów
+cards      id (nadane przez użytkownika), model, rodzaj kanałów, liczba kanałów, lokalizacja
 locations  kod (prefiks), opis
 ```
 
-Przykład karty: `id: "DI1", model: "ELA01", kind: "DI", channels: 32`
+Przykład karty: `id: "DI1", model: "ELA01", kind: "DI", channels: 32, location: "KOT"`
 Przykład lokalizacji: `code: "KOT", description: "Kotłownia"`
 
 **Karty rodzą punkty.** Dodajesz kartę o 32 kanałach — powstaje 32 pustych
 punktów. Nie wpisujesz ich ręcznie.
+
+**Lokalizacja karty to gdzie stoi MODUŁ** (szafka), nie gdzie idą jego
+zaciski — jedna karta w szafce potrafi obsługiwać kotłownię, piwnicę
+i bramę naraz. Jest tylko DOMYŚLNĄ lokalizacją dla własnych punktów
+karty (patrz niżej) — zmiana lokalizacji karty nigdy nie nadpisuje
+punktu, któremu użytkownik ustawił własną.
 
 **Lokalizacje dają prefiks**, który gwarantuje unikalność identyfikatorów
 aparatów w całym projekcie. `KOT_KMG1` i `MH_KMG1` to dwa różne aparaty.
@@ -104,9 +117,19 @@ aparatów w całym projekcie. `KOT_KMG1` i `MH_KMG1` to dwa różne aparaty.
 points
   address         "DI1.DI.1"      — <id_karty>.<RODZAJ>.<KANAŁ>
   description     opis zacisku
-  location        kod lokalizacji
+  location        kod lokalizacji, LUB brak (puste) — patrz niżej
   technical_note  wolny tekst dla serwisanta
 ```
+
+**Lokalizacja punktu dziedziczy z karty domyślnie.** `location` puste
+(brak wartości) = punkt pokazuje lokalizację swojej karty. Punkt
+z WŁASNĄ, jawnie ustawioną lokalizacją (włącznie z jawnie pustą —
+"ten zacisk naprawdę nie ma lokalizacji, mimo że karta ma") zawsze
+wygrywa z tym, co dziedziczy. Rozróżnienie "brak = dziedzicz" od "pusty
+tekst = jawnie brak" jest tym, co pozwala zmienić lokalizację karty bez
+nadpisania punktów, którym ktoś już wpisał własną — nie osobną flagą,
+tylko samym brakiem wartości. Większość punktów jednej karty faktycznie
+idzie w to samo miejsce; wyjątki dostają własną, jawną wartość.
 
 Dla punktów analogowych dodatkowo (pola przeniesione żywcem
 z dzisiejszego `analog_points`, bo działają):
