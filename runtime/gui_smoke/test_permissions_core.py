@@ -14,6 +14,8 @@ persistent state (switching counters, Training Mode, service notes,
 Analog Inputs add/edit) are in test_permissions_features.py instead, to
 keep any one file from re-growing back into a single giant block.
 """
+import time
+
 from PySide6.QtCore import Qt
 
 from gui_smoke._mocks import (
@@ -41,11 +43,28 @@ def _stub_dialog_execs():
     returns before ever constructing one of these, so the stub is simply
     unused on that path."""
     from epw_os.gui.pages.page_analog_inputs import AnalogChannelConfigDialog
-    from epw_os.gui.widgets.popups import ConfirmationPopup, DeviceControlPopup, SettingChangePopup
+    from epw_os.gui.widgets.popups import CommandFailedPopup, ConfirmationPopup, DeviceControlPopup, SettingChangePopup
     from epw_os.gui.widgets.settings_popups import LanguageDialog, ScreenSleepDialog
 
+    # CommandFailedPopup: found while working on task "migracja
+    # adresacji" (not caused by it) - page_entry_gate.py's own
+    # handle_control_request() schedules simulate_hardware_feedback()
+    # via QTimer.singleShot(), which ~5% of the time (random.random(),
+    # simulating a real comm failure) opens THIS dialog and calls
+    # .exec() on it - a real, blocking modal, never stubbed here before.
+    # The QTimer callback doesn't necessarily fire during THIS test's
+    # own synchronous body (nothing here calls processEvents()/sleeps
+    # long enough) - it fires whenever the Qt event loop next turns,
+    # which can be during a LATER test's own fixture teardown. Combined
+    # with pytest-randomly seeding Python's global `random` module for
+    # reproducibility, an unlucky seed (empirically: --randomly-seed=42)
+    # hits the 5% branch and hangs an entirely different, unrelated
+    # test waiting for a click on an invisible/unattended real dialog.
+    # Latent since this dialog/timer pairing was written; only actually
+    # hit while stress-testing this task's own new tests against many
+    # random seeds - reported and fixed here, not swept under the rug.
     stubbed = [DeviceControlPopup, ConfirmationPopup, SettingChangePopup, AnalogChannelConfigDialog,
-               LanguageDialog, ScreenSleepDialog]
+               LanguageDialog, ScreenSleepDialog, CommandFailedPopup]
     origs = {cls: cls.exec for cls in stubbed}
     for cls in stubbed:
         cls.exec = lambda self: 1
@@ -57,14 +76,32 @@ def _unstub_dialog_execs(origs):
         cls.exec = orig
 
 
-def test_device_control_from_synoptic_matrix(make_window):
+def test_device_control_from_synoptic_matrix(make_window, qapp):
     # page_entry_gate.py: device control from synoptic (matrix: User NO,
     # Operator/Engineer YES).
+    #
+    # Task "migracja adresacji": q1 needs a real apparatus configured
+    # (apparatus_registry, ROLE_MAIN_BREAKER) - this test is about the
+    # ACCESS-LEVEL gate, not the separate "is q1 configured at all"
+    # gate page_entry_gate.py now also has (see
+    # test_main_view_apparatus_not_configured in
+    # test_permissions_features.py for THAT one) - an unconfigured q1
+    # would refuse every level identically via a real QMessageBox.
+    # information() call, hanging this test waiting for a click that
+    # never comes (not stubbed below - it wasn't reachable before this
+    # task).
+    from epw_os.core.apparatus import Apparatus, ApparatusRegistry
+    from epw_os.gui.pages.page_entry_gate import PageEntryGate
+    registry = ApparatusRegistry()
+    registry.set_apparatuses([Apparatus(id="Q1", command=["ADA1.DO.1"], feedback=["ELA1.DI.1"])])
+    registry.set_role_binding(PageEntryGate.ROLE_MAIN_BREAKER, "Q1")
+
     origs = _stub_dialog_execs()
     try:
         for level, allowed in (("User", False), ("Operator", True), ("Engineer", True)):
             access, audit, cmd = _access_at(level), MockAuditLogger(), CountingCommandManager()
-            w = make_window(MockTagManager(), cmd, access, MockProjectManager(), audit)
+            w = make_window(MockTagManager(), cmd, access, MockProjectManager(), audit,
+                             apparatus_registry=registry)
             # Bug 3 fix: handle_control_request() used to reference an
             # undefined `delay` variable right after the
             # command_manager.request_command() call this test cares
@@ -76,6 +113,22 @@ def test_device_control_from_synoptic_matrix(make_window):
             if allowed:
                 assert not _denied(audit), (level, audit.entries)
                 assert cmd.calls, f"{level} should have reached command_manager"
+                # Task "migracja adresacji" (found, not caused, while
+                # stress-testing this task's own fix against many
+                # random seeds): an allowed command schedules
+                # simulate_hardware_feedback() via QTimer.singleShot()
+                # up to 1000ms out - drained HERE, before this test's
+                # own `finally` unstubs CommandFailedPopup below,
+                # rather than left pending. A pending timer that fires
+                # AFTER unstub, during some unrelated LATER test, would
+                # hit CommandFailedPopup's REAL .exec() - a genuine
+                # blocking modal with nothing left to stub it - and
+                # hang that later test instead of failing this one
+                # (empirically confirmed: --randomly-seed=42).
+                deadline = time.time() + 1.2
+                while time.time() < deadline:
+                    qapp.processEvents()
+                    time.sleep(0.02)
             else:
                 assert _denied(audit, "synoptic"), (level, audit.entries)
                 assert not cmd.calls, "a denied level must never reach command_manager"

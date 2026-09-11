@@ -24,7 +24,29 @@ class EPWCore:
         log.info("Initializing EPWCore services...")
         self.tag_manager = TagManager(self.event_bus)
         self.alarm_manager = AlarmManager(self.event_bus)
-        
+
+        # Task "migracja adresacji", point 1.2 (Waldek's own doprecyzowanie,
+        # wariant C): runtime's one shared view of "what apparatuses
+        # (aparaty) exist" - page_entry_gate.py and protection_verifier.py
+        # both read THIS instead of each keeping its own DI2/DI3/DI4/
+        # DO01-04-style literal channel numbers. Empty by construction -
+        # "no apparatus configured" is the honest starting state.
+        #
+        # >>> FUTURE WIRING POINT <<< - task "runtime czyta projekt.epw"
+        # (not yet built): that task should call
+        # self.apparatus_registry.set_apparatuses(...) (and set_role_binding()
+        # for the fixed Main View roles - see page_entry_gate.py's own
+        # ROLE_* constants) here in startup(), from the loaded project's
+        # own rejestr aparatów, the same place project_manager.config
+        # gets populated by load_project(). Deliberately NOT project.json
+        # (that format is on its way out - Studio/projekt.epw is where a
+        # project's structure gets designed now) and NOT a new runtime
+        # settings screen (runtime is losing its own configuration
+        # wizards, not gaining one) - see apparatus.py's own module
+        # docstring for the full reasoning.
+        from epw_os.core.apparatus import ApparatusRegistry
+        self.apparatus_registry = ApparatusRegistry()
+
         self.project_manager = ProjectManager()
         self.logic_engine = LogicEngine(self.tag_manager)
         self.safety_kernel = SafetyKernel(self.tag_manager)

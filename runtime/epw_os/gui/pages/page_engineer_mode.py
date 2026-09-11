@@ -7,13 +7,24 @@ from epw_os.gui.theme_manager import get_theme_manager, current_colors
 from epw_os.i18n import tr
 
 class PageEngineerMode(QWidget):
-    def __init__(self, tag_manager, protection_manager, access_manager, audit_logger=None, parent=None):
+    def __init__(self, tag_manager, protection_manager, access_manager, apparatus_registry=None,
+                 audit_logger=None, parent=None):
         super().__init__(parent)
         self.tag_manager = tag_manager
         # Task (System.PendingCommand/System.ActiveTrip requirement #4) -
         # threaded straight through to ProtectionVerifier, which is the
         # one that actually knows WHICH precondition was denied and why.
-        self.verifier = ProtectionVerifier(tag_manager, protection_manager, access_manager, audit_logger)
+        #
+        # Task "migracja adresacji": apparatus_registry is injected, not
+        # hardcoded - None (today's real value, everywhere this page is
+        # actually constructed) means "no apparatus registry wired up
+        # yet" - see ProtectionVerifier's own check_safety_conditions(),
+        # which then refuses to run and says so on screen, rather than
+        # measuring against a guessed channel. See epw_os/core/
+        # apparatus.py's own module docstring for the future projekt.epw
+        # wiring point.
+        self.verifier = ProtectionVerifier(tag_manager, protection_manager, access_manager,
+                                            apparatus_registry=apparatus_registry, audit_logger=audit_logger)
         
         self.verifier.log_msg.connect(self.print_term)
         self.verifier.test_finished.connect(self.on_test_finished)
