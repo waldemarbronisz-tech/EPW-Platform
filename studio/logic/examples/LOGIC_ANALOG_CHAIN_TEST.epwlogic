@@ -313,7 +313,7 @@
             "visibility": true,
             "enabled": true,
             "properties": {
-                "Address": "ADA01.DO01",
+                "Address": "ADA01.DO.1",
                 "Comment": "Alarm wysokiej temperatury TR1"
             }
         }

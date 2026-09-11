@@ -169,14 +169,14 @@ def test_pasting_a_do_block_with_a_used_address_warns_and_keeps_the_address(qset
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("output.do", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ADA01.DO01"
+    window.project.blocks[0].properties["Address"] = "ADA01.DO.1"
     _block_items(window)[0].setSelected(True)
 
     window.scene.copy_selected_items()
     window.scene.paste_clipboard()
 
     pasted = window.project.blocks[-1]
-    assert pasted.properties["Address"] == "ADA01.DO01"  # never silently cleared
+    assert pasted.properties["Address"] == "ADA01.DO.1"  # never silently cleared
     assert "powielonymi adresami" in window.statusBar().currentMessage()
     _close(window)
 
@@ -237,7 +237,7 @@ def test_paste_copies_properties_unchanged(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
     block = window.project.blocks[0]
-    block.properties["Address"] = "ELA01.DI05"
+    block.properties["Address"] = "ELA01.DI.5"
     block.properties["Tag"] = "Q1"
     block.properties["Comment"] = "Wyłącznik główny"
     _block_items(window)[0].setSelected(True)
@@ -246,7 +246,7 @@ def test_paste_copies_properties_unchanged(qsettings):
     window.scene.paste_clipboard()
 
     pasted = window.project.blocks[-1]
-    assert pasted.properties["Address"] == "ELA01.DI05"
+    assert pasted.properties["Address"] == "ELA01.DI.5"
     assert pasted.properties["Tag"] == "Q1"
     assert pasted.properties["Comment"] == "Wyłącznik główny"
     _close(window)

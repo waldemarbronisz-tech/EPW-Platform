@@ -44,8 +44,8 @@ def test_two_blocks_with_the_same_address_reference_each_other(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 200, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI01"
-    di2.properties["Address"] = "ELA01.DI01"
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.1"
 
     item1 = _item_for(window, di1)
     others = item1._duplicate_reference_blocks()
@@ -59,8 +59,8 @@ def test_a_unique_address_has_no_duplicates(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 200, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI01"
-    di2.properties["Address"] = "ELA01.DI02"
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.2"
 
     item1 = _item_for(window, di1)
     assert item1._duplicate_reference_blocks() == []
@@ -81,7 +81,7 @@ def test_three_blocks_sharing_an_address_each_see_the_other_two(qsettings):
     window.scene.add_block_from_library("input.di", 200, 0)
     window.scene.add_block_from_library("input.di", 400, 0)
     for b in window.project.blocks:
-        b.properties["Address"] = "ELA01.DI01"
+        b.properties["Address"] = "ELA01.DI.1"
     di1, di2, di3 = window.project.blocks
 
     item1 = _item_for(window, di1)
@@ -113,7 +113,7 @@ def test_submenu_disabled_when_nothing_shares_the_address(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("input.di", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ELA01.DI01"
+    window.project.blocks[0].properties["Address"] = "ELA01.DI.1"
     item = _item_for(window, window.project.blocks[0])
 
     menu = QMenu()
@@ -128,8 +128,8 @@ def test_submenu_enabled_and_lists_the_duplicate_by_short_id(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 200, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI01"
-    di2.properties["Address"] = "ELA01.DI01"
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.1"
     item1 = _item_for(window, di1)
 
     menu = QMenu()
@@ -144,8 +144,8 @@ def test_submenu_label_includes_tag_when_set(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 200, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI01"
-    di2.properties["Address"] = "ELA01.DI01"
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.1"
     di2.properties["Tag"] = "Wyłącznik pomocniczy"
     item1 = _item_for(window, di1)
 
@@ -160,8 +160,8 @@ def test_choosing_a_duplicate_action_jumps_to_and_selects_that_block(qsettings):
     window.scene.add_block_from_library("input.di", 0, 0)
     window.scene.add_block_from_library("input.di", 300, 0)
     di1, di2 = window.project.blocks
-    di1.properties["Address"] = "ELA01.DI01"
-    di2.properties["Address"] = "ELA01.DI01"
+    di1.properties["Address"] = "ELA01.DI.1"
+    di2.properties["Address"] = "ELA01.DI.1"
     item1 = _item_for(window, di1)
 
     menu = QMenu()

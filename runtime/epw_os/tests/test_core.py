@@ -189,8 +189,11 @@ def test_canonical_tags(db):
         {"id": "EPM01", "type": "EPM"}
     ])
     core.startup()
-    assert core.tag_manager.get_value("ELA01.DI01") is False
-    assert core.tag_manager.get_value("ADA01.DO01") is False
+    # Task "migracja adresacji": was "ELA01.DI01"/"ADA01.DO01" (zero-
+    # padded, two segments) - the platform-wide grammar is now
+    # <card>.<KIND>.<channel>, no leading zero.
+    assert core.tag_manager.get_value("ELA01.DI.1") is False
+    assert core.tag_manager.get_value("ADA01.DO.1") is False
     assert core.tag_manager.get_value("EPM01.UL1.RMS") == 0.0
     core.shutdown()
 

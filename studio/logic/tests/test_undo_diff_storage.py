@@ -31,7 +31,7 @@ def _di():
 def test_three_edits_undo_all_the_way_back_in_order():
     p = Project()
     b = _di()
-    b.properties["Address"] = "ELA01.DI01"
+    b.properties["Address"] = "ELA01.DI.1"
     p.add_block(b)
 
     p.push_state()          # snapshot: x=0
@@ -134,21 +134,21 @@ def test_undo_after_a_later_in_place_property_mutation_is_not_corrupted():
     that dict through the shared reference."""
     p = Project()
     b = _di()
-    b.properties["Address"] = "ELA01.DI01"
+    b.properties["Address"] = "ELA01.DI.1"
     p.add_block(b)
 
     p.push_state()  # snapshot: Address = ELA01.DI01
-    b.properties["Address"] = "ELA01.DI02"  # in-place mutation, like the property grid does
+    b.properties["Address"] = "ELA01.DI.2"  # in-place mutation, like the property grid does
 
     state = p.undo()
-    assert state["blocks"][0]["properties"]["Address"] == "ELA01.DI01"
+    assert state["blocks"][0]["properties"]["Address"] == "ELA01.DI.1"
 
 def test_undo_after_a_later_in_place_settings_mutation_is_not_corrupted():
     """Same hazard via Project.settings -- DeviceModel.set_io_label()
     mutates the io_labels dict in place through settings.setdefault()."""
     p = Project()
     p.push_state()  # snapshot: no io_labels entries
-    DeviceModel.set_io_label(p, "ELA01.DI01", "Wyłącznik Q1")
+    DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1")
 
     state = p.undo()
     assert state["settings"].get("io_labels", {}) == {}
@@ -156,22 +156,22 @@ def test_undo_after_a_later_in_place_settings_mutation_is_not_corrupted():
 def test_two_pushed_snapshots_do_not_alias_each_others_blocks_dict():
     p = Project()
     b = _di()
-    b.properties["Address"] = "ELA01.DI01"
+    b.properties["Address"] = "ELA01.DI.1"
     p.add_block(b)
 
     p.push_state()  # snapshot A
-    b.properties["Address"] = "ELA01.DI02"
+    b.properties["Address"] = "ELA01.DI.2"
     p.push_state()  # snapshot B
-    b.properties["Address"] = "ELA01.DI03"  # live, unpushed
+    b.properties["Address"] = "ELA01.DI.3"  # live, unpushed
 
     state_b = p.undo()
-    assert state_b["blocks"][0]["properties"]["Address"] == "ELA01.DI02"
+    assert state_b["blocks"][0]["properties"]["Address"] == "ELA01.DI.2"
     state_a = p.undo()
-    assert state_a["blocks"][0]["properties"]["Address"] == "ELA01.DI01"
+    assert state_a["blocks"][0]["properties"]["Address"] == "ELA01.DI.1"
     # mutating the dict returned by the later undo() must not retroactively
     # change the earlier one's already-returned dict
     state_b["blocks"][0]["properties"]["Address"] = "TAMPERED"
-    assert state_a["blocks"][0]["properties"]["Address"] == "ELA01.DI01"
+    assert state_a["blocks"][0]["properties"]["Address"] == "ELA01.DI.1"
 
 
 # ---- storage shape: a single-block edit only stores that one block -------

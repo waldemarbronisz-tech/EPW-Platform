@@ -125,14 +125,14 @@ def test_device_explorer_leaves_carry_type_id_and_address():
     # being a PREFIX of the branch label, not an exact "ELA-01" string.
     ela = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0).startswith("ELA01"))
     first_di = ela.child(0)
-    assert first_di.text(0) == "ELA01.DI01"
+    assert first_di.text(0) == "ELA01.DI.1"
     assert first_di.data(0, TYPE_ID_ROLE) == "input.di"
-    assert first_di.data(0, ADDRESS_ROLE) == "ELA01.DI01"
+    assert first_di.data(0, ADDRESS_ROLE) == "ELA01.DI.1"
 
     ada = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0).startswith("ADA01"))
     first_do = ada.child(0)
     assert first_do.data(0, TYPE_ID_ROLE) == "output.do"
-    assert first_do.data(0, ADDRESS_ROLE) == "ADA01.DO01"
+    assert first_do.data(0, ADDRESS_ROLE) == "ADA01.DO.1"
 
     analog_branch = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0) == "Analog")
     ai_leaf = next(analog_branch.child(i) for i in range(analog_branch.childCount())
@@ -181,11 +181,11 @@ def test_scene_add_block_from_library_sets_address_when_given():
     from logic_studio.ui.canvas.scene import LogicScene
 
     scene = LogicScene()
-    scene.add_block_from_library("input.di", 40, 60, address="ELA01.DI06")
+    scene.add_block_from_library("input.di", 40, 60, address="ELA01.DI.6")
 
     from logic_studio.ui.canvas.block_item import BlockItem
     item = next(i for i in scene.items() if isinstance(i, BlockItem))
-    assert item.logic_block.properties["Address"] == "ELA01.DI06"
+    assert item.logic_block.properties["Address"] == "ELA01.DI.6"
 
 def test_scene_add_block_from_library_without_address_keeps_default():
     _app()
@@ -217,7 +217,7 @@ def test_view_drop_event_splits_type_id_and_address_payload():
     view = LogicView(scene)
 
     mime = QMimeData()
-    mime.setText("input.di|ELA01.DI06")
+    mime.setText("input.di|ELA01.DI.6")
 
     event = QDropEvent(
         QPointF(50, 50), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier, QDropEvent.Type.Drop
@@ -226,7 +226,7 @@ def test_view_drop_event_splits_type_id_and_address_payload():
 
     item = next(i for i in scene.items() if isinstance(i, BlockItem))
     assert item.logic_block.type_id == "input.di"
-    assert item.logic_block.properties["Address"] == "ELA01.DI06"
+    assert item.logic_block.properties["Address"] == "ELA01.DI.6"
 
 def test_simulation_panel_analog_widgets_rebuild_on_set_project(qsettings):
     _app()

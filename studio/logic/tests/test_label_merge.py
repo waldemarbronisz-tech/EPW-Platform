@@ -20,13 +20,13 @@ from logic_studio.compiler.label_merge import (
 register_builtin_blocks()
 
 
-def _di(address="ELA01.DI01"):
+def _di(address="ELA01.DI.1"):
     b = BlockRegistry.create_block("input.di")
     b.properties["Address"] = address
     return b
 
 
-def _do(address="ADA01.DO01"):
+def _do(address="ADA01.DO.1"):
     b = BlockRegistry.create_block("output.do")
     b.properties["Address"] = address
     return b
@@ -189,9 +189,9 @@ def test_label_and_direct_wire_produce_identical_simulation_results():
         io = SimulationIOProvider()
         engine = ExecutionEngine(res["program"], io, SimulationTimeProvider())
         engine.start()
-        io.set_digital_input("ELA01.DI01", True)
+        io.set_digital_input("ELA01.DI.1", True)
         engine.step()
-        assert io.output_image["digital"].get("ADA01.DO01") is expected
+        assert io.output_image["digital"].get("ADA01.DO.1") is expected
 
 def test_live_project_pins_are_never_mutated_by_compiling_a_label():
     """label_merge.py runs against compile_view's already-CLONED pins
@@ -260,7 +260,7 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
     src = _di()
     mid_a = BlockRegistry.create_block("logic.buffer")
     mid_b = BlockRegistry.create_block("logic.buffer")
-    do_b = _do("ADA01.DO01")
+    do_b = _do("ADA01.DO.1")
     p.add_block(src)
     p.add_block(mid_a)
     p.add_block(mid_b)
@@ -292,11 +292,11 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
     io = SimulationIOProvider()
     engine = ExecutionEngine(res["program"], io, SimulationTimeProvider())
     engine.start()
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     engine.step()
     # do_b is fed only via mid_b, which is fed only via the "Shared" label
     # -- if the merge didn't reach it, this stays False/None forever.
-    assert io.output_image["digital"].get("ADA01.DO01") is True
+    assert io.output_image["digital"].get("ADA01.DO.1") is True
 
 
 # ---- §A2: validation -------------------------------------------------------
@@ -314,8 +314,8 @@ def test_label_with_no_source_is_an_error():
 
 def test_label_with_two_sources_is_an_error_naming_both_blocks():
     p = Project()
-    di1 = _di("ELA01.DI01")
-    di2 = _di("ELA01.DI02")
+    di1 = _di("ELA01.DI.1")
+    di2 = _di("ELA01.DI.2")
     p.add_block(di1)
     p.add_block(di2)
     p.add_wire(_free_end_wire(di1.outputs[0], "TwoSources", is_source=True))
@@ -365,8 +365,8 @@ def test_incompatible_types_across_a_label_is_an_error_naming_the_label():
 def test_multiple_receivers_on_one_label_is_legal():
     p = Project()
     di = _di()
-    do1 = _do("ADA01.DO01")
-    do2 = _do("ADA01.DO02")
+    do1 = _do("ADA01.DO.1")
+    do2 = _do("ADA01.DO.2")
     p.add_block(di)
     p.add_block(do1)
     p.add_block(do2)
@@ -394,8 +394,8 @@ def test_describe_label_groups_reports_source_position_and_receiver_count():
     p = Project()
     di = _di()
     di.set_position(300.0, 500.0)
-    do1 = _do("ADA01.DO01")
-    do2 = _do("ADA01.DO02")
+    do1 = _do("ADA01.DO.1")
+    do2 = _do("ADA01.DO.2")
     p.add_block(di)
     p.add_block(do1)
     p.add_block(do2)
@@ -418,8 +418,8 @@ def test_describe_label_groups_flags_no_source_as_an_error():
 
 def test_describe_label_groups_flags_multiple_sources_as_an_error():
     p = Project()
-    di1 = _di("ELA01.DI01")
-    di2 = _di("ELA01.DI02")
+    di1 = _di("ELA01.DI.1")
+    di2 = _di("ELA01.DI.2")
     p.add_block(di1)
     p.add_block(di2)
     p.add_wire(_free_end_wire(di1.outputs[0], "TwoSources", is_source=True))

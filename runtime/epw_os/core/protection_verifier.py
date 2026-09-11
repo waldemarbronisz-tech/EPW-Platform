@@ -33,11 +33,40 @@ class ProtectionVerifier(QObject):
     log_msg = Signal(str)
     test_finished = Signal(object)
 
-    def __init__(self, tag_manager, protection_manager, access_manager, audit_logger=None):
+    # Task "migracja adresacji", point 1.2 doprecyzowanie: which
+    # apparatus this verifier tests is a fixed ROLE (the "incoming
+    # feeder breaker" a protection pickup/trip-time test always runs
+    # against, regardless of which protection function is selected) -
+    # not a per-test-call parameter. Same ROLE_* convention as
+    # page_entry_gate.py's own Main View symbols; the apparatus bound to
+    # this role supplies BOTH sides (command = which output pulses the
+    # coil, feedback = which input the trip is observed on) from its
+    # own definition - this class asks for the role, never a bare
+    # address (Waldek's own "test przyjmuje JEDNO wskazanie: który
+    # aparat testujemy").
+    ROLE_TESTED_APPARATUS = "engineer_mode.tested_apparatus"
+    # Interlocks - OTHER apparatuses that must be open (feedback
+    # inactive) before a test may start. Plural and optional by nature
+    # (a site may have zero) - unlike ROLE_TESTED_APPARATUS, an empty
+    # list is a legitimate "no interlocks configured", not a blocked
+    # state; see check_safety_conditions()'s own handling.
+    ROLE_INTERLOCK_PREFIX = "engineer_mode.interlock."
+
+    def __init__(self, tag_manager, protection_manager, access_manager,
+                 apparatus_registry=None, interlock_roles=(), audit_logger=None):
         super().__init__()
         self.tag_manager = tag_manager
         self.protection_manager = protection_manager
         self.access_manager = access_manager
+        # Task "migracja adresacji": injected from outside, never a
+        # hardcoded literal - None (today's honest default, everywhere
+        # this class is actually constructed) means "not wired up yet",
+        # not "assume DI2". See apparatus.py's own module docstring for
+        # where a real registry eventually comes from.
+        self.apparatus_registry = apparatus_registry
+        # Which interlock ROLES to check, in order - empty by default
+        # (see ROLE_INTERLOCK_PREFIX's own docstring above).
+        self.interlock_roles = list(interlock_roles)
         # Task (System.PendingCommand/System.ActiveTrip requirement #4:
         # "odmowa zapisywana do dziennika audytowego") - optional, same
         # tolerance every other core module's audit_logger parameter
@@ -135,6 +164,19 @@ class ProtectionVerifier(QObject):
         with open(REPORTS_FILE, "w") as f:
             json.dump([asdict(r) for r in self.reports], f, indent=4)
             
+    def _tested_apparatus(self):
+        if self.apparatus_registry is None:
+            return None
+        return self.apparatus_registry.get_by_role(self.ROLE_TESTED_APPARATUS)
+
+    def _tested_command_tag(self):
+        ap = self._tested_apparatus()
+        return ap.command[0] if ap is not None and ap.command else None
+
+    def _tested_feedback_tag(self):
+        ap = self._tested_apparatus()
+        return ap.feedback[0] if ap is not None and ap.feedback else None
+
     def _di_label(self, tag_name: str) -> str:
         """Human-readable label for a DI tag in verification messages -
         the operator-editable tag description if one is set (same
@@ -189,19 +231,38 @@ class ProtectionVerifier(QObject):
         if not self.access_manager.has_access(AccessLevel.ENGINEER):
             return False, "Engineer access is NOT ACTIVE.\nVerification requires Engineer access."
 
+        # Task "migracja adresacji", point 1.2 doprecyzowanie: was
+        # literal "DI2"/"DI3"/"DI4" - now resolved from whichever real
+        # apparatus is bound to ROLE_TESTED_APPARATUS. Refuses outright,
+        # in plain words, rather than measuring against a guessed
+        # channel (Waldek's own "test ma to powiedzieć i odmówić
+        # uruchomienia, a nie mierzyć nie wiadomo czego").
+        command_tag = self._tested_command_tag()
+        feedback_tag = self._tested_feedback_tag()
+        if command_tag is None or feedback_tag is None:
+            return False, (
+                "Protection verification test is NOT CONFIGURED.\n"
+                "No apparatus with both an output and a feedback point is assigned to this test."
+            )
+
         val_l1 = self.tag_manager.get_value("Meas.L1")
         if val_l1 is None or val_l1 < 10:
             return False, "Incoming voltage not detected.\nProtection verification requires\nenergized busbars."
 
-        if self.tag_manager.get_value("DI2") != 1:
-            return False, f"{self._di_label('DI2')} is OPEN.\nVerification requires this feeder active."
+        if self.tag_manager.get_value(feedback_tag) != 1:
+            return False, f"{self._di_label(feedback_tag)} is OPEN.\nVerification requires this feeder active."
 
-        if self.tag_manager.get_value("DI3") == 1:
-            return False, f"{self._di_label('DI3')} is CLOSED.\nProtection testing could disconnect\nthis feeder.\nOpen it before starting the test."
+        for role in self.interlock_roles:
+            interlock = self.apparatus_registry.get_by_role(role) if self.apparatus_registry else None
+            if interlock is None or not interlock.feedback:
+                continue  # this interlock role has nothing assigned - nothing to check, not a block
+            interlock_tag = interlock.feedback[0]
+            if self.tag_manager.get_value(interlock_tag) == 1:
+                return False, (
+                    f"{self._di_label(interlock_tag)} is CLOSED.\n"
+                    f"Open it before starting the test."
+                )
 
-        if self.tag_manager.get_value("DI4") == 1:
-            return False, f"{self._di_label('DI4')} is CLOSED.\nOpen it before protection testing."
-            
         if self.tag_manager.get_value("System.PendingCommand") == True:
             reason = "Pending switching command detected.\nWait until switching operation\nhas finished."
             self._record_precondition_denial("System.PendingCommand", reason)
@@ -244,6 +305,17 @@ class ProtectionVerifier(QObject):
             self.log_msg.emit("TEST BLOCKED\nReason:\nProtection stage is disabled.")
             return
 
+        # Task "migracja adresacji": start_verification() is normally
+        # only reached after check_safety_conditions() already refused
+        # an unconfigured test - re-checked here too (defense in depth,
+        # same "never trust the caller already checked" stance every
+        # other Engineer-gated action in this app already has), since
+        # this method can in principle be called directly.
+        feedback_tag = self._tested_feedback_tag()
+        if feedback_tag is None:
+            self.log_msg.emit("TEST BLOCKED\nReason:\nProtection verification test is not configured.")
+            return
+
         self.log_msg.emit("■ Running Test")
 
         # Context setup
@@ -258,12 +330,13 @@ class ProtectionVerifier(QObject):
             "target_tag": "",
             "ramp_direction": 1, # 1 for up, -1 for down
             "unit": prot.unit,
-            
+            "feedback_tag": feedback_tag,
+
             "pickup_val": None,
             "pickup_time": 0,
             "trip_time": 0,
-            
-            "initial_state": self.tag_manager.get_value("DI2") if self.tag_manager.get_value("DI2") is not None else 0
+
+            "initial_state": self.tag_manager.get_value(feedback_tag) if self.tag_manager.get_value(feedback_tag) is not None else 0
         }
 
         # Map protection to tag and ramp logic
@@ -321,8 +394,9 @@ class ProtectionVerifier(QObject):
                 self.state = "WAITING_TRIP"
                 
         elif self.state == "WAITING_TRIP":
-            # Wait for DI2 feedback to drop, simulating real external trip output
-            current_di = self.tag_manager.get_value("DI2")
+            # Wait for the tested apparatus's own feedback to drop,
+            # simulating real external trip output.
+            current_di = self.tag_manager.get_value(ctx["feedback_tag"])
             if current_di is None: current_di = 0
             
             elapsed = (time.time() - ctx["pickup_time"]) * 1000 # ms
@@ -366,12 +440,12 @@ class ProtectionVerifier(QObject):
             ctx["prot_name"],
             conf_p, meas_p,
             conf_d, meas_d,
-            self._di_label("DI2"), feedback, result
+            self._di_label(ctx["feedback_tag"]), feedback, result
         )
 
         # Reset simulation values
         self.tag_manager.update_tag(ctx["target_tag"], ctx["start_val"])
-        self.tag_manager.update_tag("DI2", ctx["initial_state"]) # Restore feeder to its prior state
+        self.tag_manager.update_tag(ctx["feedback_tag"], ctx["initial_state"])  # Restore feeder to its prior state
         
         self.test_finished.emit(rep)
         self.state = "IDLE"

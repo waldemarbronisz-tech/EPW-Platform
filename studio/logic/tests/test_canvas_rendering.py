@@ -144,7 +144,7 @@ def test_identifier_and_pin_label_zones_never_overlap():
 
     cases = [
         ("input.di", ""),
-        ("input.di", "ELA01.DI01"),
+        ("input.di", "ELA01.DI.1"),
         ("input.ai", ""),
         ("input.ai", "AI.TEST"),
     ]
@@ -286,7 +286,7 @@ def test_complex_readout_clears_every_pin_row(type_id):
 
 def test_io_block_output_do_address_text_no_longer_shares_a_row_with_a_pin_label():
     """Reproduces the exact reported case: an output.do block's Address
-    ("ADA01.DO14") and display-name ("DO") text both start flush against
+    ("ADA01.DO.14") and display-name ("DO") text both start flush against
     the left edge — the same edge its single input pin (port at x=0) sits
     on. Confirms the fix's precondition (its one pin's label is suppressed)
     rather than re-deriving pixel positions."""
@@ -294,7 +294,7 @@ def test_io_block_output_do_address_text_no_longer_shares_a_row_with_a_pin_label
     from logic_studio.ui.canvas.block_item import pin_labels_suppressed
 
     block = BlockRegistry.create_block("output.do")
-    block.properties["Address"] = "ADA01.DO14"
+    block.properties["Address"] = "ADA01.DO.14"
     item = BlockItem(block)
     assert pin_labels_suppressed(item)
 
@@ -433,12 +433,12 @@ def test_output_direction_io_text_margin_clears_the_notch():
     """An output-direction chevron (DO/AO/Virtual OUT) has a notch carved
     into its left edge (shapes.draw_io_shape()) — the identifier text's
     left margin must start at or past the notch's rightmost point, never
-    inside it (§0.4: "ADA01.DO01"'s first letter used to sit on the notch's
+    inside it (§0.4: "ADA01.DO.1"'s first letter used to sit on the notch's
     diagonal edge)."""
     _app()
     from logic_studio.ui.canvas.block_item import io_text_margin_x
     block = BlockRegistry.create_block("output.do")
-    block.properties["Address"] = "ADA01.DO01"
+    block.properties["Address"] = "ADA01.DO.1"
     item = BlockItem(block)
 
     input_margin = io_text_margin_x(item.width, "input")
@@ -461,9 +461,9 @@ def test_input_and_output_io_block_widths_use_the_same_formula():
     _app()
     from logic_studio.ui.canvas.block_item import io_text_margin_x
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
     do = BlockRegistry.create_block("output.do")
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
     assert len(di.properties["Address"]) == len(do.properties["Address"])
 
     di_item = BlockItem(di)

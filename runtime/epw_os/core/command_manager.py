@@ -68,11 +68,27 @@ class CommandManager:
         self.tag_manager.update_tag("System.PendingCommand", bool(self._pending_commands))
 
     def load_definitions(self, definitions_dict: dict):
+        # Task "migracja adresacji": `target`/`action` are informational
+        # (event_bus.emit("command_executed", definition.target,
+        # definition.action, ...) below is the one real reader) - lookup
+        # itself always goes by the verbatim key (`command_id`), never by
+        # reassembling these two fields, so this split only ever needed
+        # to get the SPLIT POINT right, not the segment count. The old
+        # `split(".")[0] + "." + split(".")[1]` assumed the key had
+        # EXACTLY 3 dot-separated segments (device.tag.ACTION) - already
+        # silently wrong for a 2-segment key (`"DO05.CLOSE"` -> target
+        # "DO05.CLOSE" instead of "DO05", swallowing the action into the
+        # emitted target), and wrong again, differently, once a real tag
+        # itself contains two dots (`"ADA1.DO.1.CLOSE"` -> target
+        # "ADA1.DO" instead of "ADA1.DO.1", losing the channel number).
+        # rsplit(".", 1) is correct for any number of segments - action
+        # is always everything after the LAST dot, target everything
+        # before it.
         for k, v in definitions_dict.items():
             self._definitions[k] = CommandDefinition(
                 command_id=k,
-                target=k.split(".")[0] + "." + k.split(".")[1] if "." in k else k,
-                action=k.split(".")[-1] if "." in k else "EXECUTE",
+                target=k.rsplit(".", 1)[0] if "." in k else k,
+                action=k.rsplit(".", 1)[1] if "." in k else "EXECUTE",
                 driver_id=v.get("driver_id", "SIM_DRIVER"),
                 output_tag=v["output_tag"],
                 output_value=v["output_value"],

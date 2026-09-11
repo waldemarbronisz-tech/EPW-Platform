@@ -31,18 +31,26 @@ def test_export_signal_list_writes_valid_versioned_json(make_window):
     with open(export_path, encoding="utf-8") as f:
         export_data = json.load(f)
     assert export_data["format_version"] == "1.0"
-    assert export_data["tag_count"] == 3
+    assert export_data["tag_count"] == 4
     export_names = {t["name"] for t in export_data["tags"]}
-    assert export_names == {"DI1", "System.Theme", "Meas.L1"}, export_names
+    # Task "migracja adresacji": MockTagManager's own DI/DO tags now use
+    # the platform grammar (<card>.<KIND>.<channel>) - tag_export.py
+    # itself is untouched (ADDRESSING_INVENTORY.md's own §3.4: already
+    # name-agnostic, groups generically by a dotted name's first segment
+    # - "ELA1"/"ADA1" here, not a nice "DI"/"DO" label from
+    # _KNOWN_MODULE_NAMES, exactly as that module's own comment already
+    # says an unrecognized prefix should behave).
+    assert export_names == {"ELA1.DI.1", "ADA1.DO.1", "System.Theme", "Meas.L1"}, export_names
     theme_entry = next(t for t in export_data["tags"] if t["name"] == "System.Theme")
     assert theme_entry["direction"] == "READ_WRITE", theme_entry
-    di1_entry = next(t for t in export_data["tags"] if t["name"] == "DI1")
+    di1_entry = next(t for t in export_data["tags"] if t["name"] == "ELA1.DI.1")
     assert di1_entry["direction"] == "READ_ONLY", di1_entry
     meas_entry = next(t for t in export_data["tags"] if t["name"] == "Meas.L1")
     assert meas_entry["is_simulated"] is True
     assert di1_entry["is_simulated"] is False
     assert export_data["request_tags"] == []
-    assert "DI" in export_data["groups"] and "DI1" in export_data["groups"]["DI"]
+    assert "ELA1" in export_data["groups"] and "ELA1.DI.1" in export_data["groups"]["ELA1"]
+    assert "ADA1" in export_data["groups"] and "ADA1.DO.1" in export_data["groups"]["ADA1"]
 
 
 def test_project_properties_viewable_at_every_level_editable_only_engineer(make_window):

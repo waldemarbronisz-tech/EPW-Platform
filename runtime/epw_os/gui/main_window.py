@@ -38,9 +38,15 @@ class MainWindow(QMainWindow):
                  presentation_step_signal=None, api_host=None, intrusion_manager=None,
                  process_protection_manager=None,
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
-                 mqtt_manager=None, mqtt_status_changed_signal=None):
+                 mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None):
         super().__init__()
         self.tag_manager = tag_manager
+        # Task "migracja adresacji" - see epw_os/core/apparatus.py's own
+        # module docstring. None (today's real value from main.py) means
+        # "not wired up yet" - threaded through to whichever pages read
+        # apparatus roles (PageEntryGate, PageEngineerMode) instead of
+        # each keeping its own hardcoded DI/DO literals.
+        self.apparatus_registry = apparatus_registry
         self.command_manager = command_manager
         self.access_manager = access_manager
         # Task (page-split): passed straight through like intrusion_manager
@@ -389,7 +395,8 @@ class MainWindow(QMainWindow):
         # ALWAYS_ON_FEATURES) - always constructed first, so index 0 is
         # always Main View regardless of what else is enabled.
         self.page_entry_gate = PageEntryGate(self.tag_manager, switching_counters=self.switching_counters,
-                                              service_notes=self.service_notes)
+                                              service_notes=self.service_notes,
+                                              apparatus_registry=self.apparatus_registry)
         _add_page("main_view", self.page_entry_gate)
 
         # ALWAYS ON.
@@ -485,7 +492,9 @@ class MainWindow(QMainWindow):
                 and is_feature_enabled(self.enabled_features, "engineer_mode"):
             self.page_engineer_mode = PageEngineerMode(self.tag_manager,
                                                          self.page_protection_electrical.protection_manager,
-                                                         self.access_manager, self.audit_logger)
+                                                         self.access_manager,
+                                                         apparatus_registry=self.apparatus_registry,
+                                                         audit_logger=self.audit_logger)
             _add_page("engineer_mode", self.page_engineer_mode)
 
         content_layout.addWidget(self.stacked_widget, stretch=1)

@@ -125,11 +125,36 @@ class DeviceStatusPanel(QFrame):
                 self.labels[tag].update_status(value)
 
 class PageEntryGate(QWidget):
-    def __init__(self, tag_manager, switching_counters=None, service_notes=None, parent=None):
+    # Task "migracja adresacji", point 1.2 (Waldek's own doprecyzowanie,
+    # wariant C): this page's own device_map used to duplicate what an
+    # APARAT already is in the project (id, feedback, command) -
+    # "the same class of error as Main View <-> System Topology: two
+    # sources of truth about the same thing". Fixed by reading real
+    # apparatuses from apparatus_registry (epw_os/core/apparatus.py)
+    # instead of keeping a private DI1-4/DO01-04 literal table - but the
+    # one-line diagram ITSELF (which symbol sits where, wired to which
+    # neighbour) is a fixed drawing (GRANICE: "nie zmieniaj struktury
+    # paneli"), not project data - these four ROLE ids are which SLOT
+    # in that fixed drawing each apparatus binding fills, not apparatus
+    # ids themselves. Same convention as protection_verifier.py's own
+    # ROLE_TESTED_APPARATUS.
+    ROLE_MAIN_BREAKER = "main_view.q1"
+    ROLE_GENERATOR_CONTACTOR = "main_view.kmg"
+    ROLE_FEEDER_1 = "main_view.km1"
+    ROLE_FEEDER_2 = "main_view.km2"
+    ROLE_VOLTAGE_RELAY = "main_view.voltage_relay"
+
+    def __init__(self, tag_manager, switching_counters=None, service_notes=None,
+                 apparatus_registry=None, parent=None):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.switching_counters = switching_counters
         self.service_notes = service_notes
+        # Injected, never hardcoded - None (today's real value from
+        # main.py, until the "runtime czyta projekt.epw" task lands)
+        # means every role below resolves to "not configured", not a
+        # guessed DO01/DI1. See apparatus.py's own module docstring.
+        self.apparatus_registry = apparatus_registry
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -149,21 +174,25 @@ class PageEntryGate(QWidget):
         self.w_supply = Wire("V", 40)
         self.w_supply.update_voltage(True)
 
-        # Widget tag_name is the generic DO0N routing key (same
-        # designation/tag Control Outputs and epw_core.py's default
-        # command definitions use) - no project-specific device name
-        # lives in this code. description is read from the same
-        # persisted, operator-editable output_description Control Outputs
-        # already manages (see PageControlOutputs) - rename a channel's
-        # description there and it shows up here too on next launch (not
-        # live-synced mid-session, same as Control Outputs' own
-        # descriptions aren't live-synced from anywhere external either).
-        self.q1 = Breaker("DO01")
-        self.q1.description = self.tag_manager.get_output_description("DO01", "Digital Output Channel 1")
+        # Task "migracja adresacji": widget tag_name is the real
+        # apparatus's own command address, read from apparatus_registry
+        # by ROLE (which slot in this fixed drawing), not a literal
+        # "DO0N". `feedback` (used below to build device_map) comes from
+        # the SAME apparatus - one lookup, both addresses, matching
+        # what an apparatus actually is (id + feedback + command), not
+        # two independently-hardcoded literals. Unconfigured (no
+        # apparatus bound to this role, or it's missing one side) shows
+        # plainly as "not configured" - never a guessed DO01/DI1.
+        q1_command, q1_description, q1_feedback = self._apparatus_binding(self.ROLE_MAIN_BREAKER)
+        self.q1 = Breaker(q1_command or tr("pages.entry_gate.apparatus_not_configured_short"))
+        self.q1.description = q1_description
+        self.q1.is_configured = q1_command is not None
         self.w1 = Wire("V", 40)
 
-        self.kmg = Contactor("DO02")
-        self.kmg.description = self.tag_manager.get_output_description("DO02", "Digital Output Channel 2")
+        kmg_command, kmg_description, kmg_feedback = self._apparatus_binding(self.ROLE_GENERATOR_CONTACTOR)
+        self.kmg = Contactor(tag_name=kmg_command or tr("pages.entry_gate.apparatus_not_configured_short"))
+        self.kmg.description = kmg_description
+        self.kmg.is_configured = kmg_command is not None
         self.w2 = Wire("V", 40)
 
         self.busbar = Busbar(400)
@@ -171,11 +200,15 @@ class PageEntryGate(QWidget):
         self.w3_1 = Wire("V", 40)
         self.w3_2 = Wire("V", 40)
 
-        self.km1 = Contactor("DO03")
-        self.km1.description = self.tag_manager.get_output_description("DO03", "Digital Output Channel 3")
+        km1_command, km1_description, km1_feedback = self._apparatus_binding(self.ROLE_FEEDER_1)
+        self.km1 = Contactor(tag_name=km1_command or tr("pages.entry_gate.apparatus_not_configured_short"))
+        self.km1.description = km1_description
+        self.km1.is_configured = km1_command is not None
 
-        self.km2 = Contactor("DO04")
-        self.km2.description = self.tag_manager.get_output_description("DO04", "Digital Output Channel 4")
+        km2_command, km2_description, km2_feedback = self._apparatus_binding(self.ROLE_FEEDER_2)
+        self.km2 = Contactor(tag_name=km2_command or tr("pages.entry_gate.apparatus_not_configured_short"))
+        self.km2.description = km2_description
+        self.km2.is_configured = km2_command is not None
 
         self.w4_1 = Wire("V", 40)
         self.w4_2 = Wire("V", 40)
@@ -239,26 +272,41 @@ class PageEntryGate(QWidget):
         # Connect to DI tags
         self.tag_manager.tag_changed.connect(self.on_tag_changed)
 
-        self.device_map = {
-            "DI1": self.q1,
-            "DI2": self.kmg,
-            "DI3": self.km1,
-            "DI4": self.km2
-        }
+        # Task "migracja adresacji": keyed by whichever apparatus
+        # actually has a feedback address bound - a role with no
+        # apparatus, or an apparatus missing its feedback side, has
+        # NOTHING to react to and is correctly absent here entirely
+        # (not present-but-wrong, per the task's own "absence is the
+        # honest state" rule already applied throughout this migration).
+        self.device_map = {}
+        for feedback_tag, widget in (
+            (q1_feedback, self.q1), (kmg_feedback, self.kmg),
+            (km1_feedback, self.km1), (km2_feedback, self.km2),
+        ):
+            if feedback_tag:
+                self.device_map[feedback_tag] = widget
 
         # Switching counters (Task: liczba przelaczen i czas w stanie
-        # zamknietym per aparat) are keyed by the DI feedback tag - the
-        # one that actually carries the device's real open/close
-        # transitions (see epw_core.py's default command definitions:
-        # DO01-04's CLOSE/OPEN write straight to DI1-4). Each widget's
-        # OWN tag_name is the DO0N routing/command tag instead (see the
-        # comment above self.q1) - counter_tag is how popups.py's
-        # DeviceControlPopup/DevicePropertiesPopup find the right
-        # counter for a device without needing to know about
-        # device_map themselves.
-        for di_tag, widget in self.device_map.items():
-            widget.counter_tag = di_tag
-            self._refresh_device_tooltip(widget, di_tag)
+        # zamknietym per aparat) are keyed by the apparatus's own
+        # feedback tag - the one that actually carries the device's
+        # real open/close transitions. Each widget's OWN tag_name is
+        # its command address instead (see the comment above self.q1) -
+        # counter_tag is how popups.py's DeviceControlPopup/
+        # DevicePropertiesPopup find the right counter for a device
+        # without needing to know about device_map themselves.
+        for feedback_tag, widget in self.device_map.items():
+            widget.counter_tag = feedback_tag
+            self._refresh_device_tooltip(widget, feedback_tag)
+
+        # Task "migracja adresacji": was literal "DI14"/"DO21" - the
+        # voltage-monitoring relay pair recalculate_electricity() below
+        # drives has no dedicated widget of its own to show a "not
+        # configured" state on, so when unconfigured this relay's logic
+        # is simply skipped entirely (no phantom writes to made-up tag
+        # names, no fabricated log lines) - see recalculate_electricity()
+        # itself.
+        self._voltage_relay_command, _description, self._voltage_relay_feedback = \
+            self._apparatus_binding(self.ROLE_VOLTAGE_RELAY)
 
         # Load initial values
         self.init_cabinet_tags()
@@ -266,6 +314,31 @@ class PageEntryGate(QWidget):
         self.sim_timer = QTimer(self)
         self.sim_timer.timeout.connect(self.recalculate_electricity)
         self.sim_timer.start(250)
+
+    def _resolve_role(self, role):
+        """Apparatus bound to `role`, or None if apparatus_registry
+        itself is None or the role has no binding - see
+        apparatus_registry.get_by_role()'s own docstring."""
+        if self.apparatus_registry is None:
+            return None
+        return self.apparatus_registry.get_by_role(role)
+
+    def _apparatus_binding(self, role):
+        """(command_tag, description, feedback_tag) for `role` -
+        command_tag/feedback_tag are None when unconfigured (no
+        apparatus bound, or it's missing that side) - description falls
+        back to a plain "not configured" label (task's own explicit
+        "moduł ma to powiedzieć wprost") instead of a synthetic
+        "Digital Output Channel N" the way the old literal-tag code
+        did."""
+        apparatus = self._resolve_role(role)
+        command_tag = apparatus.command[0] if apparatus and apparatus.command else None
+        feedback_tag = apparatus.feedback[0] if apparatus and apparatus.feedback else None
+        if command_tag:
+            description = self.tag_manager.get_output_description(command_tag, command_tag)
+        else:
+            description = tr("pages.entry_gate.apparatus_not_configured")
+        return command_tag, description, feedback_tag
 
     def init_cabinet_tags(self):
         tags = [
@@ -309,6 +382,15 @@ class PageEntryGate(QWidget):
         # this is the real, execution-time gate the task asks for).
         if not main_window.access_manager.has_access(AccessLevel.OPERATOR):
             main_window.deny_access(AccessLevel.OPERATOR, "Device control from synoptic (Main View)")
+            return
+
+        # Task "migracja adresacji": no apparatus bound to this symbol's
+        # role - refuse plainly instead of dispatching a command against
+        # the placeholder text drawn on the symbol (never a real tag).
+        if not getattr(device, "is_configured", True):
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, tr("pages.entry_gate.apparatus_not_configured_title"),
+                                     tr("pages.entry_gate.apparatus_not_configured"))
             return
 
         popup = DeviceControlPopup(device, self, switching_counters=self.switching_counters,
@@ -520,10 +602,14 @@ class PageEntryGate(QWidget):
                 self.meas_panel.il1.update_value(0, health_quality)
                 self.meas_panel.pf.update_value(0, health_quality)
                 
-            # DO21 / DI14 Voltage Monitoring Relay logic
-            if self.tag_manager.get_value("DI14") != 1:
-                self.tag_manager.update_tag("DI14", 1)
-                self.tag_manager.update_tag("DO21", 1)
+            # Voltage Monitoring Relay logic - task "migracja adresacji":
+            # skipped entirely when unconfigured (no dedicated widget of
+            # its own to show "not configured" on - see this widget's
+            # own resolution comment above self.init_cabinet_tags()).
+            if self._voltage_relay_feedback and self._voltage_relay_command \
+                    and self.tag_manager.get_value(self._voltage_relay_feedback) != 1:
+                self.tag_manager.update_tag(self._voltage_relay_feedback, 1)
+                self.tag_manager.update_tag(self._voltage_relay_command, 1)
                 ui_logger.log("INFO", "OPERATION", "KVG1", "Bus voltage detected", "SYSTEM", self.tag_manager.mode, "")
         else:
             self.meas_panel.vl1.update_value(0, health_quality)
@@ -538,8 +624,11 @@ class PageEntryGate(QWidget):
             self.tag_manager.update_tag("Meas.L2", 0.0, TagQuality.SIMULATED)
             self.tag_manager.update_tag("Meas.L3", 0.0, TagQuality.SIMULATED)
             
-            # DO21 / DI14 Voltage Monitoring Relay logic
-            if self.tag_manager.get_value("DI14") != 0:
-                self.tag_manager.update_tag("DI14", 0)
-                self.tag_manager.update_tag("DO21", 0)
+            # Voltage Monitoring Relay logic - see the identical comment
+            # above (bus-energized branch) for why this is skipped
+            # entirely when unconfigured.
+            if self._voltage_relay_feedback and self._voltage_relay_command \
+                    and self.tag_manager.get_value(self._voltage_relay_feedback) != 0:
+                self.tag_manager.update_tag(self._voltage_relay_feedback, 0)
+                self.tag_manager.update_tag(self._voltage_relay_command, 0)
                 ui_logger.log("WARNING", "OPERATION", "KVG1", "Bus voltage lost", "SYSTEM", self.tag_manager.mode, "")

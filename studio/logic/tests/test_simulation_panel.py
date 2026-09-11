@@ -42,8 +42,11 @@ def _do_block(address):
 # ---- §0A.3: short address, no module prefix -------------------------------
 
 def test_short_address_strips_module_prefix():
-    assert _short_address("ELA01.DI01") == "DI01"
-    assert _short_address("ADA01.DO32") == "DO32"
+    # Task "migracja adresacji": the grammar's third dotted segment (kind
+    # and channel are separately dotted) means the short form keeps that
+    # dot too - "DI01" would silently drop which kind it even is.
+    assert _short_address("ELA01.DI.1") == "DI.1"
+    assert _short_address("ADA01.DO.32") == "DO.32"
 
 def test_short_address_passthrough_when_no_dot():
     # _short_address is only ever applied to ELA/ADA addresses (always
@@ -92,16 +95,16 @@ def test_group_columns_never_exceed_viewport_width(qsettings, viewport_width):
 def test_only_used_filter_counts_blocks_referencing_the_address(qsettings):
     _app()
     p = Project()
-    p.add_block(_di_block("ELA01.DI01"))
-    p.add_block(_di_block("ELA01.DI02"))
-    p.add_block(_di_block("ELA01.DI03"))
+    p.add_block(_di_block("ELA01.DI.1"))
+    p.add_block(_di_block("ELA01.DI.2"))
+    p.add_block(_di_block("ELA01.DI.3"))
 
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)  # "only used" is ON by default (§0A.2)
 
     assert panel.di_used_layout.count() == 3
 
-    p.add_block(_di_block("ELA01.DI04"))
+    p.add_block(_di_block("ELA01.DI.4"))
     panel.refresh()
 
     assert panel.di_used_layout.count() == 4
@@ -161,7 +164,9 @@ def test_first_group_is_di01_through_di08_in_order(qsettings):
     panel = SimulationPanel(settings=qsettings)
     first_group = panel._di_group_widgets[0]
     rows = [first_group.layout().itemAt(i).widget() for i in range(1, first_group.layout().count())]
-    assert [r.short_address for r in rows] == [f"DI{n:02d}" for n in range(1, 9)]
+    # Task "migracja adresacji": short_address keeps "DI.<n>" now (see
+    # _short_address's own docstring) - "DI01" was the old two-segment shape.
+    assert [r.short_address for r in rows] == [f"DI.{n}" for n in range(1, 9)]
 
 
 # ---- §0A.7 (4): row click behavior -----------------------------------------
@@ -169,7 +174,7 @@ def test_first_group_is_di01_through_di08_in_order(qsettings):
 def test_clicking_anywhere_on_an_input_row_toggles_it(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
-    row = panel._di_detail_rows["ELA01.DI01"]
+    row = panel._di_detail_rows["ELA01.DI.1"]
     assert panel.get_ela_state(0) is False
 
     from PySide6.QtGui import QMouseEvent
@@ -187,7 +192,7 @@ def test_clicking_anywhere_on_an_input_row_toggles_it(qsettings):
 def test_clicking_an_output_row_does_nothing(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
-    row = panel._do_detail_rows["ADA01.DO01"]
+    row = panel._do_detail_rows["ADA01.DO.1"]
 
     from PySide6.QtGui import QMouseEvent
     from PySide6.QtCore import QPointF, Qt as QtCore_Qt, QEvent
@@ -201,7 +206,7 @@ def test_clicking_an_output_row_does_nothing(qsettings):
     # No exception, no state change — set_ada_state is the only legitimate
     # writer of DO state (§0A.0: DO is the logic's answer, not the
     # engineer's).
-    assert panel._do_state["ADA01.DO01"] is False
+    assert panel._do_state["ADA01.DO.1"] is False
 
 
 # ---- Public API contract unchanged (MainWindow depends on this) ----------
@@ -210,10 +215,10 @@ def test_get_ela_state_and_set_ada_state_are_index_based(qsettings):
     _app()
     panel = SimulationPanel(settings=qsettings)
     panel.set_ada_state(3, True)
-    assert panel._do_state["ADA01.DO04"] is True
+    assert panel._do_state["ADA01.DO.4"] is True
 
-    row_addr = panel._di_detail_rows and "ELA01.DI05"
-    panel._toggle_di("ELA01.DI05")
+    row_addr = panel._di_detail_rows and "ELA01.DI.5"
+    panel._toggle_di("ELA01.DI.5")
     assert panel.get_ela_state(4) is True
 
 
@@ -229,14 +234,14 @@ def test_grid_rebuilds_when_a_second_device_is_defined(qsettings):
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
     assert len(panel._di_detail_rows) == 32
-    assert "ELA02.DI01" not in panel._di_detail_rows
+    assert "ELA02.DI.1" not in panel._di_detail_rows
 
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     panel.set_project(p)
 
     assert len(panel._di_detail_rows) == 64
-    assert "ELA02.DI01" in panel._di_detail_rows
-    assert "ELA02.DI32" in panel._di_detail_rows
+    assert "ELA02.DI.1" in panel._di_detail_rows
+    assert "ELA02.DI.32" in panel._di_detail_rows
     # The compact ("wszystkie") grouped view grows too — a full extra bank
     # of 4 groups-of-8 for ELA02's 32 channels.
     assert len(panel._di_group_widgets) == 8
@@ -246,14 +251,14 @@ def test_forced_state_survives_a_device_list_change_for_still_present_channels(q
     p = Project()
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
-    panel._toggle_di("ELA01.DI01")
+    panel._toggle_di("ELA01.DI.1")
     assert panel.get_ela_state(0) is True
 
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     panel.set_project(p)
 
     assert panel.get_ela_state(0) is True  # ELA01.DI01 unchanged
-    assert panel._di_state["ELA02.DI01"] is False  # newly added, safe default
+    assert panel._di_state["ELA02.DI.1"] is False  # newly added, safe default
 
 def test_no_rebuild_widgets_recreated_when_device_list_is_unchanged(qsettings):
     """An ordinary project edit (no device-list change) must NOT tear down
@@ -262,15 +267,15 @@ def test_no_rebuild_widgets_recreated_when_device_list_is_unchanged(qsettings):
     the engineer had just clicked."""
     _app()
     p = Project()
-    p.add_block(_di_block("ELA01.DI01"))
+    p.add_block(_di_block("ELA01.DI.1"))
     panel = SimulationPanel(settings=qsettings)
     panel.set_project(p)
-    row_before = panel._di_detail_rows["ELA01.DI01"]
+    row_before = panel._di_detail_rows["ELA01.DI.1"]
 
-    p.add_block(_di_block("ELA01.DI02"))  # unrelated edit, same device list
+    p.add_block(_di_block("ELA01.DI.2"))  # unrelated edit, same device list
     panel.set_project(p)
 
-    assert panel._di_detail_rows["ELA01.DI01"] is row_before
+    assert panel._di_detail_rows["ELA01.DI.1"] is row_before
 
 def test_main_window_di_do_sync_respects_projects_device_list():
     """The three main_window.py call sites that sync DI/DO state between

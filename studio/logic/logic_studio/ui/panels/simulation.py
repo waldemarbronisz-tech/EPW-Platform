@@ -319,12 +319,48 @@ class SimulationPanel(QWidget):
             self._do_compact_rows[addr] = compact
 
     def _build_channel_groups(self, addrs, compact_rows):
+        # Task "migracja adresacji": groups now stop at a CARD boundary,
+        # never spanning two devices - a fixed range(0, len, GROUP_SIZE)
+        # was only ever safe because ELA_CHANNELS/ADA_CHANNELS were fixed
+        # platform constants (always a multiple of GROUP_SIZE=8, so
+        # every device contributed a whole number of groups); now that
+        # the channel count is project-defined (get_ela_channels()/
+        # get_ada_channels()), a count that ISN'T a multiple of 8 would
+        # otherwise let a group's last row be one device's last channel
+        # and its first row be the NEXT device's first channel - a
+        # header like "DI.17-4" that goes backwards and names the wrong
+        # device. addressing.parse_address()'s own `card` field is the
+        # one place that already knows where one device's addresses end.
+        #
+        # Etap-3 follow-up: parse_address() now RAISES on a malformed
+        # address rather than returning None - deliberately not caught
+        # here. `addrs` only ever contains DeviceModel-generated
+        # addresses; if one doesn't parse, that is a real bug upstream
+        # and must surface loudly, not silently fall into a `card=None`
+        # bucket that would then merge unrelated devices' rows together.
+        from logic_studio.core.addressing import parse_address
+
         groups = []
-        for start in range(0, len(addrs), GROUP_SIZE):
-            chunk = addrs[start:start + GROUP_SIZE]
-            header = f"{_short_address(chunk[0])}-{_short_address(chunk[-1])[-2:]}"
+        start = 0
+        while start < len(addrs):
+            card = parse_address(addrs[start])[0]
+            end = start + 1
+            while end < len(addrs) and end - start < GROUP_SIZE:
+                if parse_address(addrs[end])[0] != card:
+                    break
+                end += 1
+            chunk = addrs[start:end]
+            # Task "migracja adresacji": was `_short_address(chunk[-1])
+            # [-2:]` - a character slice assuming a fixed 2-digit,
+            # zero-padded channel number ("DI16"[-2:] == "16"). The
+            # platform grammar's channel number has no fixed width
+            # anymore (1, 10, or 100 are all valid) - _channel_number()
+            # takes the real trailing number segment instead of the
+            # last two characters of the string.
+            header = f"{_short_address(chunk[0])}-{_channel_number(chunk[-1])}"
             rows = [compact_rows[a] for a in chunk]
             groups.append(_ChannelGroup(header, rows))
+            start = end
         return groups
 
     # ---- DI/DO device-list rebuild (feat/multi-device-followups) -----------
@@ -699,7 +735,23 @@ class SimulationPanel(QWidget):
 
 
 def _short_address(full_address: str) -> str:
-    """"ELA01.DI01" -> "DI01" (§0A.3: the module prefix repeats 32 times, is
-    already in the section header, and eats a third of the row's width for
-    nothing a working engineer needs at a glance)."""
+    """"ELA01.DI.5" -> "DI.5" (§0A.3: the module prefix repeats up to
+    `channels` times, is already in the section header, and eats a
+    third of the row's width for nothing a working engineer needs at a
+    glance).
+
+    Task "migracja adresacji": was a plain rsplit(".", 1) (last dotted
+    segment only) - correct for the old two-segment "ELA01.DI01" shape,
+    but the platform grammar has a THIRD segment (kind and channel are
+    separately dotted: "ELA01.DI.5"), so a bare rsplit would return just
+    "5", silently dropping which kind (DI/DO) it even is. Keeps the
+    last TWO segments instead - grammar-length-agnostic either way."""
+    parts = full_address.split(".")
+    return ".".join(parts[-2:]) if len(parts) >= 2 else full_address
+
+
+def _channel_number(full_address: str) -> str:
+    """"ELA01.DI.16" -> "16" - just the trailing channel number, for a
+    group-range header ("DI.1-16"). Unlike a character slice, this is
+    correct regardless of how many digits the channel number has."""
     return full_address.rsplit(".", 1)[-1] if "." in full_address else full_address

@@ -64,7 +64,7 @@ def test_pulse_highlight_overlay_is_added_then_removed(qsettings):
     _app()
     window = _make_window(qsettings)
     window.scene.add_block_from_library("output.do", 0, 0)
-    window.project.blocks[0].properties["Address"] = "ADA01.DO01"
+    window.project.blocks[0].properties["Address"] = "ADA01.DO.1"
 
     from logic_studio.ui.canvas.block_item import BlockItem
     from PySide6.QtCore import QTimer

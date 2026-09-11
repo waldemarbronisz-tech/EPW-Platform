@@ -144,19 +144,32 @@ class TagManager:
             return [copy.copy(tag) for tag in self._tags.values()]
             
     def configure(self, devices: list):
+        """The ONLY way DI/DO channel tags come into existence (task
+        "migracja adresacji" - init_default_tags()'s own flat DI1..DI64/
+        DO05..DO64 scheme is gone, see that method's own docstring).
+        `devices` may be empty - a brand-new project with no cards yet
+        correctly ends up with zero DI/DO tags, not 64 fake ones; a
+        module's channels don't exist until the module itself is part of
+        the project, same "absent = does not exist, not disabled"
+        stance Studio's own Skład urządzenia already applies.
+
+        Tag names use addressing.format_address() - <card>.<KIND>.<n>,
+        no leading zero, `card` taken verbatim from the project (never
+        assumed to start with "ELA"/"ADA")."""
+        from epw_os.core.addressing import format_address
         for dev in devices:
             dev_id = dev.get("id")
             dev_type = dev.get("type")
             if dev_type == "ELA":
                 for i in range(1, dev.get("channels", 32) + 1):
-                    self.add_tag(f"{dev_id}.DI{i:02d}", False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
+                    self.add_tag(format_address(dev_id, "DI", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
                                  source="HARDWARE",
                                  description=f"Digital input channel {i} on ELA module '{dev_id}' - True while "
                                              f"the field contact is closed. NOT_INITIALIZED until the driver "
                                              f"reports a real reading at least once.")
             elif dev_type == "ADA":
                 for i in range(1, dev.get("channels", 32) + 1):
-                    self.add_tag(f"{dev_id}.DO{i:02d}", False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
+                    self.add_tag(format_address(dev_id, "DO", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
                                  source="HARDWARE",
                                  description=f"Digital output channel {i} on ADA module '{dev_id}' - True while "
                                              f"commanded/reading closed. NOT_INITIALIZED until the driver "
@@ -255,33 +268,25 @@ class TagManager:
                         tag.quality = TagQuality.STALE
                         self.event_bus.emit("tag_changed", name, tag.value, tag.quality.value)
                         
-    def init_default_tags(self):
-        # Digital Inputs (DI1..DI64). Descriptions are generic channel
-        # labels by default - any site-specific naming ("Q1 closed
-        # feedback" etc.) is applied per project via persisted tag
-        # descriptions, not hardcoded here.
-        for i in range(1, 65):
-            self.add_tag(f"DI{i}", False, TagType.BOOL,
-                         description=f"Digital Input Channel {i}", source="HARDWARE")
+    def init_simulation_and_cabinet_tags(self):
+        """Task "migracja adresacji" - was init_default_tags(), which
+        bundled TWO unrelated things: the flat DI1..DI64/DO05..DO64
+        channel scheme (now GONE - see configure()'s own docstring; no
+        bridge, no compatibility mode, per Waldek's own explicit
+        decision) and this method's own remaining content, which has
+        NOTHING to do with DI/DO channel addressing at all - Main
+        View's cabinet-status panel and its electricity-simulation
+        tags. Splitting them apart means epw_core.py can call THIS
+        unconditionally (Main View's demo panel keeps working exactly
+        as before, on every project, regardless of whether it has any
+        real DI/DO cards configured) while the flat channel scheme
+        stays gone for good, not because these tags happened to live
+        in the same method.
 
-        # Analog Inputs: NOT registered here. Unlike DI/DO (a fixed number
-        # of physical terminals), analog points are a dynamic,
-        # operator-managed collection - EPWCore.startup() registers
-        # whatever ProjectManager.get_analog_points() currently holds, and
-        # EPWCore.add_analog_point()/remove_analog_point() grow/shrink that
-        # set at runtime. See page_analog_inputs.py and SESSION_REPORT.md.
-
-        # Digital Outputs (DO05..DO64). DO01-DO04 are the four channels
-        # with real feedback wired to DI1..DI4 (see page_control_outputs.py)
-        # rather than getting a redundant DO0N tag of their own - which
-        # four physical devices they actually are on a given site is
-        # entirely operator-editable Description text, nothing
-        # project-specific is hardcoded here. DO05-DO64 are new,
-        # self-contained channels: each tag is both the command output and
-        # its own live feedback (see epw_core.py's default command defs).
-        for i in range(5, 65):
-            self.add_tag(f"DO{i:02d}", False, TagType.BOOL,
-                         description=f"Digital Output Channel {i}", source="HARDWARE")
+        Renamed rather than kept as init_default_tags() with the DI/DO
+        loops simply deleted - the old name specifically promised "the
+        default TAG SET" (implying DI/DO among them); this name says
+        what's actually left."""
 
         # Cabinet Tags (Task: uzupelnienie opisow tagow - B3) - these are
         # display-only on Main View's device status panel

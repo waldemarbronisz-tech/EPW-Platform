@@ -146,6 +146,29 @@ uruchomieniu.
 Nie każdy punkt należy do aparatu. Czujka, licznik impulsów, wolne
 wejście na przyszłość istnieją same z siebie.
 
+**Jeden zacisk = jeden adres = jedna nazwa w całym projekcie.**
+
+Rejestr punktów zna dokładnie cztery rodzaje: `DI`, `DO`, `AI`, `AO`.
+Nic więcej nie istnieje — nie ma osobnych bytów typu "styk pomocniczy",
+"cewka", "sprzężenie zwrotne". To etykiety w głowie serwisanta, nie
+osobne wpisy w rejestrze.
+
+Aparat **nie tworzy nowych nazw**. Pola `feedback`/`command` przechowują
+**adresy z rejestru punktów** — to wskazanie (referencja), nigdy kopia
+ani pochodna. `KOT_KMG1` jako id aparatu i `DI1.DI.1` jako adres punktu,
+który ten aparat czyta, to dwie oddzielne rzeczy; jedna nie generuje
+drugiej.
+
+**Zakazane:** adresy pochodne typu `KOT_KMG1.feedback`, `KOT_KMG1.coil`
+i podobne — cokolwiek, co doklejałoby własność aparatu do jego id
+zamiast wskazać istniejący adres z rejestru punktów. Gdy coś potrzebuje
+wiedzieć, którym wejściem aparat jest obserwowany, pyta rejestr
+aparatów o jego pole `feedback` i dostaje `DI1.DI.5` — ten sam ciąg,
+którym posługuje się reszta platformy (Studio, Synoptic, runtime,
+Logic Studio). Ta sama zasada co przy sygnałach nadzoru i przy
+klasyfikacji po zachowaniu: jedno źródło prawdy, bez równoległych
+słowników.
+
 ### Ekrany — osadzone w projekcie
 
 ```

@@ -91,12 +91,20 @@ class MockTagManager(QObject):
 
     def list_tags(self):
         # Task: signal-list export - a small, fixed, representative set
-        # (one plain hardware input, the one genuinely logic-writable
-        # tag, one SIMULATED measurement) so a test can assert on real
-        # content, not just "didn't crash".
+        # (one plain hardware input, one hardware output, the one
+        # genuinely logic-writable tag, one SIMULATED measurement) so a
+        # test can assert on real content, not just "didn't crash".
+        #
+        # Task "migracja adresacji": DI/DO tag names use the platform
+        # grammar (<card>.<KIND>.<channel>) - PageDigitalInputs/
+        # PageControlOutputs now build their tables FROM list_tags()
+        # (addressing.is_address()), not a fixed range(64), so a
+        # flat-shaped name like the old "DI1" would silently produce
+        # zero rows here, same as it would against a real TagManager.
         from epw_os.core.tag_manager import Tag, TagType, TagQuality
         return [
-            Tag(name="DI1", value=True, data_type=TagType.BOOL, description="Feeder 1", quality=TagQuality.GOOD),
+            Tag(name="ELA1.DI.1", value=True, data_type=TagType.BOOL, description="Feeder 1", quality=TagQuality.GOOD),
+            Tag(name="ADA1.DO.1", value=False, data_type=TagType.BOOL, description="Output 1", quality=TagQuality.GOOD),
             Tag(name="System.Theme", value=0, data_type=TagType.INT, description="Active theme",
                 quality=TagQuality.GOOD),
             Tag(name="Meas.L1", value=230.0, data_type=TagType.REAL, description="Sim voltage",
@@ -204,18 +212,29 @@ class ThemeCapableTagManager(QObject):
 
 class DICapableTagManager(QObject):
     """Unlike MockTagManager, this one has real add/update semantics for
-    DI1..DI64 AND bridges every write through BOTH a real EventBus (so
-    SwitchingCounterManager actually counts, exactly as it does off the
-    real core event bus in production) and its own Qt tag_changed signal
-    (so the GUI pages react) - the same two-path bridging main.py itself
-    does for the real app."""
+    a real, EXPLICIT set of DI/DO tags AND bridges every write through
+    BOTH a real EventBus (so SwitchingCounterManager actually counts,
+    exactly as it does off the real core event bus in production) and
+    its own Qt tag_changed signal (so the GUI pages react) - the same
+    two-path bridging main.py itself does for the real app.
+
+    Task "migracja adresacji": used to hardcode a blanket flat
+    DI1..DI64 range - replaced with an explicit `tags` dict the caller
+    supplies (defaulting to one representative DI tag, just enough for
+    a generic switching-counter/DI-table test) - the same "real,
+    injected configuration, never an inherited literal" stance this
+    whole migration applies everywhere else. A test that also needs
+    Main View's own apparatus wiring (page_entry_gate.py's device_map/
+    counter_tag) passes its own tags AND its own ApparatusRegistry
+    explicitly - see test_permissions_features.py's own dedicated test
+    for that, which does NOT piggyback on this generic one anymore."""
     tag_changed = Signal(str, object, str)
 
-    def __init__(self, event_bus):
+    def __init__(self, event_bus, tags=None):
         super().__init__()
         self.mode = "SIMULATION MODE"
         self._event_bus = event_bus
-        self._tags = {f"DI{i}": False for i in range(1, 65)}
+        self._tags = dict(tags) if tags is not None else {"ELA1.DI.1": False}
 
     def get_value(self, name): return self._tags.get(name)
     def get_tag(self, name): return None
@@ -232,7 +251,20 @@ class DICapableTagManager(QObject):
     def add_tag(self, name, value, data_type, description="", timeout=5.0, source="SYSTEM", quality=None):
         self._tags.setdefault(name, value)
 
-    def list_tags(self): return []
+    def list_tags(self):
+        # Task "migracja adresacji": was `return []` unconditionally - a
+        # real mock-conformance gap (never exercised before this task,
+        # since PageDigitalInputs/PageControlOutputs used to build their
+        # rows from a fixed range(), never from list_tags() at all) that
+        # would otherwise make every DI/DO row silently vanish now that
+        # those pages genuinely depend on this method reflecting
+        # self._tags. TagType is assumed BOOL - the only type this mock
+        # ever stores, matching what real DI/DO tags actually are.
+        from epw_os.core.tag_manager import Tag, TagType, TagQuality
+        return [
+            Tag(name=name, value=value, data_type=TagType.BOOL, quality=TagQuality.GOOD)
+            for name, value in self._tags.items()
+        ]
     # See MockTagManager.toggle_mode()'s comment above - the same real,
     # previously-undetected gap, found by test_mock_interfaces.py.
     def toggle_mode(self): pass

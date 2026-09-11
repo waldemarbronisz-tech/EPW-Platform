@@ -616,8 +616,8 @@ def test_signal_picker_bool_shows_ela_ada_and_bool_internal_and_system():
     ]
     dialog = SignalPickerDialog(p, value_type="BOOL", sections=("physical", "internal", "system"))
     ids = _all_tree_ids(dialog)
-    assert "ELA01.DI01" in ids
-    assert "ADA01.DO01" in ids
+    assert "ELA01.DI.1" in ids
+    assert "ADA01.DO.1" in ids
     assert "BLOKADA_ZS" in ids
     assert "USTAWKA" not in ids  # wrong type, must be filtered out
     assert "SYS.READY" in ids
@@ -644,7 +644,7 @@ def test_signal_picker_system_only_scoping_shows_both_types():
     ids = _all_tree_ids(dialog)
     assert "SYS.READY" in ids       # BOOL
     assert "SYS.SCAN_TIME" in ids   # REAL
-    assert "ELA01.DI01" not in ids  # physical section excluded
+    assert "ELA01.DI.1" not in ids  # physical section excluded
 
 def test_signal_picker_search_filters_by_any_column():
     _app()

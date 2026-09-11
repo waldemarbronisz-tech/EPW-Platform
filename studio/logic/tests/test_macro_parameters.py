@@ -225,9 +225,9 @@ def test_sync_never_touches_base_properties():
     p = Project()
     def_id, _, _ = _make_delay_macro(p)
     definition = M.get_definition(p, def_id)
-    props = {"Address": "ELA01.DI01", "Tag": "T1", "Comment": "c"}
+    props = {"Address": "ELA01.DI.1", "Tag": "T1", "Comment": "c"}
     M.sync_instance_parameters(props, definition)
-    assert props["Address"] == "ELA01.DI01"
+    assert props["Address"] == "ELA01.DI.1"
     assert props["Tag"] == "T1"
     assert props["Comment"] == "c"
 
@@ -262,16 +262,16 @@ def test_two_instances_of_the_same_macro_keep_independent_presets_and_timing():
 
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    inst1 = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=300)
-    inst2 = _place_instance(p, def_id, "ELA01.DI02", "ADA01.DO02", param_value=700)
+    inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
+    inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
 
     c = Compiler(p)
     res = c.compile()
     assert res is not None, f"Compile failed: {c.errors}"
 
     eng = ExecutionEngine(res["program"], SimulationIOProvider(), SimulationTimeProvider())
-    eng.io.set_digital_input("ELA01.DI01", True)
-    eng.io.set_digital_input("ELA01.DI02", True)
+    eng.io.set_digital_input("ELA01.DI.1", True)
+    eng.io.set_digital_input("ELA01.DI.2", True)
     eng.start()
 
     # step() N is evaluated AT engine time (N-1)*100ms (the clock only
@@ -280,19 +280,19 @@ def test_two_instances_of_the_same_macro_keep_independent_presets_and_timing():
     for _ in range(4):
         eng.step()
         eng.time.advance(100)
-    assert eng.io.read_digital_output("ADA01.DO01") is True  # 300ms instance has fired
-    assert eng.io.read_digital_output("ADA01.DO02") is False  # 700ms instance hasn't yet
+    assert eng.io.read_digital_output("ADA01.DO.1") is True  # 300ms instance has fired
+    assert eng.io.read_digital_output("ADA01.DO.2") is False  # 700ms instance hasn't yet
 
     for _ in range(4):  # 4 more steps reach the 8th, at t=700ms
         eng.step()
         eng.time.advance(100)
-    assert eng.io.read_digital_output("ADA01.DO02") is True  # now it has too
+    assert eng.io.read_digital_output("ADA01.DO.2") is True  # now it has too
 
 def test_compiled_ton_properties_carry_each_instances_own_value():
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    inst1 = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=300)
-    inst2 = _place_instance(p, def_id, "ELA01.DI02", "ADA01.DO02", param_value=700)
+    inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
+    inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
 
     expanded, _wire_scopes, errors = M.expand_project(p)
     assert errors == []
@@ -305,7 +305,7 @@ def test_unbound_instance_falls_back_to_the_definitions_own_value():
     had never been a parameter at all."""
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01")  # no param_value override
+    _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")  # no param_value override
 
     expanded, _wire_scopes, errors = M.expand_project(p)
     assert errors == []
@@ -346,12 +346,12 @@ def test_nested_macro_parameter_reaches_the_deepest_block():
     assert M.add_parameter_binding(p, outer_id, outer_pname, inner_instance.uuid, "Zwloka") is True
     outer_def = M.get_definition(p, outer_id)
 
-    di = BlockRegistry.create_block("input.di"); di.properties["Address"] = "ELA01.DI01"
+    di = BlockRegistry.create_block("input.di"); di.properties["Address"] = "ELA01.DI.1"
     outer_instance = MacroInstanceBlock(outer_id)
     outer_instance.configure(outer_def)
     outer_instance.update_property("OuterZwloka", "999")
     di.outputs[0].connect(outer_instance.inputs[0])
-    do = BlockRegistry.create_block("output.do"); do.properties["Address"] = "ADA01.DO01"
+    do = BlockRegistry.create_block("output.do"); do.properties["Address"] = "ADA01.DO.1"
     outer_instance.outputs[0].connect(do.inputs[0])
     p.add_block(di); p.add_block(outer_instance); p.add_block(do)
 
@@ -366,7 +366,7 @@ def test_nested_macro_parameter_reaches_the_deepest_block():
 def test_resync_gives_existing_instances_a_newly_added_parameter():
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, bind=False)
-    instance = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01")
+    instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")
     assert "Zwloka" not in instance.properties
 
     name = M.add_parameter(p, def_id, "Zwloka", "INT", 500, unit="ms")
@@ -378,7 +378,7 @@ def test_resync_gives_existing_instances_a_newly_added_parameter():
 def test_resync_removes_a_deleted_parameters_property_from_instances():
     p = Project()
     def_id, ton_uuid, param_name = _make_delay_macro(p)
-    instance = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=700)
+    instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=700)
     assert instance.properties["Zwloka"] == 700
 
     M.remove_parameter(p, def_id, param_name)
@@ -389,7 +389,7 @@ def test_resync_removes_a_deleted_parameters_property_from_instances():
 def test_resync_reports_and_resets_a_type_change():
     p = Project()
     def_id, ton_uuid, param_name = _make_delay_macro(p)
-    instance = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=700)
+    instance = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=700)
 
     M.update_parameter(p, def_id, param_name, type="STRING", default="auto")
     notices = M.resync_all_instances(p, def_id, [p.blocks])
@@ -442,8 +442,8 @@ def test_resync_touches_a_nested_instance_embedded_as_dict_data():
 def test_serialize_deserialize_preserves_instance_parameter_values():
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    inst1 = _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=300)
-    inst2 = _place_instance(p, def_id, "ELA01.DI02", "ADA01.DO02", param_value=700)
+    inst1 = _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
+    inst2 = _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
 
     data = p.serialize()
     reloaded = Project.deserialize(data)
@@ -458,8 +458,8 @@ def test_serialize_deserialize_preserves_instance_parameter_values():
 def test_round_tripped_project_still_compiles_with_the_right_presets():
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=300)
-    _place_instance(p, def_id, "ELA01.DI02", "ADA01.DO02", param_value=700)
+    _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
+    _place_instance(p, def_id, "ELA01.DI.2", "ADA01.DO.2", param_value=700)
 
     reloaded = Project.deserialize(p.serialize())
     expanded, _wire_scopes, errors = M.expand_project(reloaded)
@@ -561,7 +561,7 @@ def test_validation_value_out_of_range_uses_the_blocks_own_existing_rule():
 def test_a_macro_with_no_parameters_compiles_and_behaves_unchanged():
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500, bind=False)
-    _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01")
+    _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1")
 
     c = Compiler(p)
     res = c.compile()
@@ -592,7 +592,7 @@ def test_export_runtime_carries_no_trace_of_macros_or_parameters():
     the export contract, see exporter.py's own CHECKSUM_FIELDS)."""
     p = Project()
     def_id, ton_uuid, _ = _make_delay_macro(p, preset_ms=500)
-    _place_instance(p, def_id, "ELA01.DI01", "ADA01.DO01", param_value=300)
+    _place_instance(p, def_id, "ELA01.DI.1", "ADA01.DO.1", param_value=300)
 
     c = Compiler(p)
     res = c.compile()

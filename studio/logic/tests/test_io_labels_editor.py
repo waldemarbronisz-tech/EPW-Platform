@@ -38,8 +38,8 @@ def test_table_lists_every_ela_ada_and_analog_address():
     dialog = ProjectSettingsDialog(p)
 
     assert dialog.io_labels_table.rowCount() == 32 + 32 + 1
-    assert _find_row(dialog, "ELA01.DI01") is not None
-    assert _find_row(dialog, "ADA01.DO01") is not None
+    assert _find_row(dialog, "ELA01.DI.1") is not None
+    assert _find_row(dialog, "ADA01.DO.1") is not None
     assert _find_row(dialog, "AI.X") is not None
 
 def test_label_column_prefilled_from_existing_registry():
@@ -47,10 +47,10 @@ def test_label_column_prefilled_from_existing_registry():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    DeviceModel.set_io_label(p, "ELA01.DI01", "Wyłącznik Q1 zamknięty")
+    DeviceModel.set_io_label(p, "ELA01.DI.1", "Wyłącznik Q1 zamknięty")
     dialog = ProjectSettingsDialog(p)
 
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     assert dialog.io_labels_table.item(row, 1).text() == "Wyłącznik Q1 zamknięty"
 
 def test_usage_column_counts_referencing_blocks():
@@ -58,15 +58,15 @@ def test_usage_column_counts_referencing_blocks():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    di1 = BlockRegistry.create_block("input.di"); di1.properties["Address"] = "ELA01.DI01"
-    di2 = BlockRegistry.create_block("input.di"); di2.properties["Address"] = "ELA01.DI01"
+    di1 = BlockRegistry.create_block("input.di"); di1.properties["Address"] = "ELA01.DI.1"
+    di2 = BlockRegistry.create_block("input.di"); di2.properties["Address"] = "ELA01.DI.1"
     p.add_block(di1)
     p.add_block(di2)
     dialog = ProjectSettingsDialog(p)
 
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     assert dialog.io_labels_table.item(row, 2).text() == "2"
-    row2 = _find_row(dialog, "ELA01.DI02")
+    row2 = _find_row(dialog, "ELA01.DI.2")
     assert dialog.io_labels_table.item(row2, 2).text() == "0"
 
 def test_address_and_usage_columns_are_read_only():
@@ -76,7 +76,7 @@ def test_address_and_usage_columns_are_read_only():
 
     p = Project()
     dialog = ProjectSettingsDialog(p)
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
 
     assert not (dialog.io_labels_table.item(row, 0).flags() & Qt.ItemIsEditable)
     assert not (dialog.io_labels_table.item(row, 2).flags() & Qt.ItemIsEditable)
@@ -87,13 +87,13 @@ def test_only_used_filter_defaults_on_and_hides_unused_rows():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    di = BlockRegistry.create_block("input.di"); di.properties["Address"] = "ELA01.DI01"
+    di = BlockRegistry.create_block("input.di"); di.properties["Address"] = "ELA01.DI.1"
     p.add_block(di)
     dialog = ProjectSettingsDialog(p)
 
     assert dialog.io_labels_only_used_check.isChecked() is True
-    used_row = _find_row(dialog, "ELA01.DI01")
-    unused_row = _find_row(dialog, "ELA01.DI02")
+    used_row = _find_row(dialog, "ELA01.DI.1")
+    unused_row = _find_row(dialog, "ELA01.DI.2")
     assert dialog.io_labels_table.isRowHidden(used_row) is False
     assert dialog.io_labels_table.isRowHidden(unused_row) is True
 
@@ -105,7 +105,7 @@ def test_unchecking_only_used_shows_every_row():
     dialog = ProjectSettingsDialog(p)
     dialog.io_labels_only_used_check.setChecked(False)
 
-    unused_row = _find_row(dialog, "ELA01.DI02")
+    unused_row = _find_row(dialog, "ELA01.DI.2")
     assert dialog.io_labels_table.isRowHidden(unused_row) is False
 
 def test_filter_matches_address_and_label():
@@ -113,13 +113,13 @@ def test_filter_matches_address_and_label():
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    DeviceModel.set_io_label(p, "ELA01.DI05", "Blokada bramy")
+    DeviceModel.set_io_label(p, "ELA01.DI.5", "Blokada bramy")
     dialog = ProjectSettingsDialog(p)
     dialog.io_labels_only_used_check.setChecked(False)
     dialog.io_labels_filter_edit.setText("Blokada")
 
-    row = _find_row(dialog, "ELA01.DI05")
-    other_row = _find_row(dialog, "ELA01.DI06")
+    row = _find_row(dialog, "ELA01.DI.5")
+    other_row = _find_row(dialog, "ELA01.DI.6")
     assert dialog.io_labels_table.isRowHidden(row) is False
     assert dialog.io_labels_table.isRowHidden(other_row) is True
 
@@ -132,29 +132,29 @@ def test_editing_a_label_and_accepting_writes_the_registry():
 
     p = Project()
     dialog = ProjectSettingsDialog(p)
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("Wyłącznik Q1 zamknięty")
 
     dialog._on_accept()
     dialog.apply_to_project()
 
-    assert DeviceModel.get_io_label(p, "ELA01.DI01") == "Wyłącznik Q1 zamknięty"
+    assert DeviceModel.get_io_label(p, "ELA01.DI.1") == "Wyłącznik Q1 zamknięty"
 
 def test_clearing_a_label_and_accepting_removes_it():
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    DeviceModel.set_io_label(p, "ELA01.DI01", "Old label")
+    DeviceModel.set_io_label(p, "ELA01.DI.1", "Old label")
     dialog = ProjectSettingsDialog(p)
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("")
 
     dialog._on_accept()
     dialog.apply_to_project()
 
-    assert DeviceModel.get_io_label(p, "ELA01.DI01") == ""
-    assert "ELA01.DI01" not in p.settings["io_labels"]
+    assert DeviceModel.get_io_label(p, "ELA01.DI.1") == ""
+    assert "ELA01.DI.1" not in p.settings["io_labels"]
 
 def test_apply_to_project_pushes_exactly_one_undo_snapshot():
     _app()
@@ -162,7 +162,7 @@ def test_apply_to_project_pushes_exactly_one_undo_snapshot():
 
     p = Project()
     dialog = ProjectSettingsDialog(p)
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("X")
     dialog._on_accept()
 
@@ -179,7 +179,7 @@ def test_export_then_import_round_trips(tmp_path):
 
     p = Project()
     dialog = ProjectSettingsDialog(p)
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     dialog.io_labels_table.item(row, 1).setText("Wyłącznik Q1 zamknięty")
 
     path = tmp_path / "labels.json"
@@ -192,20 +192,20 @@ def test_export_then_import_round_trips(tmp_path):
 
     with open(monkey_path, encoding="utf-8") as f:
         data = json.load(f)
-    assert data["io_labels"] == {"ELA01.DI01": "Wyłącznik Q1 zamknięty"}
+    assert data["io_labels"] == {"ELA01.DI.1": "Wyłącznik Q1 zamknięty"}
 
 def test_import_reports_added_changed_skipped_counts(monkeypatch, tmp_path):
     _app()
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
-    DeviceModel.set_io_label(p, "ELA01.DI02", "Existing label")
+    DeviceModel.set_io_label(p, "ELA01.DI.2", "Existing label")
     dialog = ProjectSettingsDialog(p)
 
     incoming = {
-        "ELA01.DI01": "New label",       # added
-        "ELA01.DI02": "Changed label",   # changed
-        "ELA01.DI99": "Ghost channel",   # skipped: unknown address
+        "ELA01.DI.1": "New label",       # added
+        "ELA01.DI.2": "Changed label",   # changed
+        "ELA01.DI.99": "Ghost channel",   # skipped: unknown address
     }
     path = tmp_path / "import.json"
     path.write_text(json.dumps({"io_labels": incoming}), encoding="utf-8")
@@ -225,8 +225,8 @@ def test_import_reports_added_changed_skipped_counts(monkeypatch, tmp_path):
     assert "Zostanie dodanych: 1" in captured["text"]
     assert "Zmienionych: 1" in captured["text"]
     assert "Pominiętych (nieznany adres): 1" in captured["text"]
-    assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI01"), 1).text() == "New label"
-    assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI02"), 1).text() == "Changed label"
+    assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI.1"), 1).text() == "New label"
+    assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI.2"), 1).text() == "Changed label"
 
 def test_import_never_applies_without_confirmation(monkeypatch, tmp_path):
     _app()
@@ -236,7 +236,7 @@ def test_import_never_applies_without_confirmation(monkeypatch, tmp_path):
     dialog = ProjectSettingsDialog(p)
 
     path = tmp_path / "import.json"
-    path.write_text(json.dumps({"io_labels": {"ELA01.DI01": "Should not apply"}}), encoding="utf-8")
+    path.write_text(json.dumps({"io_labels": {"ELA01.DI.1": "Should not apply"}}), encoding="utf-8")
 
     monkeypatch.setattr(
         "logic_studio.ui.dialogs.QFileDialog.getOpenFileName",
@@ -246,5 +246,5 @@ def test_import_never_applies_without_confirmation(monkeypatch, tmp_path):
 
     dialog._import_io_labels()
 
-    row = _find_row(dialog, "ELA01.DI01")
+    row = _find_row(dialog, "ELA01.DI.1")
     assert dialog.io_labels_table.item(row, 1).text() == ""

@@ -42,11 +42,11 @@ def test_empty_project_has_empty_index():
 
 def test_di_block_is_a_reader_of_a_physical_di_signal():
     p = Project()
-    di = _block("input.di", address="ELA01.DI01")
+    di = _block("input.di", address="ELA01.DI.1")
     p.add_block(di)
 
     index = build_crossref(p)
-    usage = index["ELA01.DI01"]
+    usage = index["ELA01.DI.1"]
     assert usage.kind == KIND_PHYSICAL_DI
     assert usage.data_type == "BOOL"
     assert usage.defined is True
@@ -55,11 +55,11 @@ def test_di_block_is_a_reader_of_a_physical_di_signal():
 
 def test_do_block_is_a_writer_of_a_physical_do_signal():
     p = Project()
-    do = _block("output.do", address="ADA01.DO01")
+    do = _block("output.do", address="ADA01.DO.1")
     p.add_block(do)
 
     index = build_crossref(p)
-    usage = index["ADA01.DO01"]
+    usage = index["ADA01.DO.1"]
     assert usage.kind == KIND_PHYSICAL_DO
     assert (do.uuid, do.short_id, "Cmd") in usage.writers
     assert usage.readers == []
@@ -187,17 +187,17 @@ def test_reference_to_unregistered_internal_bit_is_an_error_and_stays_indexed():
 
 def test_reference_to_unregistered_address_is_an_error():
     p = Project()
-    do = _block("output.do", address="ADA01.DO99")  # not a real ADA address in DeviceModel? actually within range
+    do = _block("output.do", address="ADA01.DO.99")  # not a real ADA address in DeviceModel? actually within range
     # Use an address structurally invalid instead, to guarantee "not found".
-    do.properties["Address"] = "ADA99.DO01"
+    do.properties["Address"] = "ADA99.DO.1"
     p.add_block(do)
 
     index = build_crossref(p)
-    usage = index["ADA99.DO01"]
+    usage = index["ADA99.DO.1"]
     assert usage.defined is False
 
     issues = find_issues(index)
-    assert any(i.severity == "error" and i.signal_id == "ADA99.DO01" for i in issues)
+    assert any(i.severity == "error" and i.signal_id == "ADA99.DO.1" for i in issues)
 
 def test_orphaned_signal_does_not_also_report_unused_or_writer_count_rules():
     """An undefined signal short-circuits find_issues() — the "unused"/
@@ -248,14 +248,14 @@ def test_gate_with_empty_address_is_not_flagged_unassigned():
 def test_same_input_address_read_by_three_blocks_is_info_not_error():
     p = Project()
     for _ in range(3):
-        p.add_block(_block("input.di", address="ELA01.DI05"))
+        p.add_block(_block("input.di", address="ELA01.DI.5"))
 
     index = build_crossref(p)
-    usage = index["ELA01.DI05"]
+    usage = index["ELA01.DI.5"]
     assert len(usage.readers) == 3
 
     issues = find_issues(index)
-    matching = [i for i in issues if i.signal_id == "ELA01.DI05"]
+    matching = [i for i in issues if i.signal_id == "ELA01.DI.5"]
     assert len(matching) == 1
     assert matching[0].severity == "info"
     assert "3" in matching[0].text
@@ -290,11 +290,11 @@ def test_internal_bit_read_but_never_written_is_a_warning():
 
 def test_multiple_addresses_do_not_cross_contaminate():
     p = Project()
-    p.add_block(_block("input.di", address="ELA01.DI01"))
-    p.add_block(_block("input.di", address="ELA01.DI02"))
+    p.add_block(_block("input.di", address="ELA01.DI.1"))
+    p.add_block(_block("input.di", address="ELA01.DI.2"))
     index = build_crossref(p)
-    assert len(index["ELA01.DI01"].readers) == 1
-    assert len(index["ELA01.DI02"].readers) == 1
+    assert len(index["ELA01.DI.1"].readers) == 1
+    assert len(index["ELA01.DI.2"].readers) == 1
 
 
 # ---- classify_signal_id (feat/signal-watch) --------------------------------
@@ -304,11 +304,11 @@ def test_multiple_addresses_do_not_cross_contaminate():
 
 def test_classify_signal_id_physical_di():
     p = Project()
-    assert crossref.classify_signal_id(p, "physical", "ELA01.DI01") == KIND_PHYSICAL_DI
+    assert crossref.classify_signal_id(p, "physical", "ELA01.DI.1") == KIND_PHYSICAL_DI
 
 def test_classify_signal_id_physical_do():
     p = Project()
-    assert crossref.classify_signal_id(p, "physical", "ADA01.DO01") == KIND_PHYSICAL_DO
+    assert crossref.classify_signal_id(p, "physical", "ADA01.DO.1") == KIND_PHYSICAL_DO
 
 def test_classify_signal_id_physical_analog_in_and_out():
     p = Project()

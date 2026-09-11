@@ -471,7 +471,7 @@ describe('Adversarial gaps (H1-H4 and B5 consistency rules)', () => {
     expect(validateDeviceFields(device)).toEqual([]);
   });
 
-  it('T. two devices on ELA1.DI.12 and ELA1.DI.012 collide exactly once (leading zero must not evade detection)', () => {
+  it('T. ELA1.DI.012 is rejected as invalid format, not silently aliased to ELA1.DI.12 (task "migracja adresacji": the platform grammar has no leading zero at all - shared/addressing.py\'s own [1-9][0-9]* rejects "012" outright, so Synoptic must too, rather than treating it as a same-channel collision)', () => {
     const registry: DeviceRegistry = {
       locations: [KOT],
       cards: [{ id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 64 }],
@@ -482,7 +482,9 @@ describe('Adversarial gaps (H1-H4 and B5 consistency rules)', () => {
     };
     const result = validateDeviceRegistry(registry);
     const collisions = result.issues.filter(i => i.code === 'CHANNEL_ADDRESS_COLLISION');
-    expect(collisions.length).toBe(1);
+    const formatErrors = result.issues.filter(i => i.code === 'CHANNEL_ADDRESS_INVALID_FORMAT' && i.message.includes('ELA1.DI.012'));
+    expect(collisions.length).toBe(0);
+    expect(formatErrors.length).toBeGreaterThan(0);
   });
 
   it('U. two devices on ELA1.DI.12 and ELA1.DI.13 produce zero collision errors', () => {

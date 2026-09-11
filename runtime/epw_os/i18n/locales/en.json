@@ -412,7 +412,10 @@
       "tooltip_meas_energy": "Cumulative energy consumption, in kilowatt-hours (kWh).",
       "command_rejected_title": "Command Rejected",
       "command_rejected_text": "Command blocked by Logic Engine.\nReason: {reason}",
-      "tooltip_synoptic_device": "{name} - command tag {do_tag}, feedback {di_tag}. Currently {state}. Click to control (Operator or higher)."
+      "tooltip_synoptic_device": "{name} - command tag {do_tag}, feedback {di_tag}. Currently {state}. Click to control (Operator or higher).",
+      "apparatus_not_configured_short": "UNASSIGNED",
+      "apparatus_not_configured_title": "Apparatus Not Assigned",
+      "apparatus_not_configured": "This symbol has no apparatus assigned. The screen has no apparatuses assigned - configure the apparatus registry in the project."
     },
     "system_topology": {
       "info_title": "DEVICE INFORMATION",

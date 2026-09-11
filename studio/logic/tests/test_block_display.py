@@ -34,11 +34,11 @@ def test_di_without_address_reports_no_identifier():
 def test_di_with_address_reports_it_and_clears_warning():
     _app()
     di = BlockRegistry.create_block("input.di")
-    di.properties["Address"] = "ELA01.DI06"
+    di.properties["Address"] = "ELA01.DI.6"
     item = BlockItem(di)
-    assert item._io_identifier() == "ELA01.DI06"
+    assert item._io_identifier() == "ELA01.DI.6"
     getter = item._REQUIRED_IDENTIFIER_GETTERS[item.shape_style]
-    assert getter(item) == "ELA01.DI06"
+    assert getter(item) == "ELA01.DI.6"
 
 def test_virtual_input_identifier_comes_from_bit():
     """feat/internal-bits §2.1: Virtual IN/OUT no longer have a free-text

@@ -412,7 +412,10 @@
       "tooltip_meas_energy": "Skumulowane zużycie energii, w kilowatogodzinach (kWh).",
       "command_rejected_title": "Polecenie odrzucone",
       "command_rejected_text": "Polecenie zablokowane przez silnik logiki.\nPowód: {reason}",
-      "tooltip_synoptic_device": "{name} - tag komendy {do_tag}, sprzężenie zwrotne {di_tag}. Aktualnie {state}. Kliknij, aby sterować (Operator lub wyżej)."
+      "tooltip_synoptic_device": "{name} - tag komendy {do_tag}, sprzężenie zwrotne {di_tag}. Aktualnie {state}. Kliknij, aby sterować (Operator lub wyżej).",
+      "apparatus_not_configured_short": "NIEPRZYPISANY",
+      "apparatus_not_configured_title": "Aparat nieprzypisany",
+      "apparatus_not_configured": "Ten symbol nie ma przypisanego aparatu. Ekran nie ma przypisanych aparatów - skonfiguruj rejestr aparatów w projekcie."
     },
     "system_topology": {
       "info_title": "INFORMACJE O URZĄDZENIU",

@@ -83,11 +83,32 @@ def _make_verifier(tmp_path, engineer=True, audit_logger=None, core_tm=None):
     # set to their PASSING state, so a test can isolate just the
     # System.PendingCommand/System.ActiveTrip gates without every other
     # one already blocking for an unrelated reason.
+    #
+    # Task "migracja adresacji", point 1.2 doprecyzowanie: was literal
+    # "DI2"/"DI3"/"DI4" - now a real ApparatusRegistry, matching how
+    # ProtectionVerifier actually resolves its tested apparatus/
+    # interlocks (ROLE_TESTED_APPARATUS/ROLE_INTERLOCK_PREFIX) since
+    # this task. "FEEDER" is the apparatus under test (command AND
+    # feedback - check_safety_conditions() itself refuses outright if
+    # either is missing); the two interlocks only need feedback.
     core_tm.add_tag("Meas.L1", 230.0, TagType.REAL)
-    core_tm.add_tag("DI2", True, TagType.BOOL)   # feeder active - required True
-    core_tm.add_tag("DI3", False, TagType.BOOL)  # must be open (not 1)
-    core_tm.add_tag("DI4", False, TagType.BOOL)  # must be open (not 1)
+    core_tm.add_tag("ELA1.DI.2", True, TagType.BOOL)   # feeder active - required True
+    core_tm.add_tag("ELA1.DI.3", False, TagType.BOOL)  # interlock A - must be open (not 1)
+    core_tm.add_tag("ELA1.DI.4", False, TagType.BOOL)  # interlock B - must be open (not 1)
     core_tm.add_tag("Device.Modbus.Status", "ONLINE", TagType.STRING)
+
+    from epw_os.core.apparatus import Apparatus, ApparatusRegistry
+    interlock_role_a = ProtectionVerifier.ROLE_INTERLOCK_PREFIX + "a"
+    interlock_role_b = ProtectionVerifier.ROLE_INTERLOCK_PREFIX + "b"
+    registry = ApparatusRegistry()
+    registry.set_apparatuses([
+        Apparatus(id="FEEDER", command=["ADA1.DO.2"], feedback=["ELA1.DI.2"]),
+        Apparatus(id="INTERLOCK_A", feedback=["ELA1.DI.3"]),
+        Apparatus(id="INTERLOCK_B", feedback=["ELA1.DI.4"]),
+    ])
+    registry.set_role_binding(ProtectionVerifier.ROLE_TESTED_APPARATUS, "FEEDER")
+    registry.set_role_binding(interlock_role_a, "INTERLOCK_A")
+    registry.set_role_binding(interlock_role_b, "INTERLOCK_B")
 
     access_manager = AccessManager(EventBus(), config_path=str(tmp_path / "access.local.json"))
     if engineer:
@@ -96,7 +117,11 @@ def _make_verifier(tmp_path, engineer=True, audit_logger=None, core_tm=None):
         assert access_manager._pin_hashes.get(AccessLevel.ENGINEER) is not None
         access_manager.level = AccessLevel.ENGINEER
 
-    verifier = ProtectionVerifier(tag_manager, ProtectionManager(), access_manager, audit_logger)
+    verifier = ProtectionVerifier(
+        tag_manager, ProtectionManager(), access_manager,
+        apparatus_registry=registry, interlock_roles=[interlock_role_a, interlock_role_b],
+        audit_logger=audit_logger,
+    )
     return verifier, tag_manager, core_tm
 
 
@@ -115,6 +140,24 @@ def test_normal_conditions_pass_the_pre_flight_check(tmp_path):
     verifier, tag_manager, core_tm = _make_verifier(tmp_path)
     ok, reason = verifier.check_safety_conditions()
     assert ok is True, reason
+
+
+def test_unconfigured_apparatus_refuses_outright_not_a_guessed_channel(tmp_path):
+    """Task "migracja adresacji", point 1.2 doprecyzowanie (Waldek's own
+    explicit requirement): with no apparatus_registry at all (today's
+    real default, until "runtime czyta projekt.epw" exists), the test
+    must refuse and say so plainly - never fall back to a hardcoded
+    DI2/DI3/DI4."""
+    core_tm = TagManager(EventBus())
+    tag_manager = _QtTagManagerBridge(core_tm)
+    core_tm.add_tag("Meas.L1", 230.0, TagType.REAL)
+    access_manager = AccessManager(EventBus(), config_path=str(tmp_path / "access.local.json"))
+    access_manager.level = AccessLevel.ENGINEER
+    verifier = ProtectionVerifier(tag_manager, ProtectionManager(), access_manager)  # no apparatus_registry
+
+    ok, reason = verifier.check_safety_conditions()
+    assert ok is False
+    assert "NOT CONFIGURED" in reason
 
 
 def test_engineer_access_still_required(tmp_path):

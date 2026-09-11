@@ -32,25 +32,34 @@ def _denied(audit, needle=None):
 # czas w stanie zamknietym per aparat) -------------------------------
 
 def test_switching_counter_increments_and_shown_in_di_table(make_window):
+    """Task "migracja adresacji" point 1.2 doprecyzowanie (Waldek's own
+    instruction): tests switching counters and the Digital Inputs
+    table - genuinely, on a real DI tag using the platform grammar -
+    not "that DO01 happens to exist". Main View's OWN apparatus wiring
+    (page_entry_gate.py's device_map/counter_tag) is a SEPARATE concern
+    with its own explicit apparatus configuration - see
+    test_main_view_shows_switching_counter_for_a_configured_apparatus
+    below, which does not piggyback on this generic test anymore."""
     from epw_os.core.events import EventBus
     from epw_os.core.switching_counters import SwitchingCounterManager
 
+    DI_TAG = "ELA1.DI.1"
     sw_bus = EventBus()
     sw_pm = MockProjectManager()
     sw_mgr = SwitchingCounterManager(sw_bus, sw_pm)
-    sw_tm = DICapableTagManager(sw_bus)
+    sw_tm = DICapableTagManager(sw_bus, tags={DI_TAG: False})
     sw_audit = MockAuditLogger()
     w = make_window(sw_tm, MockCommandManager(), MockControllableAccessManager(), sw_pm,
                      sw_audit, switching_counters=sw_mgr)
 
     # DOWÓD: the counter increases on a state change and is reflected in
     # the Digital Inputs table (Closes=6, Opens=7, Closed Time=8).
-    sw_tm.update_tag("DI1", False)  # seed - not counted (no previous state)
-    sw_tm.update_tag("DI1", True)   # -> 1 close
+    sw_tm.update_tag(DI_TAG, False)  # seed - not counted (no previous state)
+    sw_tm.update_tag(DI_TAG, True)   # -> 1 close
     assert w.page_di.table.item(0, 6).text() == "1", w.page_di.table.item(0, 6).text()
     assert w.page_di.table.item(0, 7).text() == "0"
     time.sleep(0.15)
-    sw_tm.update_tag("DI1", False)  # -> 1 open, closed_seconds >= 0.15
+    sw_tm.update_tag(DI_TAG, False)  # -> 1 open, closed_seconds >= 0.15
     assert w.page_di.table.item(0, 6).text() == "1"
     assert w.page_di.table.item(0, 7).text() == "1"
 
@@ -58,18 +67,57 @@ def test_switching_counter_increments_and_shown_in_di_table(make_window):
     # shows whole-second resolution, so the table cell legitimately still
     # reads "00:00:00" for a 0.15s interval - the precise programmatic
     # value (a float, seconds) is the real proof here.
-    closed_seconds = sw_mgr.get_snapshot("DI1")["closed_seconds"]
+    closed_seconds = sw_mgr.get_snapshot(DI_TAG)["closed_seconds"]
     assert closed_seconds >= 0.15, closed_seconds
     assert re.fullmatch(r"\d{2}:\d{2}:\d{2}", w.page_di.table.item(0, 8).text())
 
-    # Also shown in Main View's device window for the 4 tracked devices
-    # (DI1-4, see page_entry_gate.py's device_map/counter_tag).
+    # DOWÓD: the counter survives a restart - flush, then a fresh manager
+    # (new EventBus, same persisted project store) restores it.
+    sw_mgr.flush_to_project()
+    assert sw_pm.config.get("switching_counters", {}).get(DI_TAG, {}).get("closes") == 1
+    sw_mgr2 = SwitchingCounterManager(EventBus(), sw_pm)
+    restored = sw_mgr2.get_snapshot(DI_TAG)
+    assert restored["closes"] == 1
+    assert restored["opens"] == 1
+    assert restored["closed_seconds"] >= 0.15
+
+
+def test_main_view_shows_switching_counter_for_a_configured_apparatus(make_window):
+    """Task "migracja adresacji" point 1.2: page_entry_gate.py's own
+    apparatus wiring (device_map/counter_tag), proven with a REAL,
+    EXPLICIT apparatus configuration - not an inherited DI1-4/DO01-04
+    literal. Only the main-breaker role is bound here; the other three
+    symbols are deliberately left unconfigured (see
+    test_main_view_apparatus_not_configured below)."""
+    from epw_os.core.apparatus import Apparatus, ApparatusRegistry
+    from epw_os.core.events import EventBus
+    from epw_os.core.switching_counters import SwitchingCounterManager
+    from epw_os.gui.pages.page_entry_gate import PageEntryGate
+
+    DO_TAG, DI_TAG = "ADA1.DO.1", "ELA1.DI.1"
+    registry = ApparatusRegistry()
+    registry.set_apparatuses([Apparatus(id="Q1", command=[DO_TAG], feedback=[DI_TAG])])
+    registry.set_role_binding(PageEntryGate.ROLE_MAIN_BREAKER, "Q1")
+
+    sw_bus = EventBus()
+    sw_pm = MockProjectManager()
+    sw_mgr = SwitchingCounterManager(sw_bus, sw_pm)
+    sw_tm = DICapableTagManager(sw_bus, tags={DI_TAG: False})
+    w = make_window(sw_tm, MockCommandManager(), MockControllableAccessManager(), sw_pm,
+                     MockAuditLogger(), switching_counters=sw_mgr, apparatus_registry=registry)
+
+    assert w.page_entry_gate.q1.is_configured is True
+    assert w.page_entry_gate.q1.tag_name == DO_TAG
+    assert w.page_entry_gate.q1.counter_tag == DI_TAG
+
+    sw_tm.update_tag(DI_TAG, False)  # seed
+    sw_tm.update_tag(DI_TAG, True)   # -> 1 close
+
     from epw_os.gui.widgets.popups import DeviceControlPopup, DevicePropertiesPopup
     from epw_os.i18n import tr
-
-    assert w.page_entry_gate.q1.counter_tag == "DI1"
-    popup = DeviceControlPopup(w.page_entry_gate.q1, w.page_entry_gate, switching_counters=sw_mgr)
     from PySide6.QtWidgets import QLabel
+
+    popup = DeviceControlPopup(w.page_entry_gate.q1, w.page_entry_gate, switching_counters=sw_mgr)
     popup_labels = " | ".join(l.text() for l in popup.findChildren(QLabel))
     assert "1" in popup_labels and "0" in popup_labels, popup_labels  # 1 close, 0 opens so far
     popup.deleteLater()
@@ -79,15 +127,31 @@ def test_switching_counter_increments_and_shown_in_di_table(make_window):
     assert tr("pages.popups.lbl_switching_closes") in props_labels, props_labels
     props.deleteLater()
 
-    # DOWÓD: the counter survives a restart - flush, then a fresh manager
-    # (new EventBus, same persisted project store) restores it.
-    sw_mgr.flush_to_project()
-    assert sw_pm.config.get("switching_counters", {}).get("DI1", {}).get("closes") == 1
-    sw_mgr2 = SwitchingCounterManager(EventBus(), sw_pm)
-    restored = sw_mgr2.get_snapshot("DI1")
-    assert restored["closes"] == 1
-    assert restored["opens"] == 1
-    assert restored["closed_seconds"] >= 0.15
+
+def test_main_view_apparatus_not_configured(make_window):
+    """Task "migracja adresacji" point 1.2 (Waldek's own explicit
+    requirement): with no apparatus_registry at all (today's real
+    default, until "runtime czyta projekt.epw" exists), Main View's
+    symbols say so plainly and refuse to be controlled - never a
+    silently-guessed DO01/DI1."""
+    from epw_os.core.events import EventBus
+
+    access = MockControllableAccessManager()
+    assert access.attempt_login("Operator", MockControllableAccessManager.CORRECT_PIN)
+    w = make_window(DICapableTagManager(EventBus()), MockCommandManager(),
+                     access, MockProjectManager(), MockAuditLogger())
+
+    assert w.page_entry_gate.q1.is_configured is False
+    assert not hasattr(w.page_entry_gate, "device_map") or w.page_entry_gate.device_map == {}
+
+    orig_qmb_info = QMessageBox.information
+    calls = []
+    QMessageBox.information = staticmethod(lambda *a, **k: calls.append(a))
+    try:
+        w.page_entry_gate.handle_control_request((w.page_entry_gate.q1, w.page_entry_gate.pos()))
+    finally:
+        QMessageBox.information = orig_qmb_info
+    assert calls, "an unconfigured apparatus must refuse the control request, not silently dispatch it"
 
 
 def test_switching_counter_no_disk_write_on_every_state_change(make_window):
@@ -101,8 +165,8 @@ def test_switching_counter_no_disk_write_on_every_state_change(make_window):
     SwitchingCounterManager(sw_bus3, sw_pm2)
     sw_tm3 = DICapableTagManager(sw_bus3)
     for _ in range(5):
-        sw_tm3.update_tag("DI1", True)
-        sw_tm3.update_tag("DI1", False)
+        sw_tm3.update_tag("ELA1.DI.1", True)
+        sw_tm3.update_tag("ELA1.DI.1", False)
     assert "switching_counters" not in sw_pm2.config, \
         "GRANICE: must not write to disk on every state change, only periodically/on flush"
 
@@ -118,7 +182,7 @@ def test_switching_counter_manual_reset_engineer_only_audited(make_window):
     sw_audit = MockAuditLogger()
     w = make_window(sw_tm, MockCommandManager(), MockControllableAccessManager(), sw_pm,
                      sw_audit, switching_counters=sw_mgr)
-    sw_tm.update_tag("DI1", True)  # 1 close, so the reset below has something to zero
+    sw_tm.update_tag("ELA1.DI.1", True)  # 1 close, so the reset below has something to zero
 
     orig_qmb_question = QMessageBox.question
     QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
@@ -129,17 +193,17 @@ def test_switching_counter_manual_reset_engineer_only_audited(make_window):
             w_reset = make_window(DICapableTagManager(EventBus()), MockCommandManager(),
                                    reset_access, MockProjectManager(), reset_audit,
                                    switching_counters=SwitchingCounterManager(EventBus(), MockProjectManager()))
-            w_reset.page_di._reset_counter("DI1")
+            w_reset.page_di._reset_counter("ELA1.DI.1")
             assert _denied(reset_audit, "Reset switching counter"), reset_audit.entries
 
         # Allowed for Engineer, and lands in the audit log specifically
         # (not just the operational Event Recorder) - COUNTER_RESET, not
         # the generic SETTING_CHANGE type.
         assert w.access_manager.attempt_login("Engineer", MockControllableAccessManager.CORRECT_PIN)
-        w.page_di._reset_counter("DI1")
-        assert any(e[0] == "COUNTER_RESET" and e[1] == "Engineer" and "DI1" in e[2] for e in sw_audit.entries), \
+        w.page_di._reset_counter("ELA1.DI.1")
+        assert any(e[0] == "COUNTER_RESET" and e[1] == "Engineer" and "ELA1.DI.1" in e[2] for e in sw_audit.entries), \
             sw_audit.entries
-        assert sw_mgr.get_snapshot("DI1")["closes"] == 0, "reset must actually zero the counter"
+        assert sw_mgr.get_snapshot("ELA1.DI.1")["closes"] == 0, "reset must actually zero the counter"
     finally:
         QMessageBox.question = orig_qmb_question
 

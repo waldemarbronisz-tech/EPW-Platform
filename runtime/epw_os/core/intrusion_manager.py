@@ -125,7 +125,6 @@ sections just above each area's own code for the full detail)
   SUSPECT (a WARNING, never an alarm) - see _check_line_silence().
 """
 import math
-import re
 import threading
 import time
 
@@ -138,13 +137,15 @@ PROJECT_KEY_LINES = "intrusion_lines"
 
 TAG_PREFIX = "Security"
 
-# Task ("lista wejsc do wyboru ma zawierac WYLACZNIE wejscia wlasciwego
-# typu"): matches "DIn" or "<device>.DIn" (the two DI naming shapes this
-# codebase actually uses - see tag_manager.py's init_default_tags() and
-# its multi-device configure() path) - never "DOn" (a DIGIT-only suffix
-# after "DI" specifically excludes "DIfferential"-style false positives
-# too, for whatever that is worth).
-_DIGITAL_INPUT_TAG_PATTERN = re.compile(r"(^|\.)DI\d+$")
+# Task "migracja adresacji": was a bespoke regex (`r"(^|\.)DI\d+$"`) -
+# already the ONE of three independent, disagreeing "what is a DI tag"
+# opinions (ADDRESSING_INVENTORY.md §3.2c) that DID match this
+# codebase's own multi-device shape at the time (`{dev}.DI01`) - but not
+# the platform-wide three-segment grammar this task establishes
+# (`{dev}.DI.1`, a dot before the channel number too). Replaced with the
+# one shared grammar check every subsystem now uses instead of its own
+# opinion - see epw_os/core/addressing.py.
+from epw_os.core.addressing import is_address
 
 
 def list_digital_input_candidates(tag_manager) -> list:
@@ -155,7 +156,7 @@ def list_digital_input_candidates(tag_manager) -> list:
     alone would also catch every digital OUTPUT and internal flag."""
     return sorted(
         t.name for t in tag_manager.list_tags()
-        if t.data_type == TagType.BOOL and _DIGITAL_INPUT_TAG_PATTERN.search(t.name)
+        if t.data_type == TagType.BOOL and is_address(t.name, "DI")
     )
 
 

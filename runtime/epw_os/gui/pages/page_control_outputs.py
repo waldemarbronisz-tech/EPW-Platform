@@ -10,6 +10,7 @@ from epw_os.gui.table_helpers import (
     apply_table_button_style, style_transparent_cell_container,
 )
 from epw_os.core.access_manager import AccessLevel
+from epw_os.core.addressing import is_address, parse_address
 from epw_os.gui.theme_manager import get_theme_manager, current_colors
 from epw_os.i18n import tr
 from datetime import datetime
@@ -239,24 +240,27 @@ class PageControlOutputs(QWidget):
         # only one section left, so it labelled nothing.
 
         # (do_tag, designation, default_description, feedback_tag, is_controllable)
-        # DO01-DO04 are the four channels wired to real feedback DI tags
-        # (DI1-DI4) instead of their own DO tag - see epw_core.py's default
-        # command definitions. The designation (command-routing key) is
-        # just the DO tag itself, same as every other channel - no
-        # project-specific device name lives in this code. Which four real
-        # devices these are on any given site (a main isolator, a
-        # generator contactor, whatever) is entirely a matter of the
-        # operator-editable Description column below, persisted per DO
-        # tag in project.json's output_descriptions - see SESSION_REPORT.md.
-        device_defs = [
-            ("DO01", "DO01", "Digital Output Channel 1", "DI1", True),
-            ("DO02", "DO02", "Digital Output Channel 2", "DI2", True),
-            ("DO03", "DO03", "Digital Output Channel 3", "DI3", True),
-            ("DO04", "DO04", "Digital Output Channel 4", "DI4", True),
-        ]
-        for i in range(5, 65):
-            do_tag = f"DO{i:02d}"
-            device_defs.append((do_tag, do_tag, f"Digital Output Channel {i}", do_tag, True))
+        # Task "migracja adresacji": was a fixed 4 hardcoded DO01-DO04 ->
+        # DI1-DI4 pairs (real feedback, a flat-scheme artifact tied to
+        # specific reserved slot numbers 1-4 - there is no such thing as
+        # a project-wide "slot number" left to be special about) plus
+        # `range(5, 65)` for the rest. Every real DO channel configure()
+        # produced is now self-contained - own tag is both the command
+        # output and its own feedback - the SAME pattern the old flat
+        # scheme already used for its own majority case (DO05-DO64); see
+        # epw_core.py's own default command definitions for the mirrored
+        # decision on the command-routing side. Sorted by (card, channel)
+        # for a stable, predictable row order across restarts. The
+        # designation (command-routing key) is just the DO tag itself, no
+        # project-specific device name lives in this code - which real
+        # device each channel is on a given site is entirely a matter of
+        # the operator-editable Description column below, persisted per
+        # DO tag in project.json's output_descriptions.
+        do_tags = sorted(
+            (t.name for t in self.tag_manager.list_tags() if is_address(t.name, "DO")),
+            key=lambda name: (parse_address(name)[0], parse_address(name)[2]),
+        )
+        device_defs = [(do_tag, do_tag, do_tag, do_tag, True) for do_tag in do_tags]
 
         self.table = QTableWidget(len(device_defs), 8)
         self.table.setHorizontalHeaderLabels([

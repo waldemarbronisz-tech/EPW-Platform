@@ -6,7 +6,7 @@ from logic_studio.blocks.registry import BlockRegistry
 class DigitalInputBlock(BaseLogicBlock):
     PIN_DESCRIPTIONS = {"State": "Aktualny stan fizycznego wejścia cyfrowego."}
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Adres fizycznego wejścia cyfrowego (moduł ELA), np. \"ELA01.DI01\".",
+        "Address": "Adres fizycznego wejścia cyfrowego (moduł ELA), np. \"ELA01.DI.1\".",
     }
 
     def __init__(self, type_id="input.di", default_name="DI", category="Wejścia / Wyjścia", description="Fizyczne wejście cyfrowe (moduł ELA)."):
@@ -14,7 +14,7 @@ class DigitalInputBlock(BaseLogicBlock):
         self.color = "#008000" # Classic dark green
         self.width = 100
         self.height = 60
-        self.properties["Address"] = "ELA01.DI01"
+        self.properties["Address"] = "ELA01.DI.1"  # task "migracja adresacji" - was "ELA01.DI01"
         self.is_source = True
 
         out1 = Pin("State", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN)
@@ -44,7 +44,7 @@ class DigitalInputBlock(BaseLogicBlock):
 class DigitalOutputBlock(BaseLogicBlock):
     PIN_DESCRIPTIONS = {"Cmd": "Stan wysyłany na fizyczne wyjście cyfrowe."}
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Adres fizycznego wyjścia cyfrowego (moduł ADA), np. \"ADA01.DO01\".",
+        "Address": "Adres fizycznego wyjścia cyfrowego (moduł ADA), np. \"ADA01.DO.1\".",
     }
 
     def __init__(self, type_id="output.do", default_name="DO", category="Wejścia / Wyjścia", description="Fizyczne wyjście cyfrowe (moduł ADA)."):
@@ -52,7 +52,7 @@ class DigitalOutputBlock(BaseLogicBlock):
         self.color = "#800000" # Classic dark red
         self.width = 100
         self.height = 60
-        self.properties["Address"] = "ADA01.DO01"
+        self.properties["Address"] = "ADA01.DO.1"  # task "migracja adresacji" - was "ADA01.DO01"
 
         in1 = Pin("Cmd", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN)
         self.inputs = [in1]

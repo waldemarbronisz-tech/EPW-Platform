@@ -50,9 +50,9 @@ def _project_with_one_of_every_block():
         for type_id in BlockRegistry.get_blocks_in_category(category):
             block = BlockRegistry.create_block(type_id)
             if type_id == "input.di":
-                block.properties["Address"] = "ELA01.DI01"
+                block.properties["Address"] = "ELA01.DI.1"
             elif type_id == "output.do":
-                block.properties["Address"] = "ADA01.DO01"
+                block.properties["Address"] = "ADA01.DO.1"
             elif type_id == "input.ai":
                 block.properties["Address"] = "AI.CONTRACT"
             elif type_id == "output.ao":

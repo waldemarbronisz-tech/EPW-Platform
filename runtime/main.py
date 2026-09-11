@@ -328,7 +328,8 @@ def main():
                                    language_changed_callback=rebuild_window,
                                    feature_config=gui_feature_config,
                                    feature_config_changed_callback=rebuild_window,
-                                   mqtt_manager=gui_mqtt, mqtt_status_changed_signal=bridge.mqtt_status_changed)
+                                   mqtt_manager=gui_mqtt, mqtt_status_changed_signal=bridge.mqtt_status_changed,
+                                   apparatus_registry=core.apparatus_registry)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,

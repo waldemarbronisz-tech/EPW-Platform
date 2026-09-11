@@ -206,7 +206,15 @@ class SwitchingCounterManager:
         treated as a transition happening now - which slightly
         overstates precisely when it happened, but never drops or
         double-counts it."""
-        if not (isinstance(tag_name, str) and tag_name.startswith("DI") and tag_name[2:].isdigit()):
+        # Task "migracja adresacji": was `tag_name.startswith("DI") and
+        # tag_name[2:].isdigit()` - never matched this codebase's own
+        # multi-device tag shape at all (ADDRESSING_INVENTORY.md §3.2c),
+        # so switching counters would have silently stopped being
+        # tracked for any project with real ELA cards. addressing.
+        # is_address() is the one shared grammar check every subsystem
+        # now uses instead of its own opinion.
+        from epw_os.core.addressing import is_address
+        if not is_address(tag_name, "DI"):
             return
         if isinstance(value, bool):
             bool_value = value

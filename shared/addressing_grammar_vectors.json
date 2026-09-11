@@ -1,0 +1,30 @@
+{
+  "_comment": "Task 'migracja adresacji', etap 4: the ONE ground-truth vector list every implementation of the platform's point-address grammar is checked against. Python's shared/addressing.py (runtime + Logic Studio + Studio import this one file directly) and Synoptic's own studio/synoptic/src/project/DeviceValidation.ts (`parseChannelAddress`, a real fourth implementation - TypeScript can't import a Python file) are BOTH driven by this exact list, in their own language's test suite. Add a case here only when you have also checked what both sides currently do with it - see test_addressing_grammar_cross_platform.py (Python) and addressing-grammar-cross-platform.test.ts (TypeScript).",
+  "cases": [
+    {"input": "ELA1.DI.5", "valid": true, "card": "ELA1", "kind": "DI", "channel": 5},
+    {"input": "ADA1.DO.12", "valid": true, "card": "ADA1", "kind": "DO", "channel": 12},
+    {"input": "ELA1.AI.3", "valid": true, "card": "ELA1", "kind": "AI", "channel": 3},
+    {"input": "ADA1.AO.1", "valid": true, "card": "ADA1", "kind": "AO", "channel": 1},
+    {"input": "ELA1.DI.100", "valid": true, "card": "ELA1", "kind": "DI", "channel": 100, "_why": "no fixed-width ceiling, unlike the old flat scheme's 64-slot cap"},
+    {"input": "KOT_KMG1.DI.7", "valid": true, "card": "KOT_KMG1", "kind": "DI", "channel": 7, "_why": "card is free-form user text, not just ELA/ADA-prefixed"},
+    {"input": "card-with-dashes.AO.2", "valid": true, "card": "card-with-dashes", "kind": "AO", "channel": 2},
+    {"input": "X.DI.1", "valid": true, "card": "X", "kind": "DI", "channel": 1, "_why": "single-character card id"},
+    {"input": " ELA1.DI.12 ", "valid": true, "card": "ELA1", "kind": "DI", "channel": 12, "_why": "surrounding whitespace tolerated - a human typing into a text field is the one real path a stray space enters through"},
+    {"input": "ELA1 . DI . 12", "valid": true, "card": "ELA1", "kind": "DI", "channel": 12, "_why": "whitespace around each dot tolerated the same way"},
+    {"input": "ELA1.DI.05", "valid": false, "_why": "leading zero - REJECTED, not silently treated as channel 5 (would otherwise let two differently-written addresses collide undetected)"},
+    {"input": "ELA1.DI.0", "valid": false, "_why": "channel 0 is not a real channel - channels are 1-based"},
+    {"input": "ELA01.DI01", "valid": false, "_why": "the OLD two-segment, zero-padded scheme this task replaced"},
+    {"input": "ELA1.DI", "valid": false, "_why": "missing channel segment"},
+    {"input": "ELA1.DI.5.6", "valid": false, "_why": "too many segments"},
+    {"input": ".DI.5", "valid": false, "_why": "empty card"},
+    {"input": "ELA1.XX.5", "valid": false, "_why": "kind must be exactly one of DI/DO/AI/AO"},
+    {"input": "ELA1.DI.abc", "valid": false, "_why": "channel must be numeric"},
+    {"input": "ELA1.DI.-5", "valid": false, "_why": "negative channel"},
+    {"input": "ELA1.di.5", "valid": false, "_why": "kind is case-sensitive - lowercase does not match"},
+    {"input": "", "valid": false},
+    {"input": 123, "valid": false, "_why": "non-string input"},
+    {"input": null, "valid": false, "_why": "null/None input"},
+    {"input": "ELA1..5", "valid": false, "_why": "empty kind segment"},
+    {"input": "ELA1.DI. ", "valid": false, "_why": "whitespace-only channel segment"}
+  ]
+}

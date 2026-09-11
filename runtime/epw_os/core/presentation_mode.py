@@ -527,9 +527,13 @@ class PresentationMode:
         touch."""
         if self.switching_counter_manager is None:
             return {}
+        # Task "migracja adresacji": was `t.name.startswith("DI") and
+        # t.name[2:].isdigit()` - see switching_counters.py's own
+        # identical fix for why that never matched a multi-device tag.
+        from epw_os.core.addressing import is_address
         snapshot = {}
         for t in self.tag_manager.list_tags():
-            if t.name.startswith("DI") and t.name[2:].isdigit():
+            if is_address(t.name, "DI"):
                 snapshot[t.name] = self.switching_counter_manager.get_snapshot(t.name)
         return snapshot
 

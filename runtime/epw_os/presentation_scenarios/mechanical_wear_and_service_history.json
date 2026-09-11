@@ -5,25 +5,25 @@
     {
       "time_s": 0,
       "type": "counter_threshold",
-      "target": "DI1",
+      "target": "ELA01.DI.1",
       "value": 3,
-      "description": "Temporarily lowers DI1's switching-counter warning threshold to 3 cycles, just for this demo - the real threshold (and every other counter value) is restored the moment the presentation stops, exactly like every tag it touches."
+      "description": "Temporarily lowers ELA01.DI.1's switching-counter warning threshold to 3 cycles, just for this demo - the real threshold (and every other counter value) is restored the moment the presentation stops, exactly like every tag it touches."
     },
-    {"time_s": 1, "type": "command", "target": "DO01", "action": "CLOSE", "description": "Cycle 1: close"},
-    {"time_s": 3, "type": "command", "target": "DO01", "action": "OPEN", "description": "Cycle 1: open"},
-    {"time_s": 5, "type": "command", "target": "DO01", "action": "CLOSE", "description": "Cycle 2: close"},
-    {"time_s": 7, "type": "command", "target": "DO01", "action": "OPEN", "description": "Cycle 2: open"},
-    {"time_s": 9, "type": "command", "target": "DO01", "action": "CLOSE", "description": "Cycle 3: close - this reaches the (lowered) warning threshold"},
+    {"time_s": 1, "type": "tag", "tag": "ELA01.DI.1", "value": true, "quality": "GOOD", "description": "Cycle 1: close"},
+    {"time_s": 3, "type": "tag", "tag": "ELA01.DI.1", "value": false, "quality": "GOOD", "description": "Cycle 1: open"},
+    {"time_s": 5, "type": "tag", "tag": "ELA01.DI.1", "value": true, "quality": "GOOD", "description": "Cycle 2: close"},
+    {"time_s": 7, "type": "tag", "tag": "ELA01.DI.1", "value": false, "quality": "GOOD", "description": "Cycle 2: open"},
+    {"time_s": 9, "type": "tag", "tag": "ELA01.DI.1", "value": true, "quality": "GOOD", "description": "Cycle 3: close - this reaches the (lowered) warning threshold"},
     {
       "time_s": 10,
       "type": "alarm",
       "alarm_id": "DEMO_COUNTER_WARNING",
-      "message": "DI1's switching counter has reached its warning threshold (3 cycles) - mechanical wear review recommended",
+      "message": "ELA01.DI.1's switching counter has reached its warning threshold (3 cycles) - mechanical wear review recommended",
       "priority": 2,
-      "source_tag": "DI1",
-      "description": "See Digital Inputs > Switching Counter for DI1 - now at/over threshold"
+      "source_tag": "ELA01.DI.1",
+      "description": "See Digital Inputs > Switching Counter for ELA01.DI.1 - now at/over threshold"
     },
-    {"time_s": 12, "type": "command", "target": "DO01", "action": "OPEN", "description": "Cycle 3: open"},
+    {"time_s": 12, "type": "tag", "tag": "ELA01.DI.1", "value": false, "quality": "GOOD", "description": "Cycle 3: open"},
     {
       "time_s": 30,
       "type": "alarm_clear",

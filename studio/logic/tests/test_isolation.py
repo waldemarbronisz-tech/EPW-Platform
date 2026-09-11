@@ -9,12 +9,12 @@ from logic_studio.blocks.logic_gates import NotGate
 def test_isolation():
     project = Project()
     di = DigitalInputBlock()
-    di.properties["Address"] = "ELA01.DI01"
+    di.properties["Address"] = "ELA01.DI.1"
 
     no = NotGate()
 
     do = DigitalOutputBlock()
-    do.properties["Address"] = "ADA01.DO01"
+    do.properties["Address"] = "ADA01.DO.1"
 
     di.outputs[0].connect(no.inputs[0])
     no.outputs[0].connect(do.inputs[0])
@@ -31,25 +31,25 @@ def test_isolation():
     engine.start()
 
     # Run once
-    io.set_digital_input("ELA01.DI01", False)
+    io.set_digital_input("ELA01.DI.1", False)
     engine.step()
 
     assert engine.get_block_state(do.uuid).simulation_state.get("sim_value") is True
 
     # Mutate UI project
     no.properties["Name"] = "MUTATED"
-    di.properties["Address"] = "ELA02.DI02"
+    di.properties["Address"] = "ELA02.DI.2"
 
     # Verify runtime is unaffected
-    io.set_digital_input("ELA01.DI01", True)
+    io.set_digital_input("ELA01.DI.1", True)
     # DI block uses Address property to lookup IO, so it checks ELA01.DI01.
 
     engine.step()
 
     # ELA01.DI01 -> True -> NOT -> False -> DO -> False
     assert engine.get_block_state(do.uuid).simulation_state.get("sim_value") is False
-    assert engine.io.read_digital_output("ADA01.DO01") == False
-    assert io.output_image["digital"].get("ADA01.DO01") == False
+    assert engine.io.read_digital_output("ADA01.DO.1") == False
+    assert io.output_image["digital"].get("ADA01.DO.1") == False
     assert engine.get_block_state(no.uuid).properties.get("Name") != "MUTATED"
 
     # Recompile

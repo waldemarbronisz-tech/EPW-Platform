@@ -41,16 +41,15 @@ per line, mains/battery power supervision system-wide) that predates
 this module. Task "Alarmówka: na maksa dużo opcji" chose to expose
 runtime's REAL ceiling, not just the contract's minimal illustrative
 subset - every field here has a concrete, already-executing meaning on
-the runtime side, named identically, so a future "Migracja adresacji"-
-style wiring step has a field-for-field match to work from rather than
-a second design pass. The one field intrusion_manager.py's own contract
-DOESN'T have a Studio equivalent for yet: its `tag` is a flat
-TagManager name ("DI5", "ELA01.DI05") - a DIFFERENT address grammar
-from this module's own card-relative Point.address ("ELA1.DI.5"), the
-same unresolved gap project_panels.py's own module docstring already
-flags for Logic Studio. Line.tag below stores a Point.address (Studio's
-own consistent address space) - translating that to a real runtime tag
-name is deferred with everything else in that gap, not solved here.
+the runtime side, named identically. Update (task "migracja adresacji"):
+that future wiring step's grammar half is done - intrusion_manager.py's
+own `tag` is now the SAME `<card>.<KIND>.<channel>` shape as this
+module's Point.address (both go through shared/addressing.py), not the
+flat "DI5"/"ELA01.DI05" TagManager name this comment used to describe.
+Line.tag below stores a Point.address; runtime reading `projekt.epw`
+directly (rather than today's `project.json`) is the remaining, still
+genuinely unbuilt half of that gap - not an address-format mismatch
+anymore, just a file this program doesn't read yet.
 
 The contract's own "timings: czas na wyjście, czas na wejście, czas
 sygnalizacji" doesn't fully match runtime either: exit/entry delay are
