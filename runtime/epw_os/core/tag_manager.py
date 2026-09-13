@@ -47,6 +47,11 @@ class Tag:
     last_update: float = 0.0
     timeout: float = 5.0 # Seconds before STALE/BAD quality
     source: str = "SYSTEM"
+    # From the project's point registry (task "runtime czyta projekt.epw"
+    # 3.1) - where the terminal physically is and the technician's note for
+    # it. Informational; nothing in the program branches on either.
+    location: str = ""
+    technical_note: str = ""
     # read_only removed (Task: "Tag.read_only - martwe pole"): a full
     # repo-wide search confirmed EVERY add_tag() call site (100+, across
     # every core/ module) either omitted this parameter or passed the
@@ -160,6 +165,19 @@ class TagManager:
         for dev in devices:
             dev_id = dev.get("id")
             dev_type = dev.get("type")
+            # A projekt.epw card says what its channels ARE ("kind": DI/DO/
+            # AI/AO); the older device list said which module family it was
+            # ("type": ELA/ADA/EPM). Same tags either way.
+            kind = dev.get("kind")
+            if kind == "DI":
+                dev_type = "ELA"
+            elif kind == "DO":
+                dev_type = "ADA"
+            elif kind in ("AI", "AO"):
+                # AI points become tags through the Analog Inputs module
+                # (EPWCore._register_analog_input_tags(), only when that
+                # module is part of the device); AO has no runtime support yet.
+                continue
             if dev_type == "ELA":
                 for i in range(1, dev.get("channels", 32) + 1):
                     self.add_tag(format_address(dev_id, "DI", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
@@ -257,6 +275,19 @@ class TagManager:
                 return False
             tag.description = description
             self.event_bus.emit("tag_changed", name, tag.value, tag.quality.value)
+            return True
+
+    def set_point_info(self, name: str, location: str = None, technical_note: str = None) -> bool:
+        """Location and technical note from the project's point registry.
+        No tag_changed event - value and quality are untouched."""
+        with self._lock:
+            tag = self._tags.get(name)
+            if not tag:
+                return False
+            if location is not None:
+                tag.location = location
+            if technical_note is not None:
+                tag.technical_note = technical_note
             return True
 
     def check_watchdogs(self):

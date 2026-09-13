@@ -87,7 +87,7 @@ def _make_verifier(tmp_path, engineer=True, audit_logger=None, core_tm=None):
     # Task "migracja adresacji", point 1.2 doprecyzowanie: was literal
     # "DI2"/"DI3"/"DI4" - now a real ApparatusRegistry, matching how
     # ProtectionVerifier actually resolves its tested apparatus/
-    # interlocks (ROLE_TESTED_APPARATUS/ROLE_INTERLOCK_PREFIX) since
+    # interlocks (the selected device id/ROLE_INTERLOCK_PREFIX) since
     # this task. "FEEDER" is the apparatus under test (command AND
     # feedback - check_safety_conditions() itself refuses outright if
     # either is missing); the two interlocks only need feedback.
@@ -106,7 +106,6 @@ def _make_verifier(tmp_path, engineer=True, audit_logger=None, core_tm=None):
         Apparatus(id="INTERLOCK_A", feedback=["ELA1.DI.3"]),
         Apparatus(id="INTERLOCK_B", feedback=["ELA1.DI.4"]),
     ])
-    registry.set_role_binding(ProtectionVerifier.ROLE_TESTED_APPARATUS, "FEEDER")
     registry.set_role_binding(interlock_role_a, "INTERLOCK_A")
     registry.set_role_binding(interlock_role_b, "INTERLOCK_B")
 
@@ -138,7 +137,7 @@ def test_tags_are_registered_at_construction_default_false(tmp_path):
 
 def test_normal_conditions_pass_the_pre_flight_check(tmp_path):
     verifier, tag_manager, core_tm = _make_verifier(tmp_path)
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is True, reason
 
 
@@ -155,14 +154,14 @@ def test_unconfigured_apparatus_refuses_outright_not_a_guessed_channel(tmp_path)
     access_manager.level = AccessLevel.ENGINEER
     verifier = ProtectionVerifier(tag_manager, ProtectionManager(), access_manager)  # no apparatus_registry
 
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is False
     assert "NOT CONFIGURED" in reason
 
 
 def test_engineer_access_still_required(tmp_path):
     verifier, tag_manager, core_tm = _make_verifier(tmp_path, engineer=False)
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is False
     assert "Engineer" in reason
 
@@ -173,7 +172,7 @@ def test_engineer_access_still_required(tmp_path):
 def test_pending_command_true_blocks_the_pre_flight_check_with_a_clear_reason(tmp_path):
     verifier, tag_manager, core_tm = _make_verifier(tmp_path)
     core_tm.update_tag("System.PendingCommand", True)
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is False
     assert "Pending" in reason
 
@@ -183,7 +182,7 @@ def test_pending_command_true_blocks_the_pre_flight_check_with_a_clear_reason(tm
 def test_active_trip_true_blocks_the_pre_flight_check_with_a_clear_reason(tmp_path):
     verifier, tag_manager, core_tm = _make_verifier(tmp_path)
     core_tm.update_tag("System.ActiveTrip", True)
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is False
     assert "TRIP" in reason
 
@@ -194,7 +193,7 @@ def test_pending_command_denial_reaches_the_audit_log(tmp_path):
     audit = FakeAuditLogger()
     verifier, tag_manager, core_tm = _make_verifier(tmp_path, audit_logger=audit)
     core_tm.update_tag("System.PendingCommand", True)
-    verifier.check_safety_conditions()
+    verifier.check_safety_conditions("FEEDER")
 
     entries = [e for e in audit.entries if e[0] == "PROTECTION_VERIFICATION_BLOCKED"]
     assert entries, audit.entries
@@ -207,7 +206,7 @@ def test_active_trip_denial_reaches_the_audit_log(tmp_path):
     audit = FakeAuditLogger()
     verifier, tag_manager, core_tm = _make_verifier(tmp_path, audit_logger=audit)
     core_tm.update_tag("System.ActiveTrip", True)
-    verifier.check_safety_conditions()
+    verifier.check_safety_conditions("FEEDER")
 
     entries = [e for e in audit.entries if e[0] == "PROTECTION_VERIFICATION_BLOCKED"]
     assert entries, audit.entries
@@ -221,7 +220,7 @@ def test_a_passing_check_writes_nothing_to_the_audit_log(tmp_path):
     pre-flight check must not spam the audit trail."""
     audit = FakeAuditLogger()
     verifier, tag_manager, core_tm = _make_verifier(tmp_path, audit_logger=audit)
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is True
     assert not [e for e in audit.entries if e[0] == "PROTECTION_VERIFICATION_BLOCKED"]
 
@@ -254,20 +253,20 @@ def test_active_trip_reflects_a_real_process_protection_exceeding_and_clearing(t
                         hysteresis=2.0, delay_seconds=0.0)
 
     assert tag_manager.get_value("System.ActiveTrip") is False
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is True, reason
 
     core_tm.update_tag("Meas.L1", 260.0)  # push past upper_threshold - a real excursion
     assert tag_manager.get_value("System.ActiveTrip") is True, \
         "a real process-protection trip must be reflected, not just a manually-set tag"
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is False
     assert "TRIP" in reason
 
     core_tm.update_tag("Meas.L1", 230.0)  # back inside the hysteresis-adjusted band
     assert tag_manager.get_value("System.ActiveTrip") is False, \
         "momentary, not a latch - must clear the instant the real condition is gone"
-    ok, reason = verifier.check_safety_conditions()
+    ok, reason = verifier.check_safety_conditions("FEEDER")
     assert ok is True, reason
 
 
@@ -289,3 +288,32 @@ def test_active_trip_reflects_the_initial_state_at_construction_too(tmp_path):
     verifier = ProtectionVerifier(tag_manager, ProtectionManager(), access_manager)
 
     assert tag_manager.get_value("System.ActiveTrip") is True
+
+
+# --- Task "runtime czyta projekt.epw", 3.2: the test gets a device id -----------
+
+def test_the_selected_apparatus_supplies_the_feedback_the_test_checks(tmp_path):
+    """Each apparatus brings its own output and feedback: selecting a
+    different one checks THAT apparatus's feedback, and one with no output
+    (an interlock contact) is refused as not testable."""
+    verifier, tag_manager, core_tm = _make_verifier(tmp_path)
+    from epw_os.core.apparatus import Apparatus
+    verifier.apparatus_registry.set_apparatuses([
+        Apparatus(id="FEEDER", command=["ADA1.DO.2"], feedback=["ELA1.DI.2"]),
+        Apparatus(id="FEEDER_2", command=["ADA1.DO.3"], feedback=["ELA1.DI.3"]),
+        Apparatus(id="INTERLOCK_A", feedback=["ELA1.DI.3"]),
+    ])
+    verifier.interlock_roles = []
+
+    assert verifier.check_safety_conditions("FEEDER") == (True, "PASS")
+
+    ok, reason = verifier.check_safety_conditions("FEEDER_2")
+    assert ok is False
+    assert "ELA1.DI.3" in reason and "OPEN" in reason
+
+    ok, reason = verifier.check_safety_conditions("INTERLOCK_A")
+    assert ok is False and "NOT CONFIGURED" in reason
+
+    ok, reason = verifier.check_safety_conditions(None)
+    assert ok is False and "NOT CONFIGURED" in reason
+    assert verifier.apparatus_registry.testable_ids() == ["FEEDER", "FEEDER_2"]

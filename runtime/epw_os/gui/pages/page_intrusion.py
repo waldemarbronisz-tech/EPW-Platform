@@ -73,7 +73,7 @@ class ZoneConfigDialog(QDialog):
     """Add (zone=None) or edit an existing zone - name + exit/entry
     delay seconds. Engineer-only (see PageIntrusionConfiguration._configure_zones())."""
 
-    def __init__(self, zone=None, parent=None):
+    def __init__(self, zone=None, parent=None, settings_only=False):
         super().__init__(parent)
         self.is_new = zone is None
         self.setObjectName("IndustrialDialog")
@@ -89,6 +89,8 @@ class ZoneConfigDialog(QDialog):
 
         self.edit_name = QLineEdit(zone["name"] if zone else "")
         form.addRow(tr("pages.intrusion.lbl_zone_name"), self.edit_name)
+        # projekt.epw: the name is structure (Studio); the delays are settings.
+        self.edit_name.setReadOnly(settings_only)
 
         self.spin_exit_delay = QSpinBox()
         self.spin_exit_delay.setRange(0, 600)
@@ -141,7 +143,7 @@ class LineConfigDialog(QDialog):
     predecessor task's own line dialog no longer applies here - THIS
     task explicitly tightens that to a type-restricted picker)."""
 
-    def __init__(self, zones, digital_candidates, analog_candidates, line=None, parent=None):
+    def __init__(self, zones, digital_candidates, analog_candidates, line=None, parent=None, settings_only=False):
         super().__init__(parent)
         self.is_new = line is None
         self.zones = zones
@@ -317,6 +319,16 @@ class LineConfigDialog(QDialog):
         buttons.accepted.connect(self._try_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+        if settings_only:
+            # projekt.epw: which zone, input, type and wiring a line has is
+            # structure (Studio); delays, false-alarm filters and value
+            # windows are settings and stay editable here.
+            self.edit_name.setReadOnly(True)
+            for structural in (self.combo_zone, self.combo_input_mode, self.combo_tag_contact,
+                               self.combo_normal_state, self.combo_tag_analog, self.combo_parametrization,
+                               self.combo_type):
+                structural.setEnabled(False)
 
     # --- mode switching (Task part 1) ---------------------------------
 
@@ -1538,12 +1550,16 @@ class PageIntrusionConfiguration(QWidget):
     rather than either page reaching into the other's internals."""
 
     def __init__(self, intrusion_manager, access_manager, audit_logger=None,
-                 on_zones_or_lines_changed=None, parent=None):
+                 on_zones_or_lines_changed=None, parent=None, structure_editable=True):
         super().__init__(parent)
         self.intrusion_manager = intrusion_manager
         self.access_manager = access_manager
         self.audit_logger = audit_logger
         self.on_zones_or_lines_changed = on_zones_or_lines_changed
+        # projekt.epw (task "runtime czyta projekt.epw" 3.4): zones, lines and
+        # power supervision are designed in Studio - this page edits their
+        # settings only; the "create/remove" wizards are gone.
+        self.structure_editable = structure_editable
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -1569,6 +1585,11 @@ class PageIntrusionConfiguration(QWidget):
         self.btn_history_retention = QPushButton(tr("pages.intrusion.btn_configure_retention"))
         self.btn_history_retention.clicked.connect(self._configure_history_retention)
         layout.addWidget(self.btn_history_retention)
+        if not self.structure_editable:
+            self.btn_power_supervision.setVisible(False)
+            settings_note = QLabel(tr("pages.intrusion.settings_only_note"))
+            settings_note.setWordWrap(True)
+            layout.addWidget(settings_note)
         layout.addStretch()
 
         self.access_manager.level_changed.connect(self.refresh)
@@ -1603,7 +1624,7 @@ class PageIntrusionConfiguration(QWidget):
             get_items=self.intrusion_manager.get_zones,
             item_label=lambda z: z["name"],
             open_add_dialog=lambda: ZoneConfigDialog(None, self),
-            open_edit_dialog=lambda item: ZoneConfigDialog(item, self),
+            open_edit_dialog=lambda item: ZoneConfigDialog(item, self, settings_only=not self.structure_editable),
             on_add=lambda dlg: self.intrusion_manager.add_zone(
                 dlg.result_name(), dlg.result_exit_delay(), dlg.result_entry_delay(),
                 level=self.access_manager.level),
@@ -1612,6 +1633,7 @@ class PageIntrusionConfiguration(QWidget):
                 level=self.access_manager.level),
             on_remove=lambda item: self.intrusion_manager.remove_zone(item["id"], level=self.access_manager.level),
             remove_refused_message=tr("pages.intrusion.err_zone_has_lines"),
+            allow_add_remove=self.structure_editable,
         )
         self._notify_zones_or_lines_changed()
 
@@ -1633,7 +1655,8 @@ class PageIntrusionConfiguration(QWidget):
             get_items=self.intrusion_manager.get_lines,
             item_label=lambda l: l["name"],
             open_add_dialog=lambda: LineConfigDialog(zones, digital_candidates, analog_candidates, None, self),
-            open_edit_dialog=lambda item: LineConfigDialog(zones, digital_candidates, analog_candidates, item, self),
+            open_edit_dialog=lambda item: LineConfigDialog(zones, digital_candidates, analog_candidates, item, self,
+                                                           settings_only=not self.structure_editable),
             on_add=lambda dlg: self.intrusion_manager.add_line(
                 dlg.result_name(), dlg.result_zone_id(), dlg.result_tag(),
                 dlg.result_normal_state(), dlg.result_line_type(), level=self.access_manager.level,
@@ -1658,6 +1681,7 @@ class PageIntrusionConfiguration(QWidget):
                 value_windows=dlg.result_value_windows()),
             on_remove=lambda item: self.intrusion_manager.remove_line(item["id"], level=self.access_manager.level),
             remove_refused_message=None,
+            allow_add_remove=self.structure_editable,
         )
         self._notify_zones_or_lines_changed()
 

@@ -47,6 +47,9 @@ _FEATURE_LABELS = [
     ("service_notes", "feature_config.lbl_service_notes"),
 ]
 assert {f for f, _ in _FEATURE_LABELS} == set(TOGGLABLE_FEATURES)  # keep this list honest if the core one ever grows
+# feature id -> its display-name key, for anything else naming a module
+# (e.g. the startup message about logic referring to a missing module).
+FEATURE_LABEL_KEYS = dict(_FEATURE_LABELS)
 
 # Task: "jesli funkcja zapisuje dane, ktore przestana powstawac" - a
 # short, per-feature note shown under its checkbox, informational only
@@ -113,6 +116,17 @@ class FeatureConfigDialog(QDialog):
 
         self._refresh_engineer_mode_dependency()
         self._refresh_intrusion_subpage_dependency()
+
+        # projekt.epw (task "runtime czyta projekt.epw" 3.3): the modules are
+        # the device's composition, fixed in the project - "Runtime nie wie,
+        # że coś jest wyłączone. Wie tylko, z czego się składa." The dialog
+        # still shows which modules this controller has, and nothing more.
+        is_editable = getattr(self.feature_config, "is_composition_editable", None)
+        self.composition_editable = True if is_editable is None else bool(is_editable())
+        if not self.composition_editable:
+            intro.setText(tr("feature_config.composition_from_project"))
+            for checkbox in self._checkboxes.values():
+                checkbox.setEnabled(False)
 
     # --- Engineer Mode <-> Protection Settings (see nav_model.py's own
     # engineer_mode_available() docstring for the full reasoning) ------

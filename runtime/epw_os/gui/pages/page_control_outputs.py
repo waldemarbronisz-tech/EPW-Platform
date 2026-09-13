@@ -24,7 +24,8 @@ class SwitchingDeviceRow:
     is_controllable rows and only while Engineer access is active."""
 
     def __init__(self, table, row, do_tag, designation, default_description, di_tag,
-                 tag_manager, access_manager, is_controllable=True, service_notes=None):
+                 tag_manager, access_manager, is_controllable=True, service_notes=None,
+                 descriptions_editable=True):
         self.table = table
         self.row = row
         self.do_tag = do_tag
@@ -34,6 +35,7 @@ class SwitchingDeviceRow:
         self.access_manager = access_manager
         self.is_controllable = is_controllable
         self.service_notes = service_notes
+        self.descriptions_editable = descriptions_editable
 
         addr_item = QTableWidgetItem(f"%QX0.{row}")
         tag_item = QTableWidgetItem(do_tag)
@@ -43,6 +45,8 @@ class SwitchingDeviceRow:
         # keys by the visible Tag column text too.
         self.description = tag_manager.get_output_description(do_tag, default_description)
         self.desc_item = QTableWidgetItem(self.description)
+        if not self.descriptions_editable:
+            self.desc_item.setToolTip(tr("pages.common.tooltip_from_project"))
         self._apply_edit_permission()
 
         state_item = QTableWidgetItem(tr("pages.common.state_open"))
@@ -114,7 +118,7 @@ class SwitchingDeviceRow:
         actually change" guard catches it first) but not something to
         rely on, especially the very first call here at construction
         time, before self.description is even meaningfully comparable."""
-        can_edit = self.access_manager.has_access(AccessLevel.ENGINEER)
+        can_edit = self.access_manager.has_access(AccessLevel.ENGINEER) and self.descriptions_editable
         self.table.blockSignals(True)
         flags = self.desc_item.flags()
         self.desc_item.setFlags(flags | Qt.ItemFlag.ItemIsEditable if can_edit
@@ -210,11 +214,13 @@ class SwitchingDeviceRow:
 
 
 class PageControlOutputs(QWidget):
-    def __init__(self, tag_manager, access_manager, service_notes=None, parent=None):
+    def __init__(self, tag_manager, access_manager, service_notes=None, parent=None, descriptions_editable=True):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.access_manager = access_manager
         self.service_notes = service_notes
+        # projekt.epw: descriptions come from the point registry (Studio).
+        self.descriptions_editable = descriptions_editable
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -287,7 +293,8 @@ class PageControlOutputs(QWidget):
             self.device_rows.append(
                 SwitchingDeviceRow(self.table, i, do_tag, designation, default_desc, di_tag,
                                     self.tag_manager, self.access_manager, is_controllable=controllable,
-                                    service_notes=self.service_notes)
+                                    service_notes=self.service_notes,
+                                    descriptions_editable=self.descriptions_editable)
             )
 
         layout.addWidget(self.table, stretch=1)
@@ -315,6 +322,11 @@ class PageControlOutputs(QWidget):
         new_desc = item.text()
         old_desc = row_obj.description
         if new_desc == old_desc:
+            return
+        if not self.descriptions_editable:
+            self.table.blockSignals(True)
+            item.setText(old_desc)
+            self.table.blockSignals(False)
             return
         # Execution-time re-check (Task: real per-level permissions) -
         # the ItemIsEditable flag already stops the in-place editor from

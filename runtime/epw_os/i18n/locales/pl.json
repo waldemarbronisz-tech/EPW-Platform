@@ -169,7 +169,10 @@
     "synoptic_no_warnings": "Brak.",
     "synoptic_summary": "Wczytano ekran synoptyczny: {name}\n\nObiekty: {objects}\nAparaty: {devices}\n  SWITCHED: {switched}\n  SIGNAL: {signal}\n  MEASURED: {measured}\n  MODULATED: {modulated}\n  SELECTOR: {selector}\n\nOstrzeżenia:\n{warnings}",
     "ok": "OK",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "project_epw_filter": "Projekt EPW (*.epw)",
+    "project_installed_restart": "Plik projektu został wgrany. Uruchom EPW OS ponownie, żeby sterownik zaczął według niego działać.",
+    "project_install_refused": "Plik projektu nie został wgrany: {reason}"
   },
   "settings": {
     "language_section": "JĘZYK",
@@ -227,7 +230,10 @@
     "lbl_do_described": "Opisane wyjścia cyfrowe:",
     "lbl_logic_project": "Projekt logiki:",
     "logic_not_configured": "Nie skonfigurowano",
-    "lbl_project_path": "Plik projektu:"
+    "lbl_project_path": "Plik projektu:",
+    "from_project": "Nazwa, opis i autor pochodzą z projekt.epw i są edytowane w Studio.",
+    "lbl_revision": "Rewizja:",
+    "lbl_modified_by": "Ostatnio zapisał:"
   },
   "pin_prompt": {
     "title": "WYMAGANY DOSTĘP: {level}",
@@ -324,7 +330,10 @@
       "tooltip_col_opens": "Łączna liczba otwarć zarejestrowana dla tego urządzenia (licznik zużycia mechanicznego).",
       "tooltip_col_closed_time": "Łączny zsumowany czas, jaki to urządzenie spędziło w stanie zamkniętym.",
       "tooltip_col_notes": "Historia serwisowa tego urządzenia - kliknij Notatki, żeby zobaczyć lub dodać wpis.",
-      "tooltip_status_since": "W tym stanie od {time}."
+      "tooltip_status_since": "W tym stanie od {time}.",
+      "col_location": "Lokalizacja",
+      "col_technical_note": "Notatka techniczna",
+      "tooltip_from_project": "Zdefiniowane w rejestrze punktów projektu - edytuj w Studio."
     },
     "digital_inputs": {
       "menu_force_on": "Wymuś WŁ",
@@ -368,7 +377,8 @@
       "msgbox_add_duplicate": "Nie można dodać '{tag}' - ta nazwa jest już zajęta.",
       "msgbox_remove_title": "Usuń punkt",
       "msgbox_remove_select_first": "Najpierw zaznacz punkt do usunięcia.",
-      "msgbox_remove_confirm": "Usunąć punkt analogowy '{tag}'?\nTej operacji nie można cofnąć."
+      "msgbox_remove_confirm": "Usunąć punkt analogowy '{tag}'?\nTej operacji nie można cofnąć.",
+      "settings_only_note": "Punkty analogowe, ich opisy i notatki techniczne pochodzą z rejestru punktów projektu (Studio). Tutaj zmieniasz jednostkę i nastawy skalowania."
     },
     "audit_log": {
       "info": "Niezależny ślad audytowy bezpieczeństwa/konfiguracji: logowania, zmiany PIN-u, zmiany nastaw zabezpieczeń, zmiany języka. To nie to samo, co operacyjny Rejestrator Zdarzeń.",
@@ -443,7 +453,9 @@
       "confirm_title": "Rozpocznij test zabezpieczenia",
       "confirm_text": "KONTROLA WSTĘPNA: OK\n\nWszystkie kontrole bezpieczeństwa zaliczone.\nRozpocząć automatyczny test weryfikacyjny?",
       "term_test_aborted": "TEST PRZERWANY PRZEZ OPERATORA",
-      "term_completed": "■ Zakończono"
+      "term_completed": "■ Zakończono",
+      "lbl_select_apparatus": "Aparat testowany:",
+      "no_testable_apparatus": "Projekt nie ma aparatu z wyjściem i punktem zwrotnym"
     },
     "popups": {
       "default_device": "Urządzenie",
@@ -646,7 +658,8 @@
       "lbl_output_tag": "Tag wyjściowy",
       "err_point_required": "Wybierz punkt analogowy.",
       "err_lower_above_upper": "Próg dolny nie może być wyższy niż próg górny.",
-      "remove_confirm_message": "Usunąć zabezpieczenie procesowe '{name}'?"
+      "remove_confirm_message": "Usunąć zabezpieczenie procesowe '{name}'?",
+      "settings_only_note": "Zabezpieczenia procesowe są zdefiniowane w projekcie (Studio). Tutaj zmieniasz ich nastawy: progi, histerezę, zwłokę i załączenie."
     },
     "power_quality": {
       "wave_voltage_title": "NAPIĘCIE L1, L2, L3",
@@ -875,7 +888,8 @@
       "tooltip_retention_max_events": "Najstarsze zdarzenia są usuwane, gdy zostanie przekroczona ta liczba. 0 = bez limitu.",
       "lbl_retention_max_days": "Maksymalny wiek (dni)",
       "tooltip_retention_max_days": "Zdarzenia starsze niż tyle dni są usuwane. 0 = bez limitu.",
-      "retention_unlimited": "Bez limitu"
+      "retention_unlimited": "Bez limitu",
+      "settings_only_note": "Strefy, linie i nadzór zasilania są zdefiniowane w projekcie (Studio). Tutaj zmieniasz ich nastawy: czasy wyjścia i wejścia, filtry fałszywych alarmów i okna wartości."
     }
   },
   "feature_config": {
@@ -891,7 +905,8 @@
     "warn_logic_uses_tags": "Twój program logiki odwołuje się do tagów, które publikuje ta funkcja - znikną.",
     "confirm_disable_intro": "Wyłączenie tej funkcji spowoduje:",
     "tooltip_engineer_mode_needs_protection": "Tryb inżyniera weryfikuje FAKTYCZNIE skonfigurowane Nastawy zabezpieczeń - bez tej funkcji weryfikacja nic by nie znaczyła, więc jest niedostępny, dopóki Nastawy zabezpieczeń są wyłączone.",
-    "tooltip_intrusion_subpage_needs_intrusion": "Historia zdarzeń i Konfiguracja pokazują/edytują dane systemu alarmowego - są niedostępne, dopóki sam system alarmowy jest wyłączony."
+    "tooltip_intrusion_subpage_needs_intrusion": "Historia zdarzeń i Konfiguracja pokazują/edytują dane systemu alarmowego - są niedostępne, dopóki sam system alarmowy jest wyłączony.",
+    "composition_from_project": "Skład tego sterownika jest zdefiniowany w projekcie (Studio). Lista pokazuje, z jakich modułów się składa; nie da się jej tu zmienić."
   },
   "mqtt": {
     "title": "Integracja MQTT",
@@ -944,5 +959,47 @@
     "chk_enable_size_warning": "Ostrzegaj, gdy plik bazy danych przekroczy:",
     "lbl_size_threshold": "Próg:",
     "denied": "Ta zmiana wymaga uprawnień Engineer."
+  },
+  "project_format": {
+    "unreadable": "Nie można odczytać pliku projektu: {detail}",
+    "not_json": "Plik nie jest poprawnym plikiem projektu EPW: {detail}",
+    "not_object": "Plik projektu nie zawiera obiektu JSON.",
+    "wrong_format": "Plik nie jest projektem EPW (brak lub nieprawidłowy znacznik 'format').",
+    "missing_field": "Brak wymaganego pola {field}.",
+    "invalid_required": "Wymagane pole {field} ma nieprawidłową wartość (oczekiwano {expected}, jest {actual}).",
+    "newer_schema": "Plik ma wersję formatu {version}, nowszą niż obsługiwana ({supported}). Zaktualizuj program, żeby go otworzyć.",
+    "wrong_type_default": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - użyto wartości domyślnej.",
+    "wrong_type_skipped": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - rekord pominięty.",
+    "wrong_type_empty": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - traktowane jako puste.",
+    "record_not_object": "Wpis {field} nie jest obiektem - pominięty.",
+    "unknown_field": "Nieznane pole {field} - zignorowane.",
+    "duplicate_id": "{field} powtarza identyfikator '{value}' - zachowano tylko pierwsze wystąpienie."
+  },
+  "startup": {
+    "title": "Problemy przy uruchomieniu",
+    "intro": "EPW OS uruchomił się, ale wykrył poniższe problemy. Każdy z nich jest też widoczny na stronie Alarmy.",
+    "project_missing": "Brak pliku projektu {path}. Sterownik działa z pustym projektem - wgraj projekt.epw przygotowany w Studio.",
+    "project_refused": "Plik projektu {path} nie został wczytany. Sterownik działa z pustym projektem. Powód:",
+    "project_warnings": "Plik projektu {path} wczytano z ostrzeżeniami ({count}) - szczegóły są w logu.",
+    "state_missing": "Brak pliku stanu {path}: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
+    "state_damaged": "Plik stanu {path} jest uszkodzony: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
+    "composition_logic": "Plik logiki {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z logiki.",
+    "composition_screen": "Plik ekranu {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z ekranu."
+  },
+  "migration": {
+    "source_unreadable": "Nie można odczytać {path}: {detail}",
+    "source_not_legacy": "{path} nie jest starym plikiem project.json runtime.",
+    "target_unreadable": "{path} istnieje, ale nie da się go odczytać ({reason}) - pozostaje nietknięty.",
+    "card_not_ai": "Karta {card} już istnieje i nie jest kartą AI.",
+    "state_write_failed": "Nie udało się zapisać {path}.",
+    "done": "Zaimportowano {source} do {target} (rewizja {revision}).",
+    "modules": "Nowy projekt, moduły: {modules}",
+    "points_added": "Dodane punkty analogowe: {count}",
+    "points_kept": "Już w projekcie, pozostawione bez zmian: {addresses}",
+    "counters_migrated": "Liczniki łączeń przeniesione do pliku stanu: {count}",
+    "counters_not_migrated": "Liczniki łączeń nieprzeniesione (brak takiego punktu w projekcie - dla starych nazw DI<n> użyj --flat-di-card, gdy karta DI już istnieje): {names}",
+    "settings": "Przeniesione ustawienia sterownika: {keys}",
+    "left_to_studio": "Pozostawione dla Studio (struktura, nie importowana): {keys}",
+    "source_kept": "{source} nie został zmieniony i zostaje jako kopia."
   }
 }

@@ -21,6 +21,8 @@ _COL_CLOSES = 6
 _COL_OPENS = 7
 _COL_CLOSED_TIME = 8
 _COL_NOTES = 9
+_COL_LOCATION = 10
+_COL_TECHNICAL_NOTE = 11
 _COUNTER_COLUMNS = (_COL_CLOSES, _COL_OPENS, _COL_CLOSED_TIME)
 
 
@@ -81,7 +83,8 @@ class SwitchingThresholdDialog(QDialog):
 
 
 class PageDigitalInputs(QWidget):
-    def __init__(self, tag_manager, access_manager, switching_counters=None, service_notes=None, parent=None):
+    def __init__(self, tag_manager, access_manager, switching_counters=None, service_notes=None, parent=None,
+                 descriptions_editable=True):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.access_manager = access_manager
@@ -96,6 +99,10 @@ class PageDigitalInputs(QWidget):
         # None in isolated widget tests; the Notes button still opens
         # (viewing/adding both simply show nothing/refuse gracefully).
         self.service_notes = service_notes
+        # projekt.epw: a point's description, location and technical note
+        # come from the project's point registry (Studio) - shown here,
+        # not edited here (task "runtime czyta projekt.epw" 3.1).
+        self.descriptions_editable = descriptions_editable
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -107,13 +114,14 @@ class PageDigitalInputs(QWidget):
 
         # Row count set below, once self._tags (task "migracja
         # adresacji" - one row per real DI tag) is known.
-        self.table = QTableWidget(0, 10)  # Address, Tag, Description, State, LED, Timestamp, Closes, Opens, Closed Time, Notes
+        self.table = QTableWidget(0, 12)  # Address, Tag, Description, State, LED, Timestamp, Closes, Opens, Closed Time, Notes, Location, Technical note
         self.table.setHorizontalHeaderLabels([
             tr("pages.common.col_address"), tr("pages.common.col_tag"),
             tr("pages.common.col_description"), tr("pages.common.col_state"),
             tr("pages.common.col_led"), tr("pages.common.col_timestamp"),
             tr("pages.common.col_closes"), tr("pages.common.col_opens"),
             tr("pages.common.col_closed_time"), tr("pages.common.col_notes"),
+            tr("pages.common.col_location"), tr("pages.common.col_technical_note"),
         ])
         # Task: podpowiedzi - "naglowki kolumn, zwlaszcza mniej
         # oczywiste". Tag/Description/State are already self-explanatory
@@ -123,10 +131,11 @@ class PageDigitalInputs(QWidget):
             tr("pages.common.tooltip_col_led"), tr("pages.common.tooltip_col_timestamp"),
             tr("pages.common.tooltip_col_closes"), tr("pages.common.tooltip_col_opens"),
             tr("pages.common.tooltip_col_closed_time"), tr("pages.common.tooltip_col_notes"),
+            tr("pages.common.tooltip_from_project"), tr("pages.common.tooltip_from_project"),
         ])
 
         # Address, Tag, Description, State, LED, Timestamp, Closes, Opens, Closed Time, Notes
-        set_resizable_columns(self.table.horizontalHeader(), [85, 75, 300, 75, 45, 160, 60, 60, 110, 70])
+        set_resizable_columns(self.table.horizontalHeader(), [85, 75, 300, 75, 45, 160, 60, 60, 110, 70, 120, 220])
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         self.table.verticalHeader().setVisible(False)
@@ -181,6 +190,14 @@ class PageDigitalInputs(QWidget):
             self.table.setItem(i, _COL_CLOSES, closes_item)
             self.table.setItem(i, _COL_OPENS, opens_item)
             self.table.setItem(i, _COL_CLOSED_TIME, closed_time_item)
+            location_item = QTableWidgetItem(getattr(tag, "location", "") if tag else "")
+            note_item = QTableWidgetItem(getattr(tag, "technical_note", "") if tag else "")
+            for info_item in (location_item, note_item):
+                info_item.setFlags(info_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(i, _COL_LOCATION, location_item)
+            self.table.setItem(i, _COL_TECHNICAL_NOTE, note_item)
+            if not self.descriptions_editable:
+                desc_item.setToolTip(tr("pages.common.tooltip_from_project"))
 
             # Simulated LED widget
             led_container = QWidget()
@@ -253,7 +270,7 @@ class PageDigitalInputs(QWidget):
         (its get_tag() already matches the displayed text, so
         on_item_edited()'s own "did the text actually change" guard
         catches it first) but not something to rely on."""
-        can_edit = self.access_manager.has_access(AccessLevel.ENGINEER)
+        can_edit = self.access_manager.has_access(AccessLevel.ENGINEER) and self.descriptions_editable
         self.table.blockSignals(True)
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 2)
@@ -489,6 +506,11 @@ class PageDigitalInputs(QWidget):
         tag = self.tag_manager.get_tag(tag_name)
         old_desc = tag.description if tag else ""
         if new_desc == old_desc:
+            return
+        if not self.descriptions_editable:
+            self.table.blockSignals(True)
+            item.setText(old_desc)
+            self.table.blockSignals(False)
             return
 
         # Execution-time re-check (Task: real per-level permissions) -

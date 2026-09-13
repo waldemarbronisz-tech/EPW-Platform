@@ -184,6 +184,19 @@ def get_alarms(core=Depends(get_core)):
     ]
 
 
+@app.get("/api/v1/project")
+def get_project(core=Depends(get_core)):
+    """Which project this controller runs and which revision of it (task
+    "runtime czyta projekt.epw", 5.2): name, description, author, dates,
+    `revision`, `modified_by` ("studio" or "panel"), the module
+    composition and counts. What Studio reads before sending a project,
+    so it can stop when the controller already holds a newer revision
+    (SPEC_PROJEKT_EPW.md, "Wersjonowanie"). Read-only and unauthenticated
+    - the same reasoning as /health, /tags and /alarms: nothing here is
+    beyond what a User-level panel viewer already sees."""
+    return core.project_manager.get_project_header()
+
+
 @app.post("/api/v1/commands")
 def issue_command(cmd: CommandRequest, core=Depends(get_core), level: str = Depends(_require_operator)):
     """Issues a command through the exact same path a real Force button

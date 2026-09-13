@@ -169,7 +169,10 @@
     "synoptic_no_warnings": "None.",
     "synoptic_summary": "Synoptic screen loaded: {name}\n\nObjects: {objects}\nDevices: {devices}\n  SWITCHED: {switched}\n  SIGNAL: {signal}\n  MEASURED: {measured}\n  MODULATED: {modulated}\n  SELECTOR: {selector}\n\nWarnings:\n{warnings}",
     "ok": "OK",
-    "close": "Close"
+    "close": "Close",
+    "project_epw_filter": "EPW project (*.epw)",
+    "project_installed_restart": "The project file has been installed. Restart EPW OS to run the controller with it.",
+    "project_install_refused": "The project file was not installed: {reason}"
   },
   "settings": {
     "language_section": "LANGUAGE",
@@ -227,7 +230,10 @@
     "lbl_do_described": "Digital Outputs described:",
     "lbl_logic_project": "Logic project:",
     "logic_not_configured": "Not configured",
-    "lbl_project_path": "Project file:"
+    "lbl_project_path": "Project file:",
+    "from_project": "Name, description and author come from projekt.epw and are edited in Studio.",
+    "lbl_revision": "Revision:",
+    "lbl_modified_by": "Last saved by:"
   },
   "pin_prompt": {
     "title": "{level} ACCESS REQUIRED",
@@ -324,7 +330,10 @@
       "tooltip_col_opens": "Total number of open operations recorded for this device (mechanical wear counter).",
       "tooltip_col_closed_time": "Total accumulated time this device has spent in the closed state.",
       "tooltip_col_notes": "Service history for this device - click Notes to view or add an entry.",
-      "tooltip_status_since": "In this state since {time}."
+      "tooltip_status_since": "In this state since {time}.",
+      "col_location": "Location",
+      "col_technical_note": "Technical note",
+      "tooltip_from_project": "Defined in the project's point registry - edit it in Studio."
     },
     "digital_inputs": {
       "menu_force_on": "Force ON",
@@ -368,7 +377,8 @@
       "msgbox_add_duplicate": "Could not add '{tag}' - that name is already in use.",
       "msgbox_remove_title": "Remove Point",
       "msgbox_remove_select_first": "Select a point to remove first.",
-      "msgbox_remove_confirm": "Remove analog point '{tag}'?\nThis cannot be undone."
+      "msgbox_remove_confirm": "Remove analog point '{tag}'?\nThis cannot be undone.",
+      "settings_only_note": "Analog points, their descriptions and technical notes come from the project's point registry (Studio). Here you can change the unit and the scaling settings."
     },
     "audit_log": {
       "info": "Independent security/configuration trail: logins, PIN changes, Protection Settings changes, language changes. Not the same as the operational Event Recorder.",
@@ -443,7 +453,9 @@
       "confirm_title": "Start Protection Test",
       "confirm_text": "PRE-TEST CHECK: PASS\n\nAll safety checks cleared.\nStart the automated verification test now?",
       "term_test_aborted": "TEST ABORTED BY OPERATOR",
-      "term_completed": "■ Completed"
+      "term_completed": "■ Completed",
+      "lbl_select_apparatus": "Apparatus under test:",
+      "no_testable_apparatus": "The project has no apparatus with both an output and a feedback point"
     },
     "popups": {
       "default_device": "Device",
@@ -646,7 +658,8 @@
       "lbl_output_tag": "Output tag",
       "err_point_required": "Select an analog point.",
       "err_lower_above_upper": "The lower threshold can't be above the upper threshold.",
-      "remove_confirm_message": "Remove process protection '{name}'?"
+      "remove_confirm_message": "Remove process protection '{name}'?",
+      "settings_only_note": "Process protections are defined in the project (Studio). Here you can change their settings: thresholds, hysteresis, delay and on/off."
     },
     "power_quality": {
       "wave_voltage_title": "VOLTAGE L1, L2, L3",
@@ -875,7 +888,8 @@
       "tooltip_retention_max_events": "The oldest events are deleted once this many are stored. 0 = unlimited.",
       "lbl_retention_max_days": "Maximum age (days)",
       "tooltip_retention_max_days": "Events older than this are deleted. 0 = unlimited.",
-      "retention_unlimited": "Unlimited"
+      "retention_unlimited": "Unlimited",
+      "settings_only_note": "Zones, lines and power supervision are defined in the project (Studio). Here you can change their settings: exit and entry delays, false-alarm filters and value windows."
     }
   },
   "feature_config": {
@@ -891,7 +905,8 @@
     "warn_logic_uses_tags": "Your logic program references tags this feature publishes - they will disappear.",
     "confirm_disable_intro": "Disabling this will:",
     "tooltip_engineer_mode_needs_protection": "Engineer Mode verifies the ACTUAL configured Protection Settings - it needs that feature enabled to mean anything, so it's unavailable while Protection Settings is off.",
-    "tooltip_intrusion_subpage_needs_intrusion": "Event History and Configuration both view/edit the Intrusion Alarm System's own data - they're unavailable while the Intrusion Alarm System itself is off."
+    "tooltip_intrusion_subpage_needs_intrusion": "Event History and Configuration both view/edit the Intrusion Alarm System's own data - they're unavailable while the Intrusion Alarm System itself is off.",
+    "composition_from_project": "This controller's composition is defined in the project (Studio). The list shows which modules it includes; it cannot be changed here."
   },
   "mqtt": {
     "title": "MQTT Integration",
@@ -944,5 +959,47 @@
     "chk_enable_size_warning": "Warn when the database file exceeds:",
     "lbl_size_threshold": "Threshold:",
     "denied": "This change requires Engineer access."
+  },
+  "project_format": {
+    "unreadable": "Cannot read the project file: {detail}",
+    "not_json": "The file is not a valid EPW project file: {detail}",
+    "not_object": "The project file does not contain a JSON object.",
+    "wrong_format": "The file is not an EPW project (missing or wrong 'format' marker).",
+    "missing_field": "Required field {field} is missing.",
+    "invalid_required": "Required field {field} has an invalid value (expected {expected}, got {actual}).",
+    "newer_schema": "The file uses format version {version}, newer than the supported version {supported}. Update the program to open it.",
+    "wrong_type_default": "Field {field} has the wrong type (expected {expected}, got {actual}) - the default value is used.",
+    "wrong_type_skipped": "Field {field} has the wrong type (expected {expected}, got {actual}) - the record is skipped.",
+    "wrong_type_empty": "Field {field} has the wrong type (expected {expected}, got {actual}) - treated as empty.",
+    "record_not_object": "Entry {field} is not an object - skipped.",
+    "unknown_field": "Unknown field {field} - ignored.",
+    "duplicate_id": "{field} repeats the identifier '{value}' - only the first occurrence is kept."
+  },
+  "startup": {
+    "title": "Startup problems",
+    "intro": "EPW OS started, but found the problems below. Each one is also shown on the Alarms page.",
+    "project_missing": "There is no project file at {path}. The controller runs with an empty project - install the projekt.epw prepared in Studio.",
+    "project_refused": "The project file {path} was not loaded. The controller runs with an empty project. Reason:",
+    "project_warnings": "The project file {path} was loaded with {count} warning(s) - the details are in the log.",
+    "state_missing": "The runtime state file {path} does not exist: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
+    "state_damaged": "The runtime state file {path} is damaged: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
+    "composition_logic": "The logic file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the logic.",
+    "composition_screen": "The screen file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the screen."
+  },
+  "migration": {
+    "source_unreadable": "Cannot read {path}: {detail}",
+    "source_not_legacy": "{path} is not an old runtime project.json.",
+    "target_unreadable": "{path} exists but cannot be read ({reason}) - it is left untouched.",
+    "card_not_ai": "Card {card} already exists and is not an AI card.",
+    "state_write_failed": "Could not write {path}.",
+    "done": "Imported {source} into {target} (revision {revision}).",
+    "modules": "New project, modules: {modules}",
+    "points_added": "Analog points added: {count}",
+    "points_kept": "Already in the project, left unchanged: {addresses}",
+    "counters_migrated": "Switching counters moved to the state file: {count}",
+    "counters_not_migrated": "Switching counters not moved (no such point in the project - use --flat-di-card for the old DI<n> names once the DI card exists): {names}",
+    "settings": "Controller settings moved: {keys}",
+    "left_to_studio": "Left for Studio (structure, not imported): {keys}",
+    "source_kept": "{source} was not changed and stays as a copy."
   }
 }

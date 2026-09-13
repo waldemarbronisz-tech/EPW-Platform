@@ -5,6 +5,7 @@ same as every other core-ish module in this suite, even though this file
 lives under gui/.
 """
 
+from pathlib import Path
 import re
 
 import pytest
@@ -56,7 +57,7 @@ def test_build_stylesheet_raises_on_incomplete_colors():
 # program before this task -----------------------------------------------
 
 def test_industrial_stylesheet_matches_the_pre_theme_original_byte_for_byte():
-    with open("epw_os/tests/fixtures/original_industrial_qss.txt", encoding="utf-8") as f:
+    with open(Path(__file__).resolve().parent / "fixtures" / "original_industrial_qss.txt", encoding="utf-8") as f:
         original = f.read()
 
     generated = style.build_stylesheet(themes.get_theme(0)["colors"])

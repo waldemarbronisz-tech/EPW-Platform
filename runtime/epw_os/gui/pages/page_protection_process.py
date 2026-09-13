@@ -22,7 +22,7 @@ class ProcessProtectionConfigDialog(QDialog):
     candidates(), itself reusing intrusion_manager.list_analog_input_
     candidates() directly)."""
 
-    def __init__(self, analog_candidates, protection=None, parent=None):
+    def __init__(self, analog_candidates, protection=None, parent=None, settings_only=False):
         super().__init__(parent)
         self.is_new = protection is None
         self.setObjectName("IndustrialDialog")
@@ -48,6 +48,10 @@ class ProcessProtectionConfigDialog(QDialog):
             if idx >= 0:
                 self.combo_tag.setCurrentIndex(idx)
         form.addRow(tr("pages.protection_process.lbl_analog_point"), self.combo_tag)
+        # projekt.epw: name and bound point are structure (Studio); thresholds,
+        # hysteresis, delay and on/off are settings.
+        self.edit_name.setReadOnly(settings_only)
+        self.combo_tag.setEnabled(not settings_only)
 
         self.spin_upper = QDoubleSpinBox()
         self.spin_upper.setRange(-1_000_000.0, 1_000_000.0)
@@ -145,10 +149,11 @@ class PageProtectionProcess(QWidget):
     page has no equivalent "installer does this once" framing, it's an
     ordinary status+config page like Electrical)."""
 
-    def __init__(self, process_protection_manager, access_manager, parent=None):
+    def __init__(self, process_protection_manager, access_manager, parent=None, structure_editable=True):
         super().__init__(parent)
         self.process_protection_manager = process_protection_manager
         self.access_manager = access_manager
+        self.structure_editable = structure_editable
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -173,6 +178,12 @@ class PageProtectionProcess(QWidget):
         self.btn_remove.clicked.connect(self._remove)
         toolbar.addWidget(self.btn_remove)
         layout.addLayout(toolbar)
+        if not self.structure_editable:
+            self.btn_add.setVisible(False)
+            self.btn_remove.setVisible(False)
+            settings_note = QLabel(tr("pages.protection_process.settings_only_note"))
+            settings_note.setWordWrap(True)
+            layout.addWidget(settings_note)
 
         self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels([
@@ -254,8 +265,8 @@ class PageProtectionProcess(QWidget):
         return self.process_protection_manager.get_protection(protection_id)
 
     def _add(self):
-        if self.process_protection_manager is None:  # isolated widget test / mock - nothing to configure
-            return
+        if self.process_protection_manager is None or not self.structure_editable:
+            return  # isolated widget test / mock, or protections defined in the project (Studio)
         if not self.window().request_access(AccessLevel.ENGINEER):
             return
         candidates = self.process_protection_manager.get_analog_input_candidates()
@@ -276,7 +287,8 @@ class PageProtectionProcess(QWidget):
         if not self.window().request_access(AccessLevel.ENGINEER):
             return
         candidates = self.process_protection_manager.get_analog_input_candidates()
-        dialog = ProcessProtectionConfigDialog(candidates, protection, self)
+        dialog = ProcessProtectionConfigDialog(candidates, protection, self,
+                                                settings_only=not self.structure_editable)
         if dialog.exec():
             self.process_protection_manager.update_protection(
                 protection["id"], name=dialog.result_name(), analog_tag=dialog.result_analog_tag(),
@@ -286,8 +298,8 @@ class PageProtectionProcess(QWidget):
         self.refresh()
 
     def _remove(self):
-        if self.process_protection_manager is None:  # isolated widget test / mock - nothing to configure
-            return
+        if self.process_protection_manager is None or not self.structure_editable:
+            return  # isolated widget test / mock, or protections defined in the project (Studio)
         protection = self._selected_protection()
         if protection is None:
             return

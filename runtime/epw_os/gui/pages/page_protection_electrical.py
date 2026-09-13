@@ -25,11 +25,13 @@ class PageProtectionElectrical(QWidget):
     ProtectionManager instance Engineer Mode's verification page also
     depends on (main_window.py)."""
 
-    def __init__(self, tag_manager, access_manager, parent=None):
+    def __init__(self, tag_manager, access_manager, parent=None, project_manager=None):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.access_manager = access_manager
         self.protection_manager = ProtectionManager()
+        self.project_manager = project_manager
+        self._apply_project_stage_values()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -90,6 +92,44 @@ class PageProtectionElectrical(QWidget):
         self.access_manager.level_changed.connect(self._refresh_reset_button)
         self._refresh_reset_button()
         get_theme_manager().theme_changed.connect(self.refresh_theme)
+
+    def _apply_project_stage_values(self):
+        """Task "runtime czyta projekt.epw" 3.4: the stage values the project
+        carries (Studio's electrical protection settings) replace the
+        built-in defaults. A stage the project does not list keeps its
+        default; the catalog of functions/stages itself is ADA01's and
+        never comes from the project."""
+        getter = getattr(self.project_manager, "get_electrical_protection_stages", None)
+        if getter is None:
+            return
+        for record in getter():
+            function = self.protection_manager.protections.get(record.get("function_id"))
+            stage = next((s for s in function.stages if s.name == record.get("stage_name")), None) if function else None
+            if stage is None:
+                continue
+            for field in ("enabled", "setting", "hysteresis", "delay_ms", "action"):
+                if record.get(field) is not None:
+                    setattr(stage, field, record[field])
+
+    def _persist_stage(self, prot_id, stage):
+        """A value changed here goes back to the project - with projekt.epw
+        that is a new revision saved by "panel" (task etap 4); the audit
+        entry is written by the caller and by ProjectManager itself."""
+        setter = getattr(self.project_manager, "set_electrical_protection_stages", None)
+        if setter is None:
+            return
+        stages = self.project_manager.get_electrical_protection_stages()
+        record = {"function_id": prot_id, "stage_name": stage.name, "enabled": bool(stage.enabled),
+                  "setting": float(stage.setting), "hysteresis": float(stage.hysteresis or 0.0),
+                  "delay_ms": int(stage.delay_ms), "action": stage.action}
+        for index, existing in enumerate(stages):
+            if existing.get("function_id") == prot_id and existing.get("stage_name") == stage.name:
+                stages[index] = {**existing, **record}
+                break
+        else:
+            stages.append(record)
+        setter(stages)
+        self.project_manager.save_project()
 
     def refresh_theme(self, *_):
         """Status/grouping colors are baked into QTreeWidgetItems at
@@ -256,6 +296,7 @@ class PageProtectionElectrical(QWidget):
             self._deny_and_revert_checkbox(checkbox, stage.enabled)
             return
         stage.enabled = enabled
+        self._persist_stage(prot_id, stage)
         action = "Enabled" if enabled else "Disabled"
         ui_logger.log("WARNING", "PROTECTION", f"{prot_id} {stage.name}", f"Stage {action}", "Engineer", self.tag_manager.mode, "")
         self._audit(f"{prot_id} {stage.name} stage {action.lower()}")
@@ -281,6 +322,7 @@ class PageProtectionElectrical(QWidget):
         popup.move(spinbox.mapToGlobal(spinbox.rect().bottomLeft()))
         if popup.exec():
             setattr(stage, attr, new_val)
+            self._persist_stage(prot_id, stage)
             ui_logger.log("WARNING", "PROTECTION", f"{prot_id} {stage.name}", f"{field} changed from {old_val} to {new_val}", "Engineer", self.tag_manager.mode, "")
             self._audit(f"{prot_id} {stage.name} {field} changed from {old_val} to {new_val}")
         else:
@@ -297,6 +339,7 @@ class PageProtectionElectrical(QWidget):
             combo.blockSignals(False)
             return
         stage.action = text
+        self._persist_stage(prot_id, stage)
         ui_logger.log("WARNING", "PROTECTION", f"{prot_id} {stage.name}", f"Action changed to {text}", "Engineer", self.tag_manager.mode, "")
         self._audit(f"{prot_id} {stage.name} action changed to {text}")
 

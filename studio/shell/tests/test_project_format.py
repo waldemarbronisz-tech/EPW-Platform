@@ -165,8 +165,16 @@ def test_rejects_a_file_without_the_format_marker(tmp_path):
     with gzip.open(path, "wb") as f:
         f.write(json.dumps({"schema_version": 1, "project": {"name": "x"}}).encode("utf-8"))
 
-    with pytest.raises(ProjectFormatError, match="nie jest projektem EPW"):
+    with pytest.raises(ProjectFormatError) as refusal:
         load_project(path)
+    assert refusal.value.key == "wrong_format"
+    # The message itself is Studio's own translation of that key.
+    from studio.shell.i18n import set_language, tr
+    set_language("pl")
+    try:
+        assert "nie jest projektem EPW" in tr("project_format." + refusal.value.key)
+    finally:
+        set_language("en")
 
 
 def test_rejects_a_newer_schema_version_explicitly(tmp_path):
@@ -183,8 +191,16 @@ def test_rejects_a_newer_schema_version_explicitly(tmp_path):
             "project": {"name": "From the future"},
         }).encode("utf-8"))
 
-    with pytest.raises(ProjectFormatError, match="nowszą niż obsługiwana"):
+    with pytest.raises(ProjectFormatError) as refusal:
         load_project(path)
+    assert refusal.value.key == "newer_schema"
+    assert refusal.value.params == {"version": SCHEMA_VERSION + 1, "supported": SCHEMA_VERSION}
+    from studio.shell.i18n import set_language, tr
+    set_language("pl")
+    try:
+        assert "nowszą niż obsługiwana" in tr("project_format.newer_schema", **refusal.value.params)
+    finally:
+        set_language("en")
 
 
 def test_rejects_a_corrupt_non_gzip_file(tmp_path):

@@ -172,6 +172,15 @@ class ProcessProtectionManager:
     # --- candidates (Task: "korzysta z listy punktow analogowych, ktora
     # juz istnieje") ---------------------------------------------------
 
+    def _structure_editable(self) -> bool:
+        """False with projekt.epw: which protections exist, their names and
+        bound points are designed in Studio; thresholds, hysteresis, delay
+        and on/off are settings the panel may change (task "runtime czyta
+        projekt.epw" 3.4). A project manager that does not say (the unit
+        tests' fakes, an old project.json) allows everything, as before."""
+        check = getattr(self.project_manager, "structure_editable", None)
+        return True if check is None else bool(check())
+
     def get_analog_input_candidates(self) -> list:
         return list_analog_input_candidates(self.project_manager)
 
@@ -183,6 +192,9 @@ class ProcessProtectionManager:
                         level: str = None) -> "str | None":
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to add process protection {name!r}: level {level!r} is below Engineer.")
+            return None
+        if not self._structure_editable():
+            log.warning(f"Refused to add process protection {name!r}: protections are defined in the project (Studio).")
             return None
         with self._lock:
             protection_id = _next_id("PP", self._protections)
@@ -217,6 +229,13 @@ class ProcessProtectionManager:
             protection = self._protections.get(protection_id)
             if protection is None:
                 return False
+            if not self._structure_editable():
+                changed = [key for key, value in (("name", name), ("analog_tag", analog_tag))
+                           if value is not None and value != protection[key]]
+                if changed:
+                    log.warning(f"Refused to update process protection {protection_id!r}: {', '.join(changed)} "
+                                f"defined in the project (Studio) - only settings can change here.")
+                    return False
             if name is not None:
                 protection["name"] = name
             if analog_tag is not None:
@@ -241,6 +260,10 @@ class ProcessProtectionManager:
     def remove_protection(self, protection_id: str, level: str = None) -> bool:
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to remove process protection {protection_id!r}: level {level!r} is below Engineer.")
+            return False
+        if not self._structure_editable():
+            log.warning(f"Refused to remove process protection {protection_id!r}: protections are defined in the "
+                        f"project (Studio).")
             return False
         with self._lock:
             protection = self._protections.pop(protection_id, None)

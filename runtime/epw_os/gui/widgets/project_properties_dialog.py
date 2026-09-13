@@ -74,6 +74,13 @@ class ProjectPropertiesDialog(QDialog):
         self.lbl_modified = QLabel(_format_timestamp(meta["modified"]) or never)
         form.addRow(tr("project_properties.lbl_modified"), self.lbl_modified)
 
+        is_editable = getattr(project_manager, "structure_editable", None)
+        self.structure_editable = True if is_editable is None else bool(is_editable())
+        if not self.structure_editable:
+            from_project = QLabel(tr("project_properties.from_project"))
+            from_project.setWordWrap(True)
+            layout.addWidget(from_project)
+
         summary_header = QLabel(tr("project_properties.summary_header"))
         summary_header.setObjectName("SectionHeader")
         layout.addWidget(summary_header)
@@ -99,6 +106,12 @@ class ProjectPropertiesDialog(QDialog):
         logic_text = logic_file if logic_file else tr("project_properties.logic_not_configured")
         summary_form.addRow(tr("project_properties.lbl_logic_project"), QLabel(logic_text))
 
+        if hasattr(project_manager, "get_project_header") and project_manager.is_epw_project():
+            header_info = project_manager.get_project_header()
+            if header_info.get("loaded"):
+                summary_form.addRow(tr("project_properties.lbl_revision"), QLabel(str(header_info["revision"])))
+                summary_form.addRow(tr("project_properties.lbl_modified_by"), QLabel(header_info["modified_by"]))
+
         path_label = QLabel(getattr(project_manager, "project_file", "") or "")
         path_label.setWordWrap(True)
         summary_form.addRow(tr("project_properties.lbl_project_path"), path_label)
@@ -118,7 +131,8 @@ class ProjectPropertiesDialog(QDialog):
         self._apply_edit_permission()
 
     def _apply_edit_permission(self):
-        can_edit = self.access_manager is not None and self.access_manager.has_access(AccessLevel.ENGINEER)
+        can_edit = (self.access_manager is not None and self.access_manager.has_access(AccessLevel.ENGINEER)
+                    and self.structure_editable)
         for edit in (self.edit_name, self.edit_description, self.edit_location, self.edit_author):
             edit.setReadOnly(not can_edit)
         self.btn_save.setEnabled(can_edit)

@@ -57,12 +57,16 @@ ARCHITECTURE
   not a fixed slot count, not a migration target (this is a brand new
   section; GRANICE requires no migration for existing projects, and
   there is nothing to migrate FROM).
-- BYPASS is deliberately session-only, never persisted - same reasoning
-  epw_os/core/training_mode.py already established for its own on/off
-  flag: a restarted system must never silently come back up with a
-  sensor invisible to arming/alarm without a person re-deciding that
-  today, on this run. A bypass is recorded to the audit log (Task
-  requirement) but is gone on the next restart.
+- BYPASS and each zone's ARMED/DISARMED choice are operation state (task
+  "runtime czyta projekt.epw", SPEC_PROJEKT_EPW.md "Plik stanu" -
+  "co uzbrojone, co wykluczone"): written to runtime_state.json the
+  moment they change (_persist_operation_state()) and restored on the
+  next start (_restore_operation_state()) - an armed zone comes back
+  armed after a power cut, a bypassed line stays bypassed, and each
+  restore is written to the audit log so nobody is surprised by it. They
+  never go into the project file. Zones and lines themselves are the
+  project's structure: with projekt.epw they are designed in Studio and
+  the panel may only change their settings (see _structure_editable()).
 
 ZONE STATE MACHINE (Task 3's 5 states, exactly)
 ------------------------------------------------
@@ -581,7 +585,7 @@ class IntrusionManager:
         self._zone_timer = {}     # zone_id -> threading.Timer or None
         self._zone_deadline = {}  # zone_id -> time.monotonic() when the current countdown ends
         self._entry_trigger_line = {}  # zone_id -> line_id that started the current ENTRY_DELAY
-        self._line_bypassed = {}  # line_id -> bool, session-only (see module docstring)
+        self._line_bypassed = {}  # line_id -> bool, operation state persisted at once (see module docstring)
 
         # --- false-alarm filtering (Task, part 2) - all session-only,
         # same reasoning as _line_bypassed: a restarted system starts
@@ -676,6 +680,14 @@ class IntrusionManager:
             self._lines[line["id"]] = line
             self._line_bypassed[line["id"]] = False
             self._line_supervision_started_at[line["id"]] = now
+        get_bypassed = getattr(self.project_manager, "get_intrusion_bypassed_lines", None)
+        restored_bypass = []
+        for line_id in (get_bypassed() if get_bypassed is not None else []):
+            if line_id in self._lines:
+                self._line_bypassed[line_id] = True
+                restored_bypass.append(line_id)
+            else:
+                log.warning(f"Line {line_id!r} was bypassed before the restart but is not in the project any more - ignored.")
         for line_id, raw in self.project_manager.get_intrusion_line_supervision().items():
             if line_id in self._lines:
                 self._line_life[line_id] = _normalize_line_life_record(raw, line_id=line_id)
@@ -705,14 +717,15 @@ class IntrusionManager:
             self._refresh_zone_alarm_memory_tags(zone_id)
         self._refresh_system_tags()
         self._recompute_power_state()
+        self._restore_operation_state(restored_bypass)
 
     def _persist_zones(self):
         self.project_manager.set_intrusion_zones(list(self._zones.values()))
         self.project_manager.save_project()
 
     def _persist_lines(self):
-        # Bypass is intentionally NOT part of the persisted record - see
-        # module docstring. Strip it defensively even though _lines
+        # Bypass is not part of the line record - it is operation state,
+        # persisted separately (see _persist_operation_state()). Strip it defensively even though _lines
         # itself never carries the key, so a future field addition can't
         # silently leak a runtime-only flag into project.json.
         self.project_manager.set_intrusion_lines(
@@ -730,6 +743,71 @@ class IntrusionManager:
             snapshot = {zid: dict(record) for zid, record in self._zone_alarm_memory.items()}
         self.project_manager.set_intrusion_alarm_memory(snapshot)
         self.project_manager.save_project()
+
+    def _persist_operation_state(self):
+        """Which zones are armed and which lines are bypassed, written to
+        disk before the calling action returns (task "runtime czyta
+        projekt.epw" 2.2; SPEC_PROJEKT_EPW.md: after a power cut the alarm
+        comes back in the state it was in, and a write that waits for
+        shutdown or a periodic flush loses exactly that). Armed = any state
+        other than DISARMED - EXIT_DELAY, ARMED, ENTRY_DELAY and ALARM all
+        mean an operator armed the zone. A project manager without
+        operation-state storage (the unit tests' fakes) is skipped."""
+        setter = getattr(self.project_manager, "set_intrusion_operation_state", None)
+        if setter is None:
+            return
+        with self._lock:
+            armed = [zone_id for zone_id, state in self._zone_state.items() if state != ZoneState.DISARMED]
+            bypassed = [line_id for line_id, value in self._line_bypassed.items() if value]
+        if setter(armed, bypassed) is False:
+            log.error("Could not write the intrusion arming/bypass state to disk - a power loss now would "
+                      "bring the previous state back.")
+
+    def _restore_operation_state(self, restored_bypass):
+        """Arming as it was before the restart (see
+        _persist_operation_state()). A zone comes back ARMED directly - not
+        through its exit delay again; whatever violates it from now on
+        alarms as usual. Zones the project no longer has are dropped with a
+        log line. Every restored zone and bypass is audited."""
+        getter = getattr(self.project_manager, "get_intrusion_armed_zones", None)
+        armed = list(getter()) if getter is not None else []
+        restored_zones = []
+        with self._lock:
+            for zone_id in armed:
+                if zone_id in self._zones:
+                    self._set_zone_state(zone_id, ZoneState.ARMED)
+                    restored_zones.append(zone_id)
+                else:
+                    log.warning(f"Zone {zone_id!r} was armed before the restart but is not in the project any more "
+                                f"- ignored.")
+        for zone_id in restored_zones:
+            name = self._zones[zone_id]["name"]
+            detail = f"Zone '{name}' restored ARMED after restart (arming state kept in runtime_state.json)"
+            log.warning(detail)
+            if self.audit_logger is not None:
+                self.audit_logger.record("INTRUSION_ZONE_ARM_RESTORED", "SYSTEM", detail, success=True)
+            self._record_alarm_history("INTRUSION_ZONE_ARM_RESTORED", "SYSTEM", detail, zone_id=zone_id, zone_name=name)
+        for line_id in restored_bypass:
+            line = self._lines[line_id]
+            zone = self._zones.get(line["zone_id"])
+            zone_name = zone["name"] if zone else line["zone_id"]
+            detail = f"Zone '{zone_name}': line '{line['name']}' bypass restored after restart"
+            if self.audit_logger is not None:
+                self.audit_logger.record("INTRUSION_LINE_BYPASS_RESTORED", "SYSTEM", detail, success=True)
+            self._record_alarm_history("INTRUSION_LINE_BYPASS_RESTORED", "SYSTEM", detail, zone_id=line["zone_id"],
+                                        zone_name=zone_name, line_id=line_id, line_name=line["name"])
+        if len(restored_zones) != len(armed):
+            self._persist_operation_state()
+
+    def _structure_editable(self) -> bool:
+        """False when the project is projekt.epw: zones, lines, their
+        names/bindings and power supervision are structure, designed in
+        Studio (SPEC_PROJEKT_EPW.md "Trzy warstwy dostępu"); the panel
+        keeps the settings - delays and filters. A project manager that
+        does not say (the unit tests' fakes, an old project.json) allows
+        everything, as before."""
+        check = getattr(self.project_manager, "structure_editable", None)
+        return True if check is None else bool(check())
 
     def _refresh_zone_alarm_memory_tags(self, zone_id: str):
         with self._lock:
@@ -947,6 +1025,9 @@ class IntrusionManager:
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to add intrusion zone {name!r}: level {level!r} is below Engineer.")
             return None
+        if not self._structure_editable():
+            log.warning(f"Refused to add intrusion zone {name!r}: zones are defined in the project (Studio).")
+            return None
         with self._lock:
             zone_id = _next_id("Z", self._zones)
             zone = {
@@ -994,6 +1075,9 @@ class IntrusionManager:
             zone = self._zones.get(zone_id)
             if zone is None:
                 return False
+            if name is not None and name != zone["name"] and not self._structure_editable():
+                log.warning(f"Refused to rename intrusion zone {zone_id!r}: names are defined in the project (Studio).")
+                return False
             if name is not None:
                 zone["name"] = name
             if exit_delay_seconds is not None:
@@ -1011,6 +1095,9 @@ class IntrusionManager:
         unresolvable zone_id means."""
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to remove intrusion zone {zone_id!r}: level {level!r} is below Engineer.")
+            return False
+        if not self._structure_editable():
+            log.warning(f"Refused to remove intrusion zone {zone_id!r}: zones are defined in the project (Studio).")
             return False
         with self._lock:
             if zone_id not in self._zones:
@@ -1040,6 +1127,7 @@ class IntrusionManager:
             self.tag_manager.remove_tag(self._zone_tag(zone_id, suffix))
         self._persist_zones()
         self._persist_alarm_memory()
+        self._persist_operation_state()
         self._refresh_system_tags()
         return True
 
@@ -1070,6 +1158,9 @@ class IntrusionManager:
                  input_mode: str = None, parametrization: str = None, value_windows: dict = None) -> "str | None":
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to add intrusion line {name!r}: level {level!r} is below Engineer.")
+            return None
+        if not self._structure_editable():
+            log.warning(f"Refused to add intrusion line {name!r}: lines are defined in the project (Studio).")
             return None
         if line_type not in LineType._ALL:
             log.warning(f"Refused to add intrusion line {name!r}: unknown line_type {line_type!r}.")
@@ -1153,6 +1244,17 @@ class IntrusionManager:
             line = self._lines.get(line_id)
             if line is None:
                 return False
+            if not self._structure_editable():
+                requested = {"name": name, "zone_id": zone_id, "tag": tag, "normal_state": normal_state,
+                             "line_type": line_type, "input_mode": input_mode}
+                changed = [key for key, value in requested.items() if value is not None and value != line.get(key)]
+                if (parametrization is not None and line.get("input_mode") == LineInputMode.PARAMETRIZED
+                        and parametrization != line.get("parametrization")):
+                    changed.append("parametrization")
+                if changed:
+                    log.warning(f"Refused to update intrusion line {line_id!r}: {', '.join(changed)} "
+                                f"defined in the project (Studio) - only settings can change here.")
+                    return False
             if zone_id is not None and zone_id not in self._zones:
                 log.warning(f"Refused to update intrusion line {line_id!r}: unknown zone_id {zone_id!r}.")
                 return False
@@ -1214,6 +1316,9 @@ class IntrusionManager:
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to remove intrusion line {line_id!r}: level {level!r} is below Engineer.")
             return False
+        if not self._structure_editable():
+            log.warning(f"Refused to remove intrusion line {line_id!r}: lines are defined in the project (Studio).")
+            return False
         with self._lock:
             if line_id not in self._lines:
                 return False
@@ -1249,7 +1354,7 @@ class IntrusionManager:
     def bypass_line(self, line_id: str, bypassed: bool, actor: str, level: str = None) -> bool:
         """Task 1 (bypass with audit) + Task 4 ("kazdy... bypass...
         zapisuj do dziennika audytowego: kto, kiedy... ktora linia").
-        Session-only (see module docstring) - does NOT touch any
+        Persisted as operation state (see module docstring) - does NOT touch any
         already-active ALARM state (a bypass silences future violations
         of this line, it is not a way to clear an alarm already raised;
         use disarm_zone() for that)."""
@@ -1267,6 +1372,7 @@ class IntrusionManager:
             zone = self._zones.get(line["zone_id"])
             zone_name = zone["name"] if zone else line["zone_id"]
             line_name = line["name"]
+        self._persist_operation_state()
         bypass_detail = f"Zone '{zone_name}': line '{line_name}' bypass {'enabled' if bypassed else 'disabled'}"
         bypass_event = "INTRUSION_LINE_BYPASS_ON" if bypassed else "INTRUSION_LINE_BYPASS_OFF"
         if self.audit_logger is not None:
@@ -1325,6 +1431,7 @@ class IntrusionManager:
             else:
                 self._set_zone_state(zone_id, ZoneState.ARMED)
 
+        self._persist_operation_state()
         detail = f"Zone '{zone['name']}' armed"
         if violated_ids:
             names = [self._lines[lid]["name"] for lid in violated_ids]
@@ -1374,6 +1481,7 @@ class IntrusionManager:
                 if self._line_locked.get(lid, False):
                     self._line_locked[lid] = False
                     newly_unlocked.append(lid)
+        self._persist_operation_state()
         disarm_detail = f"Zone '{zone['name']}' disarmed"
         if self.audit_logger is not None:
             self.audit_logger.record("INTRUSION_ZONE_DISARMED", actor, disarm_detail, success=True)
@@ -2117,6 +2225,9 @@ class IntrusionManager:
         already has."""
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to configure power supervision: level {level!r} is below Engineer.")
+            return False
+        if not self._structure_editable():
+            log.warning("Refused to configure power supervision: its inputs are defined in the project (Studio).")
             return False
         with self._lock:
             self._power_supervision = {
