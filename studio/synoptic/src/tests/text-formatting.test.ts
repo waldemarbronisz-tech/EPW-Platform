@@ -106,7 +106,7 @@ describe('wiring (source scan)', () => {
   it('offers the Word-style groups in order: insert, style, font, size, B I U, alignment', () => {
     // The groups as they appear in the rendered bar...
     const jsx = formatBarSource.slice(formatBarSource.indexOf('export const FormatBar'));
-    const order = ['Text box', 'Paragraph style', 'title="Font"', 'Font size', 'title="Bold"', 'title="Italic"', 'title="Underline"', 'ALIGNMENTS.map('];
+    const order = ['Text box', 'Paragraph style', 'title="Font"', '<FontSizeCombo', 'title="Bold"', 'title="Italic"', 'title="Underline"', 'ALIGNMENTS.map('];
     let at = -1;
     for (const marker of order) {
       const next = jsx.indexOf(marker);
