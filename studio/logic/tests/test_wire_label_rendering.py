@@ -91,7 +91,7 @@ def test_fully_connected_labeled_wire_attaches_to_the_existing_wire_item(qsettin
     wire = Wire()
     wire.source_pin = a.outputs[0].uuid
     wire.dest_pin = n.inputs[0].uuid
-    wire.label = "Dokumentacja"
+    wire.label = "Documentation"
     window.project.add_wire(wire)
 
     window.scene.clear()

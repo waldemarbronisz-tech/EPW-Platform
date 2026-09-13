@@ -135,7 +135,7 @@ def test_signal_picker_opis_column_falls_back_when_no_label():
 
     found = _find_leaf_by_name(dialog.tree, "ELA01.DI.2")
     assert found is not None
-    assert found.text(0) == "Wejście cyfrowe (ELA)"
+    assert found.text(0) == "Digital input (ELA)"
 
 def test_signal_picker_search_matches_label_text():
     _app()

@@ -42,28 +42,20 @@ describe('ScadaTheme - Houston pipe proportions, taken from the reference file',
   });
 });
 
-describe('ConnectionLine.tsx - four passes, rounded joins, applies to every medium', () => {
-  it('draws exactly four real (non-hit-area) <Path> passes per wire', () => {
+describe('ConnectionLine.tsx - one solid line per wire, so wires that touch merge', () => {
+  it('draws a hit area, an optional selection halo and ONE visible core - no outline/shadow/highlight passes', () => {
     const pathTags = connectionLineSource.match(/<Path\b/g) ?? [];
-    // 1 invisible hit-area pass + 4 real passes (outline/fill/shadow/highlight) = 5.
-    expect(pathTags.length).toBe(5);
+    expect(pathTags.length).toBe(3);
+    expect(connectionLineSource).not.toContain('CONDUCTOR_OUTLINE');
+    expect(connectionLineSource).not.toContain('CONDUCTOR_SHADOW');
+    expect(connectionLineSource).not.toContain('CONDUCTOR_HIGHLIGHT');
   });
 
-  it('every real pass uses rounded joins and caps, not the old butt/miter', () => {
+  it('uses rounded joins and caps, so a bend or a tee has no seam', () => {
     expect(connectionLineSource).not.toContain('lineCap="butt"');
     expect(connectionLineSource).not.toContain('lineJoin="miter"');
-    const roundJoins = connectionLineSource.match(/lineJoin="round"/g) ?? [];
-    const roundCaps = connectionLineSource.match(/lineCap="round"/g) ?? [];
-    expect(roundJoins.length).toBe(4);
-    expect(roundCaps.length).toBe(4);
-  });
-
-  it('a shadow and a highlight pass both exist, each reading its own ScadaTheme offset/width/opacity constants', () => {
-    expect(connectionLineSource).toContain('CONDUCTOR_SHADOW_OFFSET_X');
-    expect(connectionLineSource).toContain('CONDUCTOR_SHADOW_OFFSET_Y');
-    expect(connectionLineSource).toContain('CONDUCTOR_SHADOW_OPACITY');
-    expect(connectionLineSource).toContain('CONDUCTOR_HIGHLIGHT_OFFSET_X');
-    expect(connectionLineSource).toContain('CONDUCTOR_HIGHLIGHT_OFFSET_Y');
+    expect((connectionLineSource.match(/lineJoin="round"/g) ?? []).length).toBe(2);
+    expect((connectionLineSource.match(/lineCap="round"/g) ?? []).length).toBe(2);
   });
 
   it('no color, thickness or offset is a literal number/hex outside ScadaTheme (source-scan, same convention as scada-symbols.test.ts)', () => {
@@ -74,7 +66,7 @@ describe('ConnectionLine.tsx - four passes, rounded joins, applies to every medi
     expect(hexLiterals).toBeNull();
   });
 
-  it('applies to every medium, not only water: each of the three media resolves its own highlight/shadow pair via the same function', () => {
+  it('colours every medium by its own state', () => {
     expect(getConductorCoreColor('ELECTRICAL', 'ACTIVE')).toBe(COLOR_ENERGIZED);
     expect(getConductorCoreColor('WATER', 'ACTIVE')).toBe(COLOR_WATER);
     expect(getConductorCoreColor('VENTILATION', 'ACTIVE')).toBe(VENTILATION_ACTIVE);

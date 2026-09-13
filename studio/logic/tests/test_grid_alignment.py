@@ -41,7 +41,7 @@ GATE_TYPE_IDS = [
     type_id
     for category in BlockRegistry.get_categories()
     for type_id in BlockRegistry.get_blocks_in_category(category)
-    if BlockRegistry.create_block(type_id).category == "Bramki logiczne"
+    if BlockRegistry.create_block(type_id).category == "Logic gates"
 ]
 
 

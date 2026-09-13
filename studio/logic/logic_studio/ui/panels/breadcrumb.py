@@ -39,15 +39,15 @@ class BreadcrumbBar(QWidget):
         self._pins_button.clicked.connect(self.manage_pins_requested)
         self._row.addWidget(self._pins_button)
 
-        # Hidden at the root level (a lone "Główny" crumb is clutter, not
+        # Hidden at the root level (a lone "Main" crumb is clutter, not
         # information) — set_path() below is what makes it visible.
         self.setVisible(False)
 
     def set_path(self, names: list):
-        """`names` is the FULL path from the root ("Główny") to the
-        current level, inclusive — e.g. `["Główny", "Blokada"]` while
+        """`names` is the FULL path from the root ("Main") to the
+        current level, inclusive — e.g. `["Main", "Blokada"]` while
         editing macro "Blokada" placed directly on the main canvas, or
-        `["Główny", "Blokada", "Zatrzask"]` one level deeper. Every entry
+        `["Main", "Blokada", "Zatrzask"]` one level deeper. Every entry
         except the last is a clickable button; the last is the current
         level, shown bold, not clickable. Shown only when there's more
         than one entry — the plain top-level view has nothing to show.

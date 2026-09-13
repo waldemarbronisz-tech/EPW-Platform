@@ -3,6 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AppState } from './appState';
 import { releaseAnchorsForDeletedObjects } from '../utils/WireAnchoring';
 import { getObstacles } from '../project/WireCollision';
+import { isCircuitOn } from './../project/CircuitResolver';
+import { circuitSwitchUpdates, isSwitchingSymbol, isSymbolOn, symbolSwitchUpdates } from '../project/CommandRequest';
+import { chainsFromWalls } from '../project/WallGeometry';
+import { scaleObjectPositions, scaleWalls } from '../project/GroupScale';
+import { isOpeningType, seatOpeningInWall } from '../project/WallOpenings';
+import { setBinding } from '../project/CircuitBindings';
 import { routeAround } from '../project/WireRouter';
 
 // The seven drawing-surface collections (objects/connections/meters/
@@ -11,12 +17,15 @@ import { routeAround } from '../project/WireRouter';
 // Selection, clipboard, and undo/redo over these same arrays each live
 // in their own slice instead.
 export type ElementsSlice = Pick<AppState,
-  | 'objects' | 'connections' | 'meters' | 'signalPanels' | 'frames' | 'groupCommands' | 'setpointPanels'
+  | 'objects' | 'connections' | 'meters' | 'signalPanels' | 'frames' | 'groupCommands' | 'setpointPanels' | 'walls'
   | 'addObject' | 'updateObject' | 'updateObjects'
   | 'addConnection' | 'updateConnection'
   | 'addMeter' | 'updateMeter'
   | 'addSignalPanel' | 'updateSignalPanel'
   | 'addFrame' | 'updateFrame'
+  | 'addWall' | 'updateWall' | 'applyWallStyleToRoom' | 'addRoomWalls' | 'toggleCircuitAt'
+  | 'scaleSelection'
+  | 'circuits' | 'setCircuitDevice'
   | 'addGroupCommand' | 'updateGroupCommand'
   | 'addSetpointPanel' | 'updateSetpointPanel'
   | 'deleteObjects'
@@ -29,6 +38,8 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
   meters: [],
   signalPanels: [],
   frames: [],
+  walls: [],
+  circuits: [],
   groupCommands: [],
   setpointPanels: [],
 
@@ -56,6 +67,152 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
       });
       return { objects: newObjects, isDirty: true };
     });
+  },
+
+  addWall: (wall) => {
+    set((state) => ({
+      walls: [...state.walls, { ...wall, id: uuidv4() }],
+      isDirty: true
+    }));
+    get().saveHistory();
+  },
+
+  updateWall: (id, updates) => {
+    set((state) => ({
+      walls: state.walls.map(w => w.id === id ? { ...w, ...updates } : w),
+      isDirty: true
+    }));
+  },
+
+  setCircuitDevice: (circuit, deviceId) => {
+    set((state) => ({ circuits: setBinding(state.circuits, circuit, deviceId), isDirty: true }));
+    get().saveHistory();
+  },
+
+  addRoomWalls: (rect) => {
+    const { wallDrawThickness, wallDrawHeight, wallDrawMaterial } = get();
+    const { x, y, width, height } = rect;
+    // Corners in order, so the four walls chain end to end and the loop
+    // closes exactly - which is what RoomFloors.ts needs to recognise a
+    // room and give it a floor.
+    const corners = [
+      { x, y },
+      { x: x + width, y },
+      { x: x + width, y: y + height },
+      { x, y: y + height },
+    ];
+    const made = corners.map((from, i) => ({
+      id: uuidv4(),
+      from,
+      to: corners[(i + 1) % corners.length],
+      thickness: wallDrawThickness,
+      height: wallDrawHeight,
+      material: wallDrawMaterial,
+    }));
+    set((state) => ({ walls: [...state.walls, ...made], isDirty: true }));
+    // One entry for the whole room: drawing it was one gesture, so one
+    // Ctrl+Z must undo all of it.
+    get().saveHistory();
+  },
+
+  applyWallStyleToRoom: (wallId) => {
+    const { walls } = get();
+    const source = walls.find(w => w.id === wallId);
+    if (!source) return;
+    // The room is the CHAIN this wall belongs to - the same grouping the
+    // renderer uses, so "the whole room" means exactly what the drawing
+    // shows as one body (or would, once the styles agree).
+    const chain = chainsFromWalls(walls).find(c => c.wallIds.includes(wallId));
+    if (!chain || chain.wallIds.length < 2) return;
+    const ids = new Set(chain.wallIds);
+    set((state) => ({
+      walls: state.walls.map(w => ids.has(w.id)
+        ? { ...w, thickness: source.thickness, height: source.height, material: source.material }
+        : w),
+      isDirty: true,
+    }));
+    get().saveHistory();
+  },
+
+  // feat/cad-marquee: resize whatever is selected - above all a whole
+  // room, selected with a crossing marquee over its walls.
+  //
+  // GEOMETRY SCALES, OBJECTS MOVE (project/GroupScale.ts's header has
+  // the full argument): the walls take the new shape, while the chairs,
+  // luminaires and doors inside keep their real-world sizes and are
+  // carried to the same relative place. A plan is dimensioned; growing
+  // a hall does not grow the chairs in it.
+  //
+  // ONE history entry for the whole drag, written by the caller when the
+  // drag ENDS - not per frame, or a single resize would bury the undo
+  // stack under sixty identical entries.
+  scaleSelection: (before, after, snapStep) => {
+    const { walls, objects, selectedWallIds, selectedIds } = get();
+    if (selectedWallIds.length === 0 && selectedIds.length === 0) return;
+    if (before.width <= 0 && before.height <= 0) return;
+
+    const snap = snapStep && snapStep > 0
+      ? (value: number) => Math.round(value / snapStep) * snapStep
+      : (value: number) => value;
+
+    const wallUpdates = scaleWalls(walls, selectedWallIds, before, after, snap);
+    const objectUpdates = scaleObjectPositions(objects, selectedIds, before, after, snap);
+
+    set((state) => {
+      const byId = new Map(wallUpdates.map(u => [u.id, u.updates]));
+      const nextWalls = state.walls.map(w => (byId.has(w.id) ? { ...w, ...byId.get(w.id) } : w));
+
+      const objectById = new Map(objectUpdates.map(u => [u.id, u.updates]));
+      const nextObjects = state.objects.map(o => {
+        const update = objectById.get(o.id);
+        if (!update) return o;
+        const moved = { ...o, ...update };
+        // An opening's place is only meaningful RELATIVE to its wall, so
+        // it is re-seated against the walls in their NEW positions - a
+        // door carried by the same proportion as a chair would end up
+        // beside its wall rather than in it.
+        if (!isOpeningType(moved.type)) return moved;
+        const seat = seatOpeningInWall(nextWalls, moved);
+        return seat ? { ...moved, ...seat } : moved;
+      });
+
+      return { walls: nextWalls, objects: nextObjects, isDirty: true };
+    });
+  },
+
+  // feat/room-plan: switch the whole circuit the given object belongs
+  // to. One history entry for the entire circuit, not one per fixture -
+  // a click is a single user action however many luminaires it lights.
+  // A no-op (and no history entry at all) for an object with no
+  // circuit name, so clicking an unassigned fixture in Podglad mode
+  // quietly does nothing rather than silently switching every other
+  // unassigned fixture on the screen.
+  toggleCircuitAt: (objectId) => {
+    const { objects, circuits, devices } = get();
+    const target = objects.find(o => o.id === objectId);
+    if (!target) return;
+    // A breaker or disconnect switch on the schematic is the apparatus
+    // itself, not a plan circuit: a click opens or closes it.
+    if (isSwitchingSymbol(target.type)) {
+      const switched = symbolSwitchUpdates(objects, objectId, !isSymbolOn(target));
+      if (switched.length === 0) return;
+      get().updateObjects(switched);
+      get().saveHistory();
+      return;
+    }
+    const turningOn = !isCircuitOn(objects, target.circuit);
+    // THE PLAN AND THE SCHEMATIC MOVE TOGETHER - the fixtures on the
+    // plan and every schematic symbol carrying the same aparat, in one
+    // set of updates. The rule and the reasoning behind it now live in
+    // project/CommandRequest.ts's circuitSwitchUpdates, shared with the
+    // simulation's confirmed command: two code paths switching a circuit
+    // slightly differently is exactly the divergence nobody notices
+    // until the two drawings disagree on site.
+    const updates = circuitSwitchUpdates(objects, circuits, devices, target.circuit, turningOn);
+    if (updates.length === 0) return;
+
+    get().updateObjects(updates);
+    get().saveHistory();
   },
 
   addConnection: (conn) => {
@@ -150,8 +307,8 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
   // needs to cascade any more. A wire left dangling by a deleted object
   // simply stops being part of any net; it stays on the canvas exactly
   // like drawing a wire into empty space always could.
-  deleteObjects: (ids, connIds = [], meterIds = [], signalPanelIds = [], frameIds = [], groupCommandIds = [], setpointPanelIds = []) => {
-    if (ids.length === 0 && connIds.length === 0 && meterIds.length === 0 && signalPanelIds.length === 0 && frameIds.length === 0 && groupCommandIds.length === 0 && setpointPanelIds.length === 0) return;
+  deleteObjects: (ids, connIds = [], meterIds = [], signalPanelIds = [], frameIds = [], groupCommandIds = [], setpointPanelIds = [], wallIds = []) => {
+    if (ids.length === 0 && connIds.length === 0 && meterIds.length === 0 && signalPanelIds.length === 0 && frameIds.length === 0 && groupCommandIds.length === 0 && setpointPanelIds.length === 0 && wallIds.length === 0) return;
     // feat/water-management commit 1: deleting a symbol releases every
     // wire endpoint anchored to one of its terminals - the point stays
     // exactly where it was (a free end now), never silently left
@@ -178,7 +335,9 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
         groupCommands: state.groupCommands.filter(g => !groupCommandIds.includes(g.id)),
         selectedGroupCommandIds: state.selectedGroupCommandIds.filter(id => !groupCommandIds.includes(id)),
         setpointPanels: state.setpointPanels.filter(p => !setpointPanelIds.includes(p.id)),
-        selectedSetpointPanelIds: state.selectedSetpointPanelIds.filter(id => !setpointPanelIds.includes(id))
+        selectedSetpointPanelIds: state.selectedSetpointPanelIds.filter(id => !setpointPanelIds.includes(id)),
+        walls: state.walls.filter(w => !wallIds.includes(w.id)),
+        selectedWallIds: state.selectedWallIds.filter(id => !wallIds.includes(id))
       };
     });
     if (releasedCount > 0) {

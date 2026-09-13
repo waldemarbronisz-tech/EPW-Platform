@@ -1,5 +1,5 @@
 """feat/editor-modes-and-geometry §2.2/§2.3 — the canvas interaction and
-rendering side of disabled ("zaślepione") inputs: eligibility rules for the
+rendering side of disabled ("stubbed") inputs: eligibility rules for the
 double-click/context-menu toggle, and the extra geometry the disabled stub
 needs. Compile/validate-level behavior is covered by test_disabled_inputs.py;
 this file is presentation-layer only, same split as test_canvas_rendering.py.

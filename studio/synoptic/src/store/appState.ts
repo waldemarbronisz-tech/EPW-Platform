@@ -7,11 +7,18 @@
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
+import type { WallElement } from '../elements/WallElement';
+import type { CircuitBinding } from '../project/CircuitBindings';
+import type { ScreenContent, ScreenInfo } from '../project/ScreenContent';
+import type { WallMaterialId, FloorMaterialId } from '../theme/Materials';
 import type { GroupCommandElement } from '../elements/GroupCommandElement';
 import type { SetpointPanelElement } from '../elements/SetpointElement';
 import type { Device, LocationEntry, CardEntry } from '../project/DeviceSchema';
 import type { CanvasState, DeviceCreateOrAssignRequest, DeviceFormRequest, HistorySnapshot, Message, ScreenKind, SynopticConnection, SynopticObject } from './types';
 import type { HelpLanguage } from '../i18n/HelpLanguage';
+import type { WorkspaceLayout } from '../project/WorkspaceLayout';
+import type { CommandRequest } from '../project/CommandRequest';
+import type { SimulationEvent } from './simulationSlice';
 
 export interface AppState {
   projectMetadata: {
@@ -24,6 +31,12 @@ export interface AppState {
     height: number;
     background: string;
     gridSize: number;
+    // feat/room-plan: which material the derived room floors are
+    // painted with. Screen-level, not per-room: rooms are derived from
+    // walls (RoomFloors.ts), so they have no identity of their own to
+    // hang a setting on. Optional and additive - absent means
+    // DEFAULT_FLOOR_MATERIAL.
+    floorMaterial?: FloorMaterialId;
   };
   objects: SynopticObject[];
   connections: SynopticConnection[];
@@ -39,6 +52,61 @@ export interface AppState {
   // pure graphic (no terminals, no state, no aparat link) drawn by
   // dragging a rectangle - see elements/FrameElement.ts.
   frames: FrameElement[];
+  // feat/room-plan: the wall element - a straight architectural wall
+  // segment. Its own array, like the frame, for the same reason: it
+  // is not a symbol (see elements/WallElement.ts).
+  walls: WallElement[];
+  // feat/room-plan: which device switches each circuit - the link
+  // between the plan and the controller (project/CircuitBindings.ts).
+  // Project-level, not per fixture: a circuit has one device, and a
+  // copy on every fixture would drift the moment one was edited.
+  circuits: CircuitBinding[];
+  // feat/multi-screen: one controller runs more than one room, so a
+  // project holds several screens and switches between them. The ACTIVE
+  // screen's content is the ordinary objects/walls/... arrays above -
+  // only the others live in screenContents. See project/ScreenContent.ts
+  // for why it is split that way.
+  screens: ScreenInfo[];
+  activeScreenId: string;
+  screenContents: Record<string, ScreenContent>;
+  addScreen: (name?: string) => void;
+  // feat/workspace: every screen on show as a tiled window, the one you
+  // work in being the active one. See store/workspaceSlice.ts. Session-
+  // only UI state: it says how you are looking at the project, not what
+  // the project is, so none of it is ever serialized.
+  workspaceLayout: WorkspaceLayout;
+  /** Screens the user took off the workspace. New screens are shown by default. */
+  hiddenScreens: string[];
+  /** Each screen's own zoom and pan, so switching tiles never resets a view. */
+  screenViews: Record<string, CanvasState>;
+  /** Each screen's own undo stack, so clicking between tiles never empties it. */
+  screenHistories: Record<string, { history: HistorySnapshot[]; historyIndex: number }>;
+  setWorkspaceLayout: (layout: WorkspaceLayout) => void;
+  showScreen: (screenId: string) => void;
+  hideScreen: (screenId: string) => void;
+
+  // feat/workspace: simulation - the plan operated the way the
+  // controller will operate it, through a confirmation window rather
+  // than by a bare click (store/simulationSlice.ts). Session-only, and
+  // deliberately non-destructive: stopping restores every state the
+  // simulation changed.
+  simulationRunning: boolean;
+  commandRequest: CommandRequest | null;
+  /** Circuits whose command has gone out and whose feedback contact has not answered yet. Only ever non-empty for a device that HAS feedback. */
+  pendingCircuits: string[];
+  simulationLog: SimulationEvent[];
+  startSimulation: () => void;
+  stopSimulation: () => void;
+  /** A click on a fixture: an immediate toggle while editing, a command window while simulating. The one entry point every view calls. */
+  operateAt: (objectId: string) => void;
+  confirmCommand: () => void;
+  cancelCommand: () => void;
+  clearSimulationLog: () => void;
+  renameScreen: (id: string, name: string) => void;
+  deleteScreen: (id: string) => void;
+  switchScreen: (id: string) => void;
+  /** Flush the live arrays into screenContents. Anything reading ALL screens - saving above all - must call this first. */
+  captureActiveScreen: () => void;
   // The group command button (feat/control-elements commit 2): a
   // screen-level convenience that re-issues one existing SWITCHED
   // command (.CLOSE/.OPEN) to a configurable list of devices at once -
@@ -55,6 +123,7 @@ export interface AppState {
   selectedMeterIds: string[];
   selectedSignalPanelIds: string[];
   selectedFrameIds: string[];
+  selectedWallIds: string[];
   selectedGroupCommandIds: string[];
   selectedSetpointPanelIds: string[];
   canvasState: CanvasState;
@@ -111,6 +180,39 @@ export interface AppState {
   // selection box. drawingFrameVariant is which of the two the next
   // drag creates; the tool stays active across multiple drags, same
   // convention as the wire tool above, until toggled off again.
+  // feat/room-plan: the wall tool. Armed from the toolbar; each click
+  // on the canvas drops one wall and starts the next at its end, so a
+  // room is drawn as a chain rather than as separate drags.
+  isDrawingWall: boolean;
+  isDrawingRoom: boolean;
+  wallDrawThickness: number;
+  wallDrawHeight: number;
+  wallDrawMaterial: WallMaterialId;
+  setDrawingWallMode: (active: boolean) => void;
+  setDrawingRoomMode: (active: boolean) => void;
+  setWallDrawThickness: (thickness: number) => void;
+  setWallDrawHeight: (height: number) => void;
+  setWallDrawMaterial: (material: WallMaterialId) => void;
+  setFloorMaterial: (material: FloorMaterialId) => void;
+  // feat/room-plan: Podglad mode. In it a click OPERATES the drawing
+  // (toggles the circuit under the cursor) instead of selecting it -
+  // see project/CircuitResolver.ts. Session-only UI state, never
+  // serialized, exactly like the drawing tools above.
+  // feat/room-lighting: the false-colour illuminance map over the
+  // working plane. A VIEW state like previewMode - never serialized,
+  // since it says how you are looking at the plan, not what it is.
+  // feat/text-formatting: the text box currently open for typing on the
+  // canvas (TextEditOverlay), or null. Session-only.
+  editingTextId: string | null;
+  setEditingTextId: (id: string | null) => void;
+  /** The format the format bar holds while no text is selected - what the next text box is created with, as in a word processor. */
+  nextTextFormat: Partial<SynopticObject>;
+  setNextTextFormat: (updates: Partial<SynopticObject>) => void;
+  showIlluminance: boolean;
+  setShowIlluminance: (active: boolean) => void;
+  previewMode: boolean;
+  setPreviewMode: (active: boolean) => void;
+  toggleCircuitAt: (objectId: string) => void;
   isDrawingFrame: boolean;
   drawingFrameVariant: FrameElement['variant'];
   // fix/handles-insert-mode-diodes commit 2: whether Shift was held
@@ -169,13 +271,39 @@ export interface AppState {
   updateMeter: (id: string, updates: Partial<MeterElement>) => void;
   addSignalPanel: (panel: Omit<SignalPanelElement, 'id'>) => void;
   updateSignalPanel: (id: string, updates: Partial<SignalPanelElement>) => void;
+  addWall: (wall: Omit<WallElement, 'id'>) => void;
+  updateWall: (id: string, updates: Partial<WallElement>) => void;
+  // feat/room-plan: copy one wall's thickness/height/material onto
+  // every wall joined to it. Editing a wall usually means editing the
+  // ROOM - you pick OSB for the workshop, not for its north wall -
+  // and doing that one wall at a time is four identical edits that
+  // also leave the room un-mitred in between.
+  applyWallStyleToRoom: (wallId: string) => void;
+  // feat/room-plan: four walls round a rectangle, in ONE action and ONE
+  // history entry. Drawing a plain rectangular room corner by corner is
+  // the commonest thing this tool is used for, and doing it as four
+  // separate walls is four chances to miss a corner by a pixel - which
+  // is also four chances to end up with a room that does not close and
+  // therefore gets no floor.
+  addRoomWalls: (rect: { x: number; y: number; width: number; height: number }) => void;
+  // feat/cad-marquee: resize the whole selection - a room selected with
+  // a crossing marquee, above all. Geometry scales, objects move; see
+  // project/GroupScale.ts. Writes no history entry of its own, so a drag
+  // can call it on every frame and record ONE entry when it ends.
+  scaleSelection: (
+    before: { x: number; y: number; width: number; height: number },
+    after: { x: number; y: number; width: number; height: number },
+    snapStep?: number
+  ) => void;
+  /** Bind (or, with an empty id, unbind) the device that switches one circuit. */
+  setCircuitDevice: (circuit: string, deviceId: string | undefined) => void;
   addFrame: (frame: Omit<FrameElement, 'id'>) => void;
   updateFrame: (id: string, updates: Partial<FrameElement>) => void;
   addGroupCommand: (el: Omit<GroupCommandElement, 'id'>) => void;
   updateGroupCommand: (id: string, updates: Partial<GroupCommandElement>) => void;
   addSetpointPanel: (panel: Omit<SetpointPanelElement, 'id'>) => void;
   updateSetpointPanel: (id: string, updates: Partial<SetpointPanelElement>) => void;
-  deleteObjects: (ids: string[], connIds?: string[], meterIds?: string[], signalPanelIds?: string[], frameIds?: string[], groupCommandIds?: string[], setpointPanelIds?: string[]) => void;
+  deleteObjects: (ids: string[], connIds?: string[], meterIds?: string[], signalPanelIds?: string[], frameIds?: string[], groupCommandIds?: string[], setpointPanelIds?: string[], wallIds?: string[]) => void;
   // feat/wire-routing-around-obstacles commit 3, point (f): PRZELICZ
   // TRASE - recomputes the route of every given (selected) connection
   // around the screen's CURRENT obstacles, skipping any wire already
@@ -189,6 +317,7 @@ export interface AppState {
   selectMeters: (ids: string[], multi?: boolean) => void;
   selectSignalPanels: (ids: string[], multi?: boolean) => void;
   selectFrames: (ids: string[], multi?: boolean) => void;
+  selectWalls: (ids: string[], multi?: boolean) => void;
   selectGroupCommands: (ids: string[], multi?: boolean) => void;
   selectSetpointPanels: (ids: string[], multi?: boolean) => void;
   // commit 3 (feat/editing-and-signal-panel), extended in commit 2
@@ -197,7 +326,7 @@ export interface AppState {
   // feat/selector-symbol-setpoint-alarm with a seventh: replaces the
   // whole selection with a mix of all seven kinds at once (the
   // rubber-band's own result) - and Ctrl+A's "select everything on screen".
-  selectMixed: (selection: { objectIds?: string[]; connectionIds?: string[]; meterIds?: string[]; signalPanelIds?: string[]; frameIds?: string[]; groupCommandIds?: string[]; setpointPanelIds?: string[] }) => void;
+  selectMixed: (selection: { objectIds?: string[]; connectionIds?: string[]; meterIds?: string[]; signalPanelIds?: string[]; frameIds?: string[]; groupCommandIds?: string[]; setpointPanelIds?: string[]; wallIds?: string[] }) => void;
   selectAll: () => void;
   clearSelection: () => void;
   // Arrow keys (commit 3): every selected object/meter/signalPanel/
@@ -252,6 +381,14 @@ export interface AppState {
   // rather than being rejected.
   screenKind: ScreenKind;
   setScreenKind: (kind: ScreenKind) => void;
+
+  // feat/library-recent-and-search: the symbols most recently placed,
+  // newest first, so the library can offer them before anything else -
+  // the same list the Logic editor's own library has always kept. Never
+  // part of a project file: it describes the person drawing, not the
+  // drawing. See project/RecentSymbols.ts.
+  recentSymbols: string[];
+  recordSymbolUse: (type: string) => void;
 
   // feat/help-system commit 1: which language the Help window's own
   // content shows in - see helpSlice.ts's own header for why this lives

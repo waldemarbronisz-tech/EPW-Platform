@@ -76,6 +76,16 @@ export interface SymbolDefinition {
   // entry in the Toolbox any more. Flip back to expose it again - one
   // line, no file touched.
   hiddenFromLibrary?: boolean;
+  // feat/room-plan: a resize BAKES into width/height and the artwork is
+  // redrawn at the new size, instead of the default - which writes
+  // scaleX/scaleY and lets Konva stretch the drawing. Stretching is
+  // right for a schematic glyph (it has no real size, only a shape);
+  // it is wrong for a plan symbol, where the size IS the information:
+  // a stretched 90 cm door has smeared jambs, a blurred swing arc and
+  // a leaf thicker in one axis than the other, and it is no longer
+  // 90 cm of anything. Every BUDYNEK symbol sets this; nothing else
+  // does, so no existing symbol's behaviour changes.
+  resizeRedraws?: boolean;
 }
 
 import { electricalSymbols } from './registry/electrical';
@@ -87,6 +97,7 @@ import { measurementsSymbols } from './registry/measurements';
 import { graphicsSymbols } from './registry/graphics';
 import { scadaSymbols } from './registry/scada';
 import { siteSymbols } from './registry/site';
+import { buildingSymbols } from './registry/building';
 
 export const SYMBOL_REGISTRY: Record<string, SymbolDefinition> = {
   ...electricalSymbols,
@@ -97,7 +108,8 @@ export const SYMBOL_REGISTRY: Record<string, SymbolDefinition> = {
   ...measurementsSymbols,
   ...graphicsSymbols,
   ...scadaSymbols,
-  ...siteSymbols
+  ...siteSymbols,
+  ...buildingSymbols
 };
 
 export const getSymbolDefinition = (type: string): SymbolDefinition | undefined => {
@@ -114,7 +126,7 @@ export const getSymbolDefinition = (type: string): SymbolDefinition | undefined 
 // before its own entry gets added here - is appended afterward, in
 // whatever order it was first encountered, so it is never silently
 // dropped from the library.
-const CATEGORY_DISPLAY_ORDER = ['Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA', 'Automation'];
+const CATEGORY_DISPLAY_ORDER = ['BUILDING', 'Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA', 'Automation'];
 
 // Only what the Object Library should show - getSymbolDefinition above
 // stays unfiltered, since an already-placed object of a hidden type

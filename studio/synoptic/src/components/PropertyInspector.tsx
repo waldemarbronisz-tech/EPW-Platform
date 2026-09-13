@@ -1,7 +1,15 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { useStore } from '../store';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
+import { isCircuitOperable, listCircuits } from '../project/CircuitResolver';
+import { circuitOutputAddress, describeCircuitFeedback, findBinding, switchableDevices } from '../project/CircuitBindings';
+import { WALL_MIN_THICKNESS, WALL_MAX_THICKNESS, WALL_MIN_HEIGHT, WALL_MAX_HEIGHT, clampWallThickness, clampWallHeight, WALL_DEFAULT_HEIGHT, wallLength } from '../elements/WallElement';
+import { formatLength } from '../theme/Scale';
+import { WALL_MATERIALS, DEFAULT_WALL_MATERIAL } from '../theme/Materials';
+import type { WallMaterialId } from '../theme/Materials';
 import { symbolUsesTextField } from '../symbols/SymbolRenderer';
+import { isTextFormattable } from '../project/TextFormatting';
+import { fitTextBoxHeight } from '../utils/TextMeasure';
 import { clampMeterWidth, METER_MIN_WIDTH, METER_MAX_WIDTH, METER_DEFAULT_FONT_SIZE } from '../meter/MeterElement';
 import type { MeterElementRow } from '../meter/MeterElement';
 import { clampSignalPanelWidth, SIGNAL_PANEL_MIN_WIDTH, SIGNAL_PANEL_MAX_WIDTH, SIGNAL_PANEL_DEFAULT_FONT_SIZE } from '../elements/SignalPanelElement';
@@ -40,6 +48,8 @@ export const PropertyInspector: React.FC = () => {
   const { meters, selectedMeterIds, updateMeter, devices } = useStore();
   const { signalPanels, selectedSignalPanelIds, updateSignalPanel } = useStore();
   const { frames, selectedFrameIds, updateFrame } = useStore();
+  const { walls, selectedWallIds, updateWall, applyWallStyleToRoom } = useStore();
+  const { circuits, setCircuitDevice } = useStore();
   const { groupCommands, selectedGroupCommandIds, updateGroupCommand } = useStore();
   const { setpointPanels, selectedSetpointPanelIds, updateSetpointPanel } = useStore();
   // Hooks must run unconditionally on every render (this component is
@@ -49,6 +59,62 @@ export const PropertyInspector: React.FC = () => {
   // read by its own branch.
   const [showMeterWizard, setShowMeterWizard] = useState(false);
   const [showSignalPanelWizard, setShowSignalPanelWizard] = useState(false);
+
+  // feat/room-plan: a selected wall gets its own panel and returns
+  // early, the same shape every other element kind here uses. Placed
+  // BEFORE the empty-selection guard so selecting only a wall is not
+  // mistaken for selecting nothing.
+  const selectedWall = selectedWallIds.length === 1 ? walls.find(w => w.id === selectedWallIds[0]) : null;
+  if (selectedWall) {
+    return (
+      <div className="property-inspector">
+        <div className="inspector-header">Wall</div>
+        <div className="inspector-content">
+          <div className="property-group">
+            <div className="property-group-title">Wall</div>
+            <div className="property-row">
+              <label>Thickness</label>
+              <input type="number" min={WALL_MIN_THICKNESS} max={WALL_MAX_THICKNESS}
+                value={selectedWall.thickness}
+                onChange={e => updateWall(selectedWall.id, { thickness: clampWallThickness(Number(e.target.value)) })}
+                onBlur={() => useStore.getState().saveHistory()} />
+            </div>
+            <div className="property-row">
+              <label>Height</label>
+              <input type="number" min={WALL_MIN_HEIGHT} max={WALL_MAX_HEIGHT}
+                value={selectedWall.height ?? WALL_DEFAULT_HEIGHT}
+                onChange={e => updateWall(selectedWall.id, { height: clampWallHeight(Number(e.target.value)) })}
+                onBlur={() => useStore.getState().saveHistory()} />
+            </div>
+            <div className="property-row">
+              <label>Material</label>
+              <select value={selectedWall.material ?? DEFAULT_WALL_MATERIAL}
+                onChange={e => { updateWall(selectedWall.id, { material: e.target.value as WallMaterialId }); useStore.getState().saveHistory(); }}>
+                {Object.entries(WALL_MATERIALS).map(([id, m]) => (<option key={id} value={id}>{m.label}</option>))}
+              </select>
+            </div>
+            <div className="property-row">
+              <label>Length</label>
+              <input type="text" value={formatLength(wallLength(selectedWall))} disabled />
+            </div>
+            {/* Editing a wall almost always means editing the room. One
+                button copies this wall's look onto every wall joined to
+                it - which also puts the room back to ONE mitred body,
+                since bodies only merge when their walls agree. */}
+            <div className="property-row">
+              <button
+                type="button"
+                style={{ width: '100%' }}
+                onClick={() => applyWallStyleToRoom(selectedWall.id)}
+              >
+                Apply to the whole room
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedIds.length === 0 && selectedConnectionIds.length === 0 && selectedMeterIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0 && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0) {
     return (
@@ -582,7 +648,7 @@ export const PropertyInspector: React.FC = () => {
     // group, not hardcoded to either). Member picking is a plain
     // dropdown-plus-list, not a wizard dialog like the meter/signal
     // panel's own Kreator - a device-id list this short does not
-    // justify one. "Testuj (podglad)" never sends anything (this
+    // justify one. "Test (preview)" never sends anything (this
     // editor is design-time only - see GroupCommandResolver.ts's own
     // header) - it only logs what a click WOULD command, into the
     // existing Messages panel, same honesty convention as the meter/
@@ -1006,7 +1072,25 @@ export const PropertyInspector: React.FC = () => {
           {symbolUsesTextField(selectedObj.type) && (
             <div className="property-row">
               <label>Text</label>
-              <input type="text" name="text" value={selectedObj.text || ''} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()} />
+              {/* feat/text-formatting: a text box holds several lines - a
+                  single-line input silently joined them. The box also grows
+                  to fit what is typed here, as it does on the canvas. */}
+              {isTextFormattable(selectedObj.type) ? (
+                <textarea
+                  name="text"
+                  rows={4}
+                  value={selectedObj.text || ''}
+                  onChange={e => {
+                    const text = e.target.value;
+                    const needed = fitTextBoxHeight({ ...selectedObj, text });
+                    updateObject(selectedObj.id, needed > selectedObj.height ? { text, height: needed } : { text });
+                  }}
+                  onBlur={() => useStore.getState().saveHistory()}
+                  style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
+                />
+              ) : (
+                <input type="text" name="text" value={selectedObj.text || ''} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()} />
+              )}
             </div>
           )}
           <div className="property-row">
@@ -1022,6 +1106,101 @@ export const PropertyInspector: React.FC = () => {
             <input type="text" name="tooltip" value={selectedObj.tooltip || ''} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()} />
           </div>
         </div>
+
+        {/* feat/room-plan: the CIRCUIT this element belongs to. Shown
+            only for the building elements that a circuit can actually
+            switch (CircuitResolver.isCircuitOperable) - putting it on
+            every symbol would offer a field that does nothing on most
+            of them, the same mistake symbolUsesTextField() exists to
+            avoid for the Text field. */}
+        {isCircuitOperable(selectedObj.type) && (
+          <div className="property-group">
+            <div className="property-group-title">Circuit</div>
+            <div className="property-row">
+              <label>Circuit</label>
+              <input
+                type="text"
+                name="circuit"
+                list="epw-circuit-names"
+                value={selectedObj.circuit || ''}
+                onChange={handleChange}
+                onBlur={() => useStore.getState().saveHistory()}
+                placeholder="e.g. LIGHTS_1"
+              />
+              {/* Every circuit name already used on this screen, offered
+                  as completions - typing the same circuit twice by hand
+                  is how a room ends up with two circuits that were meant
+                  to be one. */}
+              <datalist id="epw-circuit-names">
+                {listCircuits(objects).map(name => <option key={name} value={name} />)}
+              </datalist>
+            </div>
+
+            {/* WHAT SWITCHES THIS CIRCUIT. The whole reason the plan is
+                worth drawing: bound to a SWITCHED device from the
+                project's own registry, the circuit stops being a label
+                and becomes a real controller output. Only SWITCHED
+                devices are offered - a circuit is switched on and off,
+                so nothing else can drive one. */}
+            {selectedObj.circuit?.trim() ? (
+              <>
+                <div className="property-row">
+                  <label>Switched by</label>
+                  <select
+                    value={findBinding(circuits, selectedObj.circuit)?.deviceId || ''}
+                    onChange={e => setCircuitDevice(selectedObj.circuit!, e.target.value || undefined)}
+                  >
+                    <option value="">(none - circuit not bound)</option>
+                    {switchableDevices(devices).map(d => (
+                      <option key={d.id} value={d.id}>
+                        {(d.designation || d.id)}{d.name ? ` - ${d.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="property-row">
+                  <label>Output</label>
+                  {/* Read-only on purpose: the address belongs to the
+                      device, and the one place it may be edited is the
+                      device's own form. Showing it here is what lets you
+                      check, from the plan, that the fixture you are
+                      looking at really is on the channel you think. */}
+                  <input
+                    type="text"
+                    readOnly
+                    value={circuitOutputAddress(circuits, devices, selectedObj.circuit) || '(no output)'}
+                    title="Controller output channel, from the bound device's configuration"
+                  />
+                </div>
+                <div className="property-row">
+                  <label>Feedback</label>
+                  {/* Stated, not left to be assumed. A lighting circuit
+                      on a plain DO has nothing to read back: the state
+                      shown here is taken from the command the instant it
+                      is issued, and that is correct. Saying so is what
+                      stops someone later hunting for a feedback input
+                      that was never meant to exist. */}
+                  <input
+                    type="text"
+                    readOnly
+                    value={describeCircuitFeedback(circuits, devices, selectedObj.circuit)}
+                    title="How the circuit state is confirmed. Lighting on a plain DO has no feedback - the state is assumed."
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="property-row">
+                <label> </label>
+                {/* No inline font size: typography-proportions.test.ts
+                    keeps every size in ScadaTheme, and a hint line is
+                    not a reason to make an exception. */}
+                <span style={{ opacity: 0.7 }}>
+                  Give the circuit a name to bind it to a device.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="property-group">
           <div className="property-group-title">Editor Preview</div>

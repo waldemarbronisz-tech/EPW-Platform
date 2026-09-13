@@ -161,7 +161,7 @@ class Exporter:
             # Surfaced both in the exported metadata (for EPW-OS) and as a compiler
             # warning (for the engineer exporting), see AUDIT_REPORT.md §5.1.
             self.warnings.append(
-                "Eksport zawiera aktywne wymuszenia wejść: " + ", ".join(forced_block_names)
+                "The export contains active input forces: " + ", ".join(forced_block_names)
             )
 
         # feat/clipboard-and-align §4.3: modeled exactly on contains_forced_io
@@ -173,7 +173,7 @@ class Exporter:
         contains_disabled_blocks = len(disabled_block_names) > 0
         if contains_disabled_blocks:
             self.warnings.append(
-                "Projekt zawiera wyłączone bloki (pominięte w eksporcie): " + ", ".join(disabled_block_names)
+                "The project contains disabled blocks (left out of the export): " + ", ".join(disabled_block_names)
             )
 
         # Full copy of every analog point the project declares — not just the

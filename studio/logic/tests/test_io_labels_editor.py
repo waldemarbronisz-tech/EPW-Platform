@@ -1,4 +1,4 @@
-"""feat/io-labels-and-ids §2 — the "Etykiety wejść/wyjść" tab in
+"""feat/io-labels-and-ids §2 — the "I/O labels" tab in
 ProjectSettingsDialog."""
 import json
 import pytest
@@ -246,9 +246,9 @@ def test_import_reports_added_changed_skipped_counts(monkeypatch, tmp_path):
 
     dialog._import_io_labels()
 
-    assert "Zostanie dodanych: 1" in captured["text"]
-    assert "Zmienionych: 1" in captured["text"]
-    assert "Pominiętych (nieznany adres): 1" in captured["text"]
+    assert "To be added: 1" in captured["text"]
+    assert "Changed: 1" in captured["text"]
+    assert "Skipped (unknown address): 1" in captured["text"]
     assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI.1"), 1).text() == "New label"
     assert dialog.io_labels_table.item(_find_row(dialog, "ELA01.DI.2"), 1).text() == "Changed label"
 

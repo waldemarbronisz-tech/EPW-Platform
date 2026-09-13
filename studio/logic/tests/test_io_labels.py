@@ -107,7 +107,7 @@ def test_known_ela_address_label_does_not_warn():
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
 
-    assert not any("ELA01.DI.1" in w and "nie istnieje" in w for w in warnings)
+    assert not any("ELA01.DI.1" in w and "does not exist" in w for w in warnings)
 
 def test_analog_point_address_label_does_not_warn():
     p = Project()
@@ -122,7 +122,7 @@ def test_analog_point_address_label_does_not_warn():
     Validator(p).run(errors, warnings)
 
     assert errors == []
-    assert not any("AI.TEMP" in w and "nie istnieje" in w for w in warnings)
+    assert not any("AI.TEMP" in w and "does not exist" in w for w in warnings)
 
 
 # ---- §1.3 migration ---------------------------------------------------

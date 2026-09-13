@@ -86,10 +86,10 @@ def validate_bundle(bundle: dict) -> None:
     Project.deserialize()'s own unknown-type_id/unknown-schema-version
     handling. A no-op (returns None) for a bundle this build can import."""
     if not isinstance(bundle, dict) or bundle.get("format") != FORMAT:
-        raise ValueError("To nie jest plik biblioteki makrobloków EPW Logic Studio.")
+        raise ValueError("This is not an EPW Logic Studio macro library file.")
     if bundle.get("schema_version", 0) > SCHEMA_VERSION:
         raise ValueError(
-            "Plik zapisany nowszą wersją EPW Logic Studio, której ten program jeszcze nie obsługuje."
+            "The file was saved by a newer version of EPW Logic Studio that this program does not support yet."
         )
 
 

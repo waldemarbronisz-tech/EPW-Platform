@@ -23,12 +23,24 @@ describe('Every visible symbol - terminal centering and grid alignment', () => {
     expect(symbols.length).toBeGreaterThan(0);
   });
 
-  // 3. every visible symbol has dimensions that are an EVEN multiple of
-  // GRID_SIZE (32, 64, 96, ... - not 16 or 48), so that w/2 and h/2 -
-  // where a terminal always sits - are themselves grid-aligned.
-  it('every visible symbol has defaultWidth/defaultHeight as an EVEN GRID_SIZE multiple', () => {
+  // 3. every symbol WITH TERMINALS has dimensions that are an EVEN
+  // multiple of GRID_SIZE (32, 64, 96, ... - not 16 or 48), so that
+  // w/2 and h/2 - where a terminal always sits - are themselves
+  // grid-aligned.
+  //
+  // Scoped to terminal-bearing symbols by feat/room-plan, because that
+  // is the entire reason the rule exists (see this file's own header,
+  // and the sentence above). The BUDYNEK plan symbols have no terminals
+  // at all and their sizes are REAL DIMENSIONS instead - a 90 cm door,
+  // a 120 cm window, a 45 cm chair, via theme/Scale.ts - so forcing
+  // them onto a 32 px step would mean a door that is not 90 cm wide,
+  // which is the one thing a floor plan may not get wrong. Nothing is
+  // weakened for the symbols the rule was written for: a new SCHEMATIC
+  // symbol with a terminal and a bad size still fails here
+  // automatically, exactly as before.
+  it('every visible symbol WITH TERMINALS has defaultWidth/defaultHeight as an EVEN GRID_SIZE multiple', () => {
     const problems: string[] = [];
-    symbols.forEach((def: any) => {
+    symbols.filter((def: any) => (def.terminals || []).length > 0).forEach((def: any) => {
       const evenStep = GRID_SIZE * 2; // 32
       if (def.defaultWidth % evenStep !== 0) problems.push(`${def.type}: width ${def.defaultWidth}`);
       if (def.defaultHeight % evenStep !== 0) problems.push(`${def.type}: height ${def.defaultHeight}`);

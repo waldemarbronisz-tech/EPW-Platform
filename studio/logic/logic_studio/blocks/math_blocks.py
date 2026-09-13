@@ -4,9 +4,9 @@ from logic_studio.blocks.registry import BlockRegistry
 
 class MathBase(BaseLogicBlock):
     PIN_DESCRIPTIONS = {
-        "In1": "Pierwszy argument działania.",
-        "In2": "Drugi argument działania.",
-        "Out": "Wynik działania.",
+        "In1": "First operand.",
+        "In2": "Second operand.",
+        "Out": "Result.",
     }
 
     def __init__(self, type_id, default_name, category, description):
@@ -26,7 +26,7 @@ class MathBase(BaseLogicBlock):
 
 @BlockRegistry.register
 class AddBlock(MathBase):
-    def __init__(self, type_id="math.add", default_name="ADD", category="Elementy Analogowe", description="Dodawanie — Out = In1 + In2."):
+    def __init__(self, type_id="math.add", default_name="ADD", category="Analog", description="Dodawanie — Out = In1 + In2."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -35,7 +35,7 @@ class AddBlock(MathBase):
 
 @BlockRegistry.register
 class SubBlock(MathBase):
-    def __init__(self, type_id="math.sub", default_name="SUB", category="Elementy Analogowe", description="Odejmowanie — Out = In1 - In2."):
+    def __init__(self, type_id="math.sub", default_name="SUB", category="Analog", description="Odejmowanie — Out = In1 - In2."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -44,7 +44,7 @@ class SubBlock(MathBase):
 
 @BlockRegistry.register
 class MulBlock(MathBase):
-    def __init__(self, type_id="math.mul", default_name="MUL", category="Elementy Analogowe", description="Mnożenie — Out = In1 * In2."):
+    def __init__(self, type_id="math.mul", default_name="MUL", category="Analog", description="Multiplication — Out = In1 * In2."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -53,7 +53,7 @@ class MulBlock(MathBase):
 
 @BlockRegistry.register
 class DivBlock(MathBase):
-    def __init__(self, type_id="math.div", default_name="DIV", category="Elementy Analogowe", description="Dzielenie — Out = In1 / In2 (przy In2 = 0 wyjście wynosi 0, bez wyjątku)."):
+    def __init__(self, type_id="math.div", default_name="DIV", category="Analog", description="Division — Out = In1 / In2 (when In2 = 0 the output is 0, no exception)."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -66,7 +66,7 @@ class DivBlock(MathBase):
 
 @BlockRegistry.register
 class AbsBlock(MathBase):
-    def __init__(self, type_id="math.abs", default_name="ABS", category="Elementy Analogowe", description="Wartość bezwzględna — Out = |In1|."):
+    def __init__(self, type_id="math.abs", default_name="ABS", category="Analog", description="Absolute value — Out = |In1|."):
         # only "In1"/"Out" ever exist on this block (see below, In2 removed) -
         # inherited PIN_DESCRIPTIONS still has an unused "In2" entry, harmless
         # since the catalog only ever looks up pins a block ACTUALLY has.
@@ -79,7 +79,7 @@ class AbsBlock(MathBase):
 
 @BlockRegistry.register
 class MinBlock(MathBase):
-    def __init__(self, type_id="math.min", default_name="MIN", category="Elementy Analogowe", description="Mniejsza z dwóch wartości — Out = min(In1, In2)."):
+    def __init__(self, type_id="math.min", default_name="MIN", category="Analog", description="Smaller of two values — Out = min(In1, In2)."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -88,7 +88,7 @@ class MinBlock(MathBase):
 
 @BlockRegistry.register
 class MaxBlock(MathBase):
-    def __init__(self, type_id="math.max", default_name="MAX", category="Elementy Analogowe", description="Większa z dwóch wartości — Out = max(In1, In2)."):
+    def __init__(self, type_id="math.max", default_name="MAX", category="Analog", description="Larger of two values — Out = max(In1, In2)."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):

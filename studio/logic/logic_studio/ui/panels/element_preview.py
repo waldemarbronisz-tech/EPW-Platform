@@ -19,7 +19,7 @@ class ElementPreviewPanel(QWidget):
     see its pins" cycle."""
 
     # feat/help-system §5.4: emits the selected block's type_id when
-    # "Więcej o tym bloku" is clicked — MainWindow connects this to
+    # "More about this block" is clicked — MainWindow connects this to
     # show_help_for_block_type() rather than this panel importing
     # ui/help_window.py itself (this panel has no business knowing HOW
     # help is shown, only that more of it exists for the current block).
@@ -68,20 +68,20 @@ class ElementPreviewPanel(QWidget):
         content_layout.addLayout(top_row)
 
         self.pins_table = QTableWidget(0, 4)
-        self.pins_table.setHorizontalHeaderLabels(["Pin", "Kierunek", "Typ", "Opis"])
+        self.pins_table.setHorizontalHeaderLabels(["Pin", "Direction", "Type", "Description"])
         self.pins_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.pins_table.verticalHeader().setVisible(False)
         self.pins_table.setEditTriggers(QTableWidget.NoEditTriggers)
         content_layout.addWidget(self.pins_table)
 
         self.props_table = QTableWidget(0, 2)
-        self.props_table.setHorizontalHeaderLabels(["Właściwość", "Wartość domyślna"])
+        self.props_table.setHorizontalHeaderLabels(["Property", "Default value"])
         self.props_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.props_table.verticalHeader().setVisible(False)
         self.props_table.setEditTriggers(QTableWidget.NoEditTriggers)
         content_layout.addWidget(self.props_table)
 
-        self.more_info_btn = QPushButton("Więcej o tym bloku")
+        self.more_info_btn = QPushButton("More about this block")
         self.more_info_btn.clicked.connect(
             lambda: self.more_info_requested.emit(self._current_type_id) if self._current_type_id else None
         )
@@ -114,7 +114,7 @@ class ElementPreviewPanel(QWidget):
     def _set_empty_state(self):
         self._current_type_id = None
         self.icon_label.clear()
-        self.name_label.setText("Brak zaznaczenia")
+        self.name_label.setText("Nothing selected")
         self.type_id_label.setText("")
         self.description_label.setText("")
         self.pins_table.setRowCount(0)
@@ -159,10 +159,10 @@ class ElementPreviewPanel(QWidget):
         self.pins_table.setRowCount(len(block.inputs) + len(block.outputs))
         row = 0
         for pin in block.inputs:
-            self._fill_pin_row(row, pin, "Wejście")
+            self._fill_pin_row(row, pin, "Input")
             row += 1
         for pin in block.outputs:
-            self._fill_pin_row(row, pin, "Wyjście")
+            self._fill_pin_row(row, pin, "Output")
             row += 1
 
         self.props_table.setRowCount(len(block.properties))
@@ -172,7 +172,7 @@ class ElementPreviewPanel(QWidget):
 
     def _fill_pin_row(self, row, pin, direction_label):
         safety = bool(getattr(pin, 'safety_relevant', False))
-        note = "istotne dla bezpieczeństwa" if safety else ""
+        note = "safety relevant" if safety else ""
 
         cells = [pin.name, direction_label, pin.data_type, note]
         for col, text in enumerate(cells):

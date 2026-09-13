@@ -80,8 +80,8 @@ def test_contents_tree_has_a_block_catalog_chapter_with_categories(qsettings):
     _app()
     win = HelpWindow(settings=qsettings)
     top_titles = [win.tree.topLevelItem(i).text(0) for i in range(win.tree.topLevelItemCount())]
-    assert "Katalog bloków" in top_titles
-    catalog_item = win.tree.topLevelItem(top_titles.index("Katalog bloków"))
+    assert "Block catalog" in top_titles
+    catalog_item = win.tree.topLevelItem(top_titles.index("Block catalog"))
     assert catalog_item.childCount() > 0
     # a category node's own children are individual block types
     first_category = catalog_item.child(0)
@@ -178,7 +178,7 @@ def test_more_info_button_in_element_preview_opens_help_on_that_block(qsettings)
 
 def test_export_block_catalog_menu_action_exists_and_is_wired(qsettings):
     window = _make_window(qsettings)
-    assert window.act_export_block_catalog.text() == "Eksportuj katalog bloków..."
+    assert window.act_export_block_catalog.text() == "Export block catalog..."
     assert window.act_export_block_catalog.receivers("2triggered()") > 0
     _close(window)
 

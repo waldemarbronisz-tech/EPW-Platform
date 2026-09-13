@@ -227,7 +227,7 @@ def test_context_menu_export_action_present_for_a_macro_item(qsettings, monkeypa
 
     panel._on_tree_context_menu(pos)
 
-    assert captured["actions"] == ["Eksportuj makroblok..."]
+    assert captured["actions"] == ["Export macro..."]
     _close(window)
 
 def test_context_menu_triggers_export_when_its_action_is_chosen(qsettings, monkeypatch):

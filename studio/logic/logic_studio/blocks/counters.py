@@ -4,7 +4,7 @@ from logic_studio.blocks.registry import BlockRegistry
 
 class CounterBase(BaseLogicBlock):
     PROPERTY_DESCRIPTIONS = {
-        "Preset": "Wartość docelowa/początkowa licznika, używana gdy wejście PV nie jest podłączone.",
+        "Preset": "Target/initial counter value, used when the PV input is not connected.",
     }
 
     def __init__(self, type_id, default_name, category, description):
@@ -34,14 +34,14 @@ class CounterBase(BaseLogicBlock):
 @BlockRegistry.register
 class CTU(CounterBase):
     PIN_DESCRIPTIONS = {
-        "CU": "Zbocze narastające na tym wejściu zwiększa licznik o 1.",
-        "R": "Kasuje licznik do zera (nadrzędne wobec CU).",
-        "PV": "Wartość docelowa — jeśli podłączona, nadpisuje właściwość Preset.",
-        "Q": "Prawda, gdy CV osiągnął lub przekroczył wartość docelową.",
-        "CV": "Bieżąca wartość licznika.",
+        "CU": "A rising edge on this input increments the counter by 1.",
+        "R": "Resets the counter to zero (overrides CU).",
+        "PV": "Target value — when connected, overrides the Preset property.",
+        "Q": "True when CV has reached or exceeded the target value.",
+        "CV": "Current counter value.",
     }
 
-    def __init__(self, type_id="counter.ctu", default_name="CTU", category="Liczniki", description="Licznik zliczający w górę do wartości docelowej."):
+    def __init__(self, type_id="counter.ctu", default_name="CTU", category="Counters", description="Counter counting up to the target value."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["licznik"]
         self.inputs.append(Pin("CU", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN))
@@ -71,14 +71,14 @@ class CTU(CounterBase):
 @BlockRegistry.register
 class CTD(CounterBase):
     PIN_DESCRIPTIONS = {
-        "CD": "Zbocze narastające na tym wejściu zmniejsza licznik o 1.",
-        "LD": "Ładuje licznik wartością PV (nadrzędne wobec CD).",
-        "PV": "Wartość ładowana przez LD — jeśli podłączona, nadpisuje właściwość Preset.",
-        "Q": "Prawda, gdy CV osiągnął lub zszedł poniżej zera.",
-        "CV": "Bieżąca wartość licznika.",
+        "CD": "A rising edge on this input decrements the counter by 1.",
+        "LD": "Loads the counter with PV (overrides CD).",
+        "PV": "Value loaded by LD — when connected, overrides the Preset property.",
+        "Q": "True when CV has reached or dropped below zero.",
+        "CV": "Current counter value.",
     }
 
-    def __init__(self, type_id="counter.ctd", default_name="CTD", category="Liczniki", description="Licznik zliczający w dół od wartości początkowej."):
+    def __init__(self, type_id="counter.ctd", default_name="CTD", category="Counters", description="Counter counting down from the initial value."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["licznik"]
         self.inputs.append(Pin("CD", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN))
@@ -108,17 +108,17 @@ class CTD(CounterBase):
 @BlockRegistry.register
 class CTUD(CounterBase):
     PIN_DESCRIPTIONS = {
-        "CU": "Zbocze narastające na tym wejściu zwiększa licznik o 1.",
-        "CD": "Zbocze narastające na tym wejściu zmniejsza licznik o 1.",
-        "R": "Kasuje licznik do zera (nadrzędne wobec CU/CD/LD).",
-        "LD": "Ładuje licznik wartością PV (nadrzędne wobec CU/CD, podrzędne wobec R).",
-        "PV": "Wartość ładowana przez LD i próg dla QU — jeśli podłączona, nadpisuje właściwość Preset.",
-        "QU": "Prawda, gdy CV osiągnął lub przekroczył PV.",
-        "QD": "Prawda, gdy CV osiągnął lub zszedł poniżej zera.",
-        "CV": "Bieżąca wartość licznika.",
+        "CU": "A rising edge on this input increments the counter by 1.",
+        "CD": "A rising edge on this input decrements the counter by 1.",
+        "R": "Resets the counter to zero (overrides CU/CD/LD).",
+        "LD": "Loads the counter with PV (overrides CU/CD, overridden by R).",
+        "PV": "Value loaded by LD and the threshold for QU — when connected, overrides the Preset property.",
+        "QU": "True when CV has reached or exceeded PV.",
+        "QD": "True when CV has reached or dropped below zero.",
+        "CV": "Current counter value.",
     }
 
-    def __init__(self, type_id="counter.ctud", default_name="CTUD", category="Liczniki", description="Licznik dwukierunkowy, zliczający w górę i w dół."):
+    def __init__(self, type_id="counter.ctud", default_name="CTUD", category="Counters", description="Up/down counter."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["licznik"]
         self.height = 140

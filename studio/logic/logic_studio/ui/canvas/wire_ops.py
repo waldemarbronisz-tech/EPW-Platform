@@ -1,6 +1,6 @@
 """fix/wire-labels-and-project-integrity §A3 — the mutation logic behind
 "Nadaj etykietę.../Usuń etykietę/Zamień na odnośnik" (a fully-connected
-WireItem's context menu) and "Dodaj odnośnik..." (an unconnected port's
+WireItem's context menu) and "Add reference..." (an unconnected port's
 context menu). Kept separate from wire_item.py/port_item.py so the
 graphics-item classes stay focused on presentation and menu wiring —
 this module never touches a QGraphicsItem, only Project/Wire/Pin.
@@ -43,7 +43,7 @@ def get_or_create_wire_for_pins(project, pin_a_uuid, pin_b_uuid) -> Wire:
 
 
 def clear_label_and_prune_if_pointless(project, wire) -> None:
-    """§A3.1 "Usuń etykietę": blanks the label, then removes the Wire
+    """§A3.1 "Remove label": blanks the label, then removes the Wire
     record entirely if it no longer carries anything Pin.connections
     can't already represent on its own (fully connected, no free end,
     no label — core/wire.py's own "gets NO Wire record at all" case) —
@@ -62,7 +62,7 @@ def _stub_offset(scene, direction_sign: int):
 
 
 def add_stub_wire_from_port(project, port_item) -> Wire:
-    """§A3.2 "Dodaj odnośnik...": a fresh free-end Wire anchored at
+    """§A3.2 "Add reference...": a fresh free-end Wire anchored at
     `port_item.pin`, its free end positioned a short, fixed distance
     OUT of the port in the direction the port itself faces (the same
     "which side of the block" facing wire_item.py's own routing already
@@ -87,7 +87,7 @@ def add_stub_wire_from_port(project, port_item) -> Wire:
 
 
 def convert_wire_to_stubs(project, source_port, dest_port) -> tuple:
-    """§A3.1 "Zamień na odnośnik": cuts the physical connection between
+    """§A3.1 "Convert to reference": cuts the physical connection between
     `source_port.pin` and `dest_port.pin` (Pin.disconnect(), same as
     outright deleting the wire — ui/canvas/scene.py's own
     delete_selected_items() WireItem branch) and replaces it with TWO

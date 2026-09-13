@@ -471,32 +471,38 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"), icon_name="reroute")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False), icon_name="draw_wire")
-    _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False), icon_name="draw_frame")
-    _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False), icon_name="draw_building")
+    # Wire drawing - the tool, frames, medium, wire style and routing - is
+    # used constantly while drawing, so it stays on this bar. Inserting
+    # meters/panels lives in Synoptic's library (SCADA department).
+    # Mode buttons are checkable and remembered on the window, which
+    # ticks the active ones from Synoptic's state bridge on every poll
+    # (main_window._apply_synoptic_mode_checks) - so the toolbar shows
+    # which tool, medium, style and routing are armed.
+    modes = {}
+    modes["wire"] = _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False), icon_name="draw_wire")
+    modes["frame"] = _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False), icon_name="draw_frame")
+    modes["building"] = _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False), icon_name="draw_building")
+    toolbar.addSeparator()
+    modes["medium:ELECTRICAL"] = _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Electrical"), icon_name="medium_electrical")
+    modes["medium:WATER"] = _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Water"), icon_name="medium_water")
+    modes["medium:VENTILATION"] = _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Ventilation"), icon_name="medium_ventilation")
+    toolbar.addSeparator()
+    modes["style:NORMAL"] = _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"), icon_name="wire_style_normal")
+    modes["style:BUS"] = _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False), icon_name="wire_style_bus")
+    toolbar.addSeparator()
+    modes["routing:STRAIGHT"] = _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False), icon_name="routing_direct")
+    modes["routing:AVOID"] = _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False), icon_name="routing_avoid")
+    for action in modes.values():
+        action.setCheckable(True)
+    studio_window.synoptic_mode_actions = modes
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Prad"), icon_name="medium_electrical")
-    _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Woda"), icon_name="medium_water")
-    _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Wentylacja"), icon_name="medium_ventilation")
-    toolbar.addSeparator()
-
-    _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"), icon_name="wire_style_normal")
-    _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False), icon_name="wire_style_bus")
-    toolbar.addSeparator()
-
-    _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False), icon_name="routing_direct")
-    _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False), icon_name="routing_avoid")
-    toolbar.addSeparator()
-
-    _add(toolbar, tr("canvas.distribute_h"), _toolbar_clicker(synoptic_panel, "Distribute Horizontally"), icon_name="distribute_h")
-    _add(toolbar, tr("canvas.distribute_v"), _toolbar_clicker(synoptic_panel, "Distribute Vertically"), icon_name="distribute_v")
-    _add(toolbar, tr("canvas.align_left"), _toolbar_clicker(synoptic_panel, "Align Left"), icon_name="align_left")
-    _add(toolbar, tr("canvas.align_center"), _toolbar_clicker(synoptic_panel, "Align Center"), icon_name="align_center")
-    _add(toolbar, tr("canvas.align_right"), _toolbar_clicker(synoptic_panel, "Align Right"), icon_name="align_right")
-    _add(toolbar, tr("canvas.align_middle"), _toolbar_clicker(synoptic_panel, "Align Middle"), icon_name="align_middle")
-    toolbar.addSeparator()
-
+    # feat/toolbar-grouping: drawing wires/frames, the wire medium/style/
+    # routing options and inserting meters/panels moved into Synoptic's
+    # Object Library (SCADA department); text formatting has its own
+    # Word-style bar inside the editor. This bar keeps the basics:
+    # the core group and arranging (the align/distribute buttons were
+    # dropped at the user's request).
     _add(toolbar, tr("canvas.bring_front"), _toolbar_clicker(synoptic_panel, "Bring to Front"), icon_name="bring_front")
     _add(toolbar, tr("canvas.send_back"), _toolbar_clicker(synoptic_panel, "Send to Back"), icon_name="send_back")
     _add(toolbar, tr("canvas.lock"), _toolbar_clicker(synoptic_panel, "Lock"), icon_name="lock")
@@ -505,13 +511,6 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     _add(toolbar, tr("canvas.rotate_right"), _toolbar_clicker(synoptic_panel, "Rotate Right"), icon_name="rotate_right")
     toolbar.addSeparator()
 
-    _add(toolbar, tr("canvas.add_meter"), _toolbar_clicker(synoptic_panel, "Add Meter"), icon_name="add_meter")
-    _add(toolbar, tr("canvas.add_signal_panel"), _toolbar_clicker(synoptic_panel, "Add Signal Panel"), icon_name="add_signal_panel")
-    _add(toolbar, tr("canvas.add_group_command"), _toolbar_clicker(synoptic_panel, "Add Group Command Button"), icon_name="add_group_command")
-    _add(toolbar, tr("canvas.add_setpoint_panel"), _toolbar_clicker(synoptic_panel, "Add Setpoint Panel"), icon_name="add_setpoint_panel")
-    toolbar.addSeparator()
-
-    _add(toolbar, tr("menu.view.scada_preview"), _clicker(synoptic_panel, "SCADA Style Preview"), icon_name="scada_preview")
     toolbar.addSeparator()
 
     _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"), icon_name="project_registers")

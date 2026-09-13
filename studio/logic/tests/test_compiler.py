@@ -301,7 +301,7 @@ def test_ai_comparator_do_with_quality_unconnected_warns():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert any("Quality" in w and "wiarygodności pomiaru" in w for w in c.warnings), c.warnings
+    assert any("Quality" in w and "measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_ai_quality_connected_does_not_warn():
     from logic_studio.blocks.analog_io import AnalogInputBlock
@@ -327,7 +327,7 @@ def test_ai_quality_connected_does_not_warn():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert not any("wiarygodności pomiaru" in w for w in c.warnings), c.warnings
+    assert not any("measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_quality_block_good_unconnected_warns():
     from logic_studio.blocks.analog_processing import QualityBlock
@@ -342,7 +342,7 @@ def test_quality_block_good_unconnected_warns():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert any("Good" in w and "wiarygodności pomiaru" in w for w in c.warnings), c.warnings
+    assert any("Good" in w and "measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_ai_hold_expired_unconnected_warns_independently_of_quality():
     from logic_studio.blocks.analog_io import AnalogInputBlock
@@ -383,7 +383,7 @@ def test_unconnected_non_safety_output_never_warns():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert not any("wiarygodności pomiaru" in w for w in c.warnings)
+    assert not any("measurement trustworthiness" in w for w in c.warnings)
 
 def test_invalid_analog_input_address_fails_compilation():
     from logic_studio.blocks.analog_io import AnalogInputBlock

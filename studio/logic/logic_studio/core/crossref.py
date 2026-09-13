@@ -250,26 +250,26 @@ def find_issues(crossref: dict) -> list:
     for signal_id, usage in crossref.items():
         if usage.kind == KIND_UNASSIGNED:
             for (_uuid, short_id, _pin) in usage.readers + usage.writers:
-                issues.append(Issue("warning", short_id, f"Blok '{short_id}' nie ma przypisanego adresu."))
+                issues.append(Issue("warning", short_id, f"Block '{short_id}' has no address assigned."))
             continue
 
         if not usage.defined:
-            issues.append(Issue("error", signal_id, f"Sygnał '{signal_id}' jest używany, ale nie istnieje w żadnym rejestrze."))
+            issues.append(Issue("error", signal_id, f"Signal '{signal_id}' is used but does not exist in any registry."))
             continue  # further rules (writer count, unused, ...) aren't meaningful for a signal that doesn't exist
 
         if usage.kind in (KIND_INTERNAL_BIT, KIND_INTERNAL_REG):
             if len(usage.writers) > 1:
-                issues.append(Issue("error", signal_id, f"Sygnał wewnętrzny '{signal_id}' ma więcej niż jeden blok zapisujący."))
+                issues.append(Issue("error", signal_id, f"Internal signal '{signal_id}' has more than one writing block."))
             if usage.readers and not usage.writers:
-                issues.append(Issue("warning", signal_id, f"Sygnał wewnętrzny '{signal_id}' jest czytany, ale przez nikogo niezapisywany."))
+                issues.append(Issue("warning", signal_id, f"Internal signal '{signal_id}' is read but nobody writes it."))
             if not usage.readers and not usage.writers:
-                issues.append(Issue("warning", signal_id, f"Sygnał wewnętrzny '{signal_id}' jest zdefiniowany w rejestrze, ale nieużywany."))
+                issues.append(Issue("warning", signal_id, f"Internal signal '{signal_id}' is defined in the registry but unused."))
 
         if usage.kind in (KIND_ANALOG_IN, KIND_ANALOG_OUT):
             if not usage.readers and not usage.writers:
-                issues.append(Issue("warning", signal_id, f"Punkt analogowy '{signal_id}' jest zdefiniowany, ale nieużywany."))
+                issues.append(Issue("warning", signal_id, f"Analog point '{signal_id}' is defined but unused."))
 
         if usage.kind in (KIND_PHYSICAL_DI, KIND_ANALOG_IN) and len(usage.readers) > 1:
-            issues.append(Issue("info", signal_id, f"Adres wejściowy '{signal_id}' jest czytany przez {len(usage.readers)} bloki."))
+            issues.append(Issue("info", signal_id, f"Input address '{signal_id}' is read by {len(usage.readers)} blocks."))
 
     return issues

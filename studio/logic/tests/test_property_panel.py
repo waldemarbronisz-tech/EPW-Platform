@@ -45,7 +45,7 @@ def test_identification_section_always_has_id_tag_comment(qsettings):
     panel.load_block_properties(gate, p)
 
     labels = [label for label, _ in _rows(panel, SECTION_IDENTIFICATION)]
-    assert labels == ["Identyfikator", "Tag", "Comment"]
+    assert labels == ["Identifier", "Tag", "Comment"]
 
 def test_identyfikator_row_shows_short_id_and_is_read_only(qsettings):
     _app()
@@ -55,7 +55,7 @@ def test_identyfikator_row_shows_short_id_and_is_read_only(qsettings):
     panel = PropertyGridPanel(settings=qsettings)
     panel.load_block_properties(gate, p)
 
-    field = panel.field_widget("Identyfikator")
+    field = panel.field_widget("Identifier")
     assert field.text() == gate.short_id
     assert field.isReadOnly() is True
 
@@ -151,7 +151,7 @@ def test_empty_state_shows_placeholder_not_blank_panel(qsettings):
     panel._set_empty_state()
     labels = [panel.layout().itemAt(i).widget() for i in range(panel.layout().count())]
     texts = [w.text() for w in labels if hasattr(w, 'text')]
-    assert any("Brak zaznaczonego bloku" in t for t in texts)
+    assert any("No block selected" in t for t in texts)
 
 
 # ---- §5.3 unit suffix presentation ---------------------------------------
@@ -241,7 +241,7 @@ def test_known_enum_property_gets_a_combobox_with_its_options(qsettings):
 
     field = panel.field_widget("Mode")
     assert isinstance(field, QComboBox)
-    assert [field.itemText(i) for i in range(field.count())] == ["Bezwzględny", "Procentowy"]
+    assert [field.itemText(i) for i in range(field.count())] == ["Absolute", "Percentage"]
 
 def test_quality_range_source_gets_a_combobox_with_its_options(qsettings):
     """fix/safety-block-semantics §4.1."""
@@ -254,7 +254,7 @@ def test_quality_range_source_gets_a_combobox_with_its_options(qsettings):
 
     field = panel.field_widget("Range Source")
     assert isinstance(field, QComboBox)
-    assert [field.itemText(i) for i in range(field.count())] == ["Z punktu analogowego", "Własny"]
+    assert [field.itemText(i) for i in range(field.count())] == ["From analog point", "Custom"]
 
 def test_quality_stuck_tolerance_has_a_tooltip(qsettings):
     """fix/safety-block-semantics §1.3: the property grid must warn, right

@@ -28,13 +28,13 @@ from logic_studio.ui.window_lookup import logic_main_window
 #   "Zabezpieczenia Technologiczne", "Łączniki", "Banki Nastaw",
 #   "Zabezpieczenia silnikowe"
 
-RECENT_LABEL = "Ostatnio używane"
+RECENT_LABEL = "Recently used"
 RECENT_MAX = 10
 
 # feat/macro-blocks: the library's ONE per-project category (every other
 # root here is a fixed, class-registered BlockRegistry category, known at
 # import time) — see LibraryPanel.set_project()/_rebuild_macro_section().
-MACRO_LABEL = "Makrobloki"
+MACRO_LABEL = "Macros"
 
 DRAG_THRESHOLD_PX = 4
 
@@ -100,7 +100,12 @@ class LibraryPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Szukaj...")
+        # A bare box with a grey "Search..." in it was easy to miss
+        # entirely - it looks like a caption. Saying what it searches, and
+        # giving it the clear button every search field has, makes it read
+        # as a control rather than as a label.
+        self.search_box.setPlaceholderText("Search blocks, e.g. AND or timer...")
+        self.search_box.setClearButtonEnabled(True)
         self.search_box.textChanged.connect(self._filter_tree)
         layout.addWidget(self.search_box)
 
@@ -111,7 +116,7 @@ class LibraryPanel(QWidget):
         self.tree.itemExpanded.connect(self._on_item_expanded_changed)
         self.tree.itemCollapsed.connect(self._on_item_expanded_changed)
         self.tree.currentItemChanged.connect(self._on_current_item_changed)
-        # feat/macro-library-import-export: right-click a "Makrobloki"
+        # feat/macro-library-import-export: right-click a "Macros"
         # entry to export it — see _on_tree_context_menu().
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
@@ -121,8 +126,8 @@ class LibraryPanel(QWidget):
         # importing doesn't depend on anything currently selected) — the
         # one entry point for pulling a `.epwmacro` file another project
         # (or another engineer) produced into THIS project's own
-        # "Makrobloki" section.
-        self.import_macro_btn = QPushButton("Importuj makroblok...")
+        # "Macros" section.
+        self.import_macro_btn = QPushButton("Import macro...")
         self.import_macro_btn.clicked.connect(self._import_macro)
         layout.addWidget(self.import_macro_btn)
 
@@ -130,7 +135,7 @@ class LibraryPanel(QWidget):
         self._macro_root = None
         self._category_roots = {}
         # feat/macro-blocks: unlike every other category (a fixed
-        # BlockRegistry class list, known at import time), "Makrobloki" is
+        # BlockRegistry class list, known at import time), "Macros" is
         # per-PROJECT data — nothing to show until set_project() hands one
         # over (MainWindow does so right after construction, in
         # _refresh_project_dependent_panels()).
@@ -146,7 +151,7 @@ class LibraryPanel(QWidget):
         project-dependent panel already goes through,
         _refresh_project_dependent_panels()) and right after
         LogicScene.create_macro_from_selection() adds a new definition —
-        rebuilds the "Makrobloki" section from THIS project's own
+        rebuilds the "Macros" section from THIS project's own
         macro_definitions."""
         self._project = project
         self._rebuild_macro_section()
@@ -161,7 +166,7 @@ class LibraryPanel(QWidget):
         self._recent_root.setExpanded(self._is_expanded(RECENT_LABEL, default=True))
         self._rebuild_recent_section()
 
-        # feat/macro-blocks: right after "Ostatnio używane" — a stable,
+        # feat/macro-blocks: right after "Recently used" — a stable,
         # predictable spot, since (unlike every category below) it isn't
         # sorted alongside the rest by `sort_key()` at all.
         self._macro_root = QTreeWidgetItem(self.tree, [MACRO_LABEL])
@@ -169,14 +174,14 @@ class LibraryPanel(QWidget):
         self._rebuild_macro_section()
 
         standard_categories = [
-            "Bramki logiczne", "Detekcja zboczy", "Wejścia / Wyjścia", "Elementy Analogowe", "Timery",
-            "Przerzutniki", "Przyciski", "LED", "Liczniki", "Telemechanika", "Inne",
+            "Logic gates", "Edge detection", "Inputs / Outputs", "Analog", "Timers",
+            "Flip-flops", "Buttons", "LED", "Counters", "Telemetry", "Other",
             # Documentation blocks aren't executable logic — kept last, after
             # every functional category (§9.8).
-            "Dokumentacja",
+            "Documentation",
         ]
 
-        # "Dokumentacja" (Text/Note/Section) is excluded from compilation
+        # "Documentation" (Text/Note/Section) is excluded from compilation
         # (GraphBuilder/Compiler) because those blocks don't execute — but
         # they ARE placeable canvas annotations, so the library still lists
         # them like any other block type.
@@ -213,7 +218,7 @@ class LibraryPanel(QWidget):
         # feat/macro-blocks: BlockRegistry.get_block_class("macro.<def_id>")
         # returns MacroInstanceBlock — a real class, but `block_class()`
         # (no args) gives a bare, UNCONFIGURED instance whose display_name
-        # is the generic "Makroblok", not this SPECIFIC macro's own name.
+        # is the generic "Macro", not this SPECIFIC macro's own name.
         # Consult the project's actual definition instead, same as
         # _rebuild_macro_section() already must.
         macro_name = self._macro_definition_name(type_id)
@@ -234,7 +239,7 @@ class LibraryPanel(QWidget):
                 return ""
             n_in = len(definition.get("input_pins", []))
             n_out = len(definition.get("output_pins", []))
-            return f"Makroblok użytkownika ({n_in} wej. / {n_out} wyj.)"
+            return f"User macro ({n_in} in / {n_out} out)"
         from logic_studio.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
@@ -300,7 +305,7 @@ class LibraryPanel(QWidget):
     # ---- Makrobloki (feat/macro-blocks) ------------------------------------
 
     def _rebuild_macro_section(self):
-        """Rebuilds the "Makrobloki" root from `self._project`'s own
+        """Rebuilds the "Macros" root from `self._project`'s own
         `macro_definitions` — called by set_project() (project swapped) and
         by MainWindow right after LogicScene.create_macro_from_selection()
         adds a new one. Unlike every other category here, this one has no
@@ -320,7 +325,7 @@ class LibraryPanel(QWidget):
 
     def _on_tree_context_menu(self, pos):
         """Right-click anywhere in the tree — only ever adds anything for
-        a "Makrobloki" entry (every other category is a fixed, built-in
+        a "Macros" entry (every other category is a fixed, built-in
         block type with nothing project-specific to export)."""
         item = self.tree.itemAt(pos)
         if item is None:
@@ -331,7 +336,7 @@ class LibraryPanel(QWidget):
             return
 
         menu = QMenu(self)
-        export_action = menu.addAction("Eksportuj makroblok...")
+        export_action = menu.addAction("Export macro...")
         action = self._exec_context_menu(menu, self.tree.viewport().mapToGlobal(pos))
         if action == export_action:
             self._export_macro(def_id)
@@ -350,10 +355,10 @@ class LibraryPanel(QWidget):
             return
         from logic_studio.core import macro_library
 
-        definition_name = self._macro_definition_name(f"macro.{def_id}") or "makroblok"
+        definition_name = self._macro_definition_name(f"macro.{def_id}") or "macro"
         path, _ = QFileDialog.getSaveFileName(
-            self, "Eksportuj makroblok", f"{definition_name}.epwmacro",
-            "Pliki makrobloków EPW (*.epwmacro)"
+            self, "Export macro", f"{definition_name}.epwmacro",
+            "EPW macro files (*.epwmacro)"
         )
         if not path:
             return
@@ -363,7 +368,7 @@ class LibraryPanel(QWidget):
         try:
             macro_library.save_to_file(self._project, def_id, path)
         except (ValueError, OSError) as e:
-            QMessageBox.critical(self, "Błąd eksportu", str(e))
+            QMessageBox.critical(self, "Export error", str(e))
             return
 
         window = logic_main_window(self)
@@ -374,7 +379,7 @@ class LibraryPanel(QWidget):
         if self._project is None:
             return
         path, _ = QFileDialog.getOpenFileName(
-            self, "Importuj makroblok", "", "Pliki makrobloków EPW (*.epwmacro)"
+            self, "Import macro", "", "EPW macro files (*.epwmacro)"
         )
         if not path:
             return
@@ -384,7 +389,7 @@ class LibraryPanel(QWidget):
             bundle = macro_library.load_from_file(path)
             macro_library.validate_bundle(bundle)
         except (ValueError, OSError) as e:
-            QMessageBox.critical(self, "Błąd importu", str(e))
+            QMessageBox.critical(self, "Import error", str(e))
             return
 
         # push_state() only AFTER the file's own validity is confirmed —
@@ -399,7 +404,7 @@ class LibraryPanel(QWidget):
 
         count = len(bundle.get("definitions", {}))
         if hasattr(window, 'statusBar'):
-            window.statusBar().showMessage(f"Zaimportowano makroblok ({count} definicji).", 5000)
+            window.statusBar().showMessage(f"Imported macro ({count} definitions).", 5000)
 
     def _on_current_item_changed(self, current, previous):
         type_id = current.data(0, TYPE_ID_ROLE) if current else None
@@ -464,7 +469,7 @@ class LibraryPanel(QWidget):
             # BlockRegistry.get_block_class() would resolve the type_id to
             # MacroInstanceBlock too, but `dummy = block_class()` (no
             # args, the branch below) only ever gives the generic
-            # "Makroblok" name/description, never THIS macro's own.
+            # "Macro" name/description, never THIS macro's own.
             return text in type_id.lower() or text in macro_name.lower()
         from logic_studio.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)

@@ -45,6 +45,11 @@ export class ProjectManager {
   }
 
   static getProjectData(): string | null {
+    // The live arrays are the ACTIVE screen (project/ScreenContent.ts),
+    // so they have to be parked into screenContents before anything
+    // reads all of them - otherwise saving would write the active
+    // screen twice and whatever it last replaced not at all.
+    useStore.getState().captureActiveScreen();
     const state = useStore.getState();
     const proj: EPWProjectSchema = {
       format: FORMAT_NAME,
@@ -61,6 +66,11 @@ export class ProjectManager {
       meters: state.meters || [],
       signalPanels: state.signalPanels || [],
       frames: state.frames || [],
+      walls: state.walls || [],
+      circuits: state.circuits || [],
+      screens: state.screens,
+      activeScreenId: state.activeScreenId,
+      screenContents: state.screenContents,
       groupCommands: state.groupCommands || [],
       setpointPanels: state.setpointPanels || [],
       devices: state.devices || [],
@@ -100,6 +110,18 @@ export class ProjectManager {
       meters: project.meters || [],
       signalPanels: project.signalPanels || [],
       frames: project.frames || [],
+      walls: project.walls || [],
+      circuits: project.circuits || [],
+      // A file written before screens existed has none - it becomes a
+      // one-screen project, which is exactly what it was.
+      screens: project.screens?.length ? project.screens : [{ id: 'screen-1', name: 'Screen 1' }],
+      activeScreenId: project.activeScreenId || project.screens?.[0]?.id || 'screen-1',
+      screenContents: project.screenContents || {},
+      // feat/workspace: views and undo stacks belong to the session that
+      // made them, never to a project opened afterwards.
+      screenViews: {},
+      screenHistories: {},
+      hiddenScreens: [],
       groupCommands: project.groupCommands || [],
       setpointPanels: project.setpointPanels || [],
       devices: project.devices || [],
@@ -136,6 +158,8 @@ export class ProjectManager {
         meters: JSON.parse(JSON.stringify(project.meters || [])),
         signalPanels: JSON.parse(JSON.stringify(project.signalPanels || [])),
         frames: JSON.parse(JSON.stringify(project.frames || [])),
+        walls: JSON.parse(JSON.stringify(project.walls || [])),
+        circuits: JSON.parse(JSON.stringify(project.circuits || [])),
         groupCommands: JSON.parse(JSON.stringify(project.groupCommands || [])),
         setpointPanels: JSON.parse(JSON.stringify(project.setpointPanels || []))
       }],

@@ -13,17 +13,17 @@ class BaseAnalogBlock(BaseLogicBlock):
 @BlockRegistry.register
 class ScaleBlock(BaseAnalogBlock):
     PIN_DESCRIPTIONS = {
-        "In": "Wartość wejściowa w zakresie In Min..In Max.",
-        "Out": "Wartość przeskalowana liniowo do zakresu Out Min..Out Max (przycięta do granic).",
+        "In": "Input value in the range In Min..In Max.",
+        "Out": "Value scaled linearly to Out Min..Out Max (clamped to the limits).",
     }
     PROPERTY_DESCRIPTIONS = {
-        "In Min": "Dolna granica zakresu wejściowego.",
-        "In Max": "Górna granica zakresu wejściowego.",
-        "Out Min": "Dolna granica zakresu wyjściowego.",
-        "Out Max": "Górna granica zakresu wyjściowego.",
+        "In Min": "Lower limit of the input range.",
+        "In Max": "Upper limit of the input range.",
+        "Out Min": "Lower limit of the output range.",
+        "Out Max": "Upper limit of the output range.",
     }
 
-    def __init__(self, type_id="analog.scale", default_name="SCALE", category="Elementy Analogowe", description="Skalowanie liniowe wartości z jednego zakresu do drugiego."):
+    def __init__(self, type_id="analog.scale", default_name="SCALE", category="Analog", description="Linear scaling of a value from one range to another."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["skalowanie", "przeliczenie"]
         self.height = 100
@@ -63,15 +63,15 @@ class ScaleBlock(BaseAnalogBlock):
 @BlockRegistry.register
 class LimitBlock(BaseAnalogBlock):
     PIN_DESCRIPTIONS = {
-        "In": "Wartość wejściowa.",
-        "Out": "Wartość In przycięta do zakresu Min..Max.",
+        "In": "Input value.",
+        "Out": "In clamped to Min..Max.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Min": "Dolna granica przycięcia.",
-        "Max": "Górna granica przycięcia.",
+        "Min": "Lower clamp limit.",
+        "Max": "Upper clamp limit.",
     }
 
-    def __init__(self, type_id="analog.limit", default_name="LIMIT", category="Elementy Analogowe", description="Przycina (ogranicza) wartość do zadanego zakresu Min..Max."):
+    def __init__(self, type_id="analog.limit", default_name="LIMIT", category="Analog", description="Clamps (limits) a value to the range Min..Max."):
         super().__init__(type_id, default_name, category, description)
         self.height = 80
         self.inputs.append(Pin("In", Pin.DIR_INPUT, Pin.TYPE_FLOAT))
@@ -92,15 +92,15 @@ class LimitBlock(BaseAnalogBlock):
 @BlockRegistry.register
 class HysteresisBlock(BaseAnalogBlock):
     PIN_DESCRIPTIONS = {
-        "In": "Wartość analogowa obserwowana względem dwóch progów.",
-        "Out": "Prawda powyżej High Threshold, fałsz poniżej Low Threshold, bez zmiany pomiędzy nimi (histereza).",
+        "In": "Analog value compared against two thresholds.",
+        "Out": "True above High Threshold, false below Low Threshold, unchanged in between (hysteresis).",
     }
     PROPERTY_DESCRIPTIONS = {
-        "High Threshold": "Próg, powyżej którego Out przechodzi na prawdę.",
-        "Low Threshold": "Próg, poniżej którego Out przechodzi na fałsz.",
+        "High Threshold": "Threshold above which Out becomes true.",
+        "Low Threshold": "Threshold below which Out becomes false.",
     }
 
-    def __init__(self, type_id="analog.hysteresis", default_name="HYSTERESIS", category="Elementy Analogowe", description="Przełącznik dwuprogowy (histereza) zamieniający sygnał analogowy na logiczny."):
+    def __init__(self, type_id="analog.hysteresis", default_name="HYSTERESIS", category="Analog", description="Two-threshold switch (hysteresis) turning an analog signal into a boolean."):
         super().__init__(type_id, default_name, category, description)
         self.height = 80
 
@@ -139,14 +139,14 @@ class HysteresisBlock(BaseAnalogBlock):
 @BlockRegistry.register
 class MovingAverageBlock(BaseAnalogBlock):
     PIN_DESCRIPTIONS = {
-        "In": "Wartość wejściowa dodawana do bufora uśredniającego.",
-        "Out": "Średnia arytmetyczna z ostatnich Samples próbek.",
+        "In": "Input value added to the averaging buffer.",
+        "Out": "Arithmetic mean of the last Samples samples.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Samples": "Liczba ostatnich próbek branych do średniej.",
+        "Samples": "Number of recent samples included in the average.",
     }
 
-    def __init__(self, type_id="analog.mov_avg", default_name="MOVING AVG", category="Elementy Analogowe", description="Filtr uśredniający (średnia krocząca) z ostatnich N próbek."):
+    def __init__(self, type_id="analog.mov_avg", default_name="MOVING AVG", category="Analog", description="Averaging filter (moving average) over the last N samples."):
         super().__init__(type_id, default_name, category, description)
         self.height = 60
         self.inputs.append(Pin("In", Pin.DIR_INPUT, Pin.TYPE_FLOAT))
@@ -185,17 +185,17 @@ class DeadbandBlock(BaseAnalogBlock):
     doesn't spam downstream logic/alarms/history with meaningless churn."""
 
     PIN_DESCRIPTIONS = {
-        "In": "Wartość wejściowa.",
-        "Out": "Ostatnia zgłoszona wartość — zmienia się dopiero, gdy In odbiegnie od niej o więcej niż strefa nieczułości.",
-        "Changed": "Impuls jednego cyklu skanu, gdy Out właśnie się zmieniło.",
+        "In": "Input value.",
+        "Out": "Last reported value — changes only when In moves away from it by more than the deadband.",
+        "Changed": "One-scan pulse when Out has just changed.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Mode": "Sposób liczenia strefy nieczułości: \"Bezwzględny\" (stała wartość Deadband) albo \"Procentowy\" (Deadband% z Range).",
-        "Deadband": "Szerokość strefy nieczułości — w jednostkach sygnału (tryb Bezwzględny) albo w procentach Range (tryb Procentowy).",
-        "Range": "Zakres odniesienia dla trybu Procentowego (nieużywany w trybie Bezwzględnym).",
+        "Mode": "How the deadband is computed: \"Absolute\" (a fixed Deadband value) or \"Percentage\" (Deadband% of Range).",
+        "Deadband": "Deadband width — in signal units (Absolute mode) or as a percentage of Range (Percentage mode).",
+        "Range": "Reference span for Percentage mode (unused in Absolute mode).",
     }
 
-    def __init__(self, type_id="analog.deadband", default_name="DEADBAND", category="Elementy Analogowe", description="Strefa nieczułości (report-by-exception) — tłumi drobny szum, zgłaszając wartość tylko przy istotnej zmianie."):
+    def __init__(self, type_id="analog.deadband", default_name="DEADBAND", category="Analog", description="Deadband (report-by-exception) — suppresses small noise by reporting a value only on a significant change."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["strefa nieczułości", "martwa strefa"]
         self.height = 80
@@ -270,30 +270,30 @@ class QualityBlock(BaseAnalogBlock):
 
     PROPERTY_TOOLTIPS = {
         "Stuck Tolerance": (
-            "Dla realnego sygnału z przetwornika ta wartość MUSI być większa "
-            "od zera — szum ostatniego bitu przetwornika sprawia, że dwie "
-            "kolejne próbki prawie nigdy nie są identyczne bit-w-bit. "
-            "Punkt startowy: około 0,1% zakresu pomiarowego."
+            "For a real transducer signal this value MUST be greater "
+            "than zero — last-bit converter noise means that two "
+            "consecutive samples are almost never bit-for-bit identical. "
+            "Starting point: about 0.1% of the measuring range."
         ),
     }
     PIN_DESCRIPTIONS = {
-        "In": "Surowy sygnał analogowy poddawany nadzorowi jakości.",
-        "Good": "Zbiorczy werdykt: prawda, gdy sygnał jest liczbą, w zakresie, bez błędu szybkości zmiany i niezamrożony. Istotne dla bezpieczeństwa.",
-        "Out Of Range": "Prawda, gdy wartość wykracza poza zakres pomiarowy.",
-        "Rate Fault": "Prawda, gdy szybkość zmiany sygnału przekracza Max Rate (/s).",
-        "Stuck": "Prawda, gdy sygnał nie zmienia się (w granicach Stuck Tolerance) przez Stuck Scans kolejnych skanów.",
+        "In": "Raw analog signal under quality supervision.",
+        "Good": "Overall verdict: true when the signal is a number, in range, free of rate faults and not stuck. Safety relevant.",
+        "Out Of Range": "True when the value is outside the measuring range.",
+        "Rate Fault": "True when the rate of change of the signal exceeds Max Rate (/s).",
+        "Stuck": "True when the signal has not changed (within Stuck Tolerance) for Stuck Scans consecutive scans.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Min": "Dolna granica zakresu pomiarowego (używana, gdy Range Source = \"Własny\").",
-        "Max": "Górna granica zakresu pomiarowego (używana, gdy Range Source = \"Własny\").",
-        "Range Source": "Skąd brać zakres pomiarowy: \"Własny\" (Min/Max tego bloku) albo \"Z punktu analogowego\" (zakres podłączonego wejścia AI).",
-        "Max Rate (/s)": "Maksymalna dopuszczalna szybkość zmiany sygnału na sekundę. 0 = kontrola wyłączona.",
-        "Stuck Scans": "Liczba kolejnych niezmienionych skanów, po której sygnał uznawany jest za zamrożony. 0 = kontrola wyłączona.",
-        "Stuck Tolerance": "Margines traktowany jako \"bez zmiany\" przy wykrywaniu zamrożenia sygnału. Dla realnego toru pomiarowego MUSI być > 0.",
+        "Min": "Lower limit of the measuring range (used when Range Source = \"Custom\").",
+        "Max": "Upper limit of the measuring range (used when Range Source = \"Custom\").",
+        "Range Source": "Where the measuring range comes from: \"Custom\" (the Min/Max of this block) or \"From analog point\" (the range of the connected AI input).",
+        "Max Rate (/s)": "Maximum allowed rate of change per second. 0 = check disabled.",
+        "Stuck Scans": "Number of consecutive unchanged scans after which the signal is considered stuck. 0 = check disabled.",
+        "Stuck Tolerance": "Margin treated as \"no change\" when detecting a stuck signal. MUST be > 0 for a real measurement chain.",
     }
     PROPERTY_UNITS = {"Max Rate (/s)": "1/s"}
 
-    def __init__(self, type_id="analog.quality", default_name="QUALITY", category="Elementy Analogowe", description="Nadzór jakości sygnału analogowego: zakres, szybkość zmiany, zamrożenie. UWAGA: dla realnego przetwornika ustaw Stuck Tolerance > 0 (rząd wielkości: ok. 0,1% zakresu pomiarowego) — przy tolerancji 0.0 detekcja zamrożenia nie zadziała na sygnale z prawdziwego toru pomiarowego."):
+    def __init__(self, type_id="analog.quality", default_name="QUALITY", category="Analog", description="Analog signal quality supervision: range, rate of change, stuck value. NOTE: for a real transducer set Stuck Tolerance > 0 (order of magnitude: about 0.1% of the measuring range) — with a tolerance of 0.0 stuck detection will not work on a signal from a real measurement chain."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["jakość sygnału", "nadzór pomiaru"]
         self.height = 100

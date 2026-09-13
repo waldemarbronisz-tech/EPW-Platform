@@ -81,6 +81,18 @@ export const scadaSymbols: Record<string, SymbolDefinition> = {
     // already had.
     terminals: [{ id: 'IN', side: 'TOP', medium: 'ELECTRICAL' }]
   },
+  // feat/text-formatting: a text box typed into directly on the canvas
+  // and formatted from the Word-style bar (components/FormatBar.tsx).
+  'scada.text_box': {
+    type: 'scada.text_box',
+    label: 'Text box',
+    category: 'SCADA',
+    defaultWidth: 240,
+    defaultHeight: 48,
+    allowedStates: [],
+    defaultState: '',
+    resizeRedraws: true,
+  },
   'scada.motor': {
     type: 'scada.motor',
     label: 'Motor (SCADA)',

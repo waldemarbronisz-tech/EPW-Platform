@@ -1,5 +1,7 @@
+import { TextEditOverlay } from './TextEditOverlay';
+import { TEXT_BOX_TYPE } from '../project/TextFormatting';
 import React, { useRef, useEffect, useState } from 'react';
-import { Stage, Layer, Rect, Circle, Group, Path, Text } from 'react-konva';
+import { Stage, Layer, Rect, Circle, Group, Path, Text, Line } from 'react-konva';
 import { useStore } from '../store';
 import type { SynopticConnection, WirePoint } from '../store';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
@@ -7,8 +9,8 @@ import { pathFromPoints, getConductorCoreColor } from './ConnectionLine';
 import type { WireSegmentCollision } from './ConnectionLine';
 import { findAllCollisions } from '../project/WireCollision';
 import { ObjectLabelRenderer } from './ObjectLabelRenderer';
-import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WATER, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI, WIRE_TERMINAL_SNAP_DISTANCE } from '../theme/ScadaTheme';
-import { snapValue } from '../utils/GridSnap';
+import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI, MARQUEE_CROSSING, MARQUEE_CROSSING_FILL, MARQUEE_DASH, MARQUEE_STROKE_WIDTH, MARQUEE_TOOL_FILL, MARQUEE_WINDOW, MARQUEE_WINDOW_FILL, WIRE_TERMINAL_SNAP_DISTANCE } from '../theme/ScadaTheme';
+import { snapValue, shouldSnapToGrid } from '../utils/GridSnap';
 import {
   snapPointToGrid, appendWirePoint, removeLastWirePoint,
   insertBendOnSegment, nearestPointOnPolyline, simplifyCollinearPoints
@@ -32,9 +34,24 @@ import { GroupCommandElementNode } from './GroupCommandElementNode';
 import { computeGroupCommandHeight } from '../elements/GroupCommandElement';
 import { SetpointElementNode } from './SetpointElementNode';
 import { computeSetpointHeight } from '../elements/SetpointElement';
-import { isObjectFullyInBox, isMeterFullyInBox, isConnectionFullyInBox, mergeSelectionAdditive } from '../utils/SelectionBox';
-import { clampZoom, computeContentBounds, computeFitView, GRID_THIN_BELOW_ZOOM } from '../utils/CanvasView';
+import {
+  isObjectInBox, isMeterInBox, isConnectionInBox, isWallInBox,
+  marqueeMode, mergeSelectionAdditive,
+} from '../utils/SelectionBox';
+import type { MarqueeMode } from '../utils/SelectionBox';
+import { GroupResizeHandles } from './canvas/GroupResizeHandles';
+import { wallsBounds } from '../project/GroupScale';
+import type { ScaleBox } from '../project/GroupScale';
+import { clampZoom, computeFitView, computePlanBounds, GRID_THIN_BELOW_ZOOM } from '../utils/CanvasView';
 import { FrameElementNode } from './FrameElementNode';
+import { WallLayer } from './WallLayer';
+import { RoomFloorLayer } from './RoomFloorLayer';
+import { IlluminanceLayer } from './IlluminanceLayer';
+import { isLuminaire } from '../project/Illuminance';
+import { IlluminanceLegend } from './IlluminanceLegend';
+import { isDegenerateWall, moveWall } from '../elements/WallElement';
+import { isOpeningType, seatOpeningInWall } from '../project/WallOpenings';
+import type { SynopticObject } from '../store';
 import { computeFrameRectFromDrag } from '../elements/FrameElement';
 import { shouldExitInsertModeAfterPlacing } from '../utils/InsertMode';
 import { isAltKeyDown, isSpaceKeyDown, setAltKeyDown, setSpaceKeyDown } from '../utils/CanvasInputState';
@@ -80,6 +97,60 @@ export const Canvas: React.FC = () => {
   const { meters, selectedMeterIds, selectMeters, updateMeter, devices } = useStore();
   const { signalPanels, selectedSignalPanelIds, selectSignalPanels, updateSignalPanel } = useStore();
   const { frames, selectedFrameIds, selectFrames, addFrame, updateFrame, isDrawingFrame, drawingFrameVariant, frameToolContinuous, setDrawingFrameMode } = useStore();
+  // feat/room-plan: walls, the wall tool, and Podglad mode.
+  const { walls, selectedWallIds, selectWalls, addWall, updateWall, addRoomWalls, isDrawingWall, isDrawingRoom, wallDrawThickness, wallDrawHeight, wallDrawMaterial, previewMode, showIlluminance } = useStore();
+  // The wall chain in progress: where the next wall starts, and
+  // where the cursor currently is, for the rubber-band preview. Null
+  // start = the tool is armed but no first corner has been placed.
+  // feat/room-plan: in Podglad mode a click OPERATES the drawing - it
+  // switches the circuit the clicked object belongs to - instead of
+  // selecting it. Selection is suppressed entirely there rather than
+  // merely ignored, so nothing shows resize handles or moves while the
+  // user is "running" the room. One handler shared by both ObjectNode
+  // passes (surfaces and ordinary symbols), so the two can never
+  // disagree about what a click means.
+  // feat/room-plan: a door, window or gate dropped or dragged onto a
+  // wall SEATS ITSELF in it - centred on the wall's line and turned to
+  // the wall's angle - so it reads as an opening in the wall instead of
+  // a symbol lying across it. Off any wall it is left exactly where the
+  // user put it, which is right for one parked aside while the plan is
+  // rearranged. Applied here, on top of whatever change was already
+  // being made, so the drop path and every later drag share one rule.
+  const seatIfOpening = (obj: SynopticObject, attrs: Partial<SynopticObject>): Partial<SynopticObject> => {
+    if (!isOpeningType(obj.type)) return attrs;
+    const seat = seatOpeningInWall(useStore.getState().walls, { ...obj, ...attrs } as SynopticObject);
+    return seat ? { ...attrs, ...seat } : attrs;
+  };
+
+  const handleObjectChange = (obj: SynopticObject, attrs: Partial<SynopticObject>) => {
+    updateObject(obj.id, seatIfOpening(obj, attrs));
+  };
+
+  const handleObjectClick = (objectId: string, e: any) => {
+    if (previewMode) {
+      // operateAt, not toggleCircuitAt: in Podglad it toggles at once,
+      // and while a simulation is running it raises the controller's
+      // confirmation window instead (store/simulationSlice.ts). One
+      // entry point, so there is no route round the confirmation.
+      useStore.getState().operateAt(objectId);
+      return;
+    }
+    selectObjects([objectId], !!e?.evt?.shiftKey);
+  };
+
+  const [wallStart, setWallStart] = useState<{ x: number; y: number } | null>(null);
+  const [wallCursor, setWallCursor] = useState<{ x: number; y: number } | null>(null);
+  // The chain's current corner is ALSO held in a ref, and the ref - not
+  // the state - is what handleMouseDown reads. React state lands on the
+  // next render, so two clicks arriving before that render both see the
+  // stale value: the second one would restart the chain instead of
+  // closing a wall, silently dropping it. (Found by driving the canvas
+  // with scripted clicks, which land in a single batch - a fast
+  // double-click does the same thing to a real user.) Same
+  // state-plus-ref pairing drawingPoints/drawingPointsRef above already
+  // uses, for exactly this reason; the state copy still exists purely
+  // to drive the preview line's own re-render.
+  const wallStartRef = useRef<{ x: number; y: number } | null>(null);
   const { groupCommands, selectedGroupCommandIds, selectGroupCommands, updateGroupCommand } = useStore();
   const { setpointPanels, selectedSetpointPanelIds, selectSetpointPanels, updateSetpointPanel } = useStore();
   const { selectMixed } = useStore();
@@ -94,6 +165,15 @@ export const Canvas: React.FC = () => {
   // Selection Rect
   const [selectionBox, setSelectionBox] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
   const selectionStartRef = useRef<{ x: number, y: number } | null>(null);
+  // feat/cad-marquee: which way the drag is going, and therefore which
+  // kind of marquee this is - a WINDOW (left to right, catches only what
+  // is entirely inside) or a CROSSING (right to left, touching is
+  // enough). This drives the marquee's own COLOUR while the drag is on
+  // screen; what the release actually selects is recomputed from the
+  // start point and the release point (handleMouseUp), never from this,
+  // so a state update that has not landed yet can never select the
+  // wrong things.
+  const [marquee, setMarquee] = useState<MarqueeMode>('WINDOW');
 
   // Panning
   const isPanningRef = useRef(false);
@@ -321,13 +401,18 @@ export const Canvas: React.FC = () => {
         // behavior of just clearing the current selection.
         const s = useStore.getState();
         const wasMidDraw = !!drawingPointsRef.current;
-        const wasInsertMode = s.isDrawingConnection || s.isDrawingFrame;
+        const wasInsertMode = s.isDrawingConnection || s.isDrawingFrame || s.isDrawingWall || s.isDrawingRoom;
         if (wasMidDraw) {
           setDrawingPoints(null);
           setDrawingPreview(null);
         }
         if (s.isDrawingConnection) s.setDrawingMode(false);
         if (s.isDrawingFrame) s.setDrawingFrameMode(false);
+        // Escape ends the wall CHAIN first and the tool with it -
+        // a half-drawn chain left armed after Escape would place its
+        // next wall from a corner the user thought they abandoned.
+        if (s.isDrawingWall) { s.setDrawingWallMode(false); wallStartRef.current = null; setWallStart(null); setWallCursor(null); }
+        if (s.isDrawingRoom) { s.setDrawingRoomMode(false); selectionStartRef.current = null; setSelectionBox(null); }
         if (!wasMidDraw && !wasInsertMode) {
           s.clearSelection();
         }
@@ -346,7 +431,7 @@ export const Canvas: React.FC = () => {
         // already in this effect.
         e.preventDefault();
         const s = useStore.getState();
-        s.deleteObjects(s.selectedIds, s.selectedConnectionIds, s.selectedMeterIds, s.selectedSignalPanelIds, s.selectedFrameIds, s.selectedGroupCommandIds, s.selectedSetpointPanelIds);
+        s.deleteObjects(s.selectedIds, s.selectedConnectionIds, s.selectedMeterIds, s.selectedSignalPanelIds, s.selectedFrameIds, s.selectedGroupCommandIds, s.selectedSetpointPanelIds, s.selectedWallIds);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         // Select everything on the current screen - objects,
         // connections and meters together.
@@ -401,7 +486,7 @@ export const Canvas: React.FC = () => {
         // Fit the whole project's content into the current viewport.
         e.preventDefault();
         const s = useStore.getState();
-        const bounds = computeContentBounds(s.objects, s.meters, s.connections);
+        const bounds = computePlanBounds(s.objects, s.meters, s.connections, s.walls);
         const view = computeFitView(bounds, sizeRef.current.width, sizeRef.current.height);
         s.setCanvasState(view);
       } else if (e.key === ' ') {
@@ -439,11 +524,17 @@ export const Canvas: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // feat/workspace: set once the container has been measured for real -
+  // until then `size` is the 800x600 placeholder, and fitting a screen to
+  // a placeholder would fit it to a box that is not on screen.
+  const measuredRef = useRef(false);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
+        measuredRef.current = true;
         setSize({
           width: entry.contentRect.width,
           height: entry.contentRect.height
@@ -457,6 +548,25 @@ export const Canvas: React.FC = () => {
       observer.disconnect();
     };
   }, []);
+
+  // feat/workspace: a screen made active for the FIRST time is fitted to
+  // its own content, so it looks in the editor exactly as it looked in
+  // its tile a moment before (ScreenView fits the same way). A screen
+  // that has been active before gets its remembered view back from the
+  // store instead and is left alone here - re-fitting it would throw
+  // away the zoom the user chose.
+  const activeScreenId = useStore(s => s.activeScreenId);
+  const fittedScreenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!measuredRef.current) return;
+    if (fittedScreenRef.current === activeScreenId) return;
+    fittedScreenRef.current = activeScreenId;
+    const s = useStore.getState();
+    if (s.screenViews[activeScreenId]) return;
+    const bounds = computePlanBounds(s.objects, s.meters, s.connections, s.walls);
+    if (!bounds) return;
+    s.setCanvasState(computeFitView(bounds, size.width, size.height));
+  }, [activeScreenId, size]);
 
   const handleWheel = (e: any) => {
     e.evt.preventDefault();
@@ -547,6 +657,55 @@ export const Canvas: React.FC = () => {
       return;
     }
 
+    if (isDrawingRoom) {
+      // A drag, not a chain of clicks - geometrically identical to the
+      // rubber-band selection and the frame tool, so it reuses the same
+      // start/box tracking those two already share. Only what happens
+      // on release differs.
+      const pos = e.target.getStage().getPointerPosition();
+      if (!pos) return;
+      const { x: startX, y: startY } = toCanvasPoint(pos);
+      selectionStartRef.current = {
+        x: snapValue(startX, gridSize, isAltKeyDown()),
+        y: snapValue(startY, gridSize, isAltKeyDown()),
+      };
+      setSelectionBox({ x: selectionStartRef.current.x, y: selectionStartRef.current.y, width: 0, height: 0 });
+      return;
+    }
+
+    if (isDrawingWall) {
+      // Walls are CHAINED clicks, not drags: the first click sets a
+      // corner, every click after it drops a wall from the previous
+      // corner and starts the next one there. That is what makes a
+      // room four clicks round its corners and - crucially - what
+      // makes the corners EXACTLY coincide, which is what RoomFloors.ts
+      // needs to recognize the loop and fill a floor.
+      const pos = e.target.getStage().getPointerPosition();
+      if (!pos) return;
+      const raw = toCanvasPoint(pos);
+      const point = {
+        x: snapValue(raw.x, gridSize, isAltKeyDown()),
+        y: snapValue(raw.y, gridSize, isAltKeyDown()),
+      };
+      const start = wallStartRef.current;
+      if (!start) {
+        wallStartRef.current = point;
+        setWallStart(point);
+        setWallCursor(point);
+        return;
+      }
+      // A click that did not travel far enough is a double-click or a
+      // slip, not a wall - dropped rather than clamped, see
+      // isDegenerateWall's own comment for why clamping would be worse.
+      if (!isDegenerateWall(start, point)) {
+        addWall({ from: start, to: point, thickness: wallDrawThickness, height: wallDrawHeight, material: wallDrawMaterial });
+      }
+      wallStartRef.current = point;
+      setWallStart(point);
+      setWallCursor(point);
+      return;
+    }
+
     if (isDrawingFrame) {
       // A frame is dragged out like a rectangle tool, on any point -
       // same "doesn't matter what's underneath" reasoning as the wire
@@ -598,6 +757,17 @@ export const Canvas: React.FC = () => {
       if (pos) setDrawingPreview(toWirePoint(pos));
     }
 
+    if (isDrawingWall && wallStart) {
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (pos) {
+        const raw = toCanvasPoint(pos);
+        setWallCursor({
+          x: snapValue(raw.x, gridSize, isAltKeyDown()),
+          y: snapValue(raw.y, gridSize, isAltKeyDown()),
+        });
+      }
+    }
+
     if (isPanningRef.current) {
       const dx = e.evt.clientX - lastPanPosRef.current.x;
       const dy = e.evt.clientY - lastPanPosRef.current.y;
@@ -623,6 +793,8 @@ export const Canvas: React.FC = () => {
     const startX = selectionStartRef.current.x;
     const startY = selectionStartRef.current.y;
 
+    setMarquee(marqueeMode(startX, curX));
+
     setSelectionBox({
       x: Math.min(startX, curX),
       y: Math.min(startY, curY),
@@ -639,6 +811,35 @@ export const Canvas: React.FC = () => {
     }
 
     if (isDrawingConnection) {
+      return;
+    }
+
+    if (isDrawingRoom) {
+      // The rectangle is computed from the START REF and the pointer's
+      // position RIGHT NOW - never from the selectionBox state. State
+      // lands on the next render, so a drag whose move and release
+      // arrive in one batch (a fast flick, or anything scripted) would
+      // read a stale box, or a null one, and silently draw nothing.
+      // Same state-plus-ref pairing the wall chain above already uses.
+      const start = selectionStartRef.current;
+      const pos = e.target.getStage()?.getPointerPosition();
+      if (start && pos) {
+        const end = toCanvasPoint(pos);
+        const endX = snapValue(end.x, gridSize, isAltKeyDown());
+        const endY = snapValue(end.y, gridSize, isAltKeyDown());
+        const x = Math.min(start.x, endX);
+        const y = Math.min(start.y, endY);
+        const width = Math.abs(endX - start.x);
+        const height = Math.abs(endY - start.y);
+        // A drag too small to be a room is a stray click - dropped
+        // rather than turned into four degenerate walls.
+        if (width >= gridSize && height >= gridSize) {
+          addRoomWalls({ x, y, width, height });
+        }
+      }
+      selectionStartRef.current = null;
+      setSelectionBox(null);
+      useStore.getState().setDrawingRoomMode(false);
       return;
     }
 
@@ -674,7 +875,36 @@ export const Canvas: React.FC = () => {
       return;
     }
 
-    if (selectionStartRef.current && selectionBox) {
+    // The box is recomputed HERE from the start ref and the release
+    // position, rather than read out of selectionBox state.
+    //
+    // React state lands on the NEXT render, so a drag whose moves and
+    // release arrive in one batch - a fast flick, or anything scripted -
+    // reaches this line with a stale box, or a null one, and silently
+    // selects nothing. Exactly the trap the wall chain and the room tool
+    // above already avoid, and it was found the same way: by driving the
+    // canvas with scripted events and watching a marquee that visibly
+    // covered a whole room select none of it.
+    const releasePos = e.target.getStage()?.getPointerPosition();
+    const liveBox = (() => {
+      const start = selectionStartRef.current;
+      if (!start || !releasePos) return null;
+      const endX = (releasePos.x - canvasState.panX) / canvasState.zoom;
+      const endY = (releasePos.y - canvasState.panY) / canvasState.zoom;
+      return {
+        box: {
+          x: Math.min(start.x, endX),
+          y: Math.min(start.y, endY),
+          width: Math.abs(endX - start.x),
+          height: Math.abs(endY - start.y),
+        },
+        // The direction comes from the same two points, for the same
+        // reason - the mode must agree with the box that is being used.
+        mode: marqueeMode(start.x, endX),
+      };
+    })();
+
+    if (selectionStartRef.current && liveBox) {
       // Rubber-band selection (commit 3, extended in commit 6 to signal
       // panels, and in commit 2/feat-appearance-selection-frames to
       // frames): everything lying ENTIRELY within the box - objects,
@@ -688,27 +918,35 @@ export const Canvas: React.FC = () => {
       // isObjectFullyInBox (built for a SynopticObject, but only ever
       // reads those four fields plus optional scale) is reusable for
       // it exactly as it stands - no new isFrameFullyInBox either.
-      const box = selectionBox;
-      const objectIds = objects.filter(obj => isObjectFullyInBox(obj, box)).map(o => o.id);
-      const meterIds = meters.filter(m => isMeterFullyInBox(m, computeMeterHeight(m), box)).map(m => m.id);
-      const signalPanelIds = signalPanels.filter(p => isMeterFullyInBox(p, computeSignalPanelHeight(p), box)).map(p => p.id);
-      const frameIds = frames.filter(f => isObjectFullyInBox(f, box)).map(f => f.id);
+      // feat/cad-marquee: WINDOW (dragged rightwards) catches only what
+      // lies entirely inside; CROSSING (dragged leftwards) catches
+      // anything it touches.
+      const { box, mode } = liveBox;
+      const objectIds = objects.filter(obj => isObjectInBox(obj, box, mode)).map(o => o.id);
+      const meterIds = meters.filter(m => isMeterInBox(m, computeMeterHeight(m), box, mode)).map(m => m.id);
+      const signalPanelIds = signalPanels.filter(p => isMeterInBox(p, computeSignalPanelHeight(p), box, mode)).map(p => p.id);
+      const frameIds = frames.filter(f => isObjectInBox(f, box, mode)).map(f => f.id);
       // A group command button has a fixed, computed height (never a
       // field of its own) exactly like a meter/signal panel - reuses
-      // isMeterFullyInBox's own {x,y,width}+height signature, no new helper.
-      const groupCommandIds = groupCommands.filter(g => isMeterFullyInBox(g, computeGroupCommandHeight(), box)).map(g => g.id);
-      const setpointPanelIds = setpointPanels.filter(p => isMeterFullyInBox(p, computeSetpointHeight(p), box)).map(p => p.id);
-      const connectionIds = connections.filter(c => isConnectionFullyInBox(c, box)).map(c => c.id);
+      // isMeterInBox's own {x,y,width}+height signature, no new helper.
+      const groupCommandIds = groupCommands.filter(g => isMeterInBox(g, computeGroupCommandHeight(), box, mode)).map(g => g.id);
+      const setpointPanelIds = setpointPanels.filter(p => isMeterInBox(p, computeSetpointHeight(p), box, mode)).map(p => p.id);
+      const connectionIds = connections.filter(c => isConnectionInBox(c, box, mode)).map(c => c.id);
+      // Walls join the rubber band here for the first time. Without
+      // them a room could only ever be selected one wall at a time,
+      // which is why "select the whole room and move it" was not
+      // something this editor could do.
+      const wallIds = walls.filter(w => isWallInBox(w, box, mode)).map(w => w.id);
 
-      if (objectIds.length > 0 || meterIds.length > 0 || signalPanelIds.length > 0 || frameIds.length > 0 || groupCommandIds.length > 0 || setpointPanelIds.length > 0 || connectionIds.length > 0) {
+      if (objectIds.length > 0 || meterIds.length > 0 || signalPanelIds.length > 0 || frameIds.length > 0 || groupCommandIds.length > 0 || setpointPanelIds.length > 0 || connectionIds.length > 0 || wallIds.length > 0) {
         if (e.evt.shiftKey) {
           // Shift+drag adds to whatever was already selected, per kind.
           selectMixed(mergeSelectionAdditive(
-            { objectIds: selectedIds, connectionIds: selectedConnectionIds, meterIds: selectedMeterIds, signalPanelIds: selectedSignalPanelIds, frameIds: selectedFrameIds, groupCommandIds: selectedGroupCommandIds, setpointPanelIds: selectedSetpointPanelIds },
-            { objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds }
+            { objectIds: selectedIds, connectionIds: selectedConnectionIds, meterIds: selectedMeterIds, signalPanelIds: selectedSignalPanelIds, frameIds: selectedFrameIds, groupCommandIds: selectedGroupCommandIds, setpointPanelIds: selectedSetpointPanelIds, wallIds: selectedWallIds },
+            { objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds }
           ));
         } else {
-          selectMixed({ objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds });
+          selectMixed({ objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds });
         }
       }
       // An empty box selects nothing new - a non-shift click already
@@ -840,6 +1078,11 @@ export const Canvas: React.FC = () => {
     const width = def?.defaultWidth || 80;
     const height = def?.defaultHeight || 80;
 
+    // feat/library-recent-and-search: recorded where a symbol is
+    // actually PLACED, not where it is clicked in the library - a symbol
+    // you looked at and dragged back is not one you used.
+    useStore.getState().recordSymbolUse(data.type);
+
     addObject({
       type: data.type,
       category: data.category,
@@ -856,7 +1099,7 @@ export const Canvas: React.FC = () => {
       color: '#000000',
       fill: '#c0c0c0',
       border: '#000000',
-      text: def?.label || data.type,
+      text: data.type === TEXT_BOX_TYPE ? '' : (def?.label || data.type),
       font: FONT_UI,
       fontSize: FONT_SIZE_BASE,
       editor: {
@@ -865,6 +1108,28 @@ export const Canvas: React.FC = () => {
       tooltip: '',
       customProperties: {}
     });
+
+    // feat/text-formatting: a text box dropped from the library opens
+    // straight away for typing.
+    if (data.type === TEXT_BOX_TYPE) {
+      const created = useStore.getState().objects[useStore.getState().objects.length - 1];
+      if (created) {
+        selectObjects([created.id]);
+        useStore.getState().setEditingTextId(created.id);
+      }
+    }
+
+    // A door/window/gate dropped onto a wall seats itself in it right
+    // away, so it lands as an opening rather than needing to be nudged
+    // into place first. addObject assigns the id, so the freshly
+    // created object is read back here rather than guessed at.
+    if (isOpeningType(data.type)) {
+      const created = useStore.getState().objects[useStore.getState().objects.length - 1];
+      if (created) {
+        const seat = seatOpeningInWall(useStore.getState().walls, created);
+        if (seat) updateObject(created.id, seat);
+      }
+    }
   };
 
   // Draw Grid: discreet minor lines every gridSize, a more pronounced
@@ -928,7 +1193,11 @@ export const Canvas: React.FC = () => {
   // (an axis-aligned box, not each object's own rotated bounds) - the
   // same simplification isObjectFullyInBox already makes for the
   // rubber-band box itself.
-  const selectedTotalCount = selectedIds.length + selectedMeterIds.length + selectedSignalPanelIds.length + selectedFrameIds.length + selectedGroupCommandIds.length + selectedSetpointPanelIds.length + selectedConnectionIds.length;
+  // feat/cad-marquee: walls count towards the group too - a room
+  // selected with a crossing marquee IS a multi-element selection, and
+  // leaving its walls out meant four selected walls drew no group
+  // outline at all.
+  const selectedTotalCount = selectedIds.length + selectedMeterIds.length + selectedSignalPanelIds.length + selectedFrameIds.length + selectedGroupCommandIds.length + selectedSetpointPanelIds.length + selectedConnectionIds.length + selectedWallIds.length;
   const selectionGroupBounds = (() => {
     if (selectedTotalCount <= 1) return null;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -945,10 +1214,39 @@ export const Canvas: React.FC = () => {
     groupCommands.filter(g => selectedGroupCommandIds.includes(g.id)).forEach(g => extend(g.x, g.y, g.x + g.width, g.y + computeGroupCommandHeight()));
     setpointPanels.filter(p => selectedSetpointPanelIds.includes(p.id)).forEach(p => extend(p.x, p.y, p.x + p.width, p.y + computeSetpointHeight(p)));
     connections.filter(c => selectedConnectionIds.includes(c.id)).forEach(c => c.points.forEach(pt => extend(pt.x, pt.y, pt.x, pt.y)));
+    walls.filter(w => selectedWallIds.includes(w.id)).forEach(w => extend(w.from.x, w.from.y, w.to.x, w.to.y));
     if (!Number.isFinite(minX)) return null;
     const padding = 8;
     return { x: minX - padding, y: minY - padding, width: (maxX - minX) + padding * 2, height: (maxY - minY) + padding * 2 };
   })();
+
+  // feat/cad-marquee: the resize handles appear once there is a ROOM to
+  // resize - two or more walls selected together. One wall already has
+  // its own endpoints to drag; a pair of them is the smallest thing that
+  // is a shape rather than a line, and dragging a corner of it is what
+  // "zmienic rozmiar pomieszczenia" means.
+  //
+  // The box handed to the handles is the UNPADDED one: the padding above
+  // is a visual margin round the outline, and scaling from a box 8 px
+  // larger than the walls would move every wall slightly outward on the
+  // first pixel of the drag.
+  const resizeBounds = selectedWallIds.length >= 2
+    ? wallsBounds(walls, selectedWallIds)
+    : null;
+
+  const handleGroupResize = (before: ScaleBox, after: ScaleBox) => {
+    // shouldSnapToGrid is the ONE place the View-menu toggle and the
+    // momentary Alt bypass are combined (utils/GridSnap.ts) - reading
+    // the flag directly here would be a second, drifting copy of that
+    // rule.
+    useStore.getState().scaleSelection(before, after, shouldSnapToGrid(isAltKeyDown()) ? gridSize : 0);
+  };
+
+  // ONE history entry for the whole drag, written when it ends - not on
+  // every frame, or a single resize would bury sixty identical entries.
+  const handleGroupResizeCommit = () => {
+    useStore.getState().saveHistory();
+  };
 
   return (
     <div
@@ -956,7 +1254,10 @@ export const Canvas: React.FC = () => {
       ref={containerRef}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      style={{ position: 'relative' }}
     >
+      <IlluminanceLegend />
+      <TextEditOverlay />
       <Stage
         width={size.width}
         height={size.height}
@@ -975,7 +1276,7 @@ export const Canvas: React.FC = () => {
         // from the select cursor for the WHOLE time an insert tool is
         // armed (isDrawingFrame included, not just isDrawingConnection
         // as before) - not only once a drag is already underway.
-        style={{ cursor: (isDrawingConnection || isDrawingFrame) ? 'crosshair' : (selectionStartRef.current ? 'crosshair' : 'default') }}
+        style={{ cursor: previewMode ? 'pointer' : ((isDrawingConnection || isDrawingFrame || isDrawingWall || isDrawingRoom) ? 'crosshair' : (selectionStartRef.current ? 'crosshair' : 'default')) }}
       >
         <Layer>
           {/* feat/appearance-selection-frames commit 2: both background
@@ -1018,8 +1319,8 @@ export const Canvas: React.FC = () => {
             <ObjectNode
               key={obj.id}
               obj={obj}
-              onSelect={(e: any) => selectObjects([obj.id], !!e?.evt?.shiftKey)}
-              onChange={(newAttrs) => updateObject(obj.id, newAttrs)}
+              onSelect={(e: any) => handleObjectClick(obj.id, e)}
+              onChange={(newAttrs) => handleObjectChange(obj, newAttrs)}
               gridSize={gridSize}
               onShapeRef={registerObjectShapeRef}
               groupDrag={groupDrag}
@@ -1028,6 +1329,46 @@ export const Canvas: React.FC = () => {
               drawingMedium={isDrawingConnection ? drawingMedium : null}
             />
           ))}
+          {/* feat/room-plan: the floor and its light pools go BELOW
+              everything - they are the ground the room stands on. Then
+              the walls, which must sit under the fixtures placed in the
+              room but above the floor they stand on. */}
+          <RoomFloorLayer walls={walls} objects={objects} floorMaterial={canvasConfig.floorMaterial} />
+          {/* The illuminance map lies ON the working plane: above the
+              floor, below the walls and everything standing on it. */}
+          {showIlluminance && <IlluminanceLayer walls={walls} objects={objects} />}
+          {/* Walls are painted as merged BODIES (WallGeometry.ts) so a
+              room is one mitred shape rather than four overlapping
+              rectangles; selection and dragging stay per wall. */}
+          <WallLayer
+            walls={walls}
+            objects={objects}
+            selectedWallIds={selectedWallIds}
+            previewMode={previewMode}
+            onSelect={(wallId, e) => { if (!previewMode) selectWalls([wallId], !!e?.evt?.shiftKey); }}
+            onDragEnd={(wallId, dx, dy) => {
+              const snappedDx = snapValue(dx, gridSize, isAltKeyDown());
+              const snappedDy = snapValue(dy, gridSize, isAltKeyDown());
+              if (snappedDx === 0 && snappedDy === 0) return;
+              const wall = useStore.getState().walls.find(w => w.id === wallId);
+              if (!wall) return;
+              updateWall(wallId, moveWall(wall, snappedDx, snappedDy));
+              useStore.getState().saveHistory();
+            }}
+          />
+          {/* The wall being drawn right now - a plain hairline, not a
+              full extruded body: it is a measurement in progress, and
+              painting it as a finished wall would hide the grid and the
+              corner the user is aiming at. */}
+          {isDrawingWall && wallStart && wallCursor && (
+            <Line
+              points={[wallStart.x, wallStart.y, wallCursor.x, wallCursor.y]}
+              stroke="#00A0FF"
+              strokeWidth={2}
+              dash={[6, 4]}
+              listening={false}
+            />
+          )}
           {frames.map((frame) => (
             <FrameElementNode
               key={frame.id}
@@ -1105,12 +1446,22 @@ export const Canvas: React.FC = () => {
               ))}
             </>
           )}
+          {/* In the lighting view everything that is NOT a luminaire is
+              faded back. A false-colour map exists to be read, and a
+              tan table sitting at full strength on top of it competes
+              with the very colours that carry the result - while the
+              luminaires must stay bright, because where they are is
+              half of what the map is telling you. */}
           {[...objects].filter((obj) => !getSymbolDefinition(obj.type)?.isSurface).sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)).map((obj) => (
+            <Group
+              key={`obj-${obj.id}`}
+              opacity={showIlluminance && !isLuminaire(obj.type) ? 0.42 : 1}
+            >
             <ObjectNode
               key={obj.id}
               obj={obj}
-              onSelect={(e: any) => selectObjects([obj.id], !!e?.evt?.shiftKey)}
-              onChange={(newAttrs) => updateObject(obj.id, newAttrs)}
+              onSelect={(e: any) => handleObjectClick(obj.id, e)}
+              onChange={(newAttrs) => handleObjectChange(obj, newAttrs)}
               gridSize={gridSize}
               onShapeRef={registerObjectShapeRef}
               groupDrag={groupDrag}
@@ -1118,6 +1469,7 @@ export const Canvas: React.FC = () => {
               highlightedTerminalId={highlightedTerminal?.objId === obj.id ? highlightedTerminal.terminalId : null}
               drawingMedium={isDrawingConnection ? drawingMedium : null}
             />
+            </Group>
           ))}
           {/* Topology junctions (layer 4 - deliberately ABOVE symbols,
               not below as the task's own layer list literally orders
@@ -1286,7 +1638,7 @@ export const Canvas: React.FC = () => {
               scaleY={obj.scaleY || 1}
               visible={obj.visible !== false}
             >
-              <ObjectLabelRenderer obj={obj} onChange={(newAttrs) => updateObject(obj.id, newAttrs)} />
+              <ObjectLabelRenderer obj={obj} onChange={(newAttrs) => handleObjectChange(obj, newAttrs)} />
             </Group>
           ))}
           {/* feat/device-list-ui commit 5: a symbol whose Aparat points
@@ -1404,18 +1756,57 @@ export const Canvas: React.FC = () => {
               listening={false}
             />
           )}
-          {selectionBox && (
-            <Rect
-              x={selectionBox.x}
-              y={selectionBox.y}
-              width={selectionBox.width}
-              height={selectionBox.height}
-              fill={COLOR_WATER}
-              fillOpacity={0.25}
-              stroke={COLOR_WATER}
-              strokeWidth={1}
+          {/* feat/cad-marquee: the marquee itself.
+              It used to be a solid blue slab: Konva has no fillOpacity
+              (that is an SVG attribute), so the 0.25 written there did
+              nothing at all and the box covered whatever it was drawn
+              over - you could not see what you were selecting.
+              Now it is what a CAD draws: a transparent rectangle with a
+              thin outline, BLUE and solid for a window (dragged
+              rightwards, catches only what is entirely inside) and GREEN
+              and dashed for a crossing (dragged leftwards, touching is
+              enough). The direction is the gesture people already have
+              in their hands, and the colour says which rule is running
+              before the mouse is released.
+              While a tool is dragging out a rectangle (frame, room) the
+              distinction does not apply, so that one is drawn neutral. */}
+          {/* feat/cad-marquee: resize the selected room. Drawn after the
+              group outline so the handles sit on top of it. */}
+          {resizeBounds && !previewMode && (
+            <GroupResizeHandles
+              bounds={resizeBounds}
+              zoom={canvasState.zoom}
+              snapStep={shouldSnapToGrid(isAltKeyDown()) ? gridSize : 0}
+              onResize={handleGroupResize}
+              onCommit={handleGroupResizeCommit}
             />
           )}
+          {selectionBox && (() => {
+            const tool = isDrawingFrame || isDrawingRoom;
+            const crossing = !tool && marquee === 'CROSSING';
+            const stroke = tool ? COLOR_OUTLINE : (crossing ? MARQUEE_CROSSING : MARQUEE_WINDOW);
+            const fill = tool ? MARQUEE_TOOL_FILL : (crossing ? MARQUEE_CROSSING_FILL : MARQUEE_WINDOW_FILL);
+            return (
+              <Rect
+                x={selectionBox.x}
+                y={selectionBox.y}
+                width={selectionBox.width}
+                height={selectionBox.height}
+                // The tint is in the colour itself, not a node opacity:
+                // node opacity would dim the outline too, and an outline
+                // you cannot see is what made the old marquee unusable.
+                fill={fill}
+                stroke={stroke}
+                // Constant on screen however far the view is zoomed - a
+                // hairline at 4x is invisible, a 1px line at 0.2x is a
+                // slab.
+                strokeWidth={MARQUEE_STROKE_WIDTH}
+                strokeScaleEnabled={false}
+                dash={crossing || tool ? MARQUEE_DASH : undefined}
+                listening={false}
+              />
+            );
+          })()}
           {/* feat/wire-routing-around-obstacles commit 1: the hover
               tooltip naming which obstacle a marked segment crosses -
               a plain Rect+Text pair sized to the text, anchored just

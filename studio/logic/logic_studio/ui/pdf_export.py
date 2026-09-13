@@ -93,7 +93,7 @@ def _draw_schematic_page(painter: QPainter, writer: QPdfWriter, scene, project):
 
     title_font = QFont("Arial", 16)
     painter.setFont(title_font)
-    name = project.settings.get("name", "Projekt")
+    name = project.settings.get("name", "Project")
     painter.drawText(
         QRectF(PAGE_MARGIN, 0, page_width - 2 * PAGE_MARGIN, TITLE_BLOCK_HEIGHT / 2),
         Qt.AlignLeft | Qt.AlignVCenter, name,
@@ -119,7 +119,7 @@ def _draw_schematic_page(painter: QPainter, writer: QPdfWriter, scene, project):
 
 
 _COLUMN_X = (0, 380, 480, 620, 1000, 1400)
-_COLUMN_HEADERS = ("Sygnał", "Kategoria", "Typ", "Etykieta", "Zapisuje", "Czyta")
+_COLUMN_HEADERS = ("Signal", "Category", "Type", "Label", "Writes", "Reads")
 _ROW_HEIGHT = 55
 
 
@@ -138,7 +138,7 @@ def _draw_signal_list_pages(painter: QPainter, writer: QPdfWriter, rows: list):
 
     title_font = QFont("Arial", 14)
     painter.setFont(title_font)
-    painter.drawText(QRectF(PAGE_MARGIN, 0, page_width - 2 * PAGE_MARGIN, 100), Qt.AlignLeft | Qt.AlignVCenter, "Lista sygnałów")
+    painter.drawText(QRectF(PAGE_MARGIN, 0, page_width - 2 * PAGE_MARGIN, 100), Qt.AlignLeft | Qt.AlignVCenter, "Signal list")
 
     y = draw_header(150)
     body_font = QFont("Arial", 9)

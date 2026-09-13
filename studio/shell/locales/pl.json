@@ -6,6 +6,11 @@
   "app": {
     "title": "EPW Studio"
   },
+  "splash": {
+    "loading_logic": "Ładowanie edytora logiki...",
+    "loading_synoptic": "Ładowanie edytora ekranów...",
+    "ready": "Gotowe"
+  },
   "editor": {
     "synoptic_name": "Ekrany (Synoptic Editor)",
     "logic_name": "Logika (Logic Studio)"
@@ -103,8 +108,7 @@
       "toolbar": "Pasek narzędzi",
       "toolbar_icons": "Ikony",
       "toolbar_icons_text": "Ikony i tekst",
-      "toolbar_text": "Tekst",
-      "scada_preview": "Podgląd stylu SCADA..."
+      "toolbar_text": "Tekst"
     },
     "project": {
       "settings": "Ustawienia projektu...",

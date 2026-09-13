@@ -4,6 +4,7 @@
 // before ever getting to the ~1000-line Canvas component itself; pulling
 // them into their own files (this one, ConnectionNode.tsx,
 // TransformerHandles.tsx) is a pure move, no behavior change.
+import { isTextFormattable } from '../../project/TextFormatting';
 import { useEffect, useRef, useState } from 'react';
 import { Circle, Group, Rect } from 'react-konva';
 import { useStore } from '../../store';
@@ -16,6 +17,7 @@ import { getHoverHitRect } from '../../utils/TerminalReach';
 import { areMediaCompatible } from '../../project/NetResolver';
 import type { Medium } from '../../project/NetResolver';
 import { computeResizeFromAnchor, getActiveResizeAnchor, setActiveResizeAnchor } from '../../utils/ResizeHandles';
+import { getSymbolDefinition } from '../../symbols/SymbolRegistry';
 import { isAltKeyDown } from '../../utils/CanvasInputState';
 import { describeObject } from '../../utils/ObjectDisplay';
 import type { DragKey, GroupDragApi } from './types';
@@ -46,6 +48,12 @@ import type { DragKey, GroupDragApi } from './types';
 export function handleSymbolDblClick(e: { cancelBubble: boolean }, obj: SynopticObject) {
   if (useStore.getState().isDrawingConnection) return;
   e.cancelBubble = true;
+  // feat/text-formatting: a text box has no device - double-clicking it
+  // opens it for typing, as in a word processor.
+  if (isTextFormattable(obj.type)) {
+    useStore.getState().setEditingTextId(obj.id);
+    return;
+  }
   if (!obj.deviceId) {
     useStore.getState().openDeviceCreateOrAssignForm(obj.id, obj.type, `Diagram, symbol ${describeObject(obj)}`);
     return;
@@ -212,6 +220,29 @@ export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, grou
             // Konva's own live-drag value on screen instead of the
             // value just committed to the store. Set explicitly so the
             // node's on-screen state can never drift from the store's.
+            // A symbol that REDRAWS on resize (SymbolDefinition.
+            // resizeRedraws - every plan symbol) takes the new size into
+            // its own width/height and goes back to scale 1, so its
+            // artwork is drawn fresh at the real size. Anything else
+            // keeps the original behaviour of scaling the drawing.
+            if (getSymbolDefinition(obj.type)?.resizeRedraws) {
+              node.x(resized.x);
+              node.y(resized.y);
+              node.scaleX(1);
+              node.scaleY(1);
+              onChange({
+                x: resized.x,
+                y: resized.y,
+                rotation: 0,
+                width: resized.width,
+                height: resized.height,
+                scaleX: 1,
+                scaleY: 1,
+              });
+              useStore.getState().saveHistory();
+              return;
+            }
+
             const newScaleX = resized.width / obj.width;
             const newScaleY = resized.height / obj.height;
             node.x(resized.x);

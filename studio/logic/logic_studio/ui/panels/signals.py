@@ -1,4 +1,4 @@
-"""feat/signal-crossref §2 — the "Sygnały" side panel: a read-only,
+"""feat/signal-crossref §2 — the "Signals" side panel: a read-only,
 sortable/filterable cross-reference tree backed by core/crossref.py.
 Never modifies the project, never touches the compiler/engine.
 
@@ -10,7 +10,7 @@ categories you don't care about) rather than a separate filter control —
 several categories can be visible at once, which the earlier single-
 select "Wszystkie/Fizyczne/.../Systemowe" buttons never allowed, and a
 tree's indentation doesn't impose the wide fixed minimum width a row of
-category buttons did. Search and "Problemy" stay real cross-cutting
+category buttons did. Search and "Issues" stay real cross-cutting
 filters (a signal can be in any category), auto-expanding a category
 whose children match while a search is active.
 """
@@ -38,7 +38,7 @@ CATEGORY_LABEL_ROLE = Qt.UserRole + 1
 
 # §2.2's column order: Stan | Sygnał | Typ | Etykieta | Zapisuje | Czyta
 COL_STATE, COL_SIGNAL, COL_TYPE, COL_LABEL, COL_WRITES, COL_READS = range(6)
-COLUMN_HEADERS = ["Stan", "Sygnał", "Typ", "Etykieta", "Zapisuje", "Czyta"]
+COLUMN_HEADERS = ["State", "Signal", "Type", "Label", "Writes", "Reads"]
 
 _KIND_SHORT = {
     KIND_PHYSICAL_DI: "DI", KIND_PHYSICAL_DO: "DO",
@@ -55,7 +55,7 @@ _KIND_SHORT = {
 _SIGNAL_CATEGORIES = [
     ("Fizyczne", (KIND_PHYSICAL_DI, KIND_PHYSICAL_DO)),
     ("Analogowe", (KIND_ANALOG_IN, KIND_ANALOG_OUT)),
-    ("Wewnętrzne", (KIND_INTERNAL_BIT, KIND_INTERNAL_REG)),
+    ("Internal", (KIND_INTERNAL_BIT, KIND_INTERNAL_REG)),
     ("Systemowe", (KIND_SYSTEM,)),
 ]
 _CATEGORY_FOR_KIND = {kind: label for label, kinds in _SIGNAL_CATEGORIES for kind in kinds}
@@ -70,7 +70,7 @@ _SEVERITY_RANK = {"error": 0, "warning": 1, "info": 2, None: 3}
 # that costs nothing and the fact is still worth surfacing on hover.
 _ICON_SEVERITIES = ("error", "warning")
 _SEVERITY_COLOR = {"error": QColor(220, 0, 0), "warning": QColor(200, 120, 0)}
-_SEVERITY_LABEL_PL = {"error": "Błąd", "warning": "Ostrzeżenie", "info": "Informacja", None: ""}
+_SEVERITY_LABEL_PL = {"error": "Error", "warning": "Warning", "info": "Info", None: ""}
 
 REFRESH_DEBOUNCE_MS = 200  # §2.4
 
@@ -89,7 +89,7 @@ def _status_icon(color: QColor) -> QIcon:
 
 class _SortableTreeItem(QTreeWidgetItem):
     """QTreeWidget's default sort compares each column's Qt.DisplayRole
-    text — wrong for "Stan" (severity, not alphabetical) and "Czyta"
+    text — wrong for "State" (severity, not alphabetical) and "Czyta"
     (reader COUNT, not the lexical order of "10" vs "2"). `sort_keys` is a
     {column: real_comparison_value} override map; columns not listed fall
     back to their own displayed text, matching plain-item behavior.
@@ -139,7 +139,7 @@ class SignalsPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        # ---- Search + "Problemy" (§2.3) ----
+        # ---- Search + "Issues" (§2.3) ----
         # feat/signals-panel-tree: no separate category-filter control any
         # more — categorization is the tree's own structure now (collapse
         # what you don't want to see), so this row only ever needs the two
@@ -148,13 +148,13 @@ class SignalsPanel(QWidget):
         # or has an issue isn't tied to category at all).
         search_row = QHBoxLayout()
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Szukaj sygnału, etykiety lub identyfikatora bloku...")
+        self.search_edit.setPlaceholderText("Search signal, label or block id...")
         search_row.addWidget(self.search_edit)
         layout.addLayout(search_row)
 
         filter_row = QHBoxLayout()
-        self.only_issues_check = QPushButton("Problemy")
-        self.only_issues_check.setToolTip("Pokaż tylko sygnały z błędem lub ostrzeżeniem.")
+        self.only_issues_check = QPushButton("Issues")
+        self.only_issues_check.setToolTip("Show only signals with an error or warning.")
         self.only_issues_check.setCheckable(True)
         filter_row.addWidget(self.only_issues_check)
         filter_row.addStretch()
@@ -178,7 +178,7 @@ class SignalsPanel(QWidget):
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         layout.addWidget(self.tree)
 
-        self.empty_label = QLabel("Brak sygnałów w projekcie — dodaj blok wejścia lub wyjścia i przypisz adres")
+        self.empty_label = QLabel("No signals in the project — add an input or output block and assign an address")
         self.empty_label.setWordWrap(True)
         self.empty_label.setAlignment(Qt.AlignCenter)
         self.empty_label.setVisible(False)
@@ -340,7 +340,7 @@ class SignalsPanel(QWidget):
         # §2.2: physical/system INPUTS are written by the field device, not
         # by any project block — no block ever has an input pin wired to a
         # DI/AI address, so `writers` is structurally always empty for
-        # those kinds; shown as "urządzenie" rather than "—" to say why,
+        # those kinds; shown as "device" rather than "—" to say why,
         # not just that nothing's there.
         #
         # feat/sswin-signals §2.5: KIND_SYSTEM used to be lumped in with
@@ -352,14 +352,14 @@ class SignalsPanel(QWidget):
         # catalog's own "source" field, not usage.writers being non-empty —
         # a "logic" signal with no writer YET (still being wired up) must
         # show "—" (§2.3's own "nieużywany" warning already flags that),
-        # never the misleading "urządzenie".
+        # never the misleading "device".
         if usage.kind in (KIND_PHYSICAL_DI, KIND_ANALOG_IN):
-            return "urządzenie", "Sygnał pochodzi z urządzenia fizycznego, nie z bloku w projekcie."
+            return "device", "The signal comes from a physical device, not from a block in the project."
         if usage.kind == KIND_SYSTEM:
             from logic_studio.core import system_signals
             entry = system_signals.get_signal(signal_id, self.project)
             if entry is None or entry.get("source") != "logic":
-                return "urządzenie", "Sygnał pochodzi z urządzenia fizycznego, nie z bloku w projekcie."
+                return "device", "The signal comes from a physical device, not from a block in the project."
         if not usage.writers:
             return "—", ""
         short_ids = [w[1] for w in usage.writers]
@@ -455,7 +455,7 @@ class SignalsPanel(QWidget):
         """§3.1: jumps to the WRITER of this signal, or its first reader
         when there's no writer — either a physical/analog input or a
         source == "runtime" system signal (writer structurally always
-        "urządzenie", never a project block, feat/sswin-signals §2.5), or
+        "device", never a project block, feat/sswin-signals §2.5), or
         an internal/source-"logic" signal that's read but never written,
         which §1.4/§2.3 already flag as their own warning."""
         signal_id = self._signal_id_of(item)
@@ -549,10 +549,10 @@ class SignalsPanel(QWidget):
 
     def export_csv(self, path: str):
         """§5.1/§5.2: writes exactly the rows CURRENTLY VISIBLE in the
-        tree (i.e. after search/"Problemy", exactly like the old table's
+        tree (i.e. after search/"Issues", exactly like the old table's
         filters — collapsing a category is a display convenience and does
         NOT affect what's exported, only setHidden()/leaf visibility
-        does), in the tree's own column order plus a trailing "Problemy"
+        does), in the tree's own column order plus a trailing "Issues"
         column — reads straight off the rendered cell text rather than
         re-deriving anything from core/crossref.py, so the export can
         never disagree with what's actually on screen. UTF-8 with a BOM
@@ -563,12 +563,12 @@ class SignalsPanel(QWidget):
         that treat a leading "#" as a comment skip it automatically."""
         project_name = self.project.settings.get("name", "") if self.project else ""
         timestamp = datetime.now().isoformat(timespec="seconds")
-        filter_applied = "tak" if self._is_filter_applied() else "nie"
+        filter_applied = "yes" if self._is_filter_applied() else "no"
 
         with open(path, "w", encoding="utf-8-sig", newline="") as f:
-            f.write(f"# Projekt: {project_name} | Data: {timestamp} | Filtr zastosowany: {filter_applied}\n")
+            f.write(f"# Project: {project_name} | Date: {timestamp} | Filter applied: {filter_applied}\n")
             writer = csv.writer(f, delimiter=";")
-            writer.writerow(list(COLUMN_HEADERS) + ["Problemy"])
+            writer.writerow(list(COLUMN_HEADERS) + ["Issues"])
 
             for leaf in self._iter_leaves():
                 if leaf.isHidden():
@@ -589,14 +589,14 @@ class SignalsPanel(QWidget):
     def prompt_export_csv(self):
         """§5.1: "Project -> Eksportuj listę sygnałów..." — wired from
         main_window.py."""
-        path, _ = QFileDialog.getSaveFileName(self, "Eksportuj listę sygnałów", "sygnaly.csv", "CSV (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(self, "Export signal list", "signals.csv", "CSV (*.csv)")
         if not path:
             return
         self.export_csv(path)
 
     def focus_signal(self, signal_id: str):
         """Called from the canvas block context menu's "Pokaż użycia
-        sygnału" (block_item.py) — resets the "Problemy" filter (whatever
+        sygnału" (block_item.py) — resets the "Issues" filter (whatever
         the target signal's issue state, it must end up VISIBLE — a stale
         "Tylko problemy" from earlier browsing could otherwise hide the
         very row this is supposed to reveal), sets the search filter to

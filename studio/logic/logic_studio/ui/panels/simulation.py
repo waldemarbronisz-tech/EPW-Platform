@@ -244,28 +244,28 @@ class SimulationPanel(QWidget):
         self._do_group_widgets = []
 
         # "tylko użyte" (detailed, flat) sections
-        self.di_used_group = QGroupBox("Wejścia dwustanowe (DI)")
+        self.di_used_group = QGroupBox("Digital inputs (DI)")
         self.di_used_layout = QVBoxLayout(self.di_used_group)
-        self.di_empty_label = QLabel("Brak używanych wejść — dodaj blok DI i przypisz adres.")
-        self.do_used_group = QGroupBox("Wyjścia dwustanowe (DO)")
+        self.di_empty_label = QLabel("No inputs in use — add a DI block and assign an address.")
+        self.do_used_group = QGroupBox("Digital outputs (DO)")
         self.do_used_layout = QVBoxLayout(self.do_used_group)
-        self.do_empty_label = QLabel("Brak używanych wyjść — dodaj blok DO i przypisz adres.")
+        self.do_empty_label = QLabel("No outputs in use — add a DO block and assign an address.")
 
         # "wszystkie" (compact, grouped-by-8) sections
-        self.di_all_group = QGroupBox("Wejścia dwustanowe (DI) — wszystkie")
+        self.di_all_group = QGroupBox("Digital inputs (DI) — all")
         self.di_all_grid = QGridLayout(self.di_all_group)
-        self.do_all_group = QGroupBox("Wyjścia dwustanowe (DO) — wszystkie")
+        self.do_all_group = QGroupBox("Digital outputs (DO) — all")
         self.do_all_grid = QGridLayout(self.do_all_group)
 
         for w in (self.di_used_group, self.do_used_group, self.di_all_group, self.do_all_group):
             self._content_layout.addWidget(w)
 
         # Analog Inputs / Outputs — fully project-defined, rebuilt in set_project().
-        self.ai_group = QGroupBox("Wejścia analogowe")
+        self.ai_group = QGroupBox("Analog inputs")
         self.ai_layout = QGridLayout(self.ai_group)
         self._content_layout.addWidget(self.ai_group)
 
-        self.ao_group = QGroupBox("Wyjścia analogowe")
+        self.ao_group = QGroupBox("Analog outputs")
         self.ao_layout = QGridLayout(self.ao_group)
         self._content_layout.addWidget(self.ao_group)
 
@@ -280,13 +280,13 @@ class SimulationPanel(QWidget):
 
     def _build_step_row(self):
         step_row = QHBoxLayout()
-        self.step_btn = QPushButton("Krok")
-        self.step10_btn = QPushButton("Krok ×10")
+        self.step_btn = QPushButton("Step")
+        self.step10_btn = QPushButton("Step ×10")
         step_tip = (
-            "Wykonuje ręczny skan silnika. Dostępne tylko w stanie PAUSED albo "
-            "STOPPED z załadowanym programem. Przy SystemTimeProvider krokowanie "
-            "ma sens tylko w pauzie — w trybie ciągłym zegar biegnie dalej "
-            "niezależnie od ręcznego kroku."
+            "Runs one manual engine scan. Available only in the PAUSED or "
+            "STOPPED state with a program loaded. With SystemTimeProvider stepping "
+            "only makes sense while paused — in continuous mode the clock keeps running "
+            "regardless of the manual step."
         )
         self.step_btn.setToolTip(step_tip)
         self.step10_btn.setToolTip(step_tip)
@@ -447,7 +447,7 @@ class SimulationPanel(QWidget):
     def _rebuild_card_filter(self):
         """Populates card_filter from the cards actually present among
         the just-rebuilt groups, in first-seen order (DI cards, then any
-        ADA-only card) - "Wszystkie karty" always first.
+        ADA-only card) - "All cards" always first.
 
         Visibility is decided PER KIND, not by the combined DI+ADA card
         count: an ordinary project (one ELA, one ADA) already has two
@@ -469,7 +469,7 @@ class SimulationPanel(QWidget):
         current = self.card_filter.currentData()
         self.card_filter.blockSignals(True)
         self.card_filter.clear()
-        self.card_filter.addItem("Wszystkie karty", None)
+        self.card_filter.addItem("All cards", None)
         for card in cards:
             self.card_filter.addItem(card, card)
         idx = self.card_filter.findData(current)
@@ -545,7 +545,7 @@ class SimulationPanel(QWidget):
     def _apply_view_mode(self):
         used = self._only_used
         self.only_used_btn.setText(
-            f"tylko użyte ({len(self._used_di_addrs() | self._used_do_addrs())})" if used
+            f"only used ({len(self._used_di_addrs() | self._used_do_addrs())})" if used
             else f"wszystkie ({len(self._di_addrs) + len(self._do_addrs)})"
         )
         self.di_used_group.setVisible(used)

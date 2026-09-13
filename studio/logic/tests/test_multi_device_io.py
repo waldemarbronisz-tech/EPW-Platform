@@ -172,7 +172,7 @@ def test_validator_names_the_card_when_it_gets_removed():
 
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
-    assert not any("ELA02" in e and "nie istnieje" in e for e in errors)
+    assert not any("ELA02" in e and "does not exist" in e for e in errors)
 
     DeviceModel.set_ela_devices(p, ["ELA01"])  # ELA02 removed from the project
     di.properties["Address"] = "ELA02.DI.1"  # the block's own Address is untouched
@@ -180,7 +180,7 @@ def test_validator_names_the_card_when_it_gets_removed():
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
     assert di.properties["Address"] == "ELA02.DI.1"  # never silently rewritten
-    assert any("ELA02" in e and "nie istnieje" in e for e in errors), errors
+    assert any("ELA02" in e and "does not exist" in e for e in errors), errors
 
 
 # ---- core/crossref.py: classifies an address on any defined device --------
@@ -337,11 +337,11 @@ def test_project_with_devices_generates_their_signals():
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
     expected = {
-        "ELA01.ONLINE": ("Moduł ELA01 komunikuje się poprawnie", "ELA OK", False),
-        "ELA01.FAULT": ("Awaria modułu ELA01", "ELA AW", True),
-        "ADA01.ONLINE": ("Moduł ADA01 komunikuje się poprawnie", "ADA OK", False),
-        "ADA01.FAULT": ("Awaria modułu ADA01", "ADA AW", True),
-        "ADA01.SAFE_PATH_OK": ("Sprzętowa droga wyłączenia sprawna", "DROGA OK", True),
+        "ELA01.ONLINE": ("Module ELA01 is communicating correctly", "ELA OK", False),
+        "ELA01.FAULT": ("Module ELA01 fault", "ELA FLT", True),
+        "ADA01.ONLINE": ("Module ADA01 is communicating correctly", "ADA OK", False),
+        "ADA01.FAULT": ("Module ADA01 fault", "ADA FLT", True),
+        "ADA01.SAFE_PATH_OK": ("Hardware shutdown path healthy", "PATH OK", True),
     }
     for sig_id, (desc, label, safety) in expected.items():
         entry = system_signals.get_signal(sig_id, p)
@@ -361,16 +361,16 @@ def test_second_device_gets_its_own_diagnostic_signals():
     assert system_signals.get_signal("ELA02.ONLINE") is None  # not visible without the project
     entry = system_signals.get_signal("ELA02.ONLINE", p)
     assert entry is not None
-    assert entry["description"] == "Moduł ELA02 komunikuje się poprawnie"
+    assert entry["description"] == "Module ELA02 is communicating correctly"
     assert entry["safety_relevant"] is False
 
     fault = system_signals.get_signal("ELA02.FAULT", p)
-    assert fault["description"] == "Awaria modułu ELA02"
+    assert fault["description"] == "Module ELA02 fault"
     assert fault["safety_relevant"] is True
 
     safe_path = system_signals.get_signal("ADA02.SAFE_PATH_OK", p)
     assert safe_path is not None
-    assert safe_path["label"] == "DROGA OK"
+    assert safe_path["label"] == "PATH OK"
     assert safe_path["safety_relevant"] is True
 
 def test_get_categories_places_device_signals_under_komunikacja():

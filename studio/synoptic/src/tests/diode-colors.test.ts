@@ -25,7 +25,6 @@ import indicatorDiodeSymbolSource from '../symbols/scada/IndicatorDiodeSymbol.ts
 import signalPanelElementNodeSource from '../components/SignalPanelElementNode.tsx?raw';
 import meterElementNodeSource from '../components/MeterElementNode.tsx?raw';
 import panelChromeSource from '../components/PanelChrome.tsx?raw';
-import scadaStylePreviewSource from '../components/ScadaStylePreview.tsx?raw';
 import propertyInspectorSource from '../components/PropertyInspector.tsx?raw';
 import canvasSource from '../components/Canvas.tsx?raw';
 import symbolRendererSource from '../symbols/SymbolRenderer.tsx?raw';
@@ -110,7 +109,6 @@ describe('14: no file outside ScadaTheme.ts hard-codes a diode color', () => {
     'SignalPanelElementNode.tsx': signalPanelElementNodeSource,
     'MeterElementNode.tsx': meterElementNodeSource,
     'PanelChrome.tsx': panelChromeSource,
-    'ScadaStylePreview.tsx': scadaStylePreviewSource,
     'PropertyInspector.tsx': propertyInspectorSource,
     'Canvas.tsx': canvasSource,
     'SymbolRenderer.tsx': symbolRendererSource,

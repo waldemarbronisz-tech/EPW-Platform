@@ -261,7 +261,7 @@ class Compiler:
 
         Returns (delayed_reader_uuids, info_messages) — the message format
         is exactly §5.2's: "[M.BLOKADA_ZS] Odczyt w bloku <tag> wyprzedza
-        zapis — wartość z poprzedniego cyklu."
+        zapis — value from the previous scan."
         """
         from logic_studio.core.device_model import DeviceModel
         from logic_studio.core.internal_bits import internal_bit_id
@@ -304,7 +304,7 @@ class Compiler:
                     # feat/io-labels-and-ids §4.3: short_id, not display_name.
                     reader_ref = reader_block.short_id or reader_block.display_name
                     info_messages.append(
-                        f"[{signal_label}] Odczyt w bloku {reader_ref} wyprzedza zapis — "
-                        f"wartość z poprzedniego cyklu."
+                        f"[{signal_label}] Read in block {reader_ref} happens before the write — "
+                        f"value from the previous scan."
                     )
         return delayed_reader_uuids, info_messages

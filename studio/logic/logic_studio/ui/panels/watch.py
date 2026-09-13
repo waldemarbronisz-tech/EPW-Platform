@@ -251,7 +251,7 @@ class _TrendChart(QWidget):
             painter.setPen(QPen(canvas_style.COLOR_COMMENT_TEXT, 1))
             painter.drawText(left, h - 3, _format_ago(self.window_ms))
             painter.drawText(right - 28, h - 3, "teraz")
-            painter.drawText(self.rect(), Qt.AlignCenter, "Brak danych")
+            painter.drawText(self.rect(), Qt.AlignCenter, "No data")
             return
 
         newest_t = self._samples[-1][0]
@@ -355,7 +355,7 @@ class _TrendDialog(QDialog):
         self.scrollbar = QScrollBar(Qt.Horizontal)
         self.scrollbar.valueChanged.connect(self._on_scrollbar_value_changed)
         scroll_row.addWidget(self.scrollbar, 1)
-        self.live_btn = QPushButton("⏵ Na żywo")
+        self.live_btn = QPushButton("⏵ Live")
         self.live_btn.setCheckable(True)
         self.live_btn.setChecked(True)
         self.live_btn.toggled.connect(self._on_live_toggled)
@@ -364,7 +364,7 @@ class _TrendDialog(QDialog):
         self._update_scrollbar_range()
 
         bottom_row = QHBoxLayout()
-        bottom_row.addWidget(QLabel("Zakres czasu"))
+        bottom_row.addWidget(QLabel("Time range"))
         self.window_combo = QComboBox()
         for label, ms in _TIME_WINDOWS_MS:
             self.window_combo.addItem(label, ms)
@@ -392,7 +392,7 @@ class _TrendDialog(QDialog):
             bottom_row.addWidget(QLabel("Maks"))
             bottom_row.addWidget(self.max_spin)
         bottom_row.addStretch()
-        clear_btn = QPushButton("Wyczyść bufor")
+        clear_btn = QPushButton("Clear buffer")
         clear_btn.clicked.connect(self._on_clear_clicked)
         bottom_row.addWidget(clear_btn)
         layout.addLayout(bottom_row)
@@ -495,7 +495,7 @@ class _TrendDialog(QDialog):
 
 class WatchPanel(QWidget):
     """Table of pinned signals: kind, address/name, description, live
-    value, trend. "Dodaj..." reuses SignalPickerDialog (the same picker
+    value, trend. "Add..." reuses SignalPickerDialog (the same picker
     every "Bit"/"Sygnał"/"Address" property already uses) so adding a watch
     never means a second, independently-maintained way to browse signals.
     Every column is individually resizable by the engineer (§ user
@@ -522,9 +522,9 @@ class WatchPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
 
         toolbar = QHBoxLayout()
-        self.add_btn = QPushButton("Dodaj...")
+        self.add_btn = QPushButton("Add...")
         self.add_btn.clicked.connect(self._on_add_clicked)
-        self.remove_btn = QPushButton("Usuń")
+        self.remove_btn = QPushButton("Remove")
         self.remove_btn.setEnabled(False)
         self.remove_btn.clicked.connect(self._on_remove_clicked)
         toolbar.addWidget(self.add_btn)
@@ -533,7 +533,7 @@ class WatchPanel(QWidget):
         layout.addLayout(toolbar)
 
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["Typ", "Sygnał", "Opis", "Wartość", "Trend"])
+        self.table.setHorizontalHeaderLabels(["Type", "Signal", "Description", "Value", "Trend"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -557,7 +557,7 @@ class WatchPanel(QWidget):
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         layout.addWidget(self.table)
 
-        self.empty_label = QLabel('Brak obserwowanych sygnałów — kliknij "Dodaj...".')
+        self.empty_label = QLabel('No watched signals — click "Add...".')
         self.empty_label.setStyleSheet(_rgb_style("color", canvas_style.COLOR_COMMENT_TEXT))
         layout.addWidget(self.empty_label)
 

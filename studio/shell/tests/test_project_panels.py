@@ -479,9 +479,10 @@ def test_export_points_csv_has_the_tasks_own_columns_in_order():
 
     text = export_points_csv(_export_demo_project())
     rows = list(csv.reader(io.StringIO(text)))
+    # English is the platform language now (studio/shell/i18n.py).
     assert rows[0] == [
-        "Adres", "Opis", "Lokalizacja", "Notatka techniczna", "Aparat",
-        "Zakres surowy", "Zakres inżynieryjny", "Jednostka",
+        "Address", "Description", "Location", "Technical Note", "Apparatus",
+        "Raw Range", "Engineering Range", "Unit",
     ]
 
 
@@ -494,7 +495,7 @@ def test_export_points_csv_rows_have_the_right_values():
     assert by_address["ELA1.DI.1"] == [
         "ELA1.DI.1", "Czujnik drzwi", "KOT", "NC, 2-przewodowy", "APARAT1", "", "", "",
     ]
-    assert by_address["ELA1.DI.2"][2] == "(bez lokalizacji)"
+    assert by_address["ELA1.DI.2"][2] == "(no location)"
     assert by_address["ADA1.AI.1"][5:8] == ["4…20", "0…100", "degC"]
 
 
@@ -518,7 +519,7 @@ def test_export_points_html_groups_by_card_then_location():
     text = export_points_html(_export_demo_project())
     assert "<h2>ELA1" in text and "<h2>ADA1" in text
     assert "<h3>KOT</h3>" in text
-    assert "<h3>(bez lokalizacji)</h3>" in text
+    assert "<h3>(no location)</h3>" in text
     assert text.index("<h2>ELA1") < text.index("<h2>ADA1")
 
 

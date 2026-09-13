@@ -59,6 +59,12 @@ type SynopticStudioState = {
   canRedo: boolean;
   isDirty: boolean;
   hasSelection: boolean;
+  /** The drawing mode, so Studio's own toolbar can show which tool, medium, style and routing are active. */
+  drawingWire: boolean;
+  drawingFrame: 'PLAIN' | 'BUILDING' | null;
+  drawingMedium: string;
+  drawingStyle: string;
+  wireRoutingMode: string;
 };
 type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
 (window as unknown as StudioStateBridge).__synopticStudioState = (): SynopticStudioState => {
@@ -75,6 +81,11 @@ type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
       s.selectedFrameIds.length > 0 ||
       s.selectedGroupCommandIds.length > 0 ||
       s.selectedSetpointPanelIds.length > 0,
+    drawingWire: !!s.isDrawingConnection,
+    drawingFrame: s.isDrawingFrame ? s.drawingFrameVariant : null,
+    drawingMedium: s.drawingMedium,
+    drawingStyle: s.drawingStyle,
+    wireRoutingMode: s.wireRoutingMode,
   };
 };
 

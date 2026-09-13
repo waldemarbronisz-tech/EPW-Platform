@@ -95,9 +95,9 @@ class BaseLogicBlock:
     # visible only in raw project files, never in the property grid).
     PIN_DESCRIPTIONS: dict = {}
     PROPERTY_DESCRIPTIONS: dict = {
-        "Address": "Adres sygnału I/O lub identyfikator sieciowy powiązany z tym blokiem — znaczenie zależy od typu bloku; puste, jeśli nieużywane przez ten blok.",
-        "Tag": "Oznaczenie schematowe bloku (np. \"C1\", \"Q_I>1\"), widoczne na eksportowanym schemacie i w komunikatach kompilatora.",
-        "Comment": "Krótki, dowolny opis przeznaczenia TEGO KONKRETNEGO bloku na schemacie — dokumentacja projektowa, nieużywana przez kompilator.",
+        "Address": "I/O signal address or network identifier bound to this block — its meaning depends on the block type; empty when this block does not use it.",
+        "Tag": "Schematic designation of the block (e.g. \"C1\", \"Q_I>1\"), shown on the exported diagram and in compiler messages.",
+        "Comment": "A short free-text note on what THIS PARTICULAR block is for — design documentation, not used by the compiler.",
     }
     PROPERTY_UNITS: dict = {}
 

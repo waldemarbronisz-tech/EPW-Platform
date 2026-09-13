@@ -191,7 +191,7 @@ class ExecutionEngine:
         live states — but step 3 (push outputs to the IOProvider) is
         skipped. §9.3: a call while `self.state == STOPPED` behaves as
         `dry_run=True` REGARDLESS of the `dry_run` argument — the manual
-        "Krok"/"Krok x10" buttons are deliberately still usable while
+        "Step"/"Krok x10" buttons are deliberately still usable while
         STOPPED (offline step-through), and with a real IOProvider on an
         actual controller, a step taken while the engine reports STOPPED
         must never energize an output: the state machine's own fail-safe

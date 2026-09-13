@@ -110,7 +110,7 @@ class HelpContentStore:
         return self._catalog_cache
 
     def block_catalog_chapter(self) -> dict:
-        """{"id": ..., "title": "Katalog bloków", "topics": [...]} — one
+        """{"id": ..., "title": "Block catalog", "topics": [...]} — one
         topic per CATEGORY (id "category:<name>") plus, nested under it
         conceptually (flattened here since toc.json's own shape is one
         level of chapter/topic — the Contents TREE widget in the window
@@ -125,13 +125,13 @@ class HelpContentStore:
             topics.append({"id": f"category:{category}", "title": category, "_is_category": True})
             for entry in entries:
                 topics.append({"id": f"block:{entry['type_id']}", "title": entry["display_name"], "_category": category})
-        return {"id": _BLOCK_CATEGORY_CHAPTER_ID, "title": "Katalog bloków", "topics": topics}
+        return {"id": _BLOCK_CATEGORY_CHAPTER_ID, "title": "Block catalog", "topics": topics}
 
     # ---- unified topic API --------------------------------------------------
 
     def load_toc(self) -> dict:
         """Static chapters (§3, hand-written toc.json) + one generated
-        "Katalog bloków" chapter (§2) appended after them — the
+        "Block catalog" chapter (§2) appended after them — the
         Contents tab (ui/help_window.py) renders both from this single
         structure without needing to know which is which."""
         toc = self._static_toc()
@@ -155,7 +155,7 @@ class HelpContentStore:
             type_id = topic_id[len("block:"):]
             entry = block_catalog.describe_block_type(type_id)
             if entry is None:
-                return f"# {type_id}\n\n*(Nieznany typ bloku.)*"
+                return f"# {type_id}\n\n*(Unknown block type.)*"
             return block_catalog.block_entry_markdown(entry)
 
         if topic_id.startswith("category:"):
@@ -171,14 +171,14 @@ class HelpContentStore:
 
         text = self._load_static_markdown(topic_id)
         if text is None:
-            return f"# {topic_id}\n\n*(Treść nie została znaleziona.)*"
+            return f"# {topic_id}\n\n*(Content not found.)*"
         return text.replace("{version}", version) if version else text
 
     def all_topics(self):
         """[(topic_id, title, chapter_title)], flattened, in TOC order —
         used by the Index tab and Search. Category topics (pure
         navigation nodes) are included too — searching/indexing a
-        category NAME is legitimate (e.g. "Bramki logiczne")."""
+        category NAME is legitimate (e.g. "Logic gates")."""
         result = []
         for chapter in self.load_toc()["chapters"]:
             for topic in chapter["topics"]:

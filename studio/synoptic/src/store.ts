@@ -9,6 +9,10 @@ import { createLayoutSlice } from './store/layoutSlice';
 import { createDeviceRegistrySlice } from './store/deviceRegistrySlice';
 import { createHelpSlice } from './store/helpSlice';
 import { createDeviceFormSlice } from './store/deviceFormSlice';
+import { createScreensSlice } from './store/screensSlice';
+import { createWorkspaceSlice } from './store/workspaceSlice';
+import { createSimulationSlice } from './store/simulationSlice';
+import { createLibrarySlice } from './store/librarySlice';
 import type { AppState } from './store/appState';
 
 // Internal-audit fix (god-file breakup): this file used to hold the
@@ -40,6 +44,10 @@ export const useStore = create<AppState>()((...a) => ({
   ...createProjectSlice(...a),
   ...createToolsSlice(...a),
   ...createElementsSlice(...a),
+  ...createScreensSlice(...a),
+  ...createWorkspaceSlice(...a),
+  ...createSimulationSlice(...a),
+  ...createLibrarySlice(...a),
   ...createSelectionSlice(...a),
   ...createClipboardSlice(...a),
   ...createHistorySlice(...a),

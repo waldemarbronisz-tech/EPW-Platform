@@ -51,7 +51,7 @@ def infer_param_type(value) -> str:
 class _NewMacroParameterDialog(QDialog):
     def __init__(self, property_name: str, current_value, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Nowy parametr makrobloku")
+        self.setWindowTitle("New macro parameter")
         self.entry = None
 
         base_name, unit = _split_property_unit(property_name)
@@ -64,10 +64,10 @@ class _NewMacroParameterDialog(QDialog):
         type_label = QLabel(self._param_type)
         self.unit_edit = QLineEdit(unit)
         self.description_edit = QLineEdit()
-        form.addRow("Nazwa", self.display_name_edit)
-        form.addRow("Typ (z właściwości)", type_label)
-        form.addRow("Jednostka", self.unit_edit)
-        form.addRow("Opis", self.description_edit)
+        form.addRow("Name", self.display_name_edit)
+        form.addRow("Type (from property)", type_label)
+        form.addRow("Unit", self.unit_edit)
+        form.addRow("Description", self.description_edit)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -78,7 +78,7 @@ class _NewMacroParameterDialog(QDialog):
     def _on_accept(self):
         name = self.display_name_edit.text().strip()
         if not name:
-            QMessageBox.critical(self, "Nieprawidłowa nazwa", "Nazwa parametru nie może być pusta.")
+            QMessageBox.critical(self, "Invalid name", "The parameter name cannot be empty.")
             return
         self.entry = {
             "display_name": name,
@@ -98,11 +98,11 @@ class BindParameterDialog(QDialog):
         self.current_value = current_value
         self._chosen_existing_name = None
         self._new_entry = None
-        self.setWindowTitle("Powiąż z parametrem")
+        self.setWindowTitle("Bind to parameter")
         self.resize(360, 320)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"Właściwość: {property_name}"))
+        layout.addWidget(QLabel(f"Property: {property_name}"))
 
         self.list = QListWidget()
         for param in definition.get("parameters", []):
@@ -113,7 +113,7 @@ class BindParameterDialog(QDialog):
         layout.addWidget(self.list)
 
         new_row = QHBoxLayout()
-        self.new_param_btn = QPushButton("Nowy parametr...")
+        self.new_param_btn = QPushButton("New parameter...")
         self.new_param_btn.clicked.connect(self._create_new_parameter)
         new_row.addWidget(self.new_param_btn)
         new_row.addStretch()

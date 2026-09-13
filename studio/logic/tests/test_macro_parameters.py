@@ -539,7 +539,7 @@ def test_validation_error_binding_to_a_nonexistent_block():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    assert any("nieistniejący blok" in e for e in c.errors)
+    assert any("internal block or property that does not exist" in e for e in c.errors)
 
 def test_validation_error_binding_to_a_nonexistent_parameter():
     p = Project()
@@ -553,7 +553,7 @@ def test_validation_error_binding_to_a_nonexistent_parameter():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    assert any("nieistniejący parametr" in e for e in c.errors)
+    assert any("parameter that does not exist" in e for e in c.errors)
 
 def test_validation_error_type_mismatch_between_parameter_and_property():
     p = Project()
@@ -565,7 +565,7 @@ def test_validation_error_type_mismatch_between_parameter_and_property():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    assert any("nie zgadza się z typem" in e for e in c.errors)
+    assert any("does not match the type" in e for e in c.errors)
 
 def test_validation_warning_unbound_parameter():
     p = Project()
@@ -577,7 +577,7 @@ def test_validation_warning_unbound_parameter():
     c = Compiler(p)
     res = c.compile()
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("nie jest powiązany" in w for w in c.warnings)
+    assert any("is not bound" in w for w in c.warnings)
 
 def test_validation_warning_two_parameters_bound_to_the_same_property():
     p = Project()
@@ -590,7 +590,7 @@ def test_validation_warning_two_parameters_bound_to_the_same_property():
     c = Compiler(p)
     res = c.compile()
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("Więcej niż jeden parametr" in w for w in c.warnings)
+    assert any("More than one parameter" in w for w in c.warnings)
 
 def test_validation_value_out_of_range_uses_the_blocks_own_existing_rule():
     """§C4's third BŁĄD ("wartość parametru poza dopuszczalnym zakresem
@@ -622,7 +622,7 @@ def test_validation_value_out_of_range_uses_the_blocks_own_existing_rule():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    assert any("nie może być ujemn" in e for e in c.errors)
+    assert any("cannot be negative" in e for e in c.errors)
 
 
 # ---- §C5.6: backward compatibility ---------------------------------------
@@ -747,7 +747,7 @@ def test_bound_property_row_shows_unbind_button_not_the_editor(qsettings):
     window.property_panel.load_block_properties(ton_inside, window.project, def_id)
     row = window.property_panel.field_widget("Preset")
     children = [row.layout().itemAt(i).widget() for i in range(row.layout().count())]
-    assert any("Odłącz" in getattr(w, "text", lambda: "")() for w in children)
+    assert any("Unbind" in getattr(w, "text", lambda: "")() for w in children)
     _close(window)
 
 def test_unbinding_a_property_removes_the_binding(qsettings):
@@ -792,7 +792,7 @@ def test_instance_property_panel_shows_parameter_with_unit_tooltip(qsettings):
     _close(window)
 
 
-# ---- UI: MacroPinsDialog "Parametry" tab (§C2.4) ------------------------
+# ---- UI: MacroPinsDialog "Parameters" tab (§C2.4) ------------------------
 
 def test_macro_pins_dialog_lists_parameters_with_binding_counts(qsettings):
     _app()

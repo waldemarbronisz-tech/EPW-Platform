@@ -28,8 +28,22 @@ const allSourceFiles = import.meta.glob('../**/*.{ts,tsx}', { query: '?raw', imp
 // interface code review). Only genuine interface source is scanned.
 const EXCLUDED_PATH_FRAGMENTS = ['/help/', '/i18n/', '/tests/'];
 
+// A test file is not interface source, wherever it sits. The '/tests/'
+// fragment above misses this suite's OWN SIBLINGS: the glob is relative
+// to src/tests/, so a sibling resolves as './something.test.ts' and
+// contains no '/tests/' at all. That went unnoticed only because no
+// sibling had ever carried a Polish string as test DATA - the moment one
+// did (library-recent-and-search.test.ts checks that a search finds
+// 'Oswietlenie' spelled with its diacritics, which it can hardly do
+// without writing them), this rule fired on a test rather than on any
+// interface.
+function isTestFile(path: string): boolean {
+  return path.endsWith('.test.ts') || path.endsWith('.test.tsx');
+}
+
 function isInterfaceFile(path: string): boolean {
   if (EXCLUDED_PATH_FRAGMENTS.some(f => path.includes(f))) return false;
+  if (isTestFile(path)) return false;
   return path.endsWith('.ts') || path.endsWith('.tsx');
 }
 
@@ -51,16 +65,18 @@ describe('test 17: no Polish diacritic survives in interface source, outside hel
     expect(interfaceFiles.length).toBeGreaterThan(100);
   });
 
-  it('sanity: this exclusion genuinely drops the help/i18n trees, not everything', () => {
-    // Vite's own import.meta.glob never surfaces this test file's
-    // sibling tests in the first place (test files are outside its
-    // normal module graph), so /tests/ is excluded structurally
-    // regardless of EXCLUDED_PATH_FRAGMENTS - only help/i18n need
-    // asserting here.
+  it('sanity: this exclusion genuinely drops the help/i18n trees and the tests, not everything', () => {
     const excluded = Object.keys(allSourceFiles).filter(p => !isInterfaceFile(p));
     expect(excluded.some(p => p.includes('/help/'))).toBe(true);
     expect(excluded.some(p => p.includes('/i18n/'))).toBe(true);
-    expect(Object.keys(allSourceFiles).some(p => p.includes('/tests/'))).toBe(false);
+    // This suite's own siblings ARE surfaced by the glob (it is relative
+    // to src/tests/, so they come back as './x.test.ts'), which an
+    // earlier comment here claimed they were not. They are dropped by
+    // isTestFile instead - and that has to be asserted, or the claim
+    // rots again the next time somebody reads it.
+    const siblings = Object.keys(allSourceFiles).filter(isTestFile);
+    expect(siblings.length).toBeGreaterThan(0);
+    expect(siblings.every(p => !isInterfaceFile(p))).toBe(true);
   });
 
   it('no interface source file has a Polish diacritical character outside a comment', () => {

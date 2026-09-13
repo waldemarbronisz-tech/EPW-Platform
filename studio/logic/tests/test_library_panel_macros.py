@@ -1,4 +1,4 @@
-"""feat/macro-blocks — the library tree's "Makrobloki" section
+"""feat/macro-blocks — the library tree's "Macros" section
 (ui/panels/library.py). See test_library_panel.py for the rest of the
 library panel's behavior, unrelated to macros."""
 import pytest
@@ -120,8 +120,8 @@ def test_display_name_and_tooltip_reflect_the_real_definition(qsettings):
     child = _macro_root(panel).child(0)
 
     assert child.text(0) == "Blokada"
-    assert "2 wej." in child.toolTip(0)
-    assert "1 wyj." in child.toolTip(0)
+    assert "2 in" in child.toolTip(0)
+    assert "1 out" in child.toolTip(0)
 
 def test_display_name_falls_back_to_def_id_for_dangling_reference(qsettings):
     """A macro instance placed via a stale type_id whose definition no

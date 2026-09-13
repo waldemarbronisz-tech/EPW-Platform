@@ -23,7 +23,7 @@ _CATEGORY_INTROS = {}
 
 def _direction_label(pin) -> str:
     from logic_studio.blocks.pin import Pin
-    return "Wejście" if pin.direction == Pin.DIR_INPUT else "Wyjście"
+    return "Input" if pin.direction == Pin.DIR_INPUT else "Output"
 
 
 def describe_block_type(type_id: str) -> dict:
@@ -124,19 +124,19 @@ def block_entry_markdown(entry: dict) -> str:
         "",
         f"`{entry['type_id']}` — {entry['category']}",
         "",
-        entry["description"] or "*(brak opisu)*",
+        entry["description"] or "*(no description)*",
         "",
     ]
 
     if entry["pins"]:
         lines.append("## Piny")
         lines.append("")
-        lines.append("| Nazwa | Kierunek | Typ | Opis |")
+        lines.append("| Name | Direction | Type | Description |")
         lines.append("|---|---|---|---|")
         for pin in entry["pins"]:
             desc = _escape_pipe(pin["description"] or "")
             if pin["safety_relevant"]:
-                desc = f"**{desc}** ⚠ istotne dla bezpieczeństwa"
+                desc = f"**{desc}** ⚠ safety relevant"
             lines.append(
                 f"| {_escape_pipe(pin['name'])} | {pin['direction']} | "
                 f"{_escape_pipe(pin['data_type'])} | {desc} |"
@@ -144,9 +144,9 @@ def block_entry_markdown(entry: dict) -> str:
         lines.append("")
 
     if entry["properties"]:
-        lines.append("## Właściwości")
+        lines.append("## Properties")
         lines.append("")
-        lines.append("| Nazwa | Typ | Domyślna | Jednostka | Opis |")
+        lines.append("| Name | Type | Default | Unit | Description |")
         lines.append("|---|---|---|---|---|")
         for prop in entry["properties"]:
             lines.append(
@@ -174,11 +174,11 @@ def category_index_markdown(category: str, entries: list) -> str:
 
 def export_catalog_markdown() -> str:
     """§2.4: the whole catalog as one standalone Markdown document — used
-    by Help > "Eksportuj katalog bloków..." to save a file for
+    by Help > "Export block catalog..." to save a file for
     coordination meetings/project documentation, independent of the
     interactive help window."""
     catalog = generate_catalog()
-    parts = ["# Katalog bloków EPW Logic Studio", ""]
+    parts = ["# EPW Logic Studio block catalog", ""]
     for category, entries in catalog.items():
         parts.append(f"## {category}")
         parts.append("")

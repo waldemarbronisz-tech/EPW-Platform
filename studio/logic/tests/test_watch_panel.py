@@ -140,7 +140,7 @@ def test_add_via_dialog_creates_a_watch_and_pushes_undo(qsettings, monkeypatch):
     panel.set_project(p)
 
     def fake_exec(self):
-        phys_root = self.tree.topLevelItem(0)  # "Wejścia i wyjścia fizyczne"
+        phys_root = self.tree.topLevelItem(0)  # "Physical inputs and outputs"
         leaf = phys_root.child(0)               # "ELA01.DI.1"
         self.tree.setCurrentItem(leaf)
         self._on_accept()

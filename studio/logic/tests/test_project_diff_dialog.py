@@ -46,7 +46,7 @@ def test_no_differences_shows_a_single_placeholder_row():
     _app()
     dialog = ProjectDiffDialog(_empty_comparison(), "A", "B")
     assert dialog.tree.topLevelItemCount() == 1
-    assert dialog.tree.topLevelItem(0).text(0) == "Brak różnic"
+    assert dialog.tree.topLevelItem(0).text(0) == "No differences"
 
 def test_added_and_removed_blocks_get_their_own_sections():
     _app()
@@ -56,8 +56,8 @@ def test_added_and_removed_blocks_get_their_own_sections():
     dialog = ProjectDiffDialog(comparison, "A", "B")
 
     labels = [dialog.tree.topLevelItem(i).text(0) for i in range(dialog.tree.topLevelItemCount())]
-    assert any(l.startswith("Dodane bloki") for l in labels)
-    added_root = next(dialog.tree.topLevelItem(i) for i in range(dialog.tree.topLevelItemCount()) if labels[i].startswith("Dodane"))
+    assert any(l.startswith("Added blocks") for l in labels)
+    added_root = next(dialog.tree.topLevelItem(i) for i in range(dialog.tree.topLevelItemCount()) if labels[i].startswith("Added"))
     assert added_root.childCount() == 1
     assert "logic.and" in added_root.child(0).text(0)
 
@@ -69,7 +69,7 @@ def test_changed_block_shows_field_changes_as_children():
     dialog = ProjectDiffDialog(comparison, "A", "B")
 
     root = dialog.tree.topLevelItem(0)
-    assert root.text(0).startswith("Zmienione bloki")
+    assert root.text(0).startswith("Changed blocks")
     block_item = root.child(0)
     assert "ga" in block_item.text(0) or "MyGate" in block_item.text(0)
     field_texts = [block_item.child(i).text(0) for i in range(block_item.childCount())]
@@ -84,7 +84,7 @@ def test_moved_block_shows_a_moved_row():
 
     block_item = dialog.tree.topLevelItem(0).child(0)
     field_texts = [block_item.child(i).text(0) for i in range(block_item.childCount())]
-    assert "Przesunięty na kanwie" in field_texts
+    assert "Moved on the canvas" in field_texts
 
 def test_connection_change_shown_under_its_block():
     _app()
@@ -95,7 +95,7 @@ def test_connection_change_shown_under_its_block():
 
     block_item = dialog.tree.topLevelItem(0).child(0)
     field_texts = [block_item.child(i).text(0) for i in range(block_item.childCount())]
-    assert any("In1" in t and "nowe połączenie" in t for t in field_texts)
+    assert any("In1" in t and "new connection" in t for t in field_texts)
 
 def test_settings_changes_section():
     _app()
@@ -105,7 +105,7 @@ def test_settings_changes_section():
     dialog = ProjectDiffDialog(comparison, "A", "B")
 
     root = dialog.tree.topLevelItem(0)
-    assert root.text(0).startswith("Zmiany ustawień")
+    assert root.text(0).startswith("Settings changes")
     assert "name" in root.child(0).text(0)
 
 def test_all_sections_together_when_everything_changed():
@@ -115,6 +115,6 @@ def test_all_sections_together_when_everything_changed():
     comparison = compare_projects(base, target)
     dialog = ProjectDiffDialog(comparison, "A", "B")
     labels = [dialog.tree.topLevelItem(i).text(0) for i in range(dialog.tree.topLevelItemCount())]
-    assert any(l.startswith("Dodane") for l in labels)
-    assert any(l.startswith("Zmienione") for l in labels)
-    assert any(l.startswith("Zmiany ustawień") for l in labels)
+    assert any(l.startswith("Added") for l in labels)
+    assert any(l.startswith("Changed") for l in labels)
+    assert any(l.startswith("Settings changes") for l in labels)

@@ -27,7 +27,7 @@ import { HELP_GLOSSARY } from '../help/HelpGlossary';
 import { FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_SIZE_TITLE, COLOR_ALARM, COLOR_LAMP_LIT } from '../theme/ScadaTheme';
 
 const FALLBACK_NOTICE: Record<'pl' | 'en', string> = {
-  pl: 'Ten rozdzial nie jest jeszcze przetlumaczony na wybrany jezyk. Pokazano tresc angielska.',
+  pl: 'This chapter has not been translated into the selected language yet. Showing the English content.',
   en: 'This chapter has not been translated into the selected language yet. Showing the English text.',
 };
 
@@ -218,7 +218,7 @@ export const HelpWindow: React.FC<HelpWindowProps> = ({ request, onClose }) => {
         <input
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setLeftTab('search'); }}
-          placeholder={helpLanguage === 'pl' ? 'Szukaj w pomocy...' : 'Search help...'}
+          placeholder={helpLanguage === 'pl' ? 'Search help...' : 'Search help...'}
           style={{ flex: 1, minWidth: '100px' }}
         />
         <button onClick={goBack} disabled={historyIndex <= 0}>{helpLanguage === 'pl' ? 'Wstecz' : 'Back'}</button>
@@ -238,7 +238,7 @@ export const HelpWindow: React.FC<HelpWindowProps> = ({ request, onClose }) => {
                   {helpLanguage === 'pl' ? 'Spis tresci' : 'Contents'}
                 </div>
                 <div style={leftTab === 'search' ? tabActiveStyle : tabInactiveStyle} onClick={() => setLeftTab('search')}>
-                  {helpLanguage === 'pl' ? 'Szukaj' : 'Search'}
+                  {helpLanguage === 'pl' ? 'Search' : 'Search'}
                 </div>
               </div>
               <div style={treeScrollStyle}>
@@ -269,7 +269,7 @@ export const HelpWindow: React.FC<HelpWindowProps> = ({ request, onClose }) => {
                 ) : (
                   searchResults.length === 0 ? (
                     <div style={{ padding: '8px', fontSize: `${FONT_SIZE_SMALL}px`, fontStyle: 'italic' }}>
-                      {helpLanguage === 'pl' ? 'Brak wynikow.' : 'No results.'}
+                      {helpLanguage === 'pl' ? 'No results.' : 'No results.'}
                     </div>
                   ) : searchResults.map(r => (
                     <div key={r.topicId} style={topicRowStyle} onClick={() => navigateTo(r.topicId)}>

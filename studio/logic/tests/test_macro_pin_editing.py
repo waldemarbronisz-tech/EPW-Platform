@@ -191,7 +191,7 @@ def test_expose_pin_menu_excludes_already_exposed_pins(qsettings):
 
     assert submenu is not None
     action_texts = [a.text() for a in submenu.actions()]
-    assert action_texts == ["Wejście: In2"]
+    assert action_texts == ["Input: In2"]
     assert submenu.menuAction().isEnabled() is True
     _close(window)
 

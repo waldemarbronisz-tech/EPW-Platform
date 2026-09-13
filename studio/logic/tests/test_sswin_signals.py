@@ -164,7 +164,7 @@ def test_unused_logic_signal_is_a_warning_not_an_error():
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("SSWIN.CMD_RESET" in w and "nie jest używany" in w for w in c.warnings)
+    assert any("SSWIN.CMD_RESET" in w and "is not used" in w for w in c.warnings)
 
 def test_a_logic_signal_read_but_not_written_still_counts_as_used():
     """§2.3's own "unused" warning covers "neither read nor written" — a
@@ -180,7 +180,7 @@ def test_a_logic_signal_read_but_not_written_still_counts_as_used():
     # "'SSWIN.CMD_ARM'" (quoted, exact) rather than a bare substring check —
     # "SSWIN.CMD_ARM" is also a substring of "SSWIN.CMD_ARM_PARTIAL", which
     # genuinely IS unused here and must still warn.
-    assert not any("'SSWIN.CMD_ARM'" in w and "nie jest używany" in w for w in c.warnings)
+    assert not any("'SSWIN.CMD_ARM'" in w and "is not used" in w for w in c.warnings)
 
 
 # ---- §4.3: two writers ------------------------------------------------------
@@ -196,7 +196,7 @@ def test_two_writers_for_the_same_command_is_a_compile_error_naming_both():
     res = c.compile()
 
     assert res is None
-    matching = [e for e in c.errors if "SSWIN.CMD_ARM" in e and "więcej niż jeden" in e]
+    matching = [e for e in c.errors if "SSWIN.CMD_ARM" in e and "more than one" in e]
     assert len(matching) == 1
     assert o1.short_id in matching[0]
     assert o2.short_id in matching[0]
@@ -212,7 +212,7 @@ def test_safety_relevant_write_with_no_access_level_warns():
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("krytycznym" in w and "SSWIN.CMD_DISARM" in w for w in c.warnings)
+    assert any("critical signal" in w and "SSWIN.CMD_DISARM" in w for w in c.warnings)
 
 def test_safety_relevant_write_with_engineer_level_does_not_warn():
     p = Project()
@@ -222,7 +222,7 @@ def test_safety_relevant_write_with_engineer_level_does_not_warn():
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert not any("krytycznym" in w for w in c.warnings)
+    assert not any("critical signal" in w for w in c.warnings)
 
 def test_non_safety_write_with_no_access_level_does_not_warn():
     p = Project()
@@ -232,7 +232,7 @@ def test_non_safety_write_with_no_access_level_does_not_warn():
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert not any("krytycznym" in w for w in c.warnings)
+    assert not any("critical signal" in w for w in c.warnings)
 
 def test_access_level_defaults_to_engineer_for_a_safety_relevant_signal():
     b = BlockRegistry.create_block("system.signal_out")
@@ -370,7 +370,7 @@ def test_signals_panel_still_shows_urzadzenie_for_a_runtime_sourced_signal():
     usage = build_crossref(p)["SYS.READY"]
 
     text, _tooltip = panel._writers_text("SYS.READY", usage)
-    assert text == "urządzenie"
+    assert text == "device"
 
 def test_signals_panel_shows_dash_for_an_unwritten_logic_signal():
     _app()

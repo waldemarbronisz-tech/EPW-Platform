@@ -92,7 +92,7 @@ def test_error_row_is_flagged(qsettings):
     panel = LabelsPanel(settings=qsettings)
     panel.set_project(window.project)
 
-    assert panel.table.item(0, _COL_STATE).text() == "Błąd"
+    assert panel.table.item(0, _COL_STATE).text() == "Error"
     assert panel.table.item(0, _COL_SOURCE).text() == "-"
     panel.deleteLater()
     _close(window)

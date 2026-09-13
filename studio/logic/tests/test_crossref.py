@@ -186,7 +186,7 @@ def test_internal_bit_with_two_writers_is_an_error():
     issues = find_issues(index)
     errors = [i for i in issues if i.severity == "error" and i.signal_id == "M.X"]
     assert len(errors) == 1
-    assert "więcej niż jeden" in errors[0].text
+    assert "more than one" in errors[0].text
 
 
 # ---- orphaned signal --------------------------------------------------------
@@ -207,7 +207,7 @@ def test_reference_to_unregistered_internal_bit_is_an_error_and_stays_indexed():
     issues = find_issues(index)
     errors = [i for i in issues if i.severity == "error" and i.signal_id == "GHOST"]
     assert len(errors) == 1
-    assert "nie istnieje" in errors[0].text
+    assert "does not exist" in errors[0].text
 
 def test_reference_to_unregistered_address_is_an_error():
     p = Project()
@@ -262,7 +262,7 @@ def test_di_block_with_no_address_is_flagged():
     issues = find_issues(index)
     warnings = [i for i in issues if i.severity == "warning" and i.signal_id == di.short_id]
     assert len(warnings) == 1
-    assert "nie ma przypisanego adresu" in warnings[0].text
+    assert "has no address assigned" in warnings[0].text
 
 def test_gate_with_empty_address_is_not_flagged_unassigned():
     """A gate's Address is always "" too, but it's not an addressable
@@ -307,7 +307,7 @@ def test_analog_point_defined_but_unused_is_a_warning():
     index = build_crossref(p)
     assert "AI.UNUSED" in index
     issues = find_issues(index)
-    assert any(i.severity == "warning" and i.signal_id == "AI.UNUSED" and "nieużywany" in i.text for i in issues)
+    assert any(i.severity == "warning" and i.signal_id == "AI.UNUSED" and "unused" in i.text for i in issues)
 
 def test_internal_bit_defined_but_unused_is_a_warning():
     p = Project()
@@ -316,7 +316,7 @@ def test_internal_bit_defined_but_unused_is_a_warning():
     p.settings["internal_bits"] = [{"name": "UNUSED", "type": "BOOL", "retentive": False}]
     index = build_crossref(p)
     issues = find_issues(index)
-    assert any(i.severity == "warning" and i.signal_id == "M.UNUSED" and "nieużywany" in i.text for i in issues)
+    assert any(i.severity == "warning" and i.signal_id == "M.UNUSED" and "unused" in i.text for i in issues)
 
 def test_internal_bit_read_but_never_written_is_a_warning():
     p = Project()
@@ -326,7 +326,7 @@ def test_internal_bit_read_but_never_written_is_a_warning():
     p.add_block(_block("virtual.input", bit="X"))
 
     issues = find_issues(build_crossref(p))
-    assert any(i.severity == "warning" and i.signal_id == "M.X" and "niezapisywany" in i.text for i in issues)
+    assert any(i.severity == "warning" and i.signal_id == "M.X" and "nobody writes" in i.text for i in issues)
 
 def test_multiple_addresses_do_not_cross_contaminate():
     p = Project()

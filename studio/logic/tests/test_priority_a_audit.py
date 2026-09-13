@@ -19,14 +19,14 @@ def test_priority_a_audit(qsettings):
     # Verify Library categories
     from logic_studio.blocks.registry import BlockRegistry
     cats = BlockRegistry.get_categories()
-    assert "Wejścia / Wyjścia" in cats
-    assert "Inne" in cats
-    assert "Liczniki" in cats
+    assert "Inputs / Outputs" in cats
+    assert "Other" in cats
+    assert "Counters" in cats
     # assert "Edges" in cats
-    assert "Elementy Analogowe" in cats
-    assert "Timery" in cats
-    assert "Elementy Analogowe" in cats
-    assert "Elementy Analogowe" in cats
+    assert "Analog" in cats
+    assert "Timers" in cats
+    assert "Analog" in cats
+    assert "Analog" in cats
 
     # 2. PLACEMENT
     m.scene.clear()

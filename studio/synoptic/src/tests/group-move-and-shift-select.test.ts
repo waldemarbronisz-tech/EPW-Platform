@@ -113,7 +113,10 @@ describe('mergeSelectionAdditive (Shift+drag rubber-band)', () => {
 
     const merged = mergeSelectionAdditive(existing, {});
 
-    expect(merged).toEqual(existing);
+    // feat/cad-marquee added walls as a selectable kind. An existing
+    // selection that predates it merges to the same thing plus an empty
+    // wall list, rather than throwing - see MixedSelection.wallIds.
+    expect(merged).toEqual({ ...existing, wallIds: [] });
   });
 
   it('drives selectMixed the same way Canvas.tsx\'s own Shift+drag handler does, end to end through the store', () => {

@@ -42,10 +42,10 @@ class HelpWindow(QWidget):
     repeated F1 presses/menu clicks rather than rebuilt each time, so
     Back/Forward history survives (mirrors EPW-OS's own HelpWindow)."""
 
-    def __init__(self, parent=None, settings=None, language: str = "pl"):
+    def __init__(self, parent=None, settings=None, language: str = "en"):
         super().__init__(parent, Qt.WindowType.Window)
         self.settings = settings if settings is not None else QSettings("BroniszLabs", "EPW Logic Studio")
-        self.setWindowTitle("Pomoc — EPW Logic Studio")
+        self.setWindowTitle("Help — EPW Logic Studio")
         self._restore_geometry()
 
         self._store = HelpContentStore(language)
@@ -56,7 +56,7 @@ class HelpWindow(QWidget):
         outer.setContentsMargins(4, 4, 4, 4)
 
         toolbar = QHBoxLayout()
-        self.btn_hide = QPushButton("Ukryj spis")
+        self.btn_hide = QPushButton("Hide contents")
         self.btn_hide.clicked.connect(self._toggle_left_panel)
         toolbar.addWidget(self.btn_hide)
         self.btn_back = QPushButton("◄ Wstecz")
@@ -127,7 +127,7 @@ class HelpWindow(QWidget):
                     chapter_item.addChild(topic_item)
             self.tree.addTopLevelItem(chapter_item)
         self.tree.itemClicked.connect(self._on_tree_item_clicked)
-        self.tabs.addTab(self.tree, "Spis treści")
+        self.tabs.addTab(self.tree, "Contents")
 
     def _populate_block_catalog_chapter(self, chapter_item, topics):
         """§2/§4.2: one extra tree level for the generated catalog —
@@ -172,7 +172,7 @@ class HelpWindow(QWidget):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(4, 4, 4, 4)
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Szukaj...")
+        self.search_edit.setPlaceholderText("Search...")
         self.search_edit.textChanged.connect(self._on_search_text_changed)
         layout.addWidget(self.search_edit)
         self.search_results = QListWidget()
@@ -180,7 +180,7 @@ class HelpWindow(QWidget):
             lambda item: self.navigate_to(item.data(Qt.ItemDataRole.UserRole))
         )
         layout.addWidget(self.search_results, stretch=1)
-        self.tabs.addTab(container, "Szukaj")
+        self.tabs.addTab(container, "Search")
 
     def _on_search_text_changed(self, text):
         self.search_results.clear()
@@ -205,7 +205,7 @@ class HelpWindow(QWidget):
         markdown = self._store.load_topic_markdown(topic_id, version=__version__)
         markdown = self._with_block_icon(topic_id, markdown)
         self.viewer.setMarkdown(markdown)
-        self.setWindowTitle(f"Pomoc — {title}")
+        self.setWindowTitle(f"Help — {title}")
         if _record_history:
             self._history = self._history[: self._history_index + 1]
             self._history.append(topic_id)
@@ -239,7 +239,7 @@ class HelpWindow(QWidget):
         # alt text is empty (`![](...)`) -- verified directly, including
         # for an ordinary http(s) URL, not just a data: one -- so this
         # would otherwise render nothing with no error of any kind.
-        img_line = f"![Ikona bloku](data:image/png;base64,{b64})"
+        img_line = f"![Block icon](data:image/png;base64,{b64})"
         # Right after the "# Title" line, before the type_id/category line.
         lines = markdown.split("\n", 1)
         if len(lines) == 2:
@@ -263,7 +263,7 @@ class HelpWindow(QWidget):
     def _toggle_left_panel(self):
         showing = self.tabs.isVisible()
         self.tabs.setVisible(not showing)
-        self.btn_hide.setText("Pokaż spis" if showing else "Ukryj spis")
+        self.btn_hide.setText("Show contents" if showing else "Hide contents")
 
     def _on_anchor_clicked(self, url: QUrl):
         """Internal cross-references only (e.g.

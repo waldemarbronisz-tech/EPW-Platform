@@ -8,6 +8,7 @@ Both cache by (key, size) so repeatedly refreshing the library tree or
 switching toolbar display mode never re-renders a pixmap that's already been
 drawn once.
 """
+import os
 from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QPen, QColor, QPolygonF
 
@@ -21,7 +22,7 @@ def _shape_style_for(type_id: str, category: str) -> str:
     """Mirrors BlockItem._determine_shape_style() without constructing a full
     canvas item (and its ports) just to read one field — see block_item.py
     for the canonical, authoritative version this must stay consistent with."""
-    if category == "Bramki logiczne":
+    if category == "Logic gates":
         if type_id.startswith("logic.buffer"):
             return "BUFFER"
         if type_id.startswith("logic.and"):
@@ -39,11 +40,11 @@ def _shape_style_for(type_id: str, category: str) -> str:
         if type_id.startswith("logic.not"):
             return "NOT"
         return "GATE_GENERIC"
-    if category == "Wejścia / Wyjścia":
+    if category == "Inputs / Outputs":
         return "IO"
-    if category == "Dokumentacja":
+    if category == "Documentation":
         return "DOC"
-    if category == "Makrobloki":
+    if category == "Macros":
         return "MACRO"
     return "COMPLEX"
 
@@ -109,6 +110,30 @@ def _new_pixmap(size):
     return pixmap
 
 
+# One icon look everywhere in EPW Studio: an action whose picture exists in
+# the Studio shell's icon set (studio/shell/icons/*.png) uses that PNG, so
+# Logic Studio's toolbars match Studio's and Synoptic's. Drawn at its native
+# 16 px, centred in the requested size - scaling pixel art by a non-integer
+# factor would smear it. Falls back to the painted pictogram below when the
+# shell icons are not present (Logic Studio running on its own).
+_SHELL_ICON_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "shell", "icons"))
+_SHELL_ICON_ALIASES = {"start": "sim_start", "pause": "sim_pause", "stop": "sim_stop"}
+
+
+def _shell_action_icon(name: str, size: int):
+    path = os.path.join(_SHELL_ICON_DIR, _SHELL_ICON_ALIASES.get(name, name) + ".png")
+    if not os.path.isfile(path):
+        return None
+    source = QPixmap(path)
+    if source.isNull():
+        return None
+    pixmap = _new_pixmap(size)
+    painter = QPainter(pixmap)
+    painter.drawPixmap((size - source.width()) // 2, (size - source.height()) // 2, source)
+    painter.end()
+    return QIcon(pixmap)
+
+
 def action_icon(name: str, size: int = 20) -> QIcon:
     """Simple, legible pictograms for the main toolbar (§5.4) — this build
     shipped with plain text-only actions and an explicit code comment
@@ -116,6 +141,11 @@ def action_icon(name: str, size: int = 20) -> QIcon:
     key = (name, size)
     if key in _action_icon_cache:
         return _action_icon_cache[key]
+
+    shell_icon = _shell_action_icon(name, size)
+    if shell_icon is not None:
+        _action_icon_cache[key] = shell_icon
+        return shell_icon
 
     pixmap = _new_pixmap(size)
     painter = QPainter(pixmap)

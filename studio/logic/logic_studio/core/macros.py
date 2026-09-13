@@ -191,7 +191,7 @@ def is_definition_in_use(project, def_id: str) -> bool:
 # `project.settings` (short_id counters, macro_definitions itself, ...) is
 # NEVER swapped — it stays the one shared registry throughout, which is
 # exactly why a block placed while inside a macro's edit view still gets a
-# globally-unique short_id, and why the "Makrobloki" library section stays
+# globally-unique short_id, and why the "Macros" library section stays
 # consistent regardless of nav depth.
 #
 # feat/macro-editable-pins: a definition's OWN input_pins/output_pins
@@ -562,8 +562,8 @@ def resync_all_instances(project, def_id: str, live_block_lists: list) -> list:
 
 def _format_param_reset_notice(ref: str, display_name: str, new_type: str) -> str:
     return (
-        f"[{ref}] Parametr '{display_name}' zmienił typ na {new_type} — "
-        "wartość tej instancji zresetowana do domyślnej."
+        f"[{ref}] Parameter '{display_name}' changed type to {new_type} — "
+        "the value of this instance was reset to the default."
     )
 
 
@@ -718,7 +718,7 @@ def add_parameter_binding(project, def_id: str, param_name: str, block_uuid: str
 
 def remove_parameter_binding(project, def_id: str, block_uuid: str, property_name: str) -> bool:
     """Un-binds whichever parameter (if any) is currently bound to
-    `block_uuid`'s own `property_name` — the "Odłącz od parametru" action
+    `block_uuid`'s own `property_name` — the "Unbind from parameter" action
     (§C2.3). Returns False if no such binding exists."""
     definition = get_definition(project, def_id)
     if definition is None:
@@ -953,10 +953,10 @@ def expand_project(project) -> tuple:
             # industrial-automation platform that's a hazard, not a
             # cosmetic gap, so this is now a hard compile error instead.
             errors.append(
-                "Nie można rozwiązać połączenia makrobloku: wystawiony pin "
-                "wskazuje bezpośrednio na pin zagnieżdżonej instancji innego "
-                "makrobloku zamiast na zwykły blok wewnętrzny. Dodaj blok "
-                "pośredniczący (np. bufor) między nimi i spróbuj ponownie."
+                "Cannot resolve a macro connection: an exposed pin "
+                "points directly at a pin of a nested instance of another "
+                "macro instead of an ordinary internal block. Add an "
+                "intermediate block (e.g. a buffer) between them and try again."
             )
             continue
         if old_uuid in external_pin.connections:
@@ -992,13 +992,13 @@ def _expand_blocks(blocks, macro_defs, expanding, errors, rewire_plan, wire_scop
             continue
         if def_id in expanding:
             errors.append(
-                f"Makroblok '{def_id}' pośrednio zawiera sam siebie (cykl) — kompilacja przerwana."
+                f"Macro '{def_id}' indirectly contains itself (a cycle) — compilation stopped."
             )
             continue
         macro_def = macro_defs.get(def_id)
         if macro_def is None:
             ref = block.short_id or block.display_name
-            errors.append(f"[{ref}] Odwołuje się do nieistniejącej definicji makrobloku '{def_id}'.")
+            errors.append(f"[{ref}] Refers to a macro definition that does not exist: '{def_id}'.")
             continue
         result.extend(_expand_instance(block, def_id, macro_def, macro_defs, expanding, errors, rewire_plan, wire_scopes))
         if errors:
@@ -1016,8 +1016,8 @@ def _expand_instance(instance_block, def_id, macro_def, macro_defs, expanding, e
         block_class = BlockRegistry.get_block_class(b_data.get("type_id"))
         if block_class is None:
             errors.append(
-                f"Definicja makrobloku '{macro_def.get('name', def_id)}' odwołuje się do "
-                f"nieznanego typu bloku '{b_data.get('type_id')}'."
+                f"Macro definition '{macro_def.get('name', def_id)}' refers to "
+                f"an unknown block type '{b_data.get('type_id')}'."
             )
             return []
         fresh = block_class.deserialize(b_data)

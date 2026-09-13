@@ -15,9 +15,10 @@ import re
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox, QLabel, QLineEdit,
-    QSpinBox, QDoubleSpinBox, QComboBox, QPushButton
+    QSpinBox, QDoubleSpinBox, QComboBox, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import QSettings
+from logic_studio.ui.display_names import enum_label, property_label, unit_label
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.ui.window_lookup import logic_main_window
 
@@ -41,10 +42,10 @@ _SIGNAL_PICKER_TARGETS = {
 
 # feat/io-labels-and-ids §5.1: the four collapsible sections, in display
 # order, with their default expanded/collapsed state.
-SECTION_IDENTIFICATION = "Identyfikacja"
-SECTION_ADDRESSING = "Adresacja"
-SECTION_PARAMETERS = "Parametry"
-SECTION_ADVANCED = "Zaawansowane"
+SECTION_IDENTIFICATION = "Identification"
+SECTION_ADDRESSING = "Addressing"
+SECTION_PARAMETERS = "Parameters"
+SECTION_ADVANCED = "Advanced"
 _SECTION_DEFAULT_EXPANDED = {
     SECTION_IDENTIFICATION: True,
     SECTION_ADDRESSING: True,
@@ -146,6 +147,10 @@ _COMBO_OPTIONS = {
     # own three named levels (system_signals_catalog.json), plus "Brak" for
     # "no gate at all".
     ("system.signal_out", "Minimalny poziom dostępu"): ["Brak", "User", "Operator", "Engineer"],
+    # feat/text-formatting: paragraph alignment of the documentation blocks.
+    ("doc.text", "Align"): ["Left", "Center", "Right", "Justify"],
+    ("doc.note", "Align"): ["Left", "Center", "Right", "Justify"],
+    ("doc.section", "Align"): ["Left", "Center", "Right", "Justify"],
 }
 
 _NUMERIC_RANGE = 1_000_000  # generic wide bound when no domain floor/ceiling applies
@@ -232,7 +237,7 @@ class PropertyGridPanel(QWidget):
         # A single, unmissable placeholder — not an empty panel that could
         # be mistaken for "still loading" or a bug.
         layout = self.layout()
-        placeholder = QLabel("Brak zaznaczonego bloku")
+        placeholder = QLabel("No block selected")
         placeholder.setObjectName("property_panel_empty_label")
         # Remove any previous placeholder before adding a new one.
         for i in reversed(range(layout.count())):
@@ -250,7 +255,7 @@ class PropertyGridPanel(QWidget):
         currently open in breadcrumb edit view (MainWindow's own
         `current_macro_def_id`), or None at the top level. `block` is
         then one of THAT macro's own internal blocks — every property row
-        gets a "Powiąż z parametrem" action, since parameter_bindings
+        gets a "Bind to parameter" action, since parameter_bindings
         anchor on exactly this (block_uuid, property_name) pair. Distinct
         from `block` itself BEING a placed macro instance (macro_def_id
         is about the macro being EDITED, not the block being shown) —
@@ -286,12 +291,12 @@ class PropertyGridPanel(QWidget):
 
         id_edit = QLineEdit(block.short_id)
         id_edit.setReadOnly(True)
-        form.addRow("Identyfikator", id_edit)
+        form.addRow("Identifier", id_edit)
 
         for key in _IDENTIFICATION_KEYS:
             value = block.properties.get(key, "")
             editor = self._make_text_editor(key, value)
-            form.addRow(key, editor)
+            form.addRow(property_label(key), editor)
 
     def _populate_addressing(self, block, project):
         form = self._sections[SECTION_ADDRESSING]["form"]
@@ -304,7 +309,7 @@ class PropertyGridPanel(QWidget):
             value = block.properties.get(key, "")
             editor = self._make_addressing_editor(block, key, value, project)
             if editor is not None:
-                form.addRow(key, editor)
+                form.addRow(property_label(key), editor)
 
         if block.type_id in ("input.di", "virtual.input"):
             force_value = block.simulation_state.get("force_state", "NO FORCE")
@@ -327,8 +332,8 @@ class PropertyGridPanel(QWidget):
         instance_params = self._macro_instance_param_info(block)
 
         # §C2.1: `block` is one of the CURRENTLY-EDITED macro's own
-        # internal blocks — every row gets a "Powiąż z parametrem"/
-        # "Odłącz od parametru" action. None when not inside a macro's
+        # internal blocks — every row gets a "Bind to parameter"/
+        # "Unbind from parameter" action. None when not inside a macro's
         # breadcrumb edit view at all (the common case for every other
         # block type).
         binding_def_id, binding_definition = self._binding_context()
@@ -353,7 +358,9 @@ class PropertyGridPanel(QWidget):
                 editor = self._wrap_with_binding_action(block, key, editor, binding_def_id, binding_definition)
 
             base_name, _unit = _split_unit(key)
-            form.addRow(base_name, editor)  # §5.3: unit lives on the editor, not the label
+            # Stored keys stay as they are in the file; only the label is
+            # translated (ui/display_names.py).
+            form.addRow(property_label(base_name), editor)  # §5.3: unit lives on the editor, not the label
 
     def _macro_instance_param_info(self, block) -> dict:
         """{property_key: parameter_dict} for a placed macro instance's
@@ -392,7 +399,7 @@ class PropertyGridPanel(QWidget):
 
     def _wrap_with_binding_action(self, block, key, editor, def_id, definition):
         """§C2.1/§C2.3: wraps `editor` with a small action button —
-        "Powiąż z parametrem..." when this (block.uuid, key) isn't bound
+        "Bind to parameter..." when this (block.uuid, key) isn't bound
         to anything yet, or replaces the editor entirely with a read-only
         display of the bound parameter's name plus "Odłącz od
         parametru" when it is (§C2.3: "wartość zastąpiona nazwą
@@ -410,12 +417,12 @@ class PropertyGridPanel(QWidget):
             display = QLineEdit(f"↦ {label_text}")
             display.setReadOnly(True)
             row_layout.addWidget(display)
-            unbind_btn = QPushButton("Odłącz od parametru")
+            unbind_btn = QPushButton("Unbind from parameter")
             unbind_btn.clicked.connect(lambda checked=False, b=block, k=key: self._unbind_parameter(def_id, b, k))
             row_layout.addWidget(unbind_btn)
         else:
             row_layout.addWidget(editor)
-            bind_btn = QPushButton("Powiąż z parametrem...")
+            bind_btn = QPushButton("Bind to parameter...")
             bind_btn.clicked.connect(lambda checked=False, b=block, k=key, v=block.properties.get(key): self._open_bind_parameter_dialog(def_id, b, k, v))
             row_layout.addWidget(bind_btn)
 
@@ -504,6 +511,23 @@ class PropertyGridPanel(QWidget):
 
     # ---- Editor factories ----------------------------------------------------
 
+    def _make_multiline_text_editor(self, key, value):
+        """feat/text-formatting: a note holds several lines, and a QLineEdit
+        joins them. Commits when the field loses focus, like the one-line
+        editor commits on editingFinished."""
+        grid = self
+
+        class _NoteTextField(QPlainTextEdit):
+            def focusOutEvent(self, event):
+                super().focusOutEvent(event)
+                grid._commit_property(key, self.toPlainText())
+
+        editor = _NoteTextField()
+        editor.setPlainText(str(value))
+        editor.setFixedHeight(84)
+        editor.setTabChangesFocus(True)
+        return editor
+
     def _make_text_editor(self, key, value):
         editor = QLineEdit(str(value))
         editor.editingFinished.connect(lambda k=key, e=editor: self._commit_property(k, e.text(), editor=e))
@@ -523,7 +547,7 @@ class PropertyGridPanel(QWidget):
             combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
             return combo
         if (block.type_id, key) in _SIGNAL_PICKER_TARGETS:
-            btn = QPushButton(str(value) or "(nie wybrano)")
+            btn = QPushButton(str(value) or "(not selected)")
             btn.clicked.connect(lambda checked=False, k=key, b=btn: self._open_signal_picker(k, b))
             return btn
         # Address on a block type not covered above (shouldn't normally
@@ -540,12 +564,23 @@ class PropertyGridPanel(QWidget):
             combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
             return combo
 
+        if key == "Text" and block.type_id == "doc.note":
+            return self._make_multiline_text_editor(key, value)
+
         options = _COMBO_OPTIONS.get((block.type_id, key))
         if options is not None:
+            # The stored value is the item's DATA and the English name is
+            # only its text (ui/display_names.py) - project files keep the
+            # values they have always had.
             combo = QComboBox()
-            combo.addItems(options)
-            combo.setCurrentText(str(value))
-            combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
+            for option in options:
+                combo.addItem(enum_label(option), option)
+            index = combo.findData(str(value))
+            if index >= 0:
+                combo.setCurrentIndex(index)
+            combo.currentIndexChanged.connect(
+                lambda i, k=key, c=combo: self._commit_property(k, c.itemData(i))
+            )
             return combo
 
         if isinstance(value, int) and not isinstance(value, bool):
@@ -575,7 +610,7 @@ class PropertyGridPanel(QWidget):
             if ceiling is not None:
                 editor.setMaximum(ceiling)
         if unit:
-            editor.setSuffix(f" {unit}")  # §5.3
+            editor.setSuffix(f" {unit_label(unit)}")  # §5.3
         editor.setValue(value)
         editor.setKeyboardTracking(False)  # §5.4: don't fire on every keystroke
         editor.editingFinished.connect(lambda k=key, e=editor: self._commit_property(k, e.value(), editor=e))
@@ -595,10 +630,10 @@ class PropertyGridPanel(QWidget):
             if isinstance(partner_value, (int, float)):
                 ok = (new_value < partner_value) if role == "low" else (new_value > partner_value)
                 if not ok:
-                    verb = "mniejsza niż" if role == "low" else "większa niż"
+                    verb = "less than" if role == "low" else "greater than"
                     self._reject_value(
                         old_value, editor,
-                        f"Wartość '{key}' musi być {verb} '{partner_key}' — odrzucono.",
+                        f"Value '{key}' must be {verb} '{partner_key}' — rejected.",
                     )
                     return
 
@@ -628,7 +663,7 @@ class PropertyGridPanel(QWidget):
         # done) but would otherwise leave that cached geometry stale —
         # same refresh apply_doc_text() already does, just reached from a
         # second entry point now.
-        if key in ("Text", "Rozmiar tekstu (pkt)") and self.current_block.type_id in _DOC_TYPE_IDS:
+        if key in ("Text", "Rozmiar tekstu (pkt)", "Font", "Bold", "Italic", "Underline", "Align") and self.current_block.type_id in _DOC_TYPE_IDS:
             self._refresh_doc_block_geometry(window)
 
         if hasattr(window, 'scene'):

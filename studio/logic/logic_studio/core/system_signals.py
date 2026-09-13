@@ -32,13 +32,13 @@ _COMMS_CATEGORY_ID = "SYS.COMMS"
 # WHERE they're produced, not a change of what they say for the default
 # single-device case.
 _ELA_DEVICE_SIGNAL_TEMPLATES = [
-    ("ONLINE", "Moduł {dev} komunikuje się poprawnie", "ELA OK", False),
-    ("FAULT", "Awaria modułu {dev}", "ELA AW", True),
+    ("ONLINE", "Module {dev} is communicating correctly", "ELA OK", False),
+    ("FAULT", "Module {dev} fault", "ELA FLT", True),
 ]
 _ADA_DEVICE_SIGNAL_TEMPLATES = [
-    ("ONLINE", "Moduł {dev} komunikuje się poprawnie", "ADA OK", False),
-    ("FAULT", "Awaria modułu {dev}", "ADA AW", True),
-    ("SAFE_PATH_OK", "Sprzętowa droga wyłączenia sprawna", "DROGA OK", True),
+    ("ONLINE", "Module {dev} is communicating correctly", "ADA OK", False),
+    ("FAULT", "Module {dev} fault", "ADA FLT", True),
+    ("SAFE_PATH_OK", "Hardware shutdown path healthy", "PATH OK", True),
 ]
 
 _catalog = None

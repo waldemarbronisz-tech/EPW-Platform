@@ -1,4 +1,4 @@
-"""feat/signal-crossref §2 / feat/signals-panel-tree — the "Sygnały" side
+"""feat/signal-crossref §2 / feat/signals-panel-tree — the "Signals" side
 panel (read-only), rebuilt onto a category-grouped QTreeWidget."""
 import pytest
 from PySide6.QtWidgets import QApplication
@@ -56,7 +56,7 @@ def test_empty_project_shows_placeholder_not_a_table(qsettings):
     panel.set_project(Project())
     assert panel.tree.isHidden() is True
     assert panel.empty_label.isHidden() is False
-    assert "Brak sygnałów" in panel.empty_label.text()
+    assert "No signals" in panel.empty_label.text()
 
 def test_project_with_signals_shows_the_table(qsettings):
     _app()
@@ -74,7 +74,7 @@ def test_columns_are_in_spec_order(qsettings):
     _app()
     panel = SignalsPanel(settings=qsettings)
     headers = [panel.tree.headerItem().text(i) for i in range(panel.tree.columnCount())]
-    assert headers == ["Stan", "Sygnał", "Typ", "Etykieta", "Zapisuje", "Czyta"]
+    assert headers == ["State", "Signal", "Type", "Label", "Writes", "Reads"]
 
 def test_row_shows_label_from_io_labels(qsettings):
     _app()
@@ -100,7 +100,7 @@ def test_physical_input_shows_urzadzenie_as_writer(qsettings):
     panel.set_project(p)
 
     leaf = _row_of(panel, "ELA01.DI.1")
-    assert leaf.text(COL_WRITES) == "urządzenie"
+    assert leaf.text(COL_WRITES) == "device"
 
 def test_do_block_shows_its_short_id_as_writer(qsettings):
     _app()
@@ -156,7 +156,7 @@ def test_status_icon_present_for_issue_rows_and_absent_for_clean_rows(qsettings)
 def test_signals_are_grouped_under_the_correct_category(qsettings):
     """Categorization is now the TREE'S OWN STRUCTURE (parent node), not a
     filter — a DI lands under "Fizyczne", an internal bit under
-    "Wewnętrzne", regardless of anything else selected."""
+    "Internal", regardless of anything else selected."""
     _app()
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -171,11 +171,11 @@ def test_signals_are_grouped_under_the_correct_category(qsettings):
     di_leaf = _row_of(panel, "ELA01.DI.1")
     bit_leaf = _row_of(panel, "M.X")
     assert di_leaf.parent() is _category_of(panel, "Fizyczne")
-    assert bit_leaf.parent() is _category_of(panel, "Wewnętrzne")
+    assert bit_leaf.parent() is _category_of(panel, "Internal")
     # Both categories are simultaneously visible (structural, not exclusive
     # like the old single-select filter buttons ever allowed).
     assert _category_of(panel, "Fizyczne").isHidden() is False
-    assert _category_of(panel, "Wewnętrzne").isHidden() is False
+    assert _category_of(panel, "Internal").isHidden() is False
 
 def test_category_label_shows_signal_count(qsettings):
     _app()
@@ -194,7 +194,7 @@ def test_all_four_categories_always_present_even_when_empty(qsettings):
     _app()
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(Project())
-    assert set(panel._category_items.keys()) == {"Fizyczne", "Analogowe", "Wewnętrzne", "Systemowe"}
+    assert set(panel._category_items.keys()) == {"Fizyczne", "Analogowe", "Internal", "Systemowe"}
 
 def test_categories_default_to_expanded(qsettings):
     _app()
@@ -240,7 +240,7 @@ def test_children_sort_without_reordering_categories(qsettings):
 
     # category order unchanged
     assert [panel.tree.topLevelItem(i).text(0).split(" (")[0] for i in range(4)] == \
-           ["Fizyczne", "Analogowe", "Wewnętrzne", "Systemowe"]
+           ["Fizyczne", "Analogowe", "Internal", "Systemowe"]
     # children within Fizyczne DID sort ascending by signal id
     fizyczne = _category_of(panel, "Fizyczne")
     assert [fizyczne.child(i).text(COL_SIGNAL) for i in range(fizyczne.childCount())] == \
@@ -302,16 +302,16 @@ def test_search_hides_the_non_matching_category_and_expands_the_matching_one(qse
     p.add_block(vi)
     panel = SignalsPanel(settings=qsettings)
     panel.set_project(p)
-    _category_of(panel, "Wewnętrzne").setExpanded(False)
+    _category_of(panel, "Internal").setExpanded(False)
 
     panel.search_edit.setText("M.X")
 
-    assert _category_of(panel, "Wewnętrzne").isHidden() is False
-    assert _category_of(panel, "Wewnętrzne").isExpanded() is True  # force-expanded to reveal the match
+    assert _category_of(panel, "Internal").isHidden() is False
+    assert _category_of(panel, "Internal").isExpanded() is True  # force-expanded to reveal the match
     assert _category_of(panel, "Fizyczne").isHidden() is True  # nothing in it matches "M.X"
 
     panel.search_edit.setText("")  # clearing restores the user's real collapse preference
-    assert _category_of(panel, "Wewnętrzne").isExpanded() is False
+    assert _category_of(panel, "Internal").isExpanded() is False
     assert _category_of(panel, "Fizyczne").isHidden() is False
 
 def test_only_issues_toggle_hides_clean_rows(qsettings):

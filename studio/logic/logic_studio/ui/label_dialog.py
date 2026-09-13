@@ -24,7 +24,7 @@ def label_validation_error(text: str) -> str | None:
     naming which character is the problem."""
     for ch in _FORBIDDEN_CHARS:
         if ch in text:
-            return f"Etykieta nie może zawierać znaku {ch!r}."
+            return f"A label cannot contain the character {ch!r}."
     return None
 
 
@@ -85,13 +85,13 @@ class LabelNameDialog(QDialog):
     but the completer is what stops most typos before they happen at
     all."""
 
-    def __init__(self, existing_labels, initial: str = "", title: str = "Etykieta", parent=None):
+    def __init__(self, existing_labels, initial: str = "", title: str = "Label", parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setModal(True)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Nazwa etykiety:"))
+        layout.addWidget(QLabel("Label name:"))
 
         self.edit = QLineEdit(initial)
         # §A3.4: empty by default, no auto-suggestion of an existing name.
@@ -108,7 +108,7 @@ class LabelNameDialog(QDialog):
 
         button_row = QHBoxLayout()
         button_row.addStretch()
-        cancel_btn = QPushButton("Anuluj")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         ok_btn = QPushButton("OK")
         ok_btn.setDefault(True)
@@ -129,7 +129,7 @@ class LabelNameDialog(QDialog):
         return self.edit.text().strip()
 
 
-def prompt_for_label(parent, project, initial: str = "", title: str = "Etykieta"):
+def prompt_for_label(parent, project, initial: str = "", title: str = "Label"):
     """Opens LabelNameDialog modally. Returns `(text, similar_existing)`
     on OK — `similar_existing` is the near-miss label to warn about
     (§A3.3), or None if there isn't one — or `(None, None)` if the
