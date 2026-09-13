@@ -91,7 +91,7 @@ class Pin:
         self.value = None # For simulation/runtime
 
         # UI-only metadata: highlighted in the element preview panel (§6) as
-        # "istotne dla bezpieczeństwa". Not set by any block today — ready
+        # "safety relevant". Not set by any block today — ready
         # for use once the Zabezpieczenia * block categories exist.
         self.safety_relevant: bool = False
 

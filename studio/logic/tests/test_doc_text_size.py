@@ -79,11 +79,13 @@ def test_text_size_editor_enforces_6_to_48(qsettings, type_id):
     panel = PropertyGridPanel(settings=qsettings)
     panel.load_block_properties(block, p)
 
-    field = panel.field_widget("Rozmiar tekstu")
+    # The stored key is still "Rozmiar tekstu (pkt)"; the grid shows it in
+    # English (ui/display_names.py).
+    field = panel.field_widget("Text size")
     assert isinstance(field, QSpinBox)
     assert field.minimum() == 6
     assert field.maximum() == 48
-    assert field.suffix() == " pkt"
+    assert field.suffix() == " pt"
 
 
 # ---- §B2: SERIALIZED_FIELDS mechanism, no manual per-path code -----------

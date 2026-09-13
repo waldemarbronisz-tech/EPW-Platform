@@ -184,6 +184,29 @@ export const DIODE_ALARM_CORE = '#FFA0A0';
 export const DIODE_QUALITY = '#FFD000';
 export const DIODE_QUALITY_CORE = '#FFF0A0';
 
+// ---- Marquee selection (feat/cad-marquee) ---------------------------------
+//
+// A drag rightwards is a WINDOW - only what lies entirely inside is
+// caught. A drag leftwards is a CROSSING - touching is enough. Every CAD
+// has drawn those two in blue and green for decades, and an operator who
+// has used one already knows which is which, so the colours are the
+// convention rather than a choice.
+//
+// The fills are rgba rather than a colour plus a node opacity: node
+// opacity in Konva dims the outline too, and an outline you cannot see
+// is the thing that made the old marquee unreadable. Faint enough to
+// read the drawing through - that is the entire point of it.
+export const MARQUEE_WINDOW = '#1040C0';        // okno - kontur
+export const MARQUEE_WINDOW_FILL = 'rgba(16, 64, 192, 0.14)';
+export const MARQUEE_CROSSING = '#108020';      // przeciecie - kontur
+export const MARQUEE_CROSSING_FILL = 'rgba(16, 128, 32, 0.16)';
+/** A tool dragging out a rectangle (frame, room) is not selecting, so it gets neither colour. */
+export const MARQUEE_TOOL_FILL = 'rgba(0, 0, 0, 0.10)';
+/** On-screen thickness of the marquee outline, in pixels, whatever the zoom. */
+export const MARQUEE_STROKE_WIDTH = 1.25;
+/** The dash a crossing (and any tool rectangle) is drawn with. */
+export const MARQUEE_DASH: [number, number] = [6, 4];
+
 // ---- Typography ----
 // One narrow sans-serif for everything that is a LABEL (row
 // descriptions, object labels, titles) and one fixed-width face for

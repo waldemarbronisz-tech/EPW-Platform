@@ -18,7 +18,10 @@ import os
 
 _LOCALES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locales")
 
-DEFAULT_LANGUAGE = "pl"
+# English is the platform language (2026-09: the product owner unified the
+# interface on English; a proper language switch comes later). Polish stays
+# available from the Language menu.
+DEFAULT_LANGUAGE = "en"
 
 _cache = {}
 _active = DEFAULT_LANGUAGE

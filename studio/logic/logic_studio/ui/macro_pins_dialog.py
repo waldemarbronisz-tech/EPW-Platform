@@ -6,7 +6,7 @@ BlockItem.populate_expose_pin_menu()) — this dialog only ever removes,
 since a removal has no natural "which block on the canvas" anchor the way
 an addition does.
 
-fix/safety-and-macro-params §C2.4: a second tab, "Parametry" — lists the
+fix/safety-and-macro-params §C2.4: a second tab, "Parameters" — lists the
 macro's own declared parameters (Nazwa/Typ/Domyślna/Jednostka/Powiązań),
 with add/remove/reorder. A parameter's own BINDING to an internal block's
 property is created from the property panel instead (§C2.1,
@@ -32,18 +32,18 @@ from logic_studio.core.macros import PARAM_TYPES
 
 INDEX_ROLE = Qt.UserRole
 PARAM_NAME_ROLE = Qt.UserRole
-_COLUMNS = ("Nazwa", "Typ", "Domyślna", "Jednostka", "Powiązań")
+_COLUMNS = ("Name", "Type", "Default", "Unit", "Bindings")
 
 
 class _NewParameterDialog(QDialog):
-    """§C2.4's own "Nowy parametr" — unlike ui/macro_parameter_dialog.py's
+    """§C2.4's own "New parameter" — unlike ui/macro_parameter_dialog.py's
     _NewMacroParameterDialog (created FROM a specific property, type
     inferred from its value), this one starts from nothing: the engineer
     picks the type by hand."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Nowy parametr")
+        self.setWindowTitle("New parameter")
         self.entry = None
 
         layout = QVBoxLayout(self)
@@ -54,11 +54,11 @@ class _NewParameterDialog(QDialog):
         self.default_edit = QLineEdit("0")
         self.unit_edit = QLineEdit()
         self.description_edit = QLineEdit()
-        form.addRow("Nazwa", self.display_name_edit)
-        form.addRow("Typ", self.type_combo)
-        form.addRow("Domyślna", self.default_edit)
-        form.addRow("Jednostka", self.unit_edit)
-        form.addRow("Opis", self.description_edit)
+        form.addRow("Name", self.display_name_edit)
+        form.addRow("Type", self.type_combo)
+        form.addRow("Default", self.default_edit)
+        form.addRow("Unit", self.unit_edit)
+        form.addRow("Description", self.description_edit)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -69,7 +69,7 @@ class _NewParameterDialog(QDialog):
     def _on_accept(self):
         name = self.display_name_edit.text().strip()
         if not name:
-            QMessageBox.critical(self, "Nieprawidłowa nazwa", "Nazwa parametru nie może być pusta.")
+            QMessageBox.critical(self, "Invalid name", "The parameter name cannot be empty.")
             return
         param_type = self.type_combo.currentText()
         raw = self.default_edit.text().strip()
@@ -83,7 +83,7 @@ class _NewParameterDialog(QDialog):
             else:
                 default = raw
         except ValueError:
-            QMessageBox.critical(self, "Nieprawidłowa wartość", f"'{raw}' nie jest poprawną wartością typu {param_type}.")
+            QMessageBox.critical(self, "Invalid value", f"'{raw}' is not a valid value of type {param_type}.")
             return
         self.entry = {
             "display_name": name, "type": param_type, "default": default,
@@ -110,7 +110,7 @@ class MacroPinsDialog(QDialog):
         super().__init__(parent)
         self._on_remove = on_remove
         self._on_parameter_change = on_parameter_change
-        self.setWindowTitle("Piny i parametry makrobloku")
+        self.setWindowTitle("Macro pins and parameters")
         self.resize(520, 420)
 
         layout = QVBoxLayout(self)
@@ -118,7 +118,7 @@ class MacroPinsDialog(QDialog):
         layout.addWidget(self.tabs)
 
         self.tabs.addTab(self._build_pins_tab(), "Piny")
-        self.tabs.addTab(self._build_parameters_tab(), "Parametry")
+        self.tabs.addTab(self._build_parameters_tab(), "Parameters")
 
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.accept)
@@ -136,32 +136,32 @@ class MacroPinsDialog(QDialog):
         layout.addLayout(columns)
 
         input_col = QVBoxLayout()
-        input_col.addWidget(QLabel("Wejścia"))
+        input_col.addWidget(QLabel("Inputs"))
         self.input_list = QListWidget()
         input_col.addWidget(self.input_list)
-        self.remove_input_btn = QPushButton("Usuń zaznaczone")
+        self.remove_input_btn = QPushButton("Remove selected")
         self.remove_input_btn.clicked.connect(lambda: self._remove_selected(self.input_list, Pin.DIR_INPUT))
         input_col.addWidget(self.remove_input_btn)
         columns.addLayout(input_col)
 
         output_col = QVBoxLayout()
-        output_col.addWidget(QLabel("Wyjścia"))
+        output_col.addWidget(QLabel("Outputs"))
         self.output_list = QListWidget()
         output_col.addWidget(self.output_list)
-        self.remove_output_btn = QPushButton("Usuń zaznaczone")
+        self.remove_output_btn = QPushButton("Remove selected")
         self.remove_output_btn.clicked.connect(lambda: self._remove_selected(self.output_list, Pin.DIR_OUTPUT))
         output_col.addWidget(self.remove_output_btn)
         columns.addLayout(output_col)
 
         hint = QLabel(
-            "Aby dodać nowy pin, kliknij prawym przyciskiem na blok "
-            "wewnątrz makrobloku i wybierz „Wystaw pin makrobloku”."
+            "To add a new pin, right-click a block "
+            "inside the macro and choose “Expose macro pin”."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
         return tab
 
-    # ---- "Parametry" tab (§C2.4) --------------------------------------------
+    # ---- "Parameters" tab (§C2.4) --------------------------------------------
 
     def _build_parameters_tab(self):
         tab = QWidget()
@@ -174,25 +174,25 @@ class MacroPinsDialog(QDialog):
         layout.addWidget(self.param_table)
 
         row = QHBoxLayout()
-        self.add_param_btn = QPushButton("Nowy parametr...")
+        self.add_param_btn = QPushButton("New parameter...")
         self.add_param_btn.clicked.connect(self._add_parameter)
         row.addWidget(self.add_param_btn)
-        self.remove_param_btn = QPushButton("Usuń zaznaczony")
+        self.remove_param_btn = QPushButton("Remove selected")
         self.remove_param_btn.clicked.connect(self._remove_selected_parameter)
         row.addWidget(self.remove_param_btn)
-        self.move_up_btn = QPushButton("W górę")
+        self.move_up_btn = QPushButton("Move up")
         self.move_up_btn.clicked.connect(lambda: self._move_parameter(-1))
         row.addWidget(self.move_up_btn)
-        self.move_down_btn = QPushButton("W dół")
+        self.move_down_btn = QPushButton("Move down")
         self.move_down_btn.clicked.connect(lambda: self._move_parameter(1))
         row.addWidget(self.move_down_btn)
         row.addStretch()
         layout.addLayout(row)
 
         hint = QLabel(
-            "Aby powiązać parametr z właściwością bloku, otwórz panel "
-            "właściwości tego bloku wewnątrz makrobloku i użyj przycisku "
-            "„Powiąż z parametrem...” przy wybranej właściwości."
+            "To bind a parameter to a block property, open the "
+            "properties panel of that block inside the macro and use the "
+            "“Bind to parameter...” button next to the chosen property."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -277,9 +277,9 @@ class MacroPinsDialog(QDialog):
         if bindings:
             ref_list = "\n".join(f"- {b.get('property_name')}" for b in bindings)
             reply = QMessageBox.question(
-                self, "Usunąć parametr?",
-                f"Parametr '{param.get('display_name') if param else param_name}' jest powiązany z "
-                f"{len(bindings)} właściwościami:\n{ref_list}\n\nUsunięcie skasuje też te powiązania. Kontynuować?",
+                self, "Remove parameter?",
+                f"Parameter '{param.get('display_name') if param else param_name}' is bound to "
+                f"{len(bindings)} properties:\n{ref_list}\n\nRemoving it also deletes those bindings. Continue?",
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return

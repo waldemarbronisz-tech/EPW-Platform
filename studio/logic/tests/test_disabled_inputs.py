@@ -1,4 +1,4 @@
-"""feat/editor-modes-and-geometry §2 — disabled ("zaślepione") input stubs.
+"""feat/editor-modes-and-geometry §2 — disabled ("stubbed") input stubs.
 
 Covers §2.6's four required cases: an AND-4 with one input disabled behaves
 identically to an AND-3 across every combination of the remaining three
@@ -83,7 +83,7 @@ def test_or3_with_two_disabled_inputs_warns_with_exact_message():
     assert errors == []
     # feat/io-labels-and-ids §4.3: compiler/validator messages identify a
     # block by its short_id now, not the possibly-shared display_name.
-    expected = f"Bramka {gate.short_id} ma tylko 1 aktywne wejście — działa jak przekaźnik powtarzający."
+    expected = f"Gate {gate.short_id} has only 1 active input — it works like a repeater."
     assert expected in warnings
 
 def test_disabled_input_generates_no_unconnected_warning():
@@ -114,7 +114,7 @@ def test_all_inputs_disabled_is_a_compile_error():
     res = c.compile()
 
     assert res is None
-    assert any("zaślepione" in e for e in c.errors)
+    assert any("stubbed" in e for e in c.errors)
 
 def test_disabling_input_on_non_opted_in_block_is_a_compile_error():
     """Defensive: a NotGate (1 input, allows_disabled_inputs=False) with its
@@ -128,7 +128,7 @@ def test_disabling_input_on_non_opted_in_block_is_a_compile_error():
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
 
-    assert any("nie zezwala na zaślepianie" in e for e in errors)
+    assert any("does not allow stubbed" in e for e in errors)
 
 
 # ---- §2.6.4: round-trip (save/load) preserves the flag ----

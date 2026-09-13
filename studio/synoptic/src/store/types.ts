@@ -8,6 +8,8 @@ import type { MeterRow } from '../symbols/scada/MeterSymbol';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
+import type { WallElement } from '../elements/WallElement';
+import type { CircuitBinding } from '../project/CircuitBindings';
 import type { GroupCommandElement } from '../elements/GroupCommandElement';
 import type { SetpointPanelElement } from '../elements/SetpointElement';
 
@@ -45,6 +47,19 @@ export interface SynopticObject {
   // number of objects/screens (this task's own core principle - see
   // DeviceBindingValidation.ts).
   deviceId?: string;
+  // feat/room-plan: which CIRCUIT (obwod) this object belongs to - a
+  // plain, user-chosen name like 'OBW_SWIATLO_1'. Every object sharing
+  // one name is switched together by a single click in Podglad mode
+  // (see project/CircuitResolver.ts). Empty or undefined = not on any
+  // circuit, a perfectly valid state: such an object is simply never
+  // switched by a circuit click.
+  //
+  // This is deliberately NOT the wire/net model (NetResolver.ts): a
+  // floor plan assigns a fixture to a circuit, it does not draw the
+  // cable to it. Optional and additive - a project saved before this
+  // field existed loads unchanged, so no schema version bump (same
+  // convention as every other optional field here).
+  circuit?: string;
   tag: string;
   description: string;
   color: string;
@@ -97,6 +112,15 @@ export interface SynopticObject {
   boundaryDirection?: 'SOURCE' | 'SINK';
   boundaryMedium?: 'ELECTRICAL' | 'WATER' | 'VENTILATION';
   boundaryPortSide?: 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT';
+
+  // feat/text-formatting: character and paragraph formatting for text
+  // elements (project/TextFormatting.ts). All optional: text saved
+  // before these existed renders with the defaults.
+  fontBold?: boolean;
+  fontItalic?: boolean;
+  fontUnderline?: boolean;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  textStyle?: 'normal' | 'title' | 'heading1' | 'heading2' | 'caption';
 }
 
 export interface CanvasState {
@@ -171,6 +195,13 @@ export interface HistorySnapshot {
   meters: MeterElement[];
   signalPanels: SignalPanelElement[];
   frames: FrameElement[];
+  // feat/room-plan: walls follow the later, OPTIONAL convention (they
+  // were added long after objects/connections/meters/frames became
+  // required fields here), same as groupCommands below.
+  walls?: WallElement[];
+  // Binding a circuit to a device is an edit like any other, so undo
+  // has to restore it. Optional, same convention as walls above.
+  circuits?: CircuitBinding[];
   // feat/control-elements commit 2: the group command button - optional
   // (added well after meters/signalPanels/frames became mandatory
   // fields here, so it follows the later, optional convention every

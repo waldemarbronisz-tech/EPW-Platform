@@ -145,7 +145,7 @@ class BlockItem(QGraphicsItem):
         (guaranteed by snap-on-drop/snap-on-move), every port still lands on
         the scene's placement grid (GRID_SNAP) too, since PORT_PITCH is a
         GRID_SNAP multiple."""
-        if self.category == "Bramki logiczne":
+        if self.category == "Logic gates":
             if self.type_id.startswith("logic.buffer"):
                 self.shape_style = "BUFFER"
             elif self.type_id.startswith("logic.and"):
@@ -185,7 +185,7 @@ class BlockItem(QGraphicsItem):
             # §1.3) rather than widening or heightening the body itself.
             self.width = style.GATE_BODY
 
-        elif self.category == "Wejścia / Wyjścia":
+        elif self.category == "Inputs / Outputs":
             self.shape_style = "IO"
 
             # §1.4: height always 40 for a single-pin IO block (so DI/NOT/DO
@@ -236,18 +236,18 @@ class BlockItem(QGraphicsItem):
                 base_width = max(base_width, _round_up_to_grid(needed))
             self.width = base_width
 
-        elif self.category == "Dokumentacja":
+        elif self.category == "Documentation":
             self.shape_style = "DOC"
             self._size_doc_block()
 
         else:
             # feat/macro-blocks: a placed macro instance's own category is
-            # "Makrobloki" — sized exactly like every other COMPLEX block
+            # "Macros" — sized exactly like every other COMPLEX block
             # (a macro's pin count is genuinely arbitrary project data,
             # same as any other multi-pin block here) but painted
             # distinctly (_paint_macro_block(), shapes.draw_macro_shape())
             # so it reads as "a macro" rather than a plain unknown block.
-            self.shape_style = "MACRO" if self.category == "Makrobloki" else "COMPLEX"
+            self.shape_style = "MACRO" if self.category == "Macros" else "COMPLEX"
             # §1.4: same symmetric-around-center rule as gates — height
             # driven by whichever side (inputs or outputs) has more pins.
             inputs_count = len(self.logic_block.inputs)
@@ -273,10 +273,25 @@ class BlockItem(QGraphicsItem):
             "doc.section": style.FONT_SIZE_DOC_SECTION,
             "doc.note": style.FONT_SIZE_DOC_NOTE,
         }.get(self.type_id, style.FONT_SIZE_DOC_TEXT)
-        size = self.logic_block.properties.get("Rozmiar tekstu (pkt)", fallback)
+        props = self.logic_block.properties
+        size = props.get("Rozmiar tekstu (pkt)", fallback)
         if bold is None:
-            bold = self.type_id == "doc.section"
-        return QFont(style.FONT_FAMILY, int(size), QFont.Bold if bold else QFont.Normal)
+            # feat/text-formatting: the block's own "Bold" property when it
+            # has one; doc.section's historic bold look otherwise.
+            bold = props.get("Bold", self.type_id == "doc.section")
+        font = QFont(props.get("Font") or style.FONT_FAMILY, int(size), QFont.Bold if bold else QFont.Normal)
+        font.setItalic(bool(props.get("Italic", False)))
+        font.setUnderline(bool(props.get("Underline", False)))
+        return font
+
+    def doc_text_alignment(self):
+        """feat/text-formatting: the horizontal alignment flag for this doc
+        block's own "Align" property (Left by default)."""
+        return {
+            "Center": Qt.AlignHCenter,
+            "Right": Qt.AlignRight,
+            "Justify": Qt.AlignJustify,
+        }.get(self.logic_block.properties.get("Align", "Left"), Qt.AlignLeft)
 
     def _size_doc_block(self):
         """DOC blocks have no pins to align to a grid, so they size to their
@@ -578,7 +593,7 @@ class BlockItem(QGraphicsItem):
         if self.type_id in self.INTERNAL_SIGNAL_TYPE_IDS:
             # §2.4: identifier (M.BLOKADA_ZS-style), then the registry's
             # own short "label" underneath if one is set — not the generic
-            # display_name ("Wejście bitowe (wewn.)"), which says nothing
+            # display_name ("Bit input (internal)"), which says nothing
             # about THIS signal.
             entry = self._internal_signal_entry()
             second_line = entry.get("label", "") if entry else ""
@@ -639,9 +654,9 @@ class BlockItem(QGraphicsItem):
             painter.setFont(font)
             painter.drawText(QRectF(2, self.height - 14, self.width - 4, 12), Qt.AlignLeft | Qt.AlignBottom, "z⁻¹")
             self.setToolTip(
-                "Odczyt tego sygnału wewnętrznego wyprzedza jego zapis w bieżącej "
-                "kolejności wykonania — wartość pochodzi z poprzedniego cyklu skanu "
-                "(feat/internal-bits §5). Zobacz zakładkę \"Messages\" po kompilacji."
+                "This internal signal is read before it is written in the current "
+                "execution order — the value comes from the previous scan "
+                "(feat/internal-bits §5). See the \"Messages\" tab after compiling."
             )
         elif self.type_id in ("virtual.input", "internal.reg_in"):
             self.setToolTip("")
@@ -775,11 +790,11 @@ class BlockItem(QGraphicsItem):
         sim_text = ""
         state = self.logic_block.simulation_state
 
-        if self.category == "Timery":
+        if self.category == "Timers":
             delay = self.logic_block.properties.get("Preset (ms)")
             if delay is not None:
                 param_text = f"T={float(delay)/1000:.2f}[s]"
-        elif self.category == "Liczniki":
+        elif self.category == "Counters":
             preset = self.logic_block.properties.get("Preset")
             if preset is not None:
                 param_text = f"PV={preset}"
@@ -830,6 +845,8 @@ class BlockItem(QGraphicsItem):
     def _paint_doc_block(self, painter):
         rect = QRectF(0, 0, self.width, self.height)
         text = self.logic_block.properties.get("Text", "")
+        if getattr(self, "_doc_editor", None) is not None:
+            text = ""  # the in-place editor shows the text while it is open
 
         if self.type_id == "doc.note":
             painter.setPen(QPen(style.COLOR_DOC_NOTE_BORDER, 1))
@@ -838,7 +855,7 @@ class BlockItem(QGraphicsItem):
 
             painter.setPen(QPen(style.COLOR_DOC_TEXT))
             painter.setFont(self.doc_text_font())
-            painter.drawText(rect.adjusted(6, 6, -6, -6), Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, text)
+            painter.drawText(rect.adjusted(6, 6, -6, -6), self.doc_text_alignment() | Qt.AlignTop | Qt.TextWordWrap, text)
 
             h = style.DOC_NOTE_RESIZE_HANDLE
             painter.setPen(QPen(style.COLOR_DOC_NOTE_BORDER, 1))
@@ -851,12 +868,12 @@ class BlockItem(QGraphicsItem):
         elif self.type_id == "doc.section":
             painter.setPen(QPen(style.COLOR_OUTLINE))
             painter.setFont(self.doc_text_font())
-            painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, text)
+            painter.drawText(rect, self.doc_text_alignment() | Qt.AlignVCenter, text)
 
         else:  # doc.text
             painter.setPen(QPen(style.COLOR_DOC_TEXT))
             painter.setFont(self.doc_text_font())
-            painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, text)
+            painter.drawText(rect, self.doc_text_alignment() | Qt.AlignVCenter, text)
 
     def _is_doc_note_resizable(self):
         return self.shape_style == "DOC" and self.type_id == "doc.note"
@@ -867,11 +884,33 @@ class BlockItem(QGraphicsItem):
         return handle_rect.contains(pos)
 
     def _start_doc_edit(self):
+        """feat/text-formatting: edit the text in place on the canvas
+        (ui/canvas/doc_text_editor.py), like a text box in a word processor.
+        Falls back to the dialog only for an item not shown in any view."""
+        scene = self.scene()
+        if scene is None or not scene.views():
+            self._start_doc_edit_dialog()
+            return
+        if getattr(self, "_doc_editor", None) is not None:
+            return
+        from logic_studio.ui.canvas.doc_text_editor import DocTextEditor
+        self._doc_editor = DocTextEditor(self)
+        # The double-click's own release lands on the editor, which now sits
+        # on top - so this block would keep the mouse grab forever, and the
+        # next click anywhere dragged it along instead of reaching the item
+        # under the cursor (a second edit never opened, click-away never
+        # kept the text). Let go of the mouse as soon as editing starts.
+        if scene.mouseGrabberItem() is self:
+            self.ungrabMouse()
+        self._doc_editor.start()
+        self.update()
+
+    def _start_doc_edit_dialog(self):
         current_text = self.logic_block.properties.get("Text", "")
         if self.type_id == "doc.note":
-            new_text, ok = QInputDialog.getMultiLineText(None, "Edytuj notatkę", "Tekst:", current_text)
+            new_text, ok = QInputDialog.getMultiLineText(None, "Edit note", "Text:", current_text)
         else:
-            new_text, ok = QInputDialog.getText(None, "Edytuj tekst", "Tekst:", QLineEdit.Normal, current_text)
+            new_text, ok = QInputDialog.getText(None, "Edit text", "Text:", QLineEdit.Normal, current_text)
         if ok:
             self.apply_doc_text(new_text)
 
@@ -1022,7 +1061,7 @@ class BlockItem(QGraphicsItem):
         # scene.set_blocks_enabled(), just force-directed instead.
         menu.addSeparator()
         toggle_enabled_action = menu.addAction(
-            "Włącz blok" if not self.logic_block.enabled else "Wyłącz blok"
+            "Enable block" if not self.logic_block.enabled else "Disable block"
         )
 
         # feat/signal-crossref §4: "gdzie jeszcze jest używany ELA01.DI07"
@@ -1031,7 +1070,7 @@ class BlockItem(QGraphicsItem):
         # block that actually has an Address/Bit/Sygnał assigned.
         menu.addSeparator()
         signal_ref = self._current_signal_reference()
-        show_usage_action = menu.addAction("Pokaż użycia sygnału")
+        show_usage_action = menu.addAction("Show signal uses")
         show_usage_action.setEnabled(bool(signal_ref))
 
         # feat/duplicate-address-hyperlink: direct canvas-to-canvas jump
@@ -1048,7 +1087,7 @@ class BlockItem(QGraphicsItem):
         if scene is not None and len(scene.selectedItems()) >= 2:
             menu.addSeparator()
             from logic_studio.ui.canvas.scene import populate_align_menu
-            populate_align_menu(menu.addMenu("Wyrównaj"), scene)
+            populate_align_menu(menu.addMenu("Align"), scene)
 
         # feat/macro-blocks: group the current selection (1+ blocks) into a
         # new, named, reusable block — LogicScene.create_macro_from_selection()
@@ -1061,7 +1100,7 @@ class BlockItem(QGraphicsItem):
         if scene is not None:
             selected_block_count = len([i for i in scene.selectedItems() if isinstance(i, BlockItem)])
             menu.addSeparator()
-            create_macro_action = menu.addAction("Utwórz makroblok...")
+            create_macro_action = menu.addAction("Create macro...")
             create_macro_action.setEnabled(selected_block_count >= 1)
 
         # feat/macro-editable-pins: only ever present while actually
@@ -1097,7 +1136,7 @@ class BlockItem(QGraphicsItem):
         scene = self.scene()
         if scene is None:
             return
-        name, ok = QInputDialog.getText(None, "Utwórz makroblok", "Nazwa makrobloku:", QLineEdit.Normal, "Makroblok")
+        name, ok = QInputDialog.getText(None, "Create macro", "Macro name:", QLineEdit.Normal, "Macro")
         if not ok or not name.strip():
             return
         scene.create_macro_from_selection(name.strip())
@@ -1105,7 +1144,7 @@ class BlockItem(QGraphicsItem):
     def populate_expose_pin_menu(self, menu):
         """feat/macro-editable-pins: while inside a macro's own breadcrumb
         edit view (MainWindow.current_macro_def_id is not None), adds
-        "Wystaw pin makrobloku" listing every one of THIS block's own pins
+        "Expose macro pin" listing every one of THIS block's own pins
         not already exposed as one of the macro's boundary pins — clicking
         one calls MainWindow.expose_macro_pin(). Adds nothing at all
         outside that view (the plain top-level canvas has no "current
@@ -1129,14 +1168,14 @@ class BlockItem(QGraphicsItem):
         }
         from logic_studio.blocks.pin import Pin
         candidates = [
-            (pin, Pin.DIR_INPUT, "Wejście") for pin in self.logic_block.inputs
+            (pin, Pin.DIR_INPUT, "Input") for pin in self.logic_block.inputs
             if (self.logic_block.uuid, pin.name) not in already_exposed
         ] + [
-            (pin, Pin.DIR_OUTPUT, "Wyjście") for pin in self.logic_block.outputs
+            (pin, Pin.DIR_OUTPUT, "Output") for pin in self.logic_block.outputs
             if (self.logic_block.uuid, pin.name) not in already_exposed
         ]
 
-        submenu = menu.addMenu("Wystaw pin makrobloku")
+        submenu = menu.addMenu("Expose macro pin")
         submenu.menuAction().setEnabled(bool(candidates))
         for pin, direction, kind_label in candidates:
             action = submenu.addAction(f"{kind_label}: {pin.name}")
@@ -1146,7 +1185,7 @@ class BlockItem(QGraphicsItem):
         return submenu
 
     def _current_signal_reference(self) -> str:
-        """feat/signal-crossref §4: the signal_id "Pokaż użycia sygnału"
+        """feat/signal-crossref §4: the signal_id "Show signal uses"
         should search for — the same three properties core/crossref.py's
         own block scan checks (Address/Bit/Sygnał), resolved the same way
         where possible: Bit goes through the existing
@@ -1226,14 +1265,14 @@ class BlockItem(QGraphicsItem):
         return f"{short_id} — {extra}" if extra else short_id
 
     def populate_duplicate_reference_menu(self, menu):
-        """Adds the "Inne bloki tego samego sygnału" submenu to `menu` —
+        """Adds the "Other blocks with the same signal" submenu to `menu` —
         split out from contextMenuEvent() so it's testable without ever
         calling QMenu.exec() (mirrors scene.py's populate_align_menu() /
         SignalsPanel's _build_reader_menu()). Always present (so it's
         discoverable) but disabled with nothing to choose when this block
         has no signal reference at all, or nothing else shares it."""
         others = self._duplicate_reference_blocks()
-        submenu = menu.addMenu("Inne bloki tego samego sygnału")
+        submenu = menu.addMenu("Other blocks with the same signal")
         submenu.menuAction().setEnabled(bool(others))
         for block_uuid, short_id in others:
             action = submenu.addAction(self._duplicate_reference_label(block_uuid, short_id))

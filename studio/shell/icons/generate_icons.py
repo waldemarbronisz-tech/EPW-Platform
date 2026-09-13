@@ -45,6 +45,14 @@ YELLOW = QColor(255, 204, 0)
 NAVY = QColor(0, 0, 128)
 RED = QColor(200, 0, 0)
 GREEN = QColor(0, 140, 0)
+# A ninth colour, added for one reason: VENTILATION is a medium in its
+# own right everywhere else in this platform (ScadaTheme's
+# VENTILATION_ACTIVE), and its icon sat in grey next to a yellow
+# lightning bolt and a blue drop - so of the three media icons, two were
+# identifiable at a glance and one was not. Colour carries meaning in
+# this set; leaving one medium colourless broke that rule rather than
+# following it.
+ORANGE = QColor(200, 144, 0)
 TRANSPARENT = QColor(0, 0, 0, 0)
 
 
@@ -270,24 +278,36 @@ def icon_paste(img):
 
 
 def icon_cut(img):
-    # Scissors, redrawn (v2 - v1 read as an unreadable blob): two silver
-    # blades converging on a pivot to a point on the right, black finger
-    # rings on the left.
-    pivot = (8, 8)
-    line(img, 3, 3, *pivot, GREY_LIGHT)
-    line(img, *pivot, 14, 6, GREY_LIGHT)
-    line(img, 3, 13, *pivot, GREY_LIGHT)
-    line(img, *pivot, 14, 10, GREY_LIGHT)
+    """Scissors (v4).
+
+    v2's blades were single-pixel light-grey lines that vanished; v3
+    thickened them but kept radius-2 finger rings, and a radius-2 ring
+    rasterises to eight pixels in a diamond - which is precisely what
+    the icon looked like. Radius 3 gives a ring that reads as round, and
+    the blades get a black edge so they hold their shape against the
+    toolbar's own grey.
+    """
+    pivot = (9, 8)
+
+    # Blades: a grey core with a black edge, so they survive at size.
+    for offset, color in ((0, BLACK), (1, GREY_LIGHT), (2, BLACK)):
+        line(img, 5, 1 + offset, pivot[0], pivot[1] - 1 + offset, color)
+        line(img, 5, 15 - offset, pivot[0], pivot[1] + 1 - offset, color)
+
+    # Cutting tips past the pivot.
+    for offset, color in ((0, BLACK), (1, GREY_LIGHT)):
+        line(img, pivot[0], pivot[1] - 1 + offset, 15, 3 + offset, color)
+        line(img, pivot[0], pivot[1] + 1 - offset, 15, 13 - offset, color)
+
+    # Finger rings - rim only, radius 3, so they read as holes.
     for (bx, by) in ((3, 3), (3, 13)):
-        ring = _circle(img, bx, by, 2, WHITE)
-        for (x, y) in ring:
-            if (x - bx) ** 2 + (y - by) ** 2 >= 2:
-                px(img, x, y, BLACK)
-    px(img, 8, 8, BLACK)
-    tri1 = [(13, 5), (14, 6), (13, 7)]
-    tri2 = [(13, 9), (14, 10), (13, 11)]
-    _fill_triangle(img, tri1, GREY_DARK)
-    _fill_triangle(img, tri2, GREY_DARK)
+        for y in range(by - 3, by + 4):
+            for x in range(bx - 3, bx + 4):
+                d2 = (x - bx) ** 2 + (y - by) ** 2
+                if 4 < d2 <= 9:
+                    px(img, x, y, BLACK)
+
+    px(img, pivot[0], pivot[1], BLACK)
 
 
 def icon_delete(img):
@@ -398,45 +418,100 @@ def icon_draw_building(img):
     outline_rect(img, 10, 10, 11, 11, BLACK)
 
 
+def _raised_tile(img, face):
+    """The raised tile the two medium icons sit on - the classic SCADA
+    look the user asked for: a light face, a white top-left edge and a
+    dark bottom-right edge."""
+    rect(img, 0, 0, 15, 15, face)
+    rect(img, 0, 0, 15, 0, WHITE)
+    rect(img, 0, 0, 0, 15, WHITE)
+    rect(img, 0, 15, 15, 15, GREY_DARK)
+    rect(img, 15, 0, 15, 15, GREY_DARK)
+
+
+def _paint(img, cells):
+    for x, y, w, h, color in cells:
+        rect(img, x, y, x + w - 1, y + h - 1, color)
+
+
+BOLT_RED = QColor(224, 0, 0)
+BOLT_RIM = QColor(112, 0, 0)
+TILE_PINK = QColor(222, 176, 176)
+DROP_BLUE = QColor(40, 88, 224)
+DROP_DARK = QColor(24, 56, 160)
+DROP_LIGHT = QColor(160, 192, 255)
+
+
 def icon_medium_electrical(img):
-    pts = [(9, 1), (5, 8), (8, 8), (6, 15), (12, 6), (9, 6)]
-    _fill_polygon(img, pts, YELLOW)
-    _polygon_outline(img, pts, BLACK)
+    """Power: a red lightning bolt on a raised pink tile (per the user's
+    reference icon). Kept pixel-identical with the synoptic editor's own
+    medium selector (src/components/icons/MediumPixelIcons.tsx), so the
+    two toolbars show one picture for one medium."""
+    _raised_tile(img, TILE_PINK)
+    _paint(img, [
+        (9, 2, 3, 1, BOLT_RIM),
+        (8, 3, 3, 1, BOLT_RED), (11, 3, 1, 1, BOLT_RIM), (7, 3, 1, 1, BOLT_RIM),
+        (7, 4, 3, 1, BOLT_RED), (10, 4, 1, 1, BOLT_RIM), (6, 4, 1, 1, BOLT_RIM),
+        (6, 5, 3, 1, BOLT_RED), (9, 5, 1, 1, BOLT_RIM), (5, 5, 1, 1, BOLT_RIM),
+        (5, 6, 6, 1, BOLT_RED), (4, 6, 1, 1, BOLT_RIM), (11, 6, 1, 1, BOLT_RIM),
+        (4, 7, 6, 1, BOLT_RED), (10, 7, 1, 1, BOLT_RIM), (3, 7, 1, 1, BOLT_RIM),
+        (7, 8, 2, 1, BOLT_RED), (6, 8, 1, 1, BOLT_RIM), (9, 8, 1, 1, BOLT_RIM), (3, 8, 3, 1, BOLT_RIM),
+        (6, 9, 2, 1, BOLT_RED), (5, 9, 1, 1, BOLT_RIM), (8, 9, 1, 1, BOLT_RIM),
+        (5, 10, 2, 1, BOLT_RED), (4, 10, 1, 1, BOLT_RIM), (7, 10, 1, 1, BOLT_RIM),
+        (4, 11, 2, 1, BOLT_RED), (3, 11, 1, 1, BOLT_RIM), (6, 11, 1, 1, BOLT_RIM),
+        (3, 12, 2, 1, BOLT_RED), (5, 12, 1, 1, BOLT_RIM), (2, 12, 1, 1, BOLT_RIM),
+        (2, 13, 2, 1, BOLT_RIM),
+    ])
 
 
 def icon_medium_water(img):
-    # Blue droplet approximated as circle + tapered top, pixel-built.
-    _circle(img, 8, 10, 4, NAVY)
-    for row, half in enumerate((0, 1, 2, 3)):
-        y = 6 - row
-        for x in range(8 - half, 8 + half + 1):
-            px(img, x, y, NAVY)
-    for (x, y) in list(_opaque_pixels_subset(img, 3, 3, 13, 13)):
-        pass
-    px(img, 6, 9, QColor(150, 190, 255))  # highlight
+    """Water: a tap with a falling blue drop on a raised grey tile (per the
+    user's reference icon). Pixel-identical with the synoptic editor's
+    medium selector, same reason as icon_medium_electrical."""
+    _raised_tile(img, GREY_LIGHT)
+    _paint(img, [
+        (9, 2, 5, 1, BLACK),
+        (11, 3, 1, 1, BLACK),
+        (7, 4, 7, 1, BLACK), (7, 7, 7, 1, BLACK), (7, 4, 1, 4, BLACK), (13, 4, 1, 4, BLACK),
+        (8, 5, 5, 2, GREY_DARK),
+        (3, 5, 4, 1, BLACK), (3, 5, 1, 5, BLACK), (5, 7, 2, 1, BLACK), (5, 7, 1, 3, BLACK),
+        (4, 6, 3, 1, GREY_DARK), (4, 7, 1, 2, GREY_DARK),
+        (3, 9, 3, 1, BLACK),
+        (4, 10, 1, 2, DROP_BLUE),
+        (3, 12, 3, 2, DROP_BLUE),
+        (3, 14, 3, 1, DROP_DARK),
+        (3, 12, 1, 1, DROP_LIGHT),
+    ])
 
 
 def icon_medium_ventilation(img):
-    # Redrawn (v2 - v1's blades were too thin/faint to read at 16px).
-    # A fan grille ring with three fat paddle blades around a hub.
-    ring = _circle(img, 8, 8, 7, TRANSPARENT)
-    for x in range(1, 16):
-        for y in range(1, 16):
-            d2 = (x - 8) ** 2 + (y - 8) ** 2
-            if 44 <= d2 <= 56:
-                px(img, x, y, GREY_LIGHT)
-    for ang in (90, 210, 330):
-        a = math.radians(ang)
-        tip = (8 + 5.5 * math.cos(a), 8 + 5.5 * math.sin(a))
-        left = math.radians(ang + 110)
-        right = math.radians(ang - 40)
-        p1 = (8 + 2.5 * math.cos(left), 8 + 2.5 * math.sin(left))
-        p2 = (8 + 2.5 * math.cos(right), 8 + 2.5 * math.sin(right))
-        tri = [(8, 8), (round(p1[0]), round(p1[1])), (round(tip[0]), round(tip[1]))]
-        _fill_triangle(img, tri, GREY_DARK)
-        tri2 = [(8, 8), (round(tip[0]), round(tip[1])), (round(p2[0]), round(p2[1]))]
-        _fill_triangle(img, tri2, GREY_DARK)
-    _circle(img, 8, 8, 2, BLACK)
+    """Ventilation: moving air (v4).
+
+    v2 was a grille ring with paddles that merged into a blob; v3 was a
+    four-blade pinwheel whose arms, bent all the same way at 16 px,
+    landed on a shape nobody wants on a toolbar. This is the plain
+    "moving air" glyph - three horizontal strokes with a turned-back end,
+    the longest on top - which is what every icon set uses for air and
+    which cannot be misread as anything else.
+
+    ORANGE, matching this platform's own ventilation colour, so the
+    three media icons are told apart by colour before shape: yellow
+    lightning, blue drop, orange air.
+    """
+    # Same raised grey tile as the water icon (one icon look in Studio).
+    _raised_tile(img, GREY_LIGHT)
+    # Three air streams, each a bar with a hooked end, staggered in
+    # length so they read as flow rather than as a hamburger menu.
+    rect(img, 1, 3, 11, 4, ORANGE)
+    rect(img, 11, 2, 12, 5, ORANGE)   # hook, curling back
+    rect(img, 13, 2, 14, 3, ORANGE)
+
+    rect(img, 1, 7, 13, 8, ORANGE)
+    rect(img, 13, 6, 14, 9, ORANGE)
+
+    rect(img, 1, 11, 9, 12, ORANGE)
+    rect(img, 9, 10, 10, 13, ORANGE)
+    rect(img, 11, 12, 12, 13, ORANGE)
 
 
 def icon_wire_style_normal(img):
@@ -612,19 +687,39 @@ def icon_rotate_right(img):
 
 
 def _rotate_arc(img, flip):
-    rect(img, 6, 6, 10, 10, GREY_LIGHT)
-    outline_rect(img, 6, 6, 10, 10, BLACK)
-    cx = 8
-    last = None
-    for deg in range(200, 470, 10):
-        a = math.radians(deg if not flip else 360 - deg)
-        x = round(cx + 6 * math.cos(a))
-        y = round(3 + 6 * math.sin(a))
-        px(img, x, y, GREY_DARK)
-        last = (x, y)
-    d = -1 if not flip else 1
-    tri = [(last[0], last[1]), (last[0] + d * 3, last[1] - 2), (last[0] + d * 3, last[1] + 2)]
-    _fill_triangle(img, tri, GREY_DARK)
+    """A rotation arrow (v4).
+
+    v2's arc was a single faint grey pixel wide and vanished at toolbar
+    size, leaving a bare square; v3 thickened it but wrapped it round a
+    white workpiece, and at 16 px the two fought and read as one blue
+    blob. The workpiece is gone: a three-quarter circular arrow IS the
+    rotate glyph, and without something inside it there is room to draw
+    it cleanly.
+
+    NAVY rather than the undo/redo yellow, so a rotation is not mistaken
+    for an undo at a glance.
+    """
+    # Three quarters of a ring, two pixels thick.
+    for y in range(0, SIZE):
+        for x in range(0, SIZE):
+            d2 = (x - 8) ** 2 + (y - 8) ** 2
+            if not (16 < d2 <= 36):
+                continue
+            # Leave a quadrant open - the gap the arrowhead closes.
+            if flip:
+                if x >= 8 and y <= 8:
+                    continue
+            else:
+                if x <= 8 and y <= 8:
+                    continue
+            px(img, x, y, NAVY)
+
+    # The head, closing the open quadrant.
+    if flip:
+        tri = [(8, 0), (8, 6), (14, 3)]
+    else:
+        tri = [(8, 0), (8, 6), (2, 3)]
+    _fill_triangle(img, tri, NAVY)
 
 
 def icon_add_meter(img):
@@ -786,15 +881,38 @@ def icon_help_shortcuts(img):
 
 
 def icon_settings(img):
-    _circle(img, 8, 8, 3, GREY_LIGHT)
-    for ang in range(0, 360, 45):
-        a = math.radians(ang)
-        x = round(8 + 6 * math.cos(a))
-        y = round(8 + 6 * math.sin(a))
-        rect(img, x - 1, y - 1, x + 1, y + 1, GREY_DARK)
-    _circle(img, 8, 8, 4, GREY_LIGHT)
-    _circle(img, 8, 8, 1, WHITE)
-    outline_rect(img, 7, 7, 9, 9, BLACK)
+    """A gear, redrawn (v4).
+
+    v2 laid EIGHT teeth of 3x3 pixels around a radius-6 circle; at 16 px
+    the teeth were wider than the gaps and merged into a ring of noise.
+    v3 fixed the teeth but outlined the body by re-colouring every pixel
+    past a distance threshold, which on a rasterised circle picks a
+    ragged, one-pixel-here-two-pixels-there rim. This draws the rim as
+    an explicit ring - the outer radius minus the inner one - so it is
+    uniform all the way round.
+    """
+    def ring(cx, cy, outer, inner, color):
+        for y in range(cy - outer, cy + outer + 1):
+            for x in range(cx - outer, cx + outer + 1):
+                d2 = (x - cx) ** 2 + (y - cy) ** 2
+                if inner * inner < d2 <= outer * outer:
+                    px(img, x, y, color)
+
+    # Teeth first, so the body draws over their inner ends.
+    rect(img, 6, 1, 9, 3, GREY_DARK)     # N
+    rect(img, 6, 12, 9, 14, GREY_DARK)   # S
+    rect(img, 1, 6, 3, 9, GREY_DARK)     # W
+    rect(img, 12, 6, 14, 9, GREY_DARK)   # E
+
+    _circle(img, 8, 8, 5, GREY_LIGHT)
+    ring(8, 8, 5, 4, BLACK)
+
+    # The bore. A SQUARE hole, not a round one: a radius-2 ring
+    # rasterises to eight pixels arranged in a diamond, which is what it
+    # looked like. At this size a 4x4 outlined square reads as a hole
+    # and a diamond does not.
+    rect(img, 6, 6, 9, 9, BLACK)
+    rect(img, 7, 7, 8, 8, WHITE)
 
 
 def icon_about(img):
@@ -804,15 +922,31 @@ def icon_about(img):
 
 
 def icon_compile(img):
-    _circle(img, 6, 6, 3, GREY_LIGHT)
-    for ang in range(0, 360, 60):
-        a = math.radians(ang)
-        x = round(6 + 5 * math.cos(a))
-        y = round(6 + 5 * math.sin(a))
-        rect(img, x - 1, y - 1, x + 1, y + 1, GREY_DARK)
+    """Compile: a document with a green tick.
+
+    v2 was the same unreadable gear as settings, plus a tick - two
+    problems at once, and it was also nearly indistinguishable from
+    settings itself at toolbar size. A sheet with a tick says "this was
+    built and it checks out", is unmistakable next to a gear, and does
+    not collide with sim_start's green triangle either.
+    """
+    # The sheet, with a folded corner.
+    rect(img, 2, 1, 10, 13, WHITE)
+    outline_rect(img, 2, 1, 10, 13, BLACK)
+    rect(img, 8, 1, 10, 3, GREY_LIGHT)
+    line(img, 8, 3, 10, 3, BLACK)
+    line(img, 8, 1, 8, 3, BLACK)
+
+    # Content lines - enough to read as a document, not so many that the
+    # tick has nothing to sit on.
+    for y in (5, 7, 9):
+        rect(img, 4, y, 8, y, GREY_DARK)
+
+    # The tick, deliberately breaking out past the sheet's own edge so it
+    # reads as a verdict ON the document rather than as part of it.
     for d in range(2):
-        line(img, 9, 12 + d, 11, 14 + d, GREEN)
-        line(img, 11, 14 + d, 15, 8 + d, GREEN)
+        line(img, 7, 10 + d, 9, 13 + d, GREEN)
+        line(img, 9, 13 + d, 15, 5 + d, GREEN)
 
 
 def icon_sim_start(img):
@@ -833,6 +967,140 @@ def icon_sim_stop(img):
     outline_rect(img, 3, 3, 13, 13, BLACK)
 
 
+def icon_logic(img):
+    """The Logika department. An AND gate: the one picture that says
+    "logic" to anyone who has ever opened a control drawing.
+
+    It replaces Qt's own SP_FileDialogDetailedView standard icon, which
+    said "a list with details" and nothing whatever about logic - the
+    reason the tree was reported as unreadable. Drawn as the IEC/ANSI
+    D-shape with two inputs and one output, because that silhouette
+    survives 16 px where a gate with a symbol inside it would not.
+    """
+    # The D: flat left edge, semicircular right. The arc is a hand-laid
+    # pixel run rather than a computed circle - at this size a rounded
+    # sqrt() lands on visibly lopsided pixels.
+    right_edge = {3: 9, 4: 10, 5: 11, 6: 11, 7: 12, 8: 12, 9: 11, 10: 11, 11: 10, 12: 9}
+
+    # Interior first, outline over it.
+    for y in range(4, 12):
+        rect(img, 5, y, right_edge[y] - 1, y, WHITE)
+
+    for y in range(3, 13):
+        px(img, 4, y, BLACK)
+    for x in range(4, 10):
+        px(img, x, 3, BLACK)
+        px(img, x, 12, BLACK)
+    for y, x_max in right_edge.items():
+        px(img, x_max, y, BLACK)
+
+    # Two inputs on the left, one output on the right - the part that
+    # makes it a GATE rather than a rounded box.
+    for x in range(1, 4):
+        px(img, x, 5, BLACK)
+        px(img, x, 10, BLACK)
+    for x in range(13, 16):
+        px(img, x, 8, BLACK)
+
+
+def icon_synoptic(img):
+    """The Schemat synoptyczny department. A fragment of a one-line
+    diagram: a busbar with two outgoing ways, each through a device.
+
+    It replaces Qt's own SP_DesktopIcon, which said "a computer
+    desktop". What this department actually holds is a schematic, so
+    that is what it shows. Navy for the busbar follows this set's own
+    rule that colour carries meaning - navy is the schematic/electrical
+    colour everywhere else in Studio.
+
+    TWO ways, not three: at 16 px a third device leaves each box 3 px
+    wide with a 1 px interior, and a box with a one-pixel hole in it
+    reads as a slot rather than as an apparatus. Two boxes of 5 px have
+    a real interior and the diagram still says "a bar feeding ways".
+    """
+    # Busbar, two pixels deep so it reads as a bar and not a hairline.
+    rect(img, 2, 1, 13, 2, NAVY)
+
+    # Two drops off it.
+    for x in (5, 11):
+        for y in range(3, 6):
+            px(img, x, y, BLACK)
+
+    # A device on each way - 5 px square, so the interior is a real 3 px
+    # of white rather than a single pixel.
+    for x0 in (3, 9):
+        rect(img, x0, 6, x0 + 4, 10, WHITE)
+        outline_rect(img, x0, 6, x0 + 4, 10, BLACK)
+
+    # Outgoing tails, so the ways read as going somewhere.
+    for x in (5, 11):
+        for y in range(11, 15):
+            px(img, x, y, BLACK)
+
+
+# ----------------------------------------------------------------------
+# Text formatting + preview (feat/text-formatting): used by the Word-style
+# format bars in Synoptic and Logic Studio, and by Synoptic's preview mode.
+# ----------------------------------------------------------------------
+
+def _rects(img, cells, color):
+    for x0, y0, x1, y1 in cells:
+        rect(img, x0, y0, x1, y1, color)
+
+
+def icon_text_bold(img):
+    _rects(img, [(4, 3, 5, 12), (6, 3, 9, 4), (10, 4, 11, 6), (6, 7, 10, 7),
+                 (10, 8, 11, 11), (6, 11, 9, 12)], BLACK)
+
+
+def icon_text_italic(img):
+    rect(img, 7, 3, 12, 3, BLACK)
+    rect(img, 3, 12, 8, 12, BLACK)
+    line(img, 10, 4, 6, 11, BLACK)
+    line(img, 11, 4, 7, 11, BLACK)
+
+
+def icon_text_underline(img):
+    _rects(img, [(4, 3, 5, 9), (10, 3, 11, 9), (5, 10, 10, 10), (6, 11, 9, 11)], BLACK)
+    rect(img, 3, 13, 12, 13, NAVY)
+
+
+def icon_text_align_left(img):
+    _rects(img, [(3, 3, 12, 3), (3, 6, 9, 6), (3, 9, 12, 9), (3, 12, 8, 12)], BLACK)
+
+
+def icon_text_align_center(img):
+    _rects(img, [(3, 3, 12, 3), (5, 6, 10, 6), (3, 9, 12, 9), (5, 12, 10, 12)], BLACK)
+
+
+def icon_text_align_right(img):
+    _rects(img, [(3, 3, 12, 3), (6, 6, 12, 6), (3, 9, 12, 9), (7, 12, 12, 12)], BLACK)
+
+
+def icon_text_align_justify(img):
+    _rects(img, [(3, 3, 12, 3), (3, 6, 12, 6), (3, 9, 12, 9), (3, 12, 12, 12)], BLACK)
+
+
+def icon_text_box(img):
+    for x in range(2, 14, 2):
+        px(img, x, 2, NAVY)
+        px(img, x, 13, NAVY)
+    for y in range(2, 14, 2):
+        px(img, 2, y, NAVY)
+        px(img, 13, y, NAVY)
+    rect(img, 5, 5, 10, 5, BLACK)
+    rect(img, 7, 6, 8, 10, BLACK)
+
+
+def icon_preview_mode(img):
+    _circle(img, 8, 6, 3, YELLOW)
+    for (x, y) in ((6, 3), (10, 3), (5, 6), (11, 6), (6, 9), (10, 9)):
+        px(img, x, y, BLACK)
+    rect(img, 7, 2, 9, 2, BLACK)
+    rect(img, 6, 10, 10, 11, GREY_DARK)
+    rect(img, 7, 12, 9, 12, BLACK)
+
+
 NAME_TO_FUNC = {
     name[len("icon_"):]: func
     for name, func in list(globals().items())
@@ -851,10 +1119,53 @@ def generate_all(out_dir=OUT_DIR):
     # single-source-of-bevel decision wants it back.
     for name, func in sorted(NAME_TO_FUNC.items()):
         img = _new_image()
+        # One look everywhere in EPW Studio (user request, 2026-09-13): every
+        # pictogram sits on the same raised tile as the electricity and
+        # water icons. The medium icons draw their own coloured tile.
+        if not name.startswith("medium_"):
+            _raised_tile(img, GREY_LIGHT)
         func(img)
         path = os.path.join(out_dir, f"{name}.png")
         img.save(path, "PNG")
     return sorted(NAME_TO_FUNC.keys())
+
+
+def export_synoptic_icon_data(names, out_dir=OUT_DIR):
+    """Writes the same pixels for the Synoptic web editor
+    (synoptic/src/components/icons/studioIconData.ts), so its toolbars show
+    exactly the icons Studio's own toolbar does. Each icon is a list of
+    horizontal runs "x,y,width,RRGGBB" separated by ";"."""
+    target = os.path.normpath(os.path.join(out_dir, "..", "..", "synoptic", "src", "components", "icons", "studioIconData.ts"))
+    lines = [
+        "// GENERATED by studio/shell/icons/generate_icons.py - do not edit.",
+        "// The shell's icon PNGs as pixel runs, drawn by StudioIcon.tsx.",
+        "",
+        "export const STUDIO_ICONS: Record<string, string> = {",
+    ]
+    for name in names:
+        img = QImage(os.path.join(out_dir, f"{name}.png"))
+        runs = []
+        for y in range(img.height()):
+            x = 0
+            while x < img.width():
+                c = img.pixelColor(x, y)
+                if c.alpha() == 0:
+                    x += 1
+                    continue
+                start = x
+                key = (c.red(), c.green(), c.blue())
+                while x < img.width():
+                    d = img.pixelColor(x, y)
+                    if d.alpha() == 0 or (d.red(), d.green(), d.blue()) != key:
+                        break
+                    x += 1
+                runs.append(f"{start},{y},{x - start},{key[0]:02X}{key[1]:02X}{key[2]:02X}")
+        lines.append(f"  {name}: '{';'.join(runs)}',")
+    lines.append("};")
+    lines.append("")
+    with open(target, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines))
+    return target
 
 
 def build_contact_sheet(names, out_path, cols=8, cell=64, scale=3):
@@ -885,3 +1196,5 @@ if __name__ == "__main__":
     sheet_path = os.path.join(OUT_DIR, "_contact_sheet.png")
     build_contact_sheet(all_names, sheet_path)
     print(f"contact sheet: {sheet_path}")
+    ts_path = export_synoptic_icon_data(all_names)
+    print(f"synoptic icon data: {ts_path}")

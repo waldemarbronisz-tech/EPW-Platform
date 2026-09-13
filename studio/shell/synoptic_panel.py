@@ -132,10 +132,19 @@ def _load_synoptic_launcher_module():
 
 class SynopticPanel(QWidget):
     """One widget: builds/serves studio/synoptic/dist/ and shows it in
-    a QWebEngineView. Construction is intentionally lazy (only happens
-    the first time EKRANY/SCREENS is actually clicked - see
-    main_window.py) so a shell session that never opens the screen
-    editor never pays Chromium's startup/memory cost at all.
+    a QWebEngineView.
+
+    Construction USED to be deferred to the first EKRANY/SCREENS click,
+    so a session that never opened the screen editor never paid
+    Chromium's startup/memory cost. That is no longer the default:
+    main_window.py's preload_editors() now builds this panel at startup,
+    behind the splash, because paying the cost on first click is
+    exactly what made arriving at this editor look like the whole
+    application reloading (the loading page below is on screen for the
+    0.35-1.05s the view needs). The cost did not disappear - it moved
+    to a moment where it is covered. See preload_editors() for the
+    trade-off in full; nothing about this class requires either choice,
+    it is still perfectly safe to construct on demand.
 
     Never raises out of __init__: a build failure is caught and shown
     as an error page in this widget instead - the rest of Studio (the
@@ -209,6 +218,21 @@ class SynopticPanel(QWidget):
     def _show_error(self, message: str):
         self._error_label.setText(message)
         self._pages.setCurrentIndex(_PAGE_ERROR)
+
+    def is_page_ready(self) -> bool:
+        """True once the built page has actually finished loading - the
+        same _PAGE_VIEW check every bridge method below already guards
+        itself with, exposed so main_window.py can ask without reaching
+        into this widget's privates."""
+        return self._pages.currentIndex() == _PAGE_VIEW
+
+    def is_page_pending(self) -> bool:
+        """True while the page is still loading - neither ready NOR
+        failed. Anything that WAITS for this panel must test this, not
+        `not is_page_ready()`: a panel sitting on its build-failure page
+        will never become ready, and waiting on that would burn the
+        caller's entire timeout for nothing."""
+        return self._pages.currentIndex() == _PAGE_LOADING
 
     def web_view(self):
         """Exposes the QWebEngineView itself - e.g. for

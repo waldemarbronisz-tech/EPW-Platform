@@ -26,10 +26,10 @@ class ProjectSettingsDialog(QDialog):
     COLUMNS = ["Address", "Name", "Unit", "Min", "Max", "Direction"]
 
     # feat/internal-bits §7.1
-    SIGNAL_COLUMNS = ["Nazwa", "Typ", "Trwały", "Kategoria", "Etykieta", "Opis", "Użycia"]
+    SIGNAL_COLUMNS = ["Name", "Type", "Retentive", "Category", "Label", "Description", "Uses"]
 
     # feat/io-labels-and-ids §2.1
-    IO_LABEL_COLUMNS = ["Adres", "Etykieta", "Użycia"]
+    IO_LABEL_COLUMNS = ["Address", "Label", "Uses"]
 
     def __init__(self, project, parent=None):
         super().__init__(parent)
@@ -66,8 +66,8 @@ class ProjectSettingsDialog(QDialog):
         general_layout.addWidget(self.table)
 
         row_buttons = QHBoxLayout()
-        self.add_btn = QPushButton("Dodaj")
-        self.remove_btn = QPushButton("Usuń")
+        self.add_btn = QPushButton("Add")
+        self.remove_btn = QPushButton("Remove")
         self.add_btn.clicked.connect(lambda: self._add_row())
         self.remove_btn.clicked.connect(self._remove_selected_rows)
         row_buttons.addWidget(self.add_btn)
@@ -76,9 +76,9 @@ class ProjectSettingsDialog(QDialog):
         general_layout.addLayout(row_buttons)
 
         self._load_points(project.settings.get("analog_points", []))
-        tabs.addTab(general_tab, "Ogólne")
+        tabs.addTab(general_tab, "General")
 
-        # feat/internal-bits §7.1: "Sygnały wewnętrzne" tab.
+        # feat/internal-bits §7.1: "Internal signals" tab.
         signals_tab = QWidget()
         signals_layout = QVBoxLayout(signals_tab)
 
@@ -88,8 +88,8 @@ class ProjectSettingsDialog(QDialog):
         signals_layout.addWidget(self.signals_table)
 
         signal_buttons = QHBoxLayout()
-        self.add_signal_btn = QPushButton("Dodaj")
-        self.remove_signal_btn = QPushButton("Usuń")
+        self.add_signal_btn = QPushButton("Add")
+        self.remove_signal_btn = QPushButton("Remove")
         self.import_signals_btn = QPushButton("Importuj...")
         self.export_signals_btn = QPushButton("Eksportuj...")
         self.add_signal_btn.clicked.connect(lambda: self._add_signal_row())
@@ -110,18 +110,18 @@ class ProjectSettingsDialog(QDialog):
         self._bit_renames = {}
 
         self._load_signals(project.settings.get("internal_bits", []))
-        tabs.addTab(signals_tab, "Sygnały wewnętrzne")
+        tabs.addTab(signals_tab, "Internal signals")
 
-        # feat/io-labels-and-ids §2.1: "Etykiety wejść/wyjść" tab.
+        # feat/io-labels-and-ids §2.1: "I/O labels" tab.
         io_labels_tab = QWidget()
         io_labels_layout = QVBoxLayout(io_labels_tab)
 
         filter_row = QHBoxLayout()
         self.io_labels_filter_edit = QLineEdit()
-        self.io_labels_filter_edit.setPlaceholderText("Szukaj po adresie lub etykiecie...")
+        self.io_labels_filter_edit.setPlaceholderText("Search by address or label...")
         self.io_labels_filter_edit.textChanged.connect(self._apply_io_labels_filter)
         filter_row.addWidget(self.io_labels_filter_edit)
-        self.io_labels_only_used_check = QCheckBox("Pokaż tylko używane")
+        self.io_labels_only_used_check = QCheckBox("Show only used")
         self.io_labels_only_used_check.setChecked(True)  # §2.1: default ON
         self.io_labels_only_used_check.toggled.connect(self._apply_io_labels_filter)
         filter_row.addWidget(self.io_labels_only_used_check)
@@ -144,9 +144,9 @@ class ProjectSettingsDialog(QDialog):
 
         self._result_io_labels = None
         self._load_io_labels()
-        tabs.addTab(io_labels_tab, "Etykiety wejść/wyjść")
+        tabs.addTab(io_labels_tab, "I/O labels")
 
-        # feat/multi-device-io: "Urządzenia" tab — the project's own
+        # feat/multi-device-io: "Devices" tab — the project's own
         # ELA/ADA module list (previously fixed at one of each for every
         # project, core/device_model.py). Add/remove only, no in-place
         # rename: a freshly-added entry is always a valid, unused
@@ -165,14 +165,14 @@ class ProjectSettingsDialog(QDialog):
         self._result_ela_devices = self._original_ela_devices
         self._result_ada_devices = self._original_ada_devices
 
-        devices_layout.addWidget(QLabel(f"Moduły wejść cyfrowych ELA ({DeviceModel.ELA_CHANNELS} kanałów każdy)"))
+        devices_layout.addWidget(QLabel(f"ELA digital input modules ({DeviceModel.ELA_CHANNELS} channels each)"))
         ela_row = QHBoxLayout()
         self.ela_list = QListWidget()
         self.ela_list.addItems(self._original_ela_devices)
         ela_row.addWidget(self.ela_list)
         ela_btns = QVBoxLayout()
-        self.add_ela_btn = QPushButton("Dodaj")
-        self.remove_ela_btn = QPushButton("Usuń")
+        self.add_ela_btn = QPushButton("Add")
+        self.remove_ela_btn = QPushButton("Remove")
         self.add_ela_btn.clicked.connect(lambda: self._add_device(self.ela_list, "ELA"))
         self.remove_ela_btn.clicked.connect(lambda: self._remove_selected_devices(self.ela_list))
         ela_btns.addWidget(self.add_ela_btn)
@@ -181,14 +181,14 @@ class ProjectSettingsDialog(QDialog):
         ela_row.addLayout(ela_btns)
         devices_layout.addLayout(ela_row)
 
-        devices_layout.addWidget(QLabel(f"Moduły wyjść cyfrowych ADA ({DeviceModel.ADA_CHANNELS} kanałów każdy)"))
+        devices_layout.addWidget(QLabel(f"ADA digital output modules ({DeviceModel.ADA_CHANNELS} channels each)"))
         ada_row = QHBoxLayout()
         self.ada_list = QListWidget()
         self.ada_list.addItems(self._original_ada_devices)
         ada_row.addWidget(self.ada_list)
         ada_btns = QVBoxLayout()
-        self.add_ada_btn = QPushButton("Dodaj")
-        self.remove_ada_btn = QPushButton("Usuń")
+        self.add_ada_btn = QPushButton("Add")
+        self.remove_ada_btn = QPushButton("Remove")
         self.add_ada_btn.clicked.connect(lambda: self._add_device(self.ada_list, "ADA"))
         self.remove_ada_btn.clicked.connect(lambda: self._remove_selected_devices(self.ada_list))
         ada_btns.addWidget(self.add_ada_btn)
@@ -198,7 +198,7 @@ class ProjectSettingsDialog(QDialog):
         devices_layout.addLayout(ada_row)
 
         devices_layout.addStretch()
-        tabs.addTab(devices_tab, "Urządzenia")
+        tabs.addTab(devices_tab, "Devices")
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -246,9 +246,9 @@ class ProjectSettingsDialog(QDialog):
                 continue
             names = ", ".join(b.display_name for b in usage)
             reply = QMessageBox.question(
-                self, "Usunięcie używanego urządzenia",
-                f"Urządzenie '{dev}' jest używane przez: {names}.\n"
-                "Usunięcie go pozostawi te bloki z nieprawidłowym adresem. Kontynuować?",
+                self, "Removing a device in use",
+                f"Device '{dev}' is used by: {names}.\n"
+                "Removing it will leave those blocks with an invalid address. Continue?",
             )
             if reply != QMessageBox.Yes:
                 return False
@@ -298,24 +298,24 @@ class ProjectSettingsDialog(QDialog):
             direction = combo.currentText() if combo else "input"
 
             if not addr:
-                return None, f"Wiersz {row + 1}: adres nie może być pusty."
+                return None, f"Row {row + 1}: the address cannot be empty."
             if " " in addr:
-                return None, f"Wiersz {row + 1}: adres '{addr}' nie może zawierać spacji."
+                return None, f"Row {row + 1}: address '{addr}' cannot contain spaces."
             if addr in seen_addresses:
-                return None, f"Wiersz {row + 1}: adres '{addr}' powtarza się w projekcie."
+                return None, f"Row {row + 1}: address '{addr}' is duplicated in the project."
             seen_addresses.add(addr)
 
             try:
                 min_v = float(min_text)
                 max_v = float(max_text)
             except ValueError:
-                return None, f"Wiersz {row + 1}: min/max muszą być liczbami."
+                return None, f"Row {row + 1}: min/max must be numbers."
 
             if not (min_v < max_v):
-                return None, f"Wiersz {row + 1}: min ({min_v}) musi być mniejsze niż max ({max_v})."
+                return None, f"Row {row + 1}: min ({min_v}) must be less than max ({max_v})."
 
             if direction not in ("input", "output"):
-                return None, f"Wiersz {row + 1}: direction musi być 'input' albo 'output'."
+                return None, f"Row {row + 1}: direction must be 'input' or 'output'."
 
             points.append({
                 "address": addr, "name": name, "unit": unit,
@@ -417,8 +417,8 @@ class ProjectSettingsDialog(QDialog):
                         required = self._block_signal_type(wrong_family[0].type_id)
                         names = ", ".join(b.display_name for b in wrong_family)
                         return None, (
-                            f"Nie można zmienić typu sygnału '{original['name']}' na {type_} — "
-                            f"używają go bloki wymagające typu {required}: {names}."
+                            f"Cannot change the type of signal '{original['name']}' to {type_} — "
+                            f"it is used by blocks that need type {required}: {names}."
                         ), None
 
         from logic_studio.core.internal_bits import validate_internal_bits_registry
@@ -430,7 +430,7 @@ class ProjectSettingsDialog(QDialog):
 
     def _import_signals(self):
         """§7.4: import a registry from JSON, same shape as export."""
-        path, _ = QFileDialog.getOpenFileName(self, "Importuj rejestr sygnałów wewnętrznych", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import internal signal registry", "", "JSON (*.json)")
         if not path:
             return
         import json
@@ -439,13 +439,13 @@ class ProjectSettingsDialog(QDialog):
                 data = json.load(f)
             entries = data.get("internal_bits", data) if isinstance(data, dict) else data
         except Exception as e:
-            QMessageBox.critical(self, "Błąd importu", str(e))
+            QMessageBox.critical(self, "Import error", str(e))
             return
 
         from logic_studio.core.internal_bits import validate_internal_bits_registry
         errors = validate_internal_bits_registry(entries)
         if errors:
-            QMessageBox.critical(self, "Nieprawidłowy plik", "\n".join(errors))
+            QMessageBox.critical(self, "Invalid file", "\n".join(errors))
             return
         self._load_signals(entries)
 
@@ -455,9 +455,9 @@ class ProjectSettingsDialog(QDialog):
         each tool inventing its own registry by hand."""
         entries, error, _ = self._collect_signals()
         if error:
-            QMessageBox.critical(self, "Nieprawidłowe dane", error)
+            QMessageBox.critical(self, "Invalid data", error)
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Eksportuj rejestr sygnałów wewnętrznych", "internal_bits.json", "JSON (*.json)")
+        path, _ = QFileDialog.getSaveFileName(self, "Export internal signal registry", "internal_bits.json", "JSON (*.json)")
         if not path:
             return
         import json
@@ -546,7 +546,7 @@ class ProjectSettingsDialog(QDialog):
         and asks for confirmation before touching the table at all."""
         from logic_studio.core.device_model import DeviceModel
 
-        path, _ = QFileDialog.getOpenFileName(self, "Importuj etykiety wejść/wyjść", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import I/O labels", "", "JSON (*.json)")
         if not path:
             return
         import json
@@ -555,10 +555,10 @@ class ProjectSettingsDialog(QDialog):
                 data = json.load(f)
             incoming = data.get("io_labels", data) if isinstance(data, dict) else None
         except Exception as e:
-            QMessageBox.critical(self, "Błąd importu", str(e))
+            QMessageBox.critical(self, "Import error", str(e))
             return
         if not isinstance(incoming, dict):
-            QMessageBox.critical(self, "Nieprawidłowy plik", "Oczekiwano słownika adres -> etykieta.")
+            QMessageBox.critical(self, "Invalid file", "Expected a dictionary of address -> label.")
             return
 
         valid_addresses = set(DeviceModel.all_addresses(self.project))
@@ -579,9 +579,9 @@ class ProjectSettingsDialog(QDialog):
                 changed += 1
 
         reply = QMessageBox.question(
-            self, "Import etykiet wejść/wyjść",
-            f"Zostanie dodanych: {added}\nZmienionych: {changed}\n"
-            f"Pominiętych (nieznany adres): {skipped}\n\nKontynuować?",
+            self, "I/O label import",
+            f"To be added: {added}\nChanged: {changed}\n"
+            f"Skipped (unknown address): {skipped}\n\nContinue?",
         )
         if reply != QMessageBox.Yes:
             return
@@ -597,7 +597,7 @@ class ProjectSettingsDialog(QDialog):
         """§2.2: same format §1.1 defines — {address: label} wrapped in the
         same small envelope internal_bits' own export already uses."""
         labels = self._collect_io_labels()
-        path, _ = QFileDialog.getSaveFileName(self, "Eksportuj etykiety wejść/wyjść", "io_labels.json", "JSON (*.json)")
+        path, _ = QFileDialog.getSaveFileName(self, "Export I/O labels", "io_labels.json", "JSON (*.json)")
         if not path:
             return
         import json
@@ -607,12 +607,12 @@ class ProjectSettingsDialog(QDialog):
     def _on_accept(self):
         points, error = self._collect_points()
         if error:
-            QMessageBox.critical(self, "Nieprawidłowe dane", error)
+            QMessageBox.critical(self, "Invalid data", error)
             return
 
         signals, sig_error, renames = self._collect_signals()
         if sig_error:
-            QMessageBox.critical(self, "Nieprawidłowe dane (sygnały wewnętrzne)", sig_error)
+            QMessageBox.critical(self, "Invalid data (internal signals)", sig_error)
             return
 
         # §7.2: deleting a signal that's still used needs confirmation,
@@ -631,9 +631,9 @@ class ProjectSettingsDialog(QDialog):
             if usage:
                 names = ", ".join(b.display_name for b in usage)
                 reply = QMessageBox.question(
-                    self, "Usunięcie używanego sygnału",
-                    f"Sygnał '{original['name']}' jest używany przez: {names}.\n"
-                    "Usunięcie go pozostawi te bloki bez skonfigurowanego sygnału. Kontynuować?",
+                    self, "Removing a signal in use",
+                    f"Signal '{original['name']}' is used by: {names}.\n"
+                    "Removing it will leave those blocks without a configured signal. Continue?",
                 )
                 if reply != QMessageBox.Yes:
                     return

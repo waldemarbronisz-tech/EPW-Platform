@@ -64,16 +64,34 @@ def _show_splash(app: QApplication):
     takes to construct (Logic/Synoptic panels are lazy - see
     main_window.py - so this is normally under a second; it's not
     covering up a slow load, just naming what's on screen for the
-    instant before the real window replaces it)."""
-    logo_path = STUDIO_DIR / "shell" / "identity" / "app_icon_256.png"
-    if not logo_path.exists():
+    instant before the real window replaces it).
+
+    Draws studio/shell/identity/logo_256.png - the WHOLE official logo
+    as a round badge with transparent corners, NOT the small-size "EPW"
+    plaque crop the app icon falls back to below 48px (see generate_
+    identity.py's own two-tier explanation for why those small frames
+    can't carry the illustration). A splash is the one surface with
+    enough room for all of it, so it is the one surface that shows all
+    of it. app_icon_256.png stays as a fallback, and no splash at all
+    as the last one: a missing generated asset must never stop Studio
+    from starting."""
+    identity_dir = STUDIO_DIR / "shell" / "identity"
+    logo_path = next(
+        (p for p in (identity_dir / "logo_256.png", identity_dir / "app_icon_256.png") if p.exists()),
+        None,
+    )
+    if logo_path is None:
         return None
     from PySide6.QtCore import QRect
     from PySide6.QtGui import QPainter
 
-    logo_size, logo_top = 160, 16
-    title_height, version_height, bottom_pad = 28, 22, 14
-    canvas_width = 320
+    logo_size, logo_top = 224, 18
+    # bottom_pad is deliberately taller than the padding it looks like:
+    # main() calls splash.showMessage(..., AlignBottom) during the
+    # editor warm-up, and that text lands in this strip. Sized so the
+    # progress line never overlaps the version line above it.
+    title_height, version_height, bottom_pad = 30, 24, 40
+    canvas_width = 360
     canvas_height = logo_top + logo_size + title_height + version_height + bottom_pad
 
     pixmap = QPixmap(str(logo_path)).scaled(
@@ -82,6 +100,7 @@ def _show_splash(app: QApplication):
     canvas = QPixmap(canvas_width, canvas_height)
     canvas.fill(QColor("#D4D0C8"))  # STUDIO_UI_STANDARD.md's own panel_bg
     painter = QPainter(canvas)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
     painter.drawPixmap((canvas_width - pixmap.width()) // 2, logo_top, pixmap)
 
     title_rect = QRect(0, logo_top + logo_size, canvas_width, title_height)
@@ -90,13 +109,25 @@ def _show_splash(app: QApplication):
     painter.setPen(QColor("#000000"))
     font = painter.font()
     font.setBold(True)
-    font.setPointSize(12)
+    font.setPointSize(13)
     painter.setFont(font)
     painter.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, "EPW Studio")
     font.setBold(False)
     font.setPointSize(9)
     painter.setFont(font)
     painter.drawText(version_rect, Qt.AlignmentFlag.AlignCenter, f"wersja {STUDIO_VERSION} — BroniszLabs")
+
+    # STUDIO_UI_STANDARD.md section 9's raised-panel bevel (white
+    # top/left, grey bottom/right), drawn last so nothing above
+    # overpaints it. A QSplashScreen is frameless - without this the
+    # pixmap's own edge IS the window edge, and the panel grey ran
+    # straight into the desktop with no visible boundary at all.
+    painter.setPen(QColor("#FFFFFF"))
+    painter.drawLine(0, 0, canvas_width - 1, 0)
+    painter.drawLine(0, 0, 0, canvas_height - 1)
+    painter.setPen(QColor("#808080"))
+    painter.drawLine(0, canvas_height - 1, canvas_width - 1, canvas_height - 1)
+    painter.drawLine(canvas_width - 1, 0, canvas_width - 1, canvas_height - 1)
     painter.end()
 
     splash = QSplashScreen(canvas)
@@ -115,6 +146,23 @@ def main():
     window = StudioMainWindow()
     if APP_ICON_PATH.exists():
         window.setWindowIcon(app_icon)
+
+    # Both editors are built HERE, behind the splash, rather than on the
+    # first click that needs one - see StudioMainWindow.preload_editors()
+    # for why and for what it costs. The splash stays up for the whole
+    # warm-up (that is the point: startup is where this time is meant to
+    # be spent), reporting which editor it is on.
+    def _on_progress(message: str):
+        if splash is not None:
+            splash.showMessage(
+                message,
+                Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
+                QColor("#000000"),
+            )
+        app.processEvents()
+
+    window.preload_editors(on_progress=_on_progress)
+
     window.show()
     if splash is not None:
         splash.finish(window)

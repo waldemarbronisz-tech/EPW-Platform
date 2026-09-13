@@ -37,7 +37,7 @@ def test_project_settings_dialog_validates_rows():
     dialog._add_row({"address": "AI.TEMP", "name": "Temp2", "unit": "", "min": 0.0, "max": 1.0, "direction": "input"})
     points, error = dialog._collect_points()
     assert points is None
-    assert "powtarza" in error
+    assert "duplicated" in error
 
     # Fix duplicate, break min<max instead.
     dialog.table.item(1, 0).setText("AI.OTHER")
@@ -45,7 +45,7 @@ def test_project_settings_dialog_validates_rows():
     dialog.table.item(1, 4).setText("5.0")
     points, error = dialog._collect_points()
     assert points is None
-    assert "mniejsze" in error
+    assert "less than" in error
 
     # Fix range, break with a space in the address.
     dialog.table.item(1, 3).setText("0.0")
@@ -53,13 +53,13 @@ def test_project_settings_dialog_validates_rows():
     dialog.table.item(1, 0).setText("AI. OTHER")
     points, error = dialog._collect_points()
     assert points is None
-    assert "spacji" in error
+    assert "spaces" in error
 
     # Empty address.
     dialog.table.item(1, 0).setText("")
     points, error = dialog._collect_points()
     assert points is None
-    assert "pusty" in error
+    assert "empty" in error
 
 def test_project_settings_dialog_apply_pushes_undo_and_sets_analog_points():
     _app()
@@ -201,7 +201,7 @@ def test_device_explorer_shows_a_hint_when_no_cards_are_defined(qsettings):
     panel = DeviceExplorerPanel(project=Project())
     root = panel.tree.topLevelItem(0)
     labels = [root.child(i).text(0) for i in range(root.childCount())]
-    assert any("kart" in label.lower() for label in labels)
+    assert any("card" in label.lower() for label in labels)
 
 def test_device_explorer_folder_items_are_not_draggable():
     """feat/multi-device-io: leaves sit directly under their device's own
@@ -451,7 +451,7 @@ def test_step_in_stopped_shows_dry_run_status_message(qsettings):
     assert m.engine.state == ExecutionState.STOPPED
 
     m._on_step_requested(1)
-    assert m.statusBar().currentMessage() == "Krok (bez zapisu wyjść)"
+    assert m.statusBar().currentMessage() == "Step (outputs not written)"
 
     m.is_dirty = False
     m.close()
@@ -470,7 +470,7 @@ def test_step_in_paused_does_not_show_dry_run_status_message(qsettings):
 
     m.statusBar().clearMessage()
     m._on_step_requested(1)
-    assert m.statusBar().currentMessage() != "Krok (bez zapisu wyjść)"
+    assert m.statusBar().currentMessage() != "Step (outputs not written)"
 
     m.is_dirty = False
     m.close()
@@ -494,7 +494,7 @@ def test_property_grid_analog_address_combobox(qsettings):
     panel.load_block_properties(ai, p)
 
     # feat/io-labels-and-ids §5.1: no more flat table — Address lives in
-    # the "Adresacja" section now, found via field_widget().
+    # the "Addressing" section now, found via field_widget().
     combo = panel.field_widget("Address")
     assert isinstance(combo, QComboBox)
     assert [combo.itemText(i) for i in range(combo.count())] == ["AI.A", "AI.B"]

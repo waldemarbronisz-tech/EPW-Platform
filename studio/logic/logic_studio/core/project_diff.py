@@ -145,14 +145,14 @@ def summarize(comparison: dict) -> str:
     before the engineer digs into the full detail tree."""
     parts = []
     if comparison["blocks_added"]:
-        parts.append(f"+{len(comparison['blocks_added'])} blok(i)")
+        parts.append(f"+{len(comparison['blocks_added'])} block(s)")
     if comparison["blocks_removed"]:
-        parts.append(f"-{len(comparison['blocks_removed'])} blok(i)")
+        parts.append(f"-{len(comparison['blocks_removed'])} block(s)")
     if comparison["blocks_changed"]:
-        parts.append(f"{len(comparison['blocks_changed'])} zmienione")
+        parts.append(f"{len(comparison['blocks_changed'])} changed")
     if comparison["settings_changes"]:
-        parts.append(f"{len(comparison['settings_changes'])} zmian ustawień")
-    return ", ".join(parts) if parts else "Brak różnic"
+        parts.append(f"{len(comparison['settings_changes'])} settings changes")
+    return ", ".join(parts) if parts else "No differences"
 
 
 def block_label(block_dict: dict) -> str:

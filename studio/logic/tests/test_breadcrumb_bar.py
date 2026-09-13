@@ -32,26 +32,26 @@ def test_hidden_at_construction():
 def test_hidden_for_a_single_entry_path():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny"])
+    bar.set_path(["Main"])
     assert bar.isVisible() is False
 
 def test_visible_for_a_multi_entry_path():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "MojMakro"])
+    bar.set_path(["Main", "MojMakro"])
     assert bar.isVisible() is True
 
 def test_every_entry_but_the_last_is_a_clickable_button():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A", "B"])
+    bar.set_path(["Main", "A", "B"])
     buttons = _crumb_buttons(bar)
-    assert [b.text() for b in buttons] == ["Główny", "A"]
+    assert [b.text() for b in buttons] == ["Main", "A"]
 
 def test_last_entry_is_a_bold_non_clickable_label():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A", "B"])
+    bar.set_path(["Main", "A", "B"])
     labels = [l for l in _labels(bar) if l.text() == "B"]
     assert len(labels) == 1
     assert "bold" in labels[0].styleSheet()
@@ -59,12 +59,12 @@ def test_last_entry_is_a_bold_non_clickable_label():
 def test_clicking_an_earlier_crumb_emits_its_index():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A", "B"])
+    bar.set_path(["Main", "A", "B"])
     received = []
     bar.navigate_to.connect(received.append)
 
     buttons = _crumb_buttons(bar)
-    buttons[0].click()  # "Główny"
+    buttons[0].click()  # "Main"
     assert received == [0]
 
     received.clear()
@@ -74,16 +74,16 @@ def test_clicking_an_earlier_crumb_emits_its_index():
 def test_set_path_replaces_the_previous_path():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A", "B"])
-    bar.set_path(["Główny", "X"])
-    assert [b.text() for b in _crumb_buttons(bar)] == ["Główny"]
+    bar.set_path(["Main", "A", "B"])
+    bar.set_path(["Main", "X"])
+    assert [b.text() for b in _crumb_buttons(bar)] == ["Main"]
     assert bar.isVisible() is True
 
 def test_set_path_back_to_a_single_entry_hides_again():
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A"])
-    bar.set_path(["Główny"])
+    bar.set_path(["Main", "A"])
+    bar.set_path(["Main"])
     assert bar.isVisible() is False
     assert _crumb_buttons(bar) == []
 
@@ -94,9 +94,9 @@ def test_pins_button_always_present_and_survives_set_path():
     _app()
     bar = BreadcrumbBar()
     assert bar._pins_button.text() == "Piny makrobloku..."
-    bar.set_path(["Główny", "A", "B"])
+    bar.set_path(["Main", "A", "B"])
     assert bar._pins_button.text() == "Piny makrobloku..."
-    bar.set_path(["Główny"])
+    bar.set_path(["Main"])
     assert bar._pins_button.text() == "Piny makrobloku..."
 
 def test_pins_button_click_emits_manage_pins_requested():
@@ -114,10 +114,10 @@ def test_pins_button_survives_several_set_path_calls_in_a_row():
     outright on the very first call."""
     _app()
     bar = BreadcrumbBar()
-    bar.set_path(["Główny", "A"])
-    bar.set_path(["Główny", "A", "B"])
-    bar.set_path(["Główny", "X"])
+    bar.set_path(["Main", "A"])
+    bar.set_path(["Main", "A", "B"])
+    bar.set_path(["Main", "X"])
     assert bar._pins_button in bar.findChildren(QPushButton)
     assert bar._pins_button.text() == "Piny makrobloku..."
     # and the crumb rebuild itself still works correctly alongside it
-    assert [b.text() for b in _crumb_buttons(bar)] == ["Główny"]
+    assert [b.text() for b in _crumb_buttons(bar)] == ["Main"]

@@ -20,7 +20,7 @@ class _NewInternalSignalDialog(QDialog):
 
     def __init__(self, value_type: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Nowy sygnał wewnętrzny")
+        self.setWindowTitle("New internal signal")
         self.entry = None
 
         layout = QVBoxLayout(self)
@@ -33,12 +33,12 @@ class _NewInternalSignalDialog(QDialog):
         self.description_edit = QLineEdit()
         self.label_edit = QLineEdit()
         self.category_edit = QLineEdit()
-        form.addRow("Nazwa", self.name_edit)
-        form.addRow("Typ", self.type_combo)
-        form.addRow("Trwały (retentive)", self.retentive_check)
-        form.addRow("Opis", self.description_edit)
-        form.addRow("Etykieta", self.label_edit)
-        form.addRow("Kategoria", self.category_edit)
+        form.addRow("Name", self.name_edit)
+        form.addRow("Type", self.type_combo)
+        form.addRow("Retentive", self.retentive_check)
+        form.addRow("Description", self.description_edit)
+        form.addRow("Label", self.label_edit)
+        form.addRow("Category", self.category_edit)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -51,7 +51,7 @@ class _NewInternalSignalDialog(QDialog):
         name = self.name_edit.text().strip()
         error = validate_internal_bit_name(name)
         if error:
-            QMessageBox.critical(self, "Nieprawidłowa nazwa", error)
+            QMessageBox.critical(self, "Invalid name", error)
             return
         self.entry = {
             "name": name,
@@ -70,7 +70,7 @@ class SignalPickerDialog(QDialog):
         None shows both (used for system.signal's "Sygnał", which can
         point at either). `sections` restricts which of the three §6.3
         top-level sections are populated at all — system.signal has no use
-        for "Wejścia i wyjścia fizyczne"/"Sygnały wewnętrzne", so its
+        for "Physical inputs and outputs"/"Internal signals", so its
         picker passes sections=("system",). `system_source_filter`
         (feat/sswin-signals §2.4) additionally restricts the "system"
         section to catalog entries whose "source" field matches exactly —
@@ -85,13 +85,13 @@ class SignalPickerDialog(QDialog):
         self.system_source_filter = system_source_filter
         self._chosen_id = None
         self._chosen_kind = None
-        self.setWindowTitle("Wybór sygnału")
+        self.setWindowTitle("Choose signal")
         self.resize(640, 480)
 
         layout = QVBoxLayout(self)
 
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Szukaj...")
+        self.search_edit.setPlaceholderText("Search...")
         self.search_edit.textChanged.connect(self._apply_filter)
         layout.addWidget(self.search_edit)
 
@@ -99,14 +99,14 @@ class SignalPickerDialog(QDialog):
         # column, per eTango), technical id in the middle, label on the
         # right.
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Opis", "Nazwa sygnału", "Etykieta"])
+        self.tree.setHeaderLabels(["Description", "Signal name", "Label"])
         self.tree.setColumnWidth(0, 280)
         self.tree.setColumnWidth(1, 180)
         self.tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self.tree)
 
         new_signal_row = QHBoxLayout()
-        self.new_signal_btn = QPushButton("Nowy sygnał wewnętrzny...")
+        self.new_signal_btn = QPushButton("New internal signal...")
         self.new_signal_btn.clicked.connect(self._create_new_signal)
         new_signal_row.addWidget(self.new_signal_btn)
         new_signal_row.addStretch()
@@ -132,21 +132,21 @@ class SignalPickerDialog(QDialog):
         # top-level nodes since they carry a completely different character
         # (project-defined vs. platform contract).
         if "physical" in self.sections:
-            phys_root = QTreeWidgetItem(self.tree, ["Wejścia i wyjścia fizyczne"])
+            phys_root = QTreeWidgetItem(self.tree, ["Physical inputs and outputs"])
             # feat/io-labels-and-ids §3.2: the Opis column shows the
             # address's own descriptive label (§1) when one is set — "Wyl.
             # Q1 zamknięty" is what an engineer actually recognizes, not
-            # the generic "Wejście cyfrowe (ELA)" every one of the 32 DI
+            # the generic "Digital input (ELA)" every one of the 32 DI
             # channels shares. Falls back to that generic description when
             # no label exists yet. Search already scans every column
             # (_filter_subtree), so this alone makes label text searchable
             # too — no separate search-path change needed.
             if self.value_type in (None, "BOOL"):
                 for addr in DeviceModel.get_ela_addresses(self.project):
-                    desc = DeviceModel.get_io_label(self.project, addr) or "Wejście cyfrowe (ELA)"
+                    desc = DeviceModel.get_io_label(self.project, addr) or "Digital input (ELA)"
                     self._add_leaf(phys_root, desc, addr, "", addr, "physical")
                 for addr in DeviceModel.get_ada_addresses(self.project):
-                    desc = DeviceModel.get_io_label(self.project, addr) or "Wyjście cyfrowe (ADA)"
+                    desc = DeviceModel.get_io_label(self.project, addr) or "Digital output (ADA)"
                     self._add_leaf(phys_root, desc, addr, "", addr, "physical")
             if self.value_type in (None, "REAL"):
                 for point in DeviceModel.get_analog_points(self.project):
@@ -156,7 +156,7 @@ class SignalPickerDialog(QDialog):
 
         # §6.3, section 2: internal signals, grouped by their own "category".
         if "internal" in self.sections:
-            internal_root = QTreeWidgetItem(self.tree, ["Sygnały wewnętrzne"])
+            internal_root = QTreeWidgetItem(self.tree, ["Internal signals"])
             by_category = {}
             for entry in DeviceModel.get_internal_bits(self.project, type_filter=self.value_type):
                 cat = entry.get("category") or "(bez kategorii)"
@@ -172,7 +172,7 @@ class SignalPickerDialog(QDialog):
         # §6.3, section 3: fixed system-signal catalog.
         if "system" in self.sections:
             from logic_studio.core import system_signals
-            sys_root = QTreeWidgetItem(self.tree, ["Sygnały systemowe"])
+            sys_root = QTreeWidgetItem(self.tree, ["System signals"])
             for cat in system_signals.get_categories(self.project):
                 matching = [
                     s for s in cat["signals"]
@@ -281,13 +281,13 @@ class SignalPickerDialog(QDialog):
         entries = list(self.project.settings.get("internal_bits", []))
         new_lname = sub.entry["name"].lower()
         if any(e.get("name", "").lower() == new_lname for e in entries):
-            QMessageBox.critical(self, "Duplikat nazwy", f"Sygnał '{sub.entry['name']}' już istnieje w rejestrze.")
+            QMessageBox.critical(self, "Duplicate name", f"Signal '{sub.entry['name']}' already exists in the registry.")
             return
 
         entries.append(sub.entry)
         errors = validate_internal_bits_registry(entries)
         if errors:
-            QMessageBox.critical(self, "Nieprawidłowy wpis", "\n".join(errors))
+            QMessageBox.critical(self, "Invalid entry", "\n".join(errors))
             return
 
         self.project.settings["internal_bits"] = entries

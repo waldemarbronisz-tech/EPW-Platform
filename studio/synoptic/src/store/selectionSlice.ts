@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { moveWall } from '../elements/WallElement';
 import type { AppState } from './appState';
 
 // The seven parallel "selected ids" arrays (one per element kind - see
@@ -6,8 +7,8 @@ import type { AppState } from './appState';
 // including the rubber-band's cross-kind selectMixed and arrow-key
 // moveSelectionBy.
 export type SelectionSlice = Pick<AppState,
-  | 'selectedIds' | 'selectedConnectionIds' | 'selectedMeterIds' | 'selectedSignalPanelIds' | 'selectedFrameIds' | 'selectedGroupCommandIds' | 'selectedSetpointPanelIds'
-  | 'selectObjects' | 'selectConnections' | 'selectMeters' | 'selectSignalPanels' | 'selectFrames' | 'selectGroupCommands' | 'selectSetpointPanels'
+  | 'selectedIds' | 'selectedConnectionIds' | 'selectedMeterIds' | 'selectedSignalPanelIds' | 'selectedFrameIds' | 'selectedGroupCommandIds' | 'selectedSetpointPanelIds' | 'selectedWallIds'
+  | 'selectObjects' | 'selectConnections' | 'selectMeters' | 'selectSignalPanels' | 'selectFrames' | 'selectGroupCommands' | 'selectSetpointPanels' | 'selectWalls'
   | 'selectMixed' | 'selectAll' | 'clearSelection' | 'moveSelectionBy'
 >;
 
@@ -17,6 +18,7 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
   selectedMeterIds: [],
   selectedSignalPanelIds: [],
   selectedFrameIds: [],
+  selectedWallIds: [],
   selectedGroupCommandIds: [],
   selectedSetpointPanelIds: [],
 
@@ -78,6 +80,19 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
     return { selectedSignalPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
   }),
 
+  selectWalls: (ids, multi = false) => set((state) => {
+    if (multi) {
+      const newSelection = [...state.selectedWallIds];
+      ids.forEach(id => {
+        const i = newSelection.indexOf(id);
+        if (i >= 0) newSelection.splice(i, 1);
+        else newSelection.push(id);
+      });
+      return { selectedWallIds: newSelection };
+    }
+    return { selectedWallIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+  }),
+
   selectFrames: (ids, multi = false) => set((state) => {
     if (multi) {
       const newSelection = [...state.selectedFrameIds];
@@ -128,6 +143,7 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
     selectedMeterIds: selection.meterIds || [],
     selectedSignalPanelIds: selection.signalPanelIds || [],
     selectedFrameIds: selection.frameIds || [],
+    selectedWallIds: selection.wallIds || [],
     selectedGroupCommandIds: selection.groupCommandIds || [],
     selectedSetpointPanelIds: selection.setpointPanelIds || []
   }),
@@ -140,12 +156,13 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       selectedMeterIds: meters.map(m => m.id),
       selectedSignalPanelIds: signalPanels.map(p => p.id),
       selectedFrameIds: frames.map(f => f.id),
+      selectedWallIds: get().walls.map(w => w.id),
       selectedGroupCommandIds: groupCommands.map(g => g.id),
       selectedSetpointPanelIds: setpointPanels.map(p => p.id)
     });
   },
 
-  clearSelection: () => set({ selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] }),
+  clearSelection: () => set({ selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] }),
 
   // Locked objects are skipped, same as an ordinary drag already
   // refuses to move them (draggable={!obj.locked} in Canvas.tsx) -
@@ -154,13 +171,16 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
   // of those always moves. A single set() call, then one saveHistory()
   // - one history entry per keypress, not per moved item.
   moveSelectionBy: (dx, dy) => {
-    const { selectedIds, selectedMeterIds, selectedConnectionIds, selectedSignalPanelIds, selectedFrameIds, selectedGroupCommandIds, selectedSetpointPanelIds } = get();
-    if (selectedIds.length === 0 && selectedMeterIds.length === 0 && selectedConnectionIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0 && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0) return;
+    const { selectedIds, selectedMeterIds, selectedConnectionIds, selectedSignalPanelIds, selectedFrameIds, selectedGroupCommandIds, selectedSetpointPanelIds, selectedWallIds } = get();
+    if (selectedIds.length === 0 && selectedMeterIds.length === 0 && selectedConnectionIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0 && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0 && selectedWallIds.length === 0) return;
     set((state) => ({
       objects: state.objects.map(o => (selectedIds.includes(o.id) && !o.locked) ? { ...o, x: o.x + dx, y: o.y + dy } : o),
       meters: state.meters.map(m => selectedMeterIds.includes(m.id) ? { ...m, x: m.x + dx, y: m.y + dy } : m),
       signalPanels: state.signalPanels.map(p => selectedSignalPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
       frames: state.frames.map(f => selectedFrameIds.includes(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f),
+      // A wall has no x/y of its own - both endpoints move together
+      // (moveWall), which is the only way it cannot deform.
+      walls: state.walls.map(w => selectedWallIds.includes(w.id) ? { ...w, ...moveWall(w, dx, dy) } : w),
       groupCommands: state.groupCommands.map(g => selectedGroupCommandIds.includes(g.id) ? { ...g, x: g.x + dx, y: g.y + dy } : g),
       setpointPanels: state.setpointPanels.map(p => selectedSetpointPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
       // fix/wiring-and-library-groups commit 3: a selected connection's

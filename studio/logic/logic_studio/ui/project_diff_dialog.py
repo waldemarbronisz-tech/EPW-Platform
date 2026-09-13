@@ -1,6 +1,6 @@
 """feat/project-diff — ProjectDiffDialog: a read-only tree view of
 core/project_diff.py's compare_projects() output, opened by MainWindow's
-File menu ("Porównaj z zapisanym plikiem..."/"Porównaj dwa projekty...").
+File menu ("Compare with saved file..."/"Compare two projects...").
 Qt-thin: calls compare_projects() once at construction and renders
 whatever it returns — never touches Project/the block registry, mirrors
 core/*.py vs. ui/panels/*.py's usual split elsewhere in this app.
@@ -14,10 +14,10 @@ class ProjectDiffDialog(QDialog):
     def __init__(self, comparison: dict, base_label: str, target_label: str, parent=None):
         """`comparison`: compare_projects()'s own return dict.
         `base_label`/`target_label`: short, human strings identifying
-        the two sides being compared (a filename, or "Bieżący stan") —
+        the two sides being compared (a filename, or "Current state") —
         purely for the header line, never parsed."""
         super().__init__(parent)
-        self.setWindowTitle("Porównanie projektów")
+        self.setWindowTitle("Project comparison")
         self.resize(640, 520)
 
         layout = QVBoxLayout(self)
@@ -38,44 +38,44 @@ class ProjectDiffDialog(QDialog):
         self.tree.clear()
 
         if comparison["blocks_added"]:
-            root = QTreeWidgetItem(self.tree, [f"Dodane bloki ({len(comparison['blocks_added'])})"])
+            root = QTreeWidgetItem(self.tree, [f"Added blocks ({len(comparison['blocks_added'])})"])
             for b in comparison["blocks_added"]:
                 QTreeWidgetItem(root, [f"+ {block_label(b)}  ({b.get('type_id', '')})"])
 
         if comparison["blocks_removed"]:
-            root = QTreeWidgetItem(self.tree, [f"Usunięte bloki ({len(comparison['blocks_removed'])})"])
+            root = QTreeWidgetItem(self.tree, [f"Removed blocks ({len(comparison['blocks_removed'])})"])
             for b in comparison["blocks_removed"]:
                 QTreeWidgetItem(root, [f"− {block_label(b)}  ({b.get('type_id', '')})"])
 
         if comparison["blocks_changed"]:
-            root = QTreeWidgetItem(self.tree, [f"Zmienione bloki ({len(comparison['blocks_changed'])})"])
+            root = QTreeWidgetItem(self.tree, [f"Changed blocks ({len(comparison['blocks_changed'])})"])
             for change in comparison["blocks_changed"]:
                 label = change["short_id"] or change["uuid"]
                 if change["display_name"]:
                     label = f"{label} — {change['display_name']}"
                 block_item = QTreeWidgetItem(root, [label])
                 if change["moved"]:
-                    QTreeWidgetItem(block_item, ["Przesunięty na kanwie"])
+                    QTreeWidgetItem(block_item, ["Moved on the canvas"])
                 for fc in change["field_changes"]:
                     QTreeWidgetItem(block_item, [f"{fc['field']}: {fc['old']!r} → {fc['new']!r}"])
                 for cc in change["connection_changes"]:
                     for _ in cc["added"]:
-                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: nowe połączenie"])
+                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: new connection"])
                     for _ in cc["removed"]:
-                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: usunięte połączenie"])
+                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: removed connection"])
 
         if comparison["settings_changes"]:
-            root = QTreeWidgetItem(self.tree, [f"Zmiany ustawień ({len(comparison['settings_changes'])})"])
+            root = QTreeWidgetItem(self.tree, [f"Settings changes ({len(comparison['settings_changes'])})"])
             for sc in comparison["settings_changes"]:
                 if sc["old"] is None:
-                    text = f"{sc['key']}: dodane"
+                    text = f"{sc['key']}: added"
                 elif sc["new"] is None:
-                    text = f"{sc['key']}: usunięte"
+                    text = f"{sc['key']}: removed"
                 else:
-                    text = f"{sc['key']}: zmienione"
+                    text = f"{sc['key']}: changed"
                 QTreeWidgetItem(root, [text])
 
         if self.tree.topLevelItemCount() == 0:
-            QTreeWidgetItem(self.tree, ["Brak różnic"])
+            QTreeWidgetItem(self.tree, ["No differences"])
 
         self.tree.expandAll()

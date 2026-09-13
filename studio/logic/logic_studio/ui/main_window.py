@@ -60,8 +60,8 @@ class MainWindow(QMainWindow):
         self.act_save = self._make_action("Save", self._save_project, "Ctrl+S", icon_name="save")
         self.act_save_as = self._make_action("Save As...", self._save_as_project, "Ctrl+Shift+S")
         # feat/project-diff
-        self.act_compare_saved = self._make_action("Porównaj z zapisanym plikiem...", self._compare_with_saved_file)
-        self.act_compare_files = self._make_action("Porównaj dwa projekty...", self._compare_two_projects)
+        self.act_compare_saved = self._make_action("Compare with saved file...", self._compare_with_saved_file)
+        self.act_compare_files = self._make_action("Compare two projects...", self._compare_two_projects)
         self.act_exit = self._make_action("Exit", self.close)
 
         file_menu = menubar.addMenu("File")
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
         # enabled state of all 8 operations depends on the CURRENT
         # selection size, and populate_align_menu() (scene.py, shared with
         # the block/canvas context menu) already does exactly that.
-        self.align_menu = edit_menu.addMenu("Wyrównaj")
+        self.align_menu = edit_menu.addMenu("Align")
         self.align_menu.aboutToShow.connect(self._rebuild_align_menu)
 
         # feat/clipboard-and-align §4.1: "the same action" as the block's
@@ -116,8 +116,8 @@ class MainWindow(QMainWindow):
         # obvious "opposite". Both call LogicScene.set_blocks_enabled()
         # as exactly one undo entry regardless of how many blocks.
         edit_menu.addSeparator()
-        self.act_disable_selected = self._make_action("Wyłącz zaznaczone bloki", self._disable_selected_blocks)
-        self.act_enable_selected = self._make_action("Włącz zaznaczone bloki", self._enable_selected_blocks)
+        self.act_disable_selected = self._make_action("Disable selected blocks", self._disable_selected_blocks)
+        self.act_enable_selected = self._make_action("Enable selected blocks", self._enable_selected_blocks)
         self.act_disable_selected.setEnabled(False)
         self.act_enable_selected.setEnabled(False)
         edit_menu.addAction(self.act_disable_selected)
@@ -144,9 +144,9 @@ class MainWindow(QMainWindow):
         toolbar_style_group = QActionGroup(self)
         toolbar_style_group.setExclusive(True)
 
-        self.act_toolbar_icons = self._make_action("Ikony", lambda: self._set_toolbar_style("icons"), checkable=True)
-        self.act_toolbar_icons_text = self._make_action("Ikony i tekst", lambda: self._set_toolbar_style("icons_text"), checkable=True)
-        self.act_toolbar_text = self._make_action("Tekst", lambda: self._set_toolbar_style("text"), checkable=True)
+        self.act_toolbar_icons = self._make_action("Icons", lambda: self._set_toolbar_style("icons"), checkable=True)
+        self.act_toolbar_icons_text = self._make_action("Icons and text", lambda: self._set_toolbar_style("icons_text"), checkable=True)
+        self.act_toolbar_text = self._make_action("Text", lambda: self._set_toolbar_style("text"), checkable=True)
 
         for act in (self.act_toolbar_icons, self.act_toolbar_icons_text, self.act_toolbar_text):
             toolbar_style_group.addAction(act)
@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
         # feat/signal-crossref §5.1: exports exactly what's currently
         # visible in the Sygnały panel's table (filters included) to CSV.
         self.act_export_signals = self._make_action(
-            "Eksportuj listę sygnałów...", lambda: self.signals_panel.prompt_export_csv()
+            "Export signal list...", lambda: self.signals_panel.prompt_export_csv()
         )
         # feat/pdf-export: as-built documentation — the current schematic
         # plus (optionally) the same signal list Eksportuj listę
@@ -194,10 +194,10 @@ class MainWindow(QMainWindow):
         # (AUDIT_REPORT.md §2.3) rather than kept as empty menus.
         # feat/help-system §6: every item here has an action wired to it
         # — nothing kept "for later" with no handler.
-        self.act_help = self._make_action("Pomoc", self._show_help, "F1")
-        self.act_help_catalog = self._make_action("Katalog bloków", self._show_block_catalog)
-        self.act_help_shortcuts = self._make_action("Skróty klawiszowe", self._show_shortcuts_help)
-        self.act_export_block_catalog = self._make_action("Eksportuj katalog bloków...", self._export_block_catalog)
+        self.act_help = self._make_action("Help", self._show_help, "F1")
+        self.act_help_catalog = self._make_action("Block catalog", self._show_block_catalog)
+        self.act_help_shortcuts = self._make_action("Keyboard shortcuts", self._show_shortcuts_help)
+        self.act_export_block_catalog = self._make_action("Export block catalog...", self._export_block_catalog)
         self.act_about = self._make_action("O programie", self._show_about)
         help_menu = menubar.addMenu("Help")
         help_menu.addAction(self.act_help)
@@ -317,7 +317,7 @@ class MainWindow(QMainWindow):
         library_splitter.setSizes([600, 200])  # ~3:1 (§6)
 
         self.device_panel = DeviceExplorerPanel()
-        # feat/signal-crossref §2.1: new "Sygnały" tab alongside Library/
+        # feat/signal-crossref §2.1: new "Signals" tab alongside Library/
         # Device Explorer — kept as self.left_tabs (not a local variable)
         # so the block context menu (§4) can switch to it programmatically.
         self.signals_panel = SignalsPanel(settings=self.settings)
@@ -329,8 +329,8 @@ class MainWindow(QMainWindow):
         self.labels_panel = LabelsPanel(settings=self.settings)
         left_tabs.addTab(library_splitter, "Library")
         left_tabs.addTab(self.device_panel, "Device Explorer")
-        left_tabs.addTab(self.signals_panel, "Sygnały")
-        left_tabs.addTab(self.labels_panel, "Etykiety")
+        left_tabs.addTab(self.signals_panel, "Signals")
+        left_tabs.addTab(self.labels_panel, "Labels")
         self.left_tabs = left_tabs
 
         # feat/signal-watch: pinned signals for continuous monitoring during
@@ -446,6 +446,14 @@ class MainWindow(QMainWindow):
         # feat/clipboard-and-align §4.1: same gating as Cut/Copy above.
         self.scene.selectionChanged.connect(self._update_block_toggle_actions)
 
+        # feat/text-formatting: the Word-style Format toolbar for text blocks.
+        # A toolbar of its own, so Studio - which hides only the main
+        # toolbar and the menu bar - shows it too.
+        from logic_studio.ui.format_toolbar import FormatToolbar
+        self.format_toolbar = FormatToolbar(self)
+        self.addToolBar(self.format_toolbar)
+        self.scene.selectionChanged.connect(self.format_toolbar.refresh)
+
     def closeEvent(self, event):
         if not self.check_dirty_prompt():
             event.ignore()
@@ -506,7 +514,7 @@ class MainWindow(QMainWindow):
         # from its (possibly different) watched_signals list.
         self.watch_panel.set_project(self.project)
         # feat/macro-blocks: same coverage again — rebuilds the library
-        # tree's "Makrobloki" category from THIS project's own
+        # tree's "Macros" category from THIS project's own
         # macro_definitions (a per-project registry, unlike every other
         # category, which is a fixed BlockRegistry class list).
         self.library_panel.set_project(self.project)
@@ -538,14 +546,14 @@ class MainWindow(QMainWindow):
             return
         definition = macros_module.get_definition(self.project, def_id)
         if definition is None:
-            self.statusBar().showMessage("Definicja makrobloku nie istnieje (usunięta?).", 5000)
+            self.statusBar().showMessage("The macro definition does not exist (deleted?).", 5000)
             return
 
         blocks, unknown_type_ids = macros_module.instantiate_definition_blocks(definition)
         if unknown_type_ids:
             QMessageBox.critical(
-                self, "Błąd",
-                f"Definicja odwołuje się do nieznanych typów bloków: {', '.join(unknown_type_ids)}"
+                self, "Error",
+                f"The definition refers to unknown block types: {', '.join(unknown_type_ids)}"
             )
             return
         # fix/wire-labels-and-project-integrity §B1.2: project.wires is
@@ -625,7 +633,7 @@ class MainWindow(QMainWindow):
         names = []
         for def_id in def_ids:
             if def_id is None:
-                names.append("Główny")
+                names.append("Main")
                 continue
             definition = macros_module.get_definition(self.project, def_id)
             names.append(definition.get("name", def_id) if definition is not None else def_id)
@@ -712,7 +720,7 @@ class MainWindow(QMainWindow):
         dialog = MacroPinsDialog(definition, self._remove_macro_pin, parent=self, on_parameter_change=self._on_macro_parameter_change)
         dialog.exec()
 
-    # ---- fix/safety-and-macro-params §C2.4: MacroPinsDialog's "Parametry" tab
+    # ---- fix/safety-and-macro-params §C2.4: MacroPinsDialog's "Parameters" tab
 
     def _on_macro_parameter_change(self, action: str, **kwargs):
         """Single dispatcher for every parameter-tab mutation
@@ -765,7 +773,7 @@ class MainWindow(QMainWindow):
         safety logic is a real hazard, so this has to be visible without
         having to go looking for it."""
         n = sum(1 for b in self.project.blocks if not b.enabled)
-        self.lbl_disabled_blocks.setText(f"Wyłączone bloki: {n}" if n > 0 else "")
+        self.lbl_disabled_blocks.setText(f"Disabled blocks: {n}" if n > 0 else "")
 
     def _update_step_buttons(self):
         """Manual step (§6.3) is only meaningful when the engine is not
@@ -866,7 +874,7 @@ class MainWindow(QMainWindow):
     def _show_block_catalog(self):
         self._open_help_topic("welcome", tab="contents")
         # Land on Contents with the tree visible rather than a specific
-        # block — an explicit "Katalog bloków" menu click has no single
+        # block — an explicit "Block catalog" menu click has no single
         # block in mind the way F1-on-a-selection does.
 
     def _show_shortcuts_help(self):
@@ -880,7 +888,7 @@ class MainWindow(QMainWindow):
         from logic_studio.core import block_catalog
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "Eksportuj katalog bloków", "katalog_blokow.md", "Markdown (*.md)"
+            self, "Export block catalog", "block_catalog.md", "Markdown (*.md)"
         )
         if not path:
             return
@@ -888,10 +896,10 @@ class MainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(block_catalog.export_catalog_markdown())
         except OSError as exc:
-            QMessageBox.critical(self, "Eksport nie powiódł się", str(exc))
+            QMessageBox.critical(self, "Export failed", str(exc))
 
     def show_help_for_block_type(self, type_id: str):
-        """Called from ElementPreviewPanel's "Więcej o tym bloku" link
+        """Called from ElementPreviewPanel's "More about this block" link
         (§5.4) and available for any other caller that has a type_id
         on hand but no canvas selection to derive it from."""
         self._open_help_topic(f"block:{type_id}")
@@ -905,7 +913,7 @@ class MainWindow(QMainWindow):
             self,
             "O programie",
             f"EPW Logic Studio {__version__}\n"
-            f"Format projektu: EPW_LOGIC, schema_version {EPWLOGIC_SCHEMA_VERSION}"
+            f"Project format: EPW_LOGIC, schema_version {EPWLOGIC_SCHEMA_VERSION}"
         )
 
     # ---- Logic / Simulation ---------------------------------------------------
@@ -956,7 +964,7 @@ class MainWindow(QMainWindow):
         try:
             export_schematic_to_pdf(self.scene, self.project, path)
         except Exception as e:
-            QMessageBox.critical(self, "Błąd eksportu PDF", f"Nie udało się wyeksportować PDF:\n{str(e)}")
+            QMessageBox.critical(self, "PDF export error", f"Could not export the PDF:\n{str(e)}")
             return
 
         self.statusBar().showMessage(f"Wyeksportowano do {path}", 5000)
@@ -970,7 +978,7 @@ class MainWindow(QMainWindow):
         if self.engine:
             self.engine.stop()
 
-        self.lbl_ready.setText("Kompilacja...")
+        self.lbl_ready.setText("Compiling...")
 
         from logic_studio.compiler.core import Compiler
         comp = Compiler(self.project)
@@ -990,19 +998,19 @@ class MainWindow(QMainWindow):
             for e in comp.errors:
                 self.output_panel.log_error(e)
             self.output_panel.log_message("Compilation failed.")
-            self.lbl_ready.setText("Kompilacja zakończona błędem")
+            self.lbl_ready.setText("Compilation failed")
         else:
             block_count = len(self.project.blocks)
             order_len = len(comp.last_execution_order)
             self.output_panel.log_compiler(
-                f"Skompilowano {block_count} blok(ów). Długość execution_order: {order_len}."
+                f"Compiled {block_count} block(s). execution_order length: {order_len}."
             )
             self.output_panel.log_message("Compilation successful.")
             self.lbl_ready.setText("Gotowy")
             if "program" in res:
                 self.engine.load_program(res["program"])
                 self.output_panel.log_runtime(
-                    f"Program załadowany: {len(res['program'].blocks)} blok(ów), "
+                    f"Program loaded: {len(res['program'].blocks)} block(s), "
                     f"execution_order={len(res['program'].execution_order)}."
                 )
 
@@ -1027,7 +1035,7 @@ class MainWindow(QMainWindow):
         from logic_studio.engine.execution import ExecutionState
         if self.engine.state == ExecutionState.FAULT:
             self.output_panel.log_runtime("Engine transitioned to FAULT on start.")
-            self.lbl_ready.setText("Symulacja: błąd silnika")
+            self.lbl_ready.setText("Simulation: engine error")
             self._update_step_buttons()
             return
 
@@ -1035,7 +1043,7 @@ class MainWindow(QMainWindow):
         self.sim_timer.start(cycle_time_ms)
 
         self.lbl_sim.setText("Simulation: Running")
-        self.lbl_ready.setText("Symulacja uruchomiona")
+        self.lbl_ready.setText("Simulation running")
         self.output_panel.log_runtime("Simulation started.")
         self._update_step_buttons()
 
@@ -1289,7 +1297,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _compare_with_saved_file(self):
-        """"Porównaj z zapisanym plikiem..." — the current in-memory
+        """"Compare with saved file..." — the current in-memory
         project (whatever the canvas shows right now) against the file
         it was last saved to/loaded from. Normalizes to the top level
         first (_exit_all_macro_levels()), same reasoning as Save/Compile:
@@ -1297,27 +1305,27 @@ class MainWindow(QMainWindow):
         macro's own edit view happens to be showing."""
         from PySide6.QtWidgets import QMessageBox
         if not self.current_file:
-            QMessageBox.information(self, "Porównanie", "Projekt nie był jeszcze zapisany do pliku.")
+            QMessageBox.information(self, "Comparison", "The project has not been saved to a file yet.")
             return
         self._exit_all_macro_levels()
         try:
             saved = self._load_and_normalize(self.current_file)
         except Exception as e:
-            QMessageBox.critical(self, "Błąd", f"Nie udało się odczytać zapisanego pliku:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not read the saved file:\n{e}")
             return
         current = self.project.serialize()
         import os
-        self._show_project_diff(saved, current, os.path.basename(self.current_file), "Bieżący stan")
+        self._show_project_diff(saved, current, os.path.basename(self.current_file), "Current state")
 
     def _compare_two_projects(self):
-        """"Porównaj dwa projekty..." — any two `.epwlogic` files, e.g.
+        """"Compare two projects..." — any two `.epwlogic` files, e.g.
         two exports from git history or two engineers' own copies.
         Doesn't touch self.project/self.current_file at all."""
         from PySide6.QtWidgets import QFileDialog
-        path_a, _ = QFileDialog.getOpenFileName(self, "Wybierz starszy plik", "", "EPW Logic Files (*.epwlogic)")
+        path_a, _ = QFileDialog.getOpenFileName(self, "Choose the older file", "", "EPW Logic Files (*.epwlogic)")
         if not path_a:
             return
-        path_b, _ = QFileDialog.getOpenFileName(self, "Wybierz nowszy plik", "", "EPW Logic Files (*.epwlogic)")
+        path_b, _ = QFileDialog.getOpenFileName(self, "Choose the newer file", "", "EPW Logic Files (*.epwlogic)")
         if not path_b:
             return
         from PySide6.QtWidgets import QMessageBox
@@ -1325,7 +1333,7 @@ class MainWindow(QMainWindow):
             data_a = self._load_and_normalize(path_a)
             data_b = self._load_and_normalize(path_b)
         except Exception as e:
-            QMessageBox.critical(self, "Błąd", f"Nie udało się odczytać pliku:\n{e}")
+            QMessageBox.critical(self, "Error", f"Could not read the file:\n{e}")
             return
         import os
         self._show_project_diff(data_a, data_b, os.path.basename(path_a), os.path.basename(path_b))
@@ -1379,7 +1387,7 @@ class MainWindow(QMainWindow):
             self._run_scan()
 
     def _on_step_requested(self, count: int):
-        """Manual "Krok"/"Krok ×10" from SimulationPanel (§6.3). Only legal
+        """Manual "Step"/"Step ×10" from SimulationPanel (§6.3). Only legal
         while the engine is not free-running: PAUSED, or STOPPED with a
         program loaded (the compile step already establishes that).
 
@@ -1398,7 +1406,7 @@ class MainWindow(QMainWindow):
             self._run_scan()
 
         if is_dry_run:
-            self.statusBar().showMessage("Krok (bez zapisu wyjść)", 5000)
+            self.statusBar().showMessage("Step (outputs not written)", 5000)
             self.output_panel.log_runtime(f"Manual step x{count} executed (dry-run, STOPPED — no outputs written).")
         else:
             self.output_panel.log_runtime(f"Manual step x{count} executed.")

@@ -4,12 +4,12 @@ from logic_studio.blocks.registry import BlockRegistry
 
 @BlockRegistry.register
 class DigitalInputBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"State": "Aktualny stan fizycznego wejścia cyfrowego."}
+    PIN_DESCRIPTIONS = {"State": "Current state of the physical digital input."}
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Adres fizycznego wejścia cyfrowego (moduł ELA), np. \"ELA01.DI.1\".",
+        "Address": "Address of the physical digital input (ELA module), e.g. \"ELA01.DI.1\".",
     }
 
-    def __init__(self, type_id="input.di", default_name="DI", category="Wejścia / Wyjścia", description="Fizyczne wejście cyfrowe (moduł ELA)."):
+    def __init__(self, type_id="input.di", default_name="DI", category="Inputs / Outputs", description="Physical digital input (ELA module)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#008000" # Classic dark green
         self.width = 100
@@ -52,12 +52,12 @@ class DigitalInputBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class DigitalOutputBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"Cmd": "Stan wysyłany na fizyczne wyjście cyfrowe."}
+    PIN_DESCRIPTIONS = {"Cmd": "State sent to the physical digital output."}
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Adres fizycznego wyjścia cyfrowego (moduł ADA), np. \"ADA01.DO.1\".",
+        "Address": "Address of the physical digital output (ADA module), e.g. \"ADA01.DO.1\".",
     }
 
-    def __init__(self, type_id="output.do", default_name="DO", category="Wejścia / Wyjścia", description="Fizyczne wyjście cyfrowe (moduł ADA)."):
+    def __init__(self, type_id="output.do", default_name="DO", category="Inputs / Outputs", description="Physical digital output (ADA module)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#800000" # Classic dark red
         self.width = 100

@@ -4,10 +4,9 @@ import { ProjectManager } from '../project/ProjectManager';
 import { ProjectFileService } from '../project/ProjectFileService';
 
 export interface MenuBarProps {
-  onOpenScadaPreview?: () => void;
   // feat/device-list-ui commit 1: opens the "Rejestry projektu" dialog
   // (locations + cards) - a new top-level menu, same lazy-dialog-owned-
-  // by-App.tsx convention as onOpenScadaPreview above.
+  // by-App.tsx convention.
   onOpenDeviceRegistries?: () => void;
   // feat/device-list-ui commit 2: opens the "Lista aparatow" window.
   onOpenDeviceList?: () => void;
@@ -16,7 +15,7 @@ export interface MenuBarProps {
   onOpenHelp?: () => void;
 }
 
-export const MenuBar: React.FC<MenuBarProps> = ({ onOpenScadaPreview, onOpenDeviceRegistries, onOpenDeviceList, onOpenHelp }) => {
+export const MenuBar: React.FC<MenuBarProps> = ({ onOpenDeviceRegistries, onOpenDeviceList, onOpenHelp }) => {
   const { undo, redo, copySelected, paste, deleteObjects, selectedIds, isDirty, snapToGridEnabled, toggleSnapToGrid } = useStore();
   // feat/wire-routing-around-obstacles commit 3, point (f): PRZELICZ
   // TRASE - on demand only, never automatic.
@@ -93,7 +92,6 @@ export const MenuBar: React.FC<MenuBarProps> = ({ onOpenScadaPreview, onOpenDevi
           <div className="dropdown-item" onClick={toggleSnapToGrid}>
             {snapToGridEnabled ? '✓ ' : '   '}Snap to Grid
           </div>
-          <div className="dropdown-item" onClick={() => onOpenScadaPreview?.()}>SCADA Style Preview...</div>
         </div>
       </div>
       <div className="menu-item">

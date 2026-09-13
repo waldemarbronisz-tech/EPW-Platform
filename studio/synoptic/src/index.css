@@ -428,3 +428,77 @@ body, html, #root {
   padding: 4px 16px;
   cursor: pointer;
 }
+
+/* feat/text-formatting: the Word-style formatting bar */
+.format-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background-color: var(--sys-bg);
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--sys-dark);
+  border-top: 1px solid var(--sys-light);
+}
+
+.format-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.format-bar-divider {
+  width: 2px;
+  height: 20px;
+  background-color: var(--sys-dark);
+  border-right: 1px solid var(--sys-light);
+  margin: 0 5px;
+}
+
+.format-bar button {
+  min-width: 24px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background-color: var(--sys-bg);
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: var(--sys-text);
+}
+
+.format-bar button.format-bar-wide {
+  padding: 0 6px;
+}
+
+.format-bar button:hover:not(:disabled) {
+  border: 1px solid var(--sys-light);
+  border-right-color: var(--sys-darker);
+  border-bottom-color: var(--sys-darker);
+}
+
+.format-bar button.format-bar-pressed {
+  border: 1px solid var(--sys-darker);
+  border-right-color: var(--sys-light);
+  border-bottom-color: var(--sys-light);
+  background-color: var(--sys-light);
+}
+
+.format-bar button:disabled,
+.format-bar select:disabled,
+.format-bar input:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.format-bar select,
+.format-bar input {
+  height: 20px;
+}
+
+/* Word's grow / shrink font buttons next to the size box. */
+.format-bar-size-step {
+  font: bold 11px Tahoma, Verdana, sans-serif;
+  line-height: 16px;
+  padding: 0 1px;
+}

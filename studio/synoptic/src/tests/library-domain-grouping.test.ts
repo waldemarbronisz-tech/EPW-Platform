@@ -68,16 +68,26 @@ describe('31. every symbol belongs to EXACTLY one group', () => {
 });
 
 describe('32. the total number of visible symbols reflects the library exactly as it stands', () => {
-  it('50 visible symbols total - fix/tank-language-and-media commit 3 hid the duplicate rainwater tank (site.rain_tank), the one deliberate hide since the 51-symbol count this test used to assert', () => {
+  // feat/room-plan added the two BUDYNEK plan symbols (oprawa,
+  // gniazdo): 50 -> 52. Counted, not estimated - this assertion
+  // exists to catch an ACCIDENTAL change to the library, so a
+  // deliberate one updates the number and says why, exactly as the
+  // 51 -> 50 hide before it did.
+  // feat/text-formatting added the SCADA text box: 62 -> 63.
+  it('63 visible symbols total - the 50 fix/tank-language-and-media commit 3 left, the 12 BUILDING plan symbols, and the SCADA text box', () => {
     const total = Object.values(getSymbolsByCategory()).flat().length;
-    expect(total).toBe(50);
+    expect(total).toBe(63);
   });
 });
 
 describe('the library\'s own folder order matches this task\'s own requested sequence', () => {
-  it('Electrical, Water, HVAC, Instrumentation, SITE, SCADA - in exactly that order (Automation has no visible entries today, so its own folder does not appear at all)', () => {
+  // feat/room-plan put BUDYNEK FIRST, deliberately: it is the
+  // department you start a room from (walls, then the fixtures that
+  // go in them), and it carries the wall TOOL as well as symbols -
+  // see Toolbox.tsx. The rest of the sequence is untouched.
+  it('BUDYNEK, Electrical, Water, HVAC, Instrumentation, SITE, SCADA - in exactly that order (Automation has no visible entries today, so its own folder does not appear at all)', () => {
     const order = Object.keys(getSymbolsByCategory());
-    expect(order).toEqual(['Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA']);
+    expect(order).toEqual(['BUILDING', 'Electrical', 'Water', 'HVAC', 'Instrumentation', 'SITE', 'SCADA']);
   });
 });
 

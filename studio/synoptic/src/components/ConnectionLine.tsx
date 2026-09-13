@@ -2,16 +2,9 @@ import React from 'react';
 import { Group, Path, Line } from 'react-konva';
 import type { SynopticConnection } from '../store';
 import {
-  COLOR_DE_ENERGIZED, COLOR_DE_ENERGIZED_LIGHT, COLOR_DE_ENERGIZED_DARK,
-  COLOR_ENERGIZED, COLOR_ENERGIZED_LIGHT, COLOR_ENERGIZED_DARK,
-  COLOR_WATER, COLOR_WATER_LIGHT, COLOR_WATER_DARK,
-  COLOR_WATER_INACTIVE, COLOR_WATER_INACTIVE_LIGHT, COLOR_WATER_INACTIVE_DARK,
-  VENTILATION_ACTIVE, VENTILATION_ACTIVE_LIGHT, VENTILATION_ACTIVE_DARK,
-  VENTILATION_INACTIVE, VENTILATION_INACTIVE_LIGHT, VENTILATION_INACTIVE_DARK,
-  CONDUCTOR_OUTLINE, CONDUCTOR_WIDTH,
-  CONDUCTOR_HIGHLIGHT_WIDTH, CONDUCTOR_HIGHLIGHT_OFFSET_X, CONDUCTOR_HIGHLIGHT_OFFSET_Y,
-  CONDUCTOR_SHADOW_WIDTH, CONDUCTOR_SHADOW_OFFSET_X, CONDUCTOR_SHADOW_OFFSET_Y, CONDUCTOR_SHADOW_OPACITY,
-  COLOR_OUTLINE, COLOR_WHITE, BUSBAR_HEIGHT,
+  COLOR_DE_ENERGIZED, COLOR_ENERGIZED, COLOR_WATER, COLOR_WATER_INACTIVE,
+  VENTILATION_ACTIVE, VENTILATION_INACTIVE,
+  CONDUCTOR_WIDTH, COLOR_OUTLINE, BUSBAR_HEIGHT,
   COLOR_ALARM, WIRE_COLLISION_MARK_WIDTH, WIRE_COLLISION_MARK_DASH
 } from '../theme/ScadaTheme';
 
@@ -77,82 +70,42 @@ export function getConductorCoreColor(medium: SynopticConnection['medium'], netS
   return netState === 'ACTIVE' ? COLOR_ENERGIZED : COLOR_DE_ENERGIZED;
 }
 
-/**
- * The light/dark companions of the core color above, for the Houston-
- * style highlight/shadow passes below - see ScadaTheme.ts's own
- * comment on each pair for exactly where it came from.
- */
-function getConductorShadeColors(medium: SynopticConnection['medium'], netState: 'ACTIVE' | 'INACTIVE'): { light: string; dark: string } {
-  if (medium === 'WATER') {
-    return netState === 'ACTIVE'
-      ? { light: COLOR_WATER_LIGHT, dark: COLOR_WATER_DARK }
-      : { light: COLOR_WATER_INACTIVE_LIGHT, dark: COLOR_WATER_INACTIVE_DARK };
-  }
-  if (medium === 'VENTILATION') {
-    return netState === 'ACTIVE'
-      ? { light: VENTILATION_ACTIVE_LIGHT, dark: VENTILATION_ACTIVE_DARK }
-      : { light: VENTILATION_INACTIVE_LIGHT, dark: VENTILATION_INACTIVE_DARK };
-  }
-  return netState === 'ACTIVE'
-    ? { light: COLOR_ENERGIZED_LIGHT, dark: COLOR_ENERGIZED_DARK }
-    : { light: COLOR_DE_ENERGIZED_LIGHT, dark: COLOR_DE_ENERGIZED_DARK };
-}
-
 export const ConnectionLine: React.FC<ConnectionProps> = ({ conn, netState, isSelected, onSelect, collisions, onCollisionHover }) => {
   if (!conn.points || conn.points.length < 2) return null;
 
   const path = pathFromPoints(conn.points);
   const coreColor = getConductorCoreColor(conn.medium, netState);
-  const { light: highlightColor, dark: shadowColor } = getConductorShadeColors(conn.medium, netState);
 
   // A busbar/manifold is just a much thicker wire (style BUS) - not a
   // symbol any more. Touchable anywhere along its length because
   // NetResolver treats any point ON its segment, not just its two ends,
   // as touching it.
   const coreWidth = conn.style === 'BUS' ? BUSBAR_HEIGHT : CONDUCTOR_WIDTH;
-  const outlineWidth = coreWidth + CONDUCTOR_OUTLINE;
 
   return (
     <Group onClick={onSelect} onTap={onSelect}>
       {/* Invisible hit area for easier selection */}
-      <Path data={path} stroke="transparent" strokeWidth={outlineWidth + 10} />
+      <Path data={path} stroke="transparent" strokeWidth={coreWidth + 10} />
 
-      {/* Houston-style four-pass pipe (feat/water-management commit 3,
-          docs/EPW_gospodarka_wodna_referencja.py's own pipe_seg): outline,
-          fill, shadow, highlight, all on ONE path per pass - lineCap/
-          lineJoin "round" (not the old "butt"/"miter") is what makes a
-          bend draw its own rounded elbow with no separate symbol
-          needed, for every medium, not only water. Selection still
-          reads as a white outline instead of the usual black one - a
-          geometric/palette-only cue, not an invented color. */}
-      <Path data={path} stroke={isSelected ? COLOR_WHITE : COLOR_OUTLINE} strokeWidth={outlineWidth} lineCap="round" lineJoin="round" />
+      {/* One solid line per wire, in the colour of its medium and state
+          (user request: connections must merge into one line). The old
+          four-pass "pipe" - dark outline, shadow, highlight - drew a
+          border round every wire, so two wires meeting at a tee or a
+          busbar showed their separate rounded ends instead of joining.
+          Same colour + round caps and joins = wires that touch read as
+          one conductor. A selected wire gets a soft halo underneath
+          rather than a border of its own. */}
+      {isSelected && (
+        <Path data={path} stroke={COLOR_OUTLINE} strokeWidth={coreWidth + 8} opacity={0.3} lineCap="round" lineJoin="round" listening={false} />
+      )}
       <Path data={path} stroke={coreColor} strokeWidth={coreWidth} lineCap="round" lineJoin="round" />
-      {/* Shadow: offset down-right, narrow, semi-transparent - drawn
-          BEFORE the highlight so the highlight (fully opaque) always
-          reads on top at a corner where the two might otherwise overlap. */}
-      <Path
-        data={path} stroke={shadowColor} strokeWidth={CONDUCTOR_SHADOW_WIDTH}
-        lineCap="round" lineJoin="round" opacity={CONDUCTOR_SHADOW_OPACITY}
-        x={CONDUCTOR_SHADOW_OFFSET_X} y={CONDUCTOR_SHADOW_OFFSET_Y}
-        listening={false}
-      />
-      {/* Highlight: offset up-left, narrow, fully opaque. */}
-      <Path
-        data={path} stroke={highlightColor} strokeWidth={CONDUCTOR_HIGHLIGHT_WIDTH}
-        lineCap="round" lineJoin="round"
-        x={CONDUCTOR_HIGHLIGHT_OFFSET_X} y={CONDUCTOR_HIGHLIGHT_OFFSET_Y}
-        listening={false}
-      />
       {/* feat/wire-routing-around-obstacles commit 1: a colliding
           segment's own dashed alarm-color marking, drawn on top of
           everything above - ADDED to the wire's own state color, never
           replacing it (GRANICE: a collision is a warning, the wire
           still works and still shows its real state). A Konva Line,
-          deliberately not a fifth Path element - pipe-rendering-
-          houston.test.ts's own source scan counts the Path elements
-          this file uses (one hit-area pass plus the four real Houston
-          passes above) and their round caps/joins; this marking is
-          neither of those four passes and must not be counted as one. */}
+          not a Path: pipe-rendering-houston.test.ts counts this file's
+          Path elements. */}
       {(collisions || []).map((c, i) => {
         const a = conn.points[c.segmentIndex];
         const b = conn.points[c.segmentIndex + 1];

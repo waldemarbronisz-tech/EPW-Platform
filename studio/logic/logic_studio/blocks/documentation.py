@@ -13,16 +13,47 @@ DOC_ALIASES = ["opis", "komentarz", "tekst", "tytuł"]
 # this module has no UI dependency and shouldn't gain one just for a
 # min/max pair.
 TEXT_SIZE_KEY = "Rozmiar tekstu (pkt)"
-_TEXT_SIZE_DESCRIPTION = "Rozmiar czcionki tekstu na schemacie, w punktach (6-48)."
+_TEXT_SIZE_DESCRIPTION = "Font size of the text on the diagram, in points (6-48)."
+
+# feat/text-formatting: character and paragraph formatting, written by the
+# Word-style Format toolbar (ui/format_toolbar.py) and editable in the
+# property grid like any other property. New, English keys: nothing older
+# ever stored them, and BaseLogicBlock.deserialize() merges a saved
+# block onto a freshly-constructed one, so a project saved before these
+# existed simply gets the defaults below.
+FONT_KEY = "Font"
+BOLD_KEY = "Bold"
+ITALIC_KEY = "Italic"
+UNDERLINE_KEY = "Underline"
+ALIGN_KEY = "Align"
+ALIGNMENTS = ("Left", "Center", "Right", "Justify")
+DEFAULT_DOC_FONT = "Arial"  # ui/canvas/style.py FONT_FAMILY, not imported (no Qt here)
+
+_FORMAT_DESCRIPTIONS = {
+    FONT_KEY: "Font family of the text on the diagram.",
+    BOLD_KEY: "Bold text.",
+    ITALIC_KEY: "Italic text.",
+    UNDERLINE_KEY: "Underlined text.",
+    ALIGN_KEY: "Paragraph alignment: Left, Center, Right or Justify.",
+}
+
+
+def _add_format_properties(block, bold=False, align="Left"):
+    block.properties[FONT_KEY] = DEFAULT_DOC_FONT
+    block.properties[BOLD_KEY] = bold
+    block.properties[ITALIC_KEY] = False
+    block.properties[UNDERLINE_KEY] = False
+    block.properties[ALIGN_KEY] = align
 
 @BlockRegistry.register
 class TextBlock(BaseLogicBlock):
     PROPERTY_DESCRIPTIONS = {
-        "Text": "Dowolny tekst wyświetlany na schemacie.",
+        "Text": "Free text shown on the diagram.",
         TEXT_SIZE_KEY: _TEXT_SIZE_DESCRIPTION,
+        **_FORMAT_DESCRIPTIONS,
     }
 
-    def __init__(self, type_id="doc.text", default_name="Text", category="Dokumentacja", description="Dowolny tekst na schemacie, bez wpływu na logikę."):
+    def __init__(self, type_id="doc.text", default_name="Text", category="Documentation", description="Free text on the diagram, no effect on the logic."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = list(DOC_ALIASES)
         self.width = 150
@@ -39,6 +70,7 @@ class TextBlock(BaseLogicBlock):
         # never pull in Qt just to do that (tests/test_acceptance.py::
         # test_headless_engine_no_qt).
         self.properties[TEXT_SIZE_KEY] = 9
+        _add_format_properties(self)
 
         # Doc blocks don't execute logic and have no pins
         self.inputs = []
@@ -50,11 +82,12 @@ class TextBlock(BaseLogicBlock):
 @BlockRegistry.register
 class NoteBlock(BaseLogicBlock):
     PROPERTY_DESCRIPTIONS = {
-        "Text": "Wielowierszowa notatka wyświetlana na schemacie.",
+        "Text": "Multi-line note shown on the diagram.",
         TEXT_SIZE_KEY: _TEXT_SIZE_DESCRIPTION,
+        **_FORMAT_DESCRIPTIONS,
     }
 
-    def __init__(self, type_id="doc.note", default_name="Note", category="Dokumentacja", description="Wielowierszowa notatka na schemacie, bez wpływu na logikę."):
+    def __init__(self, type_id="doc.note", default_name="Note", category="Documentation", description="Multi-line note on the diagram, no effect on the logic."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = list(DOC_ALIASES)
         self.width = 200
@@ -65,6 +98,7 @@ class NoteBlock(BaseLogicBlock):
         # §B1: matches ui/canvas/style.py's own FONT_SIZE_DOC_NOTE — see
         # TextBlock's own comment above for why this isn't imported.
         self.properties[TEXT_SIZE_KEY] = 8
+        _add_format_properties(self)
 
         self.inputs = []
         self.outputs = []
@@ -75,11 +109,12 @@ class NoteBlock(BaseLogicBlock):
 @BlockRegistry.register
 class SectionTitleBlock(BaseLogicBlock):
     PROPERTY_DESCRIPTIONS = {
-        "Text": "Treść nagłówka sekcji.",
+        "Text": "Section heading text.",
         TEXT_SIZE_KEY: _TEXT_SIZE_DESCRIPTION,
+        **_FORMAT_DESCRIPTIONS,
     }
 
-    def __init__(self, type_id="doc.section", default_name="Section Title", category="Dokumentacja", description="Duży nagłówek sekcji schematu, bez wpływu na logikę."):
+    def __init__(self, type_id="doc.section", default_name="Section Title", category="Documentation", description="Large diagram section heading, no effect on the logic."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = list(DOC_ALIASES)
         self.width = 300
@@ -88,6 +123,7 @@ class SectionTitleBlock(BaseLogicBlock):
         # §B1: matches ui/canvas/style.py's own FONT_SIZE_DOC_SECTION —
         # see TextBlock's own comment above for why this isn't imported.
         self.properties[TEXT_SIZE_KEY] = 14
+        _add_format_properties(self, bold=True)
 
         self.inputs = []
         self.outputs = []

@@ -63,7 +63,7 @@ def test_export_first_line_is_a_comment_with_project_name_and_date(tmp_path, qse
     comment, _rows = _read_csv_rows(path)
     assert comment.startswith("#")
     assert "Instalacja Testowa" in comment
-    assert "Filtr zastosowany: nie" in comment
+    assert "Filter applied: no" in comment
 
 def test_export_header_matches_table_plus_problemy(tmp_path, qsettings):
     _app()
@@ -74,7 +74,7 @@ def test_export_header_matches_table_plus_problemy(tmp_path, qsettings):
     panel.export_csv(str(path))
 
     _comment, rows = _read_csv_rows(path)
-    assert rows[0] == ["Stan", "Sygnał", "Typ", "Etykieta", "Zapisuje", "Czyta", "Problemy"]
+    assert rows[0] == ["State", "Signal", "Type", "Label", "Writes", "Reads", "Issues"]
 
 def test_export_includes_a_real_row(tmp_path, qsettings):
     _app()
@@ -93,7 +93,7 @@ def test_export_includes_a_real_row(tmp_path, qsettings):
     data_row = rows[1]
     assert data_row[1] == "ELA01.DI.1"
     assert data_row[3] == "Wyłącznik Q1"
-    assert data_row[4] == "urządzenie"
+    assert data_row[4] == "device"
 
 def test_export_includes_problem_text_for_flagged_rows(tmp_path, qsettings):
     _app()
@@ -111,8 +111,8 @@ def test_export_includes_problem_text_for_flagged_rows(tmp_path, qsettings):
 
     _comment, rows = _read_csv_rows(path)
     data_row = next(r for r in rows[1:] if r[1] == "GHOST")
-    assert data_row[0] == "Błąd"
-    assert "nie istnieje" in data_row[6]
+    assert data_row[0] == "Error"
+    assert "does not exist" in data_row[6]
 
 
 # ---- §5.2: only visible (filtered) rows are exported -----------------------
@@ -134,7 +134,7 @@ def test_export_respects_the_search_filter(tmp_path, qsettings):
     comment, rows = _read_csv_rows(path)
     signal_ids = [r[1] for r in rows[1:]]
     assert signal_ids == ["ELA01.DI.1"]
-    assert "Filtr zastosowany: tak" in comment
+    assert "Filter applied: yes" in comment
 
 def test_export_respects_the_only_issues_filter(tmp_path, qsettings):
     _app()
@@ -155,7 +155,7 @@ def test_export_respects_the_only_issues_filter(tmp_path, qsettings):
     comment, rows = _read_csv_rows(path)
     signal_ids = [r[1] for r in rows[1:]]
     assert signal_ids == ["GHOST"]
-    assert "Filtr zastosowany: tak" in comment
+    assert "Filter applied: yes" in comment
 
 
 # ---- §5.3: Polish characters + semicolon in a label round-trip correctly --

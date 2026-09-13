@@ -44,10 +44,10 @@ class VirtualInputBlock(_InternalSignalMixin, BaseLogicBlock):
     unchanged for file back-compat; the "Tag"->"Bit" property rename is
     handled by Project's v2->v3 migration (core/project.py)."""
 
-    PIN_DESCRIPTIONS = {"State": "Aktualny stan wewnętrznego bitu logicznego."}
-    PROPERTY_DESCRIPTIONS = {"Bit": "Nazwa wewnętrznego bitu (M./MR.) zarejestrowanego w ustawieniach projektu."}
+    PIN_DESCRIPTIONS = {"State": "Current state of the internal logic bit."}
+    PROPERTY_DESCRIPTIONS = {"Bit": "Name of the internal bit (M./MR.) registered in the project settings."}
 
-    def __init__(self, type_id="virtual.input", default_name="Wejście bitowe (wewn.)", category="Wejścia / Wyjścia", description="Odczyt wewnętrznego bitu logicznego (sygnał M./MR., niezwiązany z fizycznym I/O)."):
+    def __init__(self, type_id="virtual.input", default_name="Bit input (internal)", category="Inputs / Outputs", description="Reads an internal logic bit (an M./MR. signal, not tied to physical I/O)."):
         super().__init__(type_id, default_name, category, description)
         # Purple family, distinct from physical DI's green/DO's red/AI's
         # amber/AO's steel blue — an engineer must tell an internal signal
@@ -85,10 +85,10 @@ class VirtualOutputBlock(_InternalSignalMixin, BaseLogicBlock):
     signal — "Bit" property, picked via SignalPickerDialog. See
     VirtualInputBlock for the type_id/migration note."""
 
-    PIN_DESCRIPTIONS = {"Cmd": "Wartość zapisywana do wewnętrznego bitu logicznego."}
-    PROPERTY_DESCRIPTIONS = {"Bit": "Nazwa wewnętrznego bitu (M./MR.) zarejestrowanego w ustawieniach projektu."}
+    PIN_DESCRIPTIONS = {"Cmd": "Value written to the internal logic bit."}
+    PROPERTY_DESCRIPTIONS = {"Bit": "Name of the internal bit (M./MR.) registered in the project settings."}
 
-    def __init__(self, type_id="virtual.output", default_name="Wyjście bitowe (wewn.)", category="Wejścia / Wyjścia", description="Zapis wewnętrznego bitu logicznego (sygnał M./MR., niezwiązany z fizycznym I/O)."):
+    def __init__(self, type_id="virtual.output", default_name="Bit output (internal)", category="Inputs / Outputs", description="Writes an internal logic bit (an M./MR. signal, not tied to physical I/O)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#4B0082"  # Purple family — see VirtualInputBlock
         self.width = 100
@@ -114,10 +114,10 @@ class InternalRegisterInputBlock(_InternalSignalMixin, BaseLogicBlock):
     signal ("register") — the analog counterpart of VirtualInputBlock."""
     _SIGNAL_TYPE = "REAL"
 
-    PIN_DESCRIPTIONS = {"Value": "Aktualna wartość wewnętrznego rejestru analogowego."}
-    PROPERTY_DESCRIPTIONS = {"Bit": "Nazwa wewnętrznego rejestru (MW./MWR.) zarejestrowanego w ustawieniach projektu."}
+    PIN_DESCRIPTIONS = {"Value": "Current value of the internal analog register."}
+    PROPERTY_DESCRIPTIONS = {"Bit": "Name of the internal register (MW./MWR.) registered in the project settings."}
 
-    def __init__(self, type_id="internal.reg_in", default_name="Wejście rejestru (wewn.)", category="Wejścia / Wyjścia", description="Odczyt wewnętrznego rejestru analogowego (sygnał MW./MWR., niezwiązany z fizycznym I/O)."):
+    def __init__(self, type_id="internal.reg_in", default_name="Register input (internal)", category="Inputs / Outputs", description="Reads an internal analog register (an MW./MWR. signal, not tied to physical I/O)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#8A2BE2"  # Purple family — see VirtualInputBlock
         self.width = 100
@@ -143,10 +143,10 @@ class InternalRegisterOutputBlock(_InternalSignalMixin, BaseLogicBlock):
     signal — the analog counterpart of VirtualOutputBlock."""
     _SIGNAL_TYPE = "REAL"
 
-    PIN_DESCRIPTIONS = {"Value": "Wartość zapisywana do wewnętrznego rejestru analogowego."}
-    PROPERTY_DESCRIPTIONS = {"Bit": "Nazwa wewnętrznego rejestru (MW./MWR.) zarejestrowanego w ustawieniach projektu."}
+    PIN_DESCRIPTIONS = {"Value": "Value written to the internal analog register."}
+    PROPERTY_DESCRIPTIONS = {"Bit": "Name of the internal register (MW./MWR.) registered in the project settings."}
 
-    def __init__(self, type_id="internal.reg_out", default_name="Wyjście rejestru (wewn.)", category="Wejścia / Wyjścia", description="Zapis wewnętrznego rejestru analogowego (sygnał MW./MWR., niezwiązany z fizycznym I/O)."):
+    def __init__(self, type_id="internal.reg_out", default_name="Register output (internal)", category="Inputs / Outputs", description="Writes an internal analog register (an MW./MWR. signal, not tied to physical I/O)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#6A5ACD"  # Purple family — see VirtualInputBlock
         self.width = 100

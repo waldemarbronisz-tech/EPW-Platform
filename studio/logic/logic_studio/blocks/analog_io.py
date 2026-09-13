@@ -13,18 +13,18 @@ class AnalogInputBlock(BaseLogicBlock):
     AUDIT_REPORT.md §1/§2)."""
 
     PIN_DESCRIPTIONS = {
-        "Value": "Ostatnia zaufana wartość pomiarowa — trzymana z poprzedniego dobrego odczytu, gdy Quality jest fałszywe.",
-        "Quality": "Prawda, gdy ostatni odczyt jest wiarygodny (w zakresie, nie NaN/Inf). Istotne dla bezpieczeństwa.",
-        "Hold Expired": "Prawda, gdy Value jest trzymane dłużej niż pozwala Max Hold (ms). Istotne dla bezpieczeństwa.",
+        "Value": "Last trusted measured value — held from the previous good reading while Quality is false.",
+        "Quality": "True when the last reading is trustworthy (in range, not NaN/Inf). Safety relevant.",
+        "Hold Expired": "True when Value has been held longer than Max Hold (ms) allows. Safety relevant.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Identyfikator punktu analogowego zdefiniowanego w ustawieniach projektu (Analog Points).",
-        "Max Hold (ms)": "Ile czasu Value może trzymać ostatnią dobrą wartość przy złej jakości odczytu, zanim Hold Expired się uaktywni. 0 = bez limitu.",
-        "Hold Timeout Value": "Co Value pokazuje po przekroczeniu Max Hold (ms): \"Zero\", \"Ostatnia dobra\" wartość, albo \"Dolna granica zakresu\".",
+        "Address": "Identifier of an analog point defined in the project settings (Analog Points).",
+        "Max Hold (ms)": "How long Value may hold the last good value during a bad-quality reading before Hold Expired activates. 0 = no limit.",
+        "Hold Timeout Value": "What Value shows once Max Hold (ms) is exceeded: \"Zero\", the \"Last good\" value, or the \"Range minimum\".",
     }
     PROPERTY_UNITS = {"Max Hold (ms)": "ms"}
 
-    def __init__(self, type_id="input.ai", default_name="AI", category="Wejścia / Wyjścia", description="Wejście analogowe — odczyt punktu pomiarowego z kontrolą jakości sygnału."):
+    def __init__(self, type_id="input.ai", default_name="AI", category="Inputs / Outputs", description="Analog input — reads a measurement point with signal quality checking."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#CC8400"  # Amber — visually distinct from DI/VI green
         self.width = 100
@@ -176,12 +176,12 @@ class AnalogOutputBlock(BaseLogicBlock):
     engine (queue_analog_output) and flushed atomically at end-of-scan, same
     as digital outputs — see engine/execution.py."""
 
-    PIN_DESCRIPTIONS = {"Value": "Wartość zapisywana na fizyczne/wirtualne wyjście analogowe."}
+    PIN_DESCRIPTIONS = {"Value": "Value written to a physical/virtual analog output."}
     PROPERTY_DESCRIPTIONS = {
-        "Address": "Identyfikator punktu analogowego zdefiniowanego w ustawieniach projektu (Analog Points).",
+        "Address": "Identifier of an analog point defined in the project settings (Analog Points).",
     }
 
-    def __init__(self, type_id="output.ao", default_name="AO", category="Wejścia / Wyjścia", description="Wyjście analogowe."):
+    def __init__(self, type_id="output.ao", default_name="AO", category="Inputs / Outputs", description="Analog output."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#4682B4"  # Steel blue — visually distinct from DO/VO red
         self.width = 100

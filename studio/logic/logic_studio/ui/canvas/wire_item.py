@@ -479,11 +479,11 @@ class WireItem(QGraphicsPathItem):
             QMenu::item:selected { background-color: #0078D7; color: white; }
             QMenu::item:disabled { color: #A0A0A0; }
         """)
-        set_label_action = menu.addAction("Nadaj etykietę...")
-        remove_label_action = menu.addAction("Usuń etykietę")
+        set_label_action = menu.addAction("Set label...")
+        remove_label_action = menu.addAction("Remove label")
         remove_label_action.setEnabled(has_label)
         menu.addSeparator()
-        convert_action = menu.addAction("Zamień na odnośnik")
+        convert_action = menu.addAction("Convert to reference")
 
         chosen = menu.exec(QCursor.pos())
         if chosen == set_label_action:
@@ -511,7 +511,7 @@ class WireItem(QGraphicsPathItem):
 
         window = self._current_window()
         initial = existing_wire.label if existing_wire is not None else ""
-        text, similar = prompt_for_label(window, project, initial=initial, title="Nadaj etykietę")
+        text, similar = prompt_for_label(window, project, initial=initial, title="Set label")
         if text is None:
             return  # cancelled
 
@@ -519,7 +519,7 @@ class WireItem(QGraphicsPathItem):
         wire = get_or_create_wire_for_pins(project, self.source_port.pin.uuid, self.dest_port.pin.uuid)
         wire.label = text
         if similar and window is not None:
-            window.statusBar().showMessage(f"Podobna etykieta w projekcie: {similar}", 5000)
+            window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
         self._refresh_scene(window)
 
     def _remove_label(self, project, existing_wire):
@@ -539,10 +539,10 @@ class WireItem(QGraphicsPathItem):
         self._push_state_if_possible(project, window)
         wire_at_source, wire_at_dest = convert_wire_to_stubs(project, self.source_port, self.dest_port)
 
-        text, similar = prompt_for_label(window, project, initial="", title="Zamień na odnośnik")
+        text, similar = prompt_for_label(window, project, initial="", title="Convert to reference")
         if text:
             wire_at_source.label = text
             wire_at_dest.label = text
             if similar and window is not None:
-                window.statusBar().showMessage(f"Podobna etykieta w projekcie: {similar}", 5000)
+                window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
         self._refresh_scene(window)

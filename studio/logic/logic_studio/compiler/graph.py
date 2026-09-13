@@ -37,7 +37,7 @@ class GraphBuilder:
         # that only depended on a disabled one becomes ready immediately).
         executable_blocks = [
             b for b in self.project.blocks
-            if b.category != "Dokumentacja" and b.enabled
+            if b.category != "Documentation" and b.enabled
         ]
         block_by_uuid = {b.uuid: b for b in executable_blocks}
 

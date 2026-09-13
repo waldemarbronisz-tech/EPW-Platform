@@ -72,7 +72,7 @@ class Validator:
         known = DeviceModel.get_ela_devices(self.project) if kind == "DI" else DeviceModel.get_ada_devices(self.project)
         if card in known:
             return ""
-        return f" Karta '{card}' nie istnieje w projekcie."
+        return f" Card '{card}' does not exist in the project."
 
     def run(self, errors: list, warnings: list):
         import math
@@ -112,8 +112,8 @@ class Validator:
                         # block opted in) but a hand-edited/older file could
                         # still carry it — never silently accept it.
                         errors.append(
-                            f"[{self._block_ref(block)}] Wejście '{pin.name}' jest zaślepione, "
-                            "ale ten typ bloku nie zezwala na zaślepianie wejść."
+                            f"[{self._block_ref(block)}] Input '{pin.name}' is stubbed, "
+                            "but this block type does not allow stubbed inputs."
                         )
                     continue
                 active_input_count += 1
@@ -123,13 +123,13 @@ class Validator:
             if has_inputs and getattr(block, 'allows_disabled_inputs', False):
                 if active_input_count == 0:
                     errors.append(
-                        f"[{self._block_ref(block)}] Wszystkie wejścia bloku są zaślepione — "
-                        "blok nie ma żadnego aktywnego wejścia."
+                        f"[{self._block_ref(block)}] All inputs of the block are stubbed — "
+                        "the block has no active input."
                     )
                 elif active_input_count == 1:
                     warnings.append(
-                        f"Bramka {self._block_ref(block)} ma tylko 1 aktywne wejście — "
-                        "działa jak przekaźnik powtarzający."
+                        f"Gate {self._block_ref(block)} has only 1 active input — "
+                        "it works like a repeater."
                     )
 
             # fix/safety-block-semantics §6: a new category of rule, not the
@@ -143,8 +143,8 @@ class Validator:
             for pin in block.outputs:
                 if pin.safety_relevant and not pin.connections:
                     warnings.append(
-                        f"[{self._block_ref(block)}] Wyjście '{pin.name}' informujące o wiarygodności pomiaru "
-                        "nie jest nigdzie użyte. Logika będzie działać bez kontroli jakości sygnału."
+                        f"[{self._block_ref(block)}] Output '{pin.name}', which reports measurement trustworthiness, "
+                        "is not used anywhere. The logic will run without signal quality checking."
                     )
 
             # 3. Explicit IO Address Validation
@@ -189,7 +189,7 @@ class Validator:
                 if sig_id:
                     from logic_studio.core import system_signals
                     if system_signals.get_signal(sig_id, self.project) is None:
-                        warnings.append(f"[{self._block_ref(block)}] Nierozpoznany sygnał systemowy: '{sig_id}' (spoza katalogu).")
+                        warnings.append(f"[{self._block_ref(block)}] Unrecognised system signal: '{sig_id}' (not in the catalog).")
             elif block.type_id == "const.real":
                 # feat/const-property-validation: ConstantBase.evaluate()
                 # (blocks/constants.py) only catches ValueError around
@@ -206,16 +206,16 @@ class Validator:
                 try:
                     value = float(raw)
                 except (TypeError, ValueError):
-                    errors.append(f"[{self._block_ref(block)}] Wartość stałej REAL nie jest poprawną liczbą: {raw!r}.")
+                    errors.append(f"[{self._block_ref(block)}] The REAL constant value is not a valid number: {raw!r}.")
                 else:
                     if not math.isfinite(value):
-                        errors.append(f"[{self._block_ref(block)}] Wartość stałej REAL musi być liczbą skończoną (nie NaN/Inf): {raw!r}.")
+                        errors.append(f"[{self._block_ref(block)}] The REAL constant value must be a finite number (not NaN/Inf): {raw!r}.")
             elif block.type_id == "const.int":
                 raw = block.properties.get("Value", 0)
                 try:
                     int(raw)
                 except (TypeError, ValueError):
-                    errors.append(f"[{self._block_ref(block)}] Wartość stałej INT nie jest poprawną liczbą całkowitą: {raw!r}.")
+                    errors.append(f"[{self._block_ref(block)}] The INT constant value is not a valid integer: {raw!r}.")
             elif block.type_id == "analog.quality":
                 # §4.2: "Z punktu analogowego" only makes sense wired
                 # directly to an input.ai block — that's the only place a
@@ -224,8 +224,8 @@ class Validator:
                     source = _direct_source_block(block, 0, blocks)
                     if source is None or source.type_id != "input.ai":
                         errors.append(
-                            f"[{self._block_ref(block)}] Range Source = Z punktu analogowego wymaga, "
-                            "by wejście In pochodziło bezpośrednio z bloku AI."
+                            f"[{self._block_ref(block)}] Range Source = From analog point requires "
+                            "input In to come directly from an AI block."
                         )
                 # fix/safety-block-semantics §1.4: Stuck Tolerance=0 means
                 # bit-exact equality, which a real measurement chain's own
@@ -237,9 +237,9 @@ class Validator:
                 tolerance = float(block.properties.get("Stuck Tolerance", 0.0) or 0.0)
                 if stuck_scans > 0 and tolerance == 0.0:
                     warnings.append(
-                        f"[{self._block_ref(block)}] Detekcja zamrożenia sygnału z tolerancją 0 nie zadziała "
-                        "na realnym torze pomiarowym (szum ostatniego bitu przetwornika). "
-                        "Ustaw Stuck Tolerance."
+                        f"[{self._block_ref(block)}] Stuck-signal detection with a tolerance of 0 will not work "
+                        "on a real measurement chain (last-bit converter noise). "
+                        "Set Stuck Tolerance."
                     )
                 # §2.4: one-shot notice right after a v8->v9 schema
                 # migration converted this block's old per-scan "Max Rate"
@@ -256,18 +256,18 @@ class Validator:
                 if migration:
                     old_rate, new_rate = migration["old"], migration["new"]
                     warnings.append(
-                        f"[{self._block_ref(block)}] Max Rate przeliczono przy migracji projektu: "
-                        f"{old_rate:g}/skan -> {new_rate:g}/s (ta sama fizyczna szybkość zmiany, nowa jednostka)."
+                        f"[{self._block_ref(block)}] Max Rate was converted during project migration: "
+                        f"{old_rate:g}/scan -> {new_rate:g}/s (same physical rate of change, new unit)."
                     )
             elif block.type_id == "const.time":
                 raw = block.properties.get("Time (ms)", 1000)
                 try:
                     value = int(raw)
                 except (TypeError, ValueError):
-                    errors.append(f"[{self._block_ref(block)}] Czas stałej TIME nie jest poprawną liczbą całkowitą (ms): {raw!r}.")
+                    errors.append(f"[{self._block_ref(block)}] The TIME constant is not a valid integer (ms): {raw!r}.")
                 else:
                     if value < 0:
-                        errors.append(f"[{self._block_ref(block)}] Czas stałej TIME nie może być ujemny: {value} ms.")
+                        errors.append(f"[{self._block_ref(block)}] The TIME constant cannot be negative: {value} ms.")
 
         # 4. Duplicate Output Detection
         output_addresses = {}
@@ -319,13 +319,13 @@ class Validator:
             # point of replacing free-text "Tag" with a registry: a typo is
             # now a compile error instead of silently creating a new signal.
             if entry is None:
-                errors.append(f"[{self._block_ref(block)}] Sygnał wewnętrzny '{name}' nie istnieje w rejestrze projektu (Ustawienia projektu -> Sygnały wewnętrzne).")
+                errors.append(f"[{self._block_ref(block)}] Internal signal '{name}' does not exist in the project registry (Project settings -> Internal signals).")
                 continue
 
             # §4.5: a BOOL block (virtual.*) pointing at a REAL entry, or vice versa -> ERROR.
             expected_type = "REAL" if block.type_id in REAL_SIGNAL_TYPE_IDS else "BOOL"
             if entry.get("type") != expected_type:
-                errors.append(f"[{self._block_ref(block)}] Sygnał '{name}' jest typu {entry.get('type')}, a ten blok wymaga {expected_type}.")
+                errors.append(f"[{self._block_ref(block)}] Signal '{name}' is of type {entry.get('type')}, but this block needs {expected_type}.")
                 continue
 
             lname = name.lower()
@@ -342,7 +342,7 @@ class Validator:
             writer_names = writers.get(lname, [])
             if len(writer_names) > 1:
                 errors.append(
-                    f"Sygnał wewnętrzny '{internal_bit_id(entry)}' ma więcej niż jeden blok zapisujący: "
+                    f"Internal signal '{internal_bit_id(entry)}' has more than one writing block: "
                     + ", ".join(writer_names) + "."
                 )
 
@@ -353,13 +353,13 @@ class Validator:
             if lname not in writers:
                 entry = registry_by_lname.get(lname)
                 sig_label = internal_bit_id(entry) if entry else lname
-                warnings.append(f"Sygnał wewnętrzny '{sig_label}' odczytywany, ale niezapisywany przez żaden blok: " + ", ".join(reader_names) + ".")
+                warnings.append(f"Internal signal '{sig_label}' is read but not written by any block: " + ", ".join(reader_names) + ".")
 
         # §4.3: registered but unused by any block -> WARNING (housekeeping aid).
         for entry in self.project.settings.get("internal_bits", []):
             lname = entry.get("name", "").lower()
             if lname not in referenced_lower_names:
-                warnings.append(f"Zdefiniowany sygnał wewnętrzny '{entry.get('name', '')}' nie jest używany przez żaden blok.")
+                warnings.append(f"Defined internal signal '{entry.get('name', '')}' is not used by any block.")
 
         # 6. I/O label registry (feat/io-labels-and-ids §1.2): a label whose
         # address no longer names a real ELA/ADA channel or project analog
@@ -370,7 +370,7 @@ class Validator:
         for address in DeviceModel.get_labelled_addresses(self.project):
             if address not in valid_addresses:
                 warnings.append(
-                    f"Etykieta zdefiniowana dla adresu '{address}', który nie istnieje w projekcie."
+                    f"A label is defined for address '{address}', which does not exist in the project."
                 )
 
         # 7. Macro parameters (fix/safety-and-macro-params §C4) — validated
@@ -408,13 +408,13 @@ class Validator:
                 param = params_by_name.get(param_name)
 
                 if param is None:
-                    errors.append(f"[{ref}] Powiązanie parametru wskazuje na nieistniejący parametr '{param_name}'.")
+                    errors.append(f"[{ref}] A parameter binding points to a parameter that does not exist: '{param_name}'.")
                     continue
                 block_data = blocks_by_uuid.get(block_uuid)
                 if block_data is None or property_name not in block_data.get("properties", {}):
                     errors.append(
-                        f"[{ref}] Powiązanie parametru '{param.get('display_name', param_name)}' wskazuje na "
-                        "nieistniejący blok wewnętrzny lub nieistniejącą właściwość."
+                        f"[{ref}] Parameter binding '{param.get('display_name', param_name)}' points to "
+                        "an internal block or property that does not exist."
                     )
                     continue
 
@@ -422,8 +422,8 @@ class Validator:
                 current_value = block_data["properties"][property_name]
                 if not macros_module.value_matches_param_type(current_value, param.get("type", "STRING")):
                     errors.append(
-                        f"[{ref}] Parametr '{param.get('display_name', param_name)}' (typ {param.get('type')}) "
-                        f"nie zgadza się z typem właściwości '{property_name}'."
+                        f"[{ref}] Parameter '{param.get('display_name', param_name)}' (type {param.get('type')}) "
+                        f"does not match the type of property '{property_name}'."
                     )
                 property_targets.setdefault((block_uuid, property_name), []).append(param.get("display_name", param_name))
 
@@ -432,8 +432,8 @@ class Validator:
             for param in definition.get("parameters", []):
                 if param.get("name") not in bound_param_names:
                     warnings.append(
-                        f"[{ref}] Parametr '{param.get('display_name', param.get('name'))}' "
-                        "nie jest powiązany z żadną właściwością."
+                        f"[{ref}] Parameter '{param.get('display_name', param.get('name'))}' "
+                        "is not bound to any property."
                     )
 
             # §C4: two parameters aimed at the same (block, property) ->
@@ -443,8 +443,8 @@ class Validator:
             for (block_uuid, property_name), names in property_targets.items():
                 if len(names) > 1:
                     warnings.append(
-                        f"[{ref}] Więcej niż jeden parametr powiązany z tą samą właściwością "
-                        f"'{property_name}': {', '.join(names)} — wygrywa ostatnie podstawienie."
+                        f"[{ref}] More than one parameter is bound to the same property "
+                        f"'{property_name}': {', '.join(names)} — the last substitution wins."
                     )
 
         # 8. System-signal WRITE direction (feat/sswin-signals §2.3) — the
@@ -471,12 +471,12 @@ class Validator:
                 sys_referenced.add(sig_id)
                 entry = system_signals.get_signal(sig_id, self.project)
                 if entry is None:
-                    errors.append(f"[{self._block_ref(block)}] Nierozpoznany sygnał systemowy: '{sig_id}' (spoza katalogu).")
+                    errors.append(f"[{self._block_ref(block)}] Unrecognised system signal: '{sig_id}' (not in the catalog).")
                     continue
                 if entry.get("source") == "runtime":
                     errors.append(
-                        f"[{self._block_ref(block)}] Sygnał '{sig_id}' jest produkowany przez urządzenie "
-                        "i nie może być zapisywany przez logikę."
+                        f"[{self._block_ref(block)}] Signal '{sig_id}' is produced by the device "
+                        "and cannot be written by the logic."
                     )
                     continue
                 sys_writers.setdefault(sig_id, []).append(self._block_ref(block))
@@ -486,7 +486,7 @@ class Validator:
         for sig_id, writer_refs in sys_writers.items():
             if len(writer_refs) > 1:
                 errors.append(
-                    f"Sygnał systemowy '{sig_id}' ma więcej niż jeden blok zapisujący: "
+                    f"System signal '{sig_id}' has more than one writing block: "
                     + ", ".join(writer_refs) + "."
                 )
 
@@ -497,7 +497,7 @@ class Validator:
         # analogous to internal bits' missing-registry-entry rule here.
         for sig in system_signals.get_all_signals(self.project):
             if sig.get("source") == "logic" and sig["id"] not in sys_referenced:
-                warnings.append(f"Sygnał systemowy '{sig['id']}' (komenda) nie jest używany przez żaden blok.")
+                warnings.append(f"System signal '{sig['id']}' (command) is not used by any block.")
 
         # 9. Access-level gate on a block writing a safety_relevant system
         # signal (feat/sswin-signals §3.3) — WARNING only, never an error:
@@ -519,8 +519,8 @@ class Validator:
             level = block.properties.get("Minimalny poziom dostępu", "Brak")
             if level == "Brak":
                 warnings.append(
-                    f"[{self._block_ref(block)}] Blok steruje sygnałem krytycznym '{sig_id}' "
-                    "bez wymaganego poziomu dostępu."
+                    f"[{self._block_ref(block)}] The block drives the critical signal '{sig_id}' "
+                    "without a required access level."
                 )
         # feat/wire-labels §2.5: a free end with no label is a normal
         # PENDING state while a wire is being drawn or a label is about
@@ -547,4 +547,4 @@ class Validator:
             attached_pin = wire.source_pin if wire.source_pin is not None else wire.dest_pin
             attached_block = _block_owning_pin(attached_pin, blocks) if attached_pin else None
             ref = self._block_ref(attached_block) if attached_block else "?"
-            warnings.append(f"[{ref}] Niedokończony przewód (wolny koniec bez etykiety).")
+            warnings.append(f"[{ref}] Unfinished wire (free end without a label).")

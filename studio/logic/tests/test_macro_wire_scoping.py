@@ -278,7 +278,7 @@ def test_macro_internal_label_does_not_merge_with_a_same_named_top_level_label()
     c = Compiler(p)
     res = c.compile()
     assert res is not None, c.errors
-    assert not any("więcej niż jedno źródło" in e for e in c.errors)
+    assert not any("more than one source" in e for e in c.errors)
 
 def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
     """Two PLACED instances of the identical macro definition, each

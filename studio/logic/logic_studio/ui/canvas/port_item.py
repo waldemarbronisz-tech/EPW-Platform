@@ -118,7 +118,7 @@ class PortItem(QGraphicsItem):
             return False, None
 
         if not self.pin.disabled and len(self.pin.connections) > 0:
-            return True, "Odłącz przewód, aby zaślepić to wejście."
+            return True, "Disconnect the wire to stub this input."
 
         return True, None
 
@@ -174,7 +174,7 @@ class PortItem(QGraphicsItem):
         """)
         disable_action = None
         if disable_eligible:
-            label = "Odblokuj wejście" if self.pin.disabled else "Zaślep wejście"
+            label = "Unstub input" if self.pin.disabled else "Stub input"
             disable_action = menu.addAction(label)
             disable_action.setEnabled(blocked_reason is None)
             if blocked_reason:
@@ -184,7 +184,7 @@ class PortItem(QGraphicsItem):
         if stub_eligible:
             if disable_action is not None:
                 menu.addSeparator()
-            stub_action = menu.addAction("Dodaj odnośnik...")
+            stub_action = menu.addAction("Add reference...")
 
         chosen = menu.exec(QCursor.pos())
         if chosen == disable_action and blocked_reason is None:
@@ -210,11 +210,11 @@ class PortItem(QGraphicsItem):
         wire = add_stub_wire_from_port(project, self)
         window.set_dirty()
 
-        text, similar = prompt_for_label(window, project, initial="", title="Dodaj odnośnik")
+        text, similar = prompt_for_label(window, project, initial="", title="Add reference")
         if text:
             wire.label = text
             if similar:
-                window.statusBar().showMessage(f"Podobna etykieta w projekcie: {similar}", 5000)
+                window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
         scene = self.scene()
         if scene is not None:
             scene.clear()

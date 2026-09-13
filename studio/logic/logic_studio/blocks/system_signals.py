@@ -14,10 +14,10 @@ class SystemBooleanSignalBlock(BaseLogicBlock):
     back-compat; the "Tag"->"Sygnał" property rename is handled by
     Project's v2->v3 migration (core/project.py)."""
 
-    PIN_DESCRIPTIONS = {"Out": "Wartość wybranego sygnału systemowego (BOOL lub REAL, zależnie od sygnału)."}
-    PROPERTY_DESCRIPTIONS = {"Sygnał": "Identyfikator sygnału z katalogu sygnałów systemowych (SYS.*)."}
+    PIN_DESCRIPTIONS = {"Out": "Value of the selected system signal (BOOL or REAL, depending on the signal)."}
+    PROPERTY_DESCRIPTIONS = {"Sygnał": "Signal identifier from the system signal catalog (SYS.*)."}
 
-    def __init__(self, type_id="system.signal", default_name="Sygnał systemowy", category="Inne", description="Odczyt sygnału z wbudowanego katalogu sygnałów systemowych (SYS.*)."):
+    def __init__(self, type_id="system.signal", default_name="System signal", category="Other", description="Reads a signal from the built-in system signal catalog (SYS.*)."):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple
@@ -104,21 +104,21 @@ class SystemSignalOutputBlock(BaseLogicBlock):
 
     PROPERTY_TOOLTIPS = {
         "Minimalny poziom dostępu": (
-            "Egzekwowane przez EPW-OS w czasie wykonania, NIE przez "
-            "symulację Logic Studio — ta wartość jedzie do eksportu "
-            "runtime jako informacja dla sterownika."
+            "Enforced by EPW-OS at run time, NOT by the "
+            "Logic Studio simulation — this value goes into the runtime "
+            "export as information for the controller."
         ),
     }
     # feat/help-system: dodane przy scaleniu z gałęzią sswin-signals
     # (zbudowaną wcześniej, przed feat/help-system) — brakujący opis
     # pinu łamał test-strażnik katalogu generowanego z rejestru.
-    PIN_DESCRIPTIONS = {"In": "Wartość zapisywana do wybranego sygnału systemowego (komenda source==\"logic\", np. SSWIN.CMD_*)."}
+    PIN_DESCRIPTIONS = {"In": "Value written to the selected system signal (a source==\"logic\" command, e.g. SSWIN.CMD_*)."}
     PROPERTY_DESCRIPTIONS = {
-        "Sygnał": "Identyfikator zapisywanego sygnału systemowego (wyłącznie source==\"logic\", np. SSWIN.CMD_*).",
-        "Minimalny poziom dostępu": "Minimalny poziom dostępu operatora wymagany do wykonania tej komendy (egzekwowane przez EPW-OS).",
+        "Sygnał": "Identifier of the system signal written (source==\"logic\" only, e.g. SSWIN.CMD_*).",
+        "Minimalny poziom dostępu": "Minimum operator access level needed to execute this command (enforced by EPW-OS).",
     }
 
-    def __init__(self, type_id="system.signal_out", default_name="Wyjście systemowe", category="Inne", description="System Signal Output"):
+    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="System Signal Output"):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple family — same as system.signal
@@ -191,12 +191,12 @@ class SystemSignalOutputBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class ButtonBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"Out": "Stan przycisku (monostabilny: aktywny tylko podczas naciśnięcia; bistabilny: przełącza się przy każdym naciśnięciu)."}
+    PIN_DESCRIPTIONS = {"Out": "Button state (momentary: active only while pressed; toggle: flips on every press)."}
     PROPERTY_DESCRIPTIONS = {
-        "Mode": "\"Monostabilny\" — wyjście aktywne tylko podczas naciśnięcia. \"Bistabilny\" — każde naciśnięcie przełącza stan wyjścia.",
+        "Mode": "\"Momentary\" — output active only while pressed. \"Toggle\" — every press flips the output.",
     }
 
-    def __init__(self, type_id="system.button", default_name="Przycisk", category="Przyciski", description="Przycisk interfejsu operatora (HMI)."):
+    def __init__(self, type_id="system.button", default_name="Przycisk", category="Buttons", description="Przycisk interfejsu operatora (HMI)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.outputs.append(Pin("Out", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN))
@@ -230,9 +230,9 @@ class ButtonBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class LedBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"In": "Stan wyświetlany przez diodę sygnalizacyjną."}
+    PIN_DESCRIPTIONS = {"In": "State shown by the indicator LED."}
 
-    def __init__(self, type_id="system.led", default_name="LED", category="LED", description="Dioda sygnalizacyjna"):
+    def __init__(self, type_id="system.led", default_name="LED", category="LED", description="Indicator LED"):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.inputs.append(Pin("In", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN))
@@ -245,19 +245,19 @@ class LedBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class UserMessageBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"In": "Wybiera, który z dwóch komunikatów jest aktualnie wyświetlany."}
+    PIN_DESCRIPTIONS = {"In": "Selects which of the two messages is currently shown."}
     PROPERTY_DESCRIPTIONS = {
-        "Message 0": "Tekst wyświetlany, gdy wejście In jest fałszywe.",
-        "Message 1": "Tekst wyświetlany, gdy wejście In jest prawdziwe.",
+        "Message 0": "Text shown when input In is false.",
+        "Message 1": "Text shown when input In is true.",
     }
 
-    def __init__(self, type_id="system.message", default_name="Komunikat użytkownika", category="Telemechanika", description="Wiadomość tekstowa dla operatora"):
+    def __init__(self, type_id="system.message", default_name="User message", category="Telemetry", description="Text message for the operator"):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.width = 120
         self.height = 40
         self.inputs.append(Pin("In", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN))
-        self.properties["Message 0"] = "Brak alarmu"
+        self.properties["Message 0"] = "No alarm"
         self.properties["Message 1"] = "Aktywny alarm"
 
     def evaluate(self, engine=None):
@@ -269,11 +269,11 @@ class UserMessageBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class SignalGeneratorBlock(BaseLogicBlock):
-    PIN_DESCRIPTIONS = {"Out": "Przebieg prostokątny 50% wypełnienia o okresie Period (s)."}
-    PROPERTY_DESCRIPTIONS = {"Period (s)": "Okres przebiegu prostokątnego w sekundach."}
+    PIN_DESCRIPTIONS = {"Out": "50% duty-cycle square wave with period Period (s)."}
+    PROPERTY_DESCRIPTIONS = {"Period (s)": "Square wave period in seconds."}
     PROPERTY_UNITS = {"Period (s)": "s"}
 
-    def __init__(self, type_id="system.generator", default_name="Generator sygnału", category="Inne", description="Generator przebiegu prostokątnego"):
+    def __init__(self, type_id="system.generator", default_name="Signal generator", category="Other", description="Square wave generator"):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.outputs.append(Pin("Out", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN))

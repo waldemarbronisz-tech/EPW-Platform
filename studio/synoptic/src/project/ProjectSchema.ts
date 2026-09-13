@@ -2,6 +2,10 @@ import type { SynopticObject, SynopticConnection } from '../store';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
+import type { WallElement } from '../elements/WallElement';
+import type { CircuitBinding } from './CircuitBindings';
+import type { ScreenContent, ScreenInfo } from './ScreenContent';
+import type { FloorMaterialId } from '../theme/Materials';
 import type { GroupCommandElement } from '../elements/GroupCommandElement';
 import type { SetpointPanelElement } from '../elements/SetpointElement';
 import type { Device, LocationEntry, CardEntry } from './DeviceSchema';
@@ -22,6 +26,10 @@ export interface EPWCanvasSchema {
   height: number;
   background: string;
   gridSize?: number;
+  // feat/room-plan: which material the derived room floors are painted
+  // with. Screen-level appearance, which is exactly what this block
+  // already holds (background/gridSize). Optional and additive.
+  floorMaterial?: FloorMaterialId;
 }
 
 export interface EPWProjectSchema {
@@ -47,6 +55,25 @@ export interface EPWProjectSchema {
   // that task was explicit: if adding the frame element seemed to
   // need one, stop and report instead of bumping it - it does not).
   frames?: FrameElement[];
+  // feat/room-plan: the wall element - same optional/additive
+  // treatment as frames above, and for the same reason: a new kind of
+  // element in the EXISTING project shape, not a new shape. An older
+  // file simply has no walls (loads as an empty array). No schema
+  // version bump.
+  walls?: WallElement[];
+  // feat/room-plan: which device switches each circuit. Same
+  // optional/additive treatment as walls above - an older file simply
+  // has no bindings, which reads as "nothing wired yet".
+  circuits?: CircuitBinding[];
+  // feat/multi-screen: every screen's identity, which one was open, and
+  // the content of the ones that were not. The ACTIVE screen's content
+  // is still the top-level objects/walls/... above - see
+  // project/ScreenContent.ts for why the split is shaped that way, and
+  // note that it keeps a single-screen file byte-identical to what this
+  // format has always written.
+  screens?: ScreenInfo[];
+  activeScreenId?: string;
+  screenContents?: Record<string, ScreenContent>;
   // feat/meter-element part B: the project's device list, per src/
   // project/DeviceSchema.ts's contract (this editor's first caller of
   // it - see raport.md for the full read path). Just the flat device

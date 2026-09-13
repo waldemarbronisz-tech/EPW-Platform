@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLineEdit,
+)
 from PySide6.QtGui import QDrag
 from PySide6.QtCore import Qt, QMimeData
 
@@ -78,8 +80,26 @@ class DeviceExplorerPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # feat/library-recent-and-search: a search box, for the same
+        # reason the block library has one — this tree lists EVERY
+        # channel of every card, which is 64 rows per ELA before the
+        # project has any analog points at all. Scrolling to ELA01.DI47
+        # is slower than typing "47", and with two or three cards it is
+        # slower than opening the cabinet and reading the label.
+        #
+        # Deliberately the same behaviour as LibraryPanel's own box
+        # (ui/panels/library.py): it hides what does not match, keeps a
+        # branch visible only while something in it does, and expands
+        # whatever still has results — results left inside a collapsed
+        # branch look like no results at all.
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("Search address, e.g. DI12 or ELA01...")
+        self.search_box.setClearButtonEnabled(True)
+        self.search_box.textChanged.connect(self._filter_tree)
+        layout.addWidget(self.search_box)
+
         self.tree = DeviceTree()
-        self.tree.setHeaderLabels(["Urządzenia"])
+        self.tree.setHeaderLabels(["Devices"])
         layout.addWidget(self.tree)
 
         self.project = project
@@ -140,7 +160,7 @@ class DeviceExplorerPanel(QWidget):
         # task's own "podłączasz źródło danych, nie przebudowujesz
         # edytorów" scope).
         if not ela_pairs and not ada_pairs:
-            hint = QTreeWidgetItem(root, ["Brak kart wejść/wyjść — dodaj kartę w projekcie"])
+            hint = QTreeWidgetItem(root, ["No I/O cards — add a card in the project"])
             hint.setDisabled(True)
 
         # Analog points — fully project-defined, empty tree when the project
@@ -155,6 +175,68 @@ class DeviceExplorerPanel(QWidget):
                 label = f"{addr} ({direction}{', ' + unit if unit else ''})"
                 type_id = "input.ai" if direction == "input" else "output.ao"
                 self._add_leaf(analog_branch, label, type_id, addr)
+
+        # A rebuild makes brand-new, unhidden items, so whatever is typed
+        # has to be applied again - otherwise adding a card while a search
+        # was active would silently show the whole tree back.
+        self._filter_tree()
+
+    # ---- Search ----------------------------------------------------------
+
+    def _filter_tree(self, text=None):
+        """Hide every leaf that does not match, and every branch left with
+        nothing visible under it.
+
+        Matches the visible LABEL and the ADDRESS both: the label carries
+        the direction and unit for an analog point, while the address is
+        what is written on the terminal an electrician is looking at.
+        Case-insensitive, and dots are ignored on both sides, so "ELA01
+        DI06", "ela01.di06" and "eladi" all find the same channel —
+        somebody searching for a channel should not have to reproduce the
+        punctuation of an address format.
+        """
+        if text is None:
+            text = self.search_box.text()
+        needle = self._normalize(text)
+
+        root = self.tree.topLevelItem(0)
+        if root is None:
+            return
+
+        self._filter_item(root, needle)
+        root.setHidden(False)
+        if needle:
+            root.setExpanded(True)
+
+    def _filter_item(self, item, needle):
+        """Returns whether this item (or anything under it) is still
+        visible. Depth-first, so a branch's own visibility is decided
+        after its children have decided theirs."""
+        visible_children = 0
+        for i in range(item.childCount()):
+            if self._filter_item(item.child(i), needle):
+                visible_children += 1
+
+        if item.childCount() > 0:
+            # A branch stands or falls by its contents. With no search at
+            # all it always stands.
+            visible = not needle or visible_children > 0
+            item.setHidden(not visible)
+            if needle and visible:
+                item.setExpanded(True)
+            return visible
+
+        # A leaf: matched on its own text and its address.
+        address = item.data(0, ADDRESS_ROLE) or ""
+        matches = not needle or needle in self._normalize(item.text(0)) or needle in self._normalize(address)
+        item.setHidden(not matches)
+        return matches
+
+    @staticmethod
+    def _normalize(value):
+        """Lower-cased, with the separators an address format uses dropped,
+        so punctuation never decides whether a search finds a channel."""
+        return "".join(ch for ch in str(value).lower() if ch.isalnum())
 
     def _add_leaf(self, parent, label, type_id, address):
         item = QTreeWidgetItem(parent, [label])

@@ -20,7 +20,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { useStore } from '../store';
-import { Toolbar } from '../components/Toolbar';
 import { Toolbox } from '../components/Toolbox';
 import { getSymbolsByCategory } from '../symbols/SymbolRegistry';
 
@@ -34,22 +33,27 @@ function resetStore() {
   });
 }
 
-describe('Toolbar - every toolbar-inserted element (meter, signal panel) is actually reachable from the UI', () => {
+// feat/toolbar-grouping: inserting a meter or a signal panel moved from
+// the top toolbar to the Object Library's SCADA department
+// (ScadaTools.tsx). The regression this suite guards is unchanged -
+// every inserted element must be reachable from somewhere a user can
+// click - so the same assertions now run against the library.
+describe('SCADA library tools - every inserted element (meter, signal panel) is actually reachable from the UI', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
   it('renders a "Add Meter" button', () => {
-    render(<Toolbar />);
+    render(<Toolbox />);
     expect(screen.getByTitle('Add Meter')).toBeTruthy();
   });
 
   it('renders a "Add Signal Panel" button - the exact bug this task reported', () => {
-    render(<Toolbar />);
+    render(<Toolbox />);
     expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
   });
 
   it('clicking "Add Meter" actually places a meter and selects it', () => {
-    render(<Toolbar />);
+    render(<Toolbox />);
     fireEvent.click(screen.getByTitle('Add Meter'));
 
     const state = useStore.getState();
@@ -58,7 +62,7 @@ describe('Toolbar - every toolbar-inserted element (meter, signal panel) is actu
   });
 
   it('clicking "Add Signal Panel" actually places a signal panel and selects it - the same mechanism as the meter, not a different one', () => {
-    render(<Toolbar />);
+    render(<Toolbox />);
     fireEvent.click(screen.getByTitle('Add Signal Panel'));
 
     const state = useStore.getState();
@@ -67,7 +71,7 @@ describe('Toolbar - every toolbar-inserted element (meter, signal panel) is actu
   });
 
   it('both buttons live in the toolbar side by side, so neither can go missing without the other being right there to notice', () => {
-    render(<Toolbar />);
+    render(<Toolbox />);
     expect(screen.getByTitle('Add Meter')).toBeTruthy();
     expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
   });
@@ -117,6 +121,6 @@ describe('Toolbox (Object Library) - every visible symbol in the registry is act
   it('every SCADA-category symbol expected to be visible right now is listed (Label Frame, Indicator Diode, Meter (SCADA), Boundary Point) - and no more, no less', () => {
     render(<Toolbox />);
     const scadaItems = getSymbolsByCategory().SCADA || [];
-    expect(scadaItems.map(d => d.label).sort()).toEqual(['Boundary Point', 'Indicator Diode', 'Label Frame', 'Meter (SCADA)']);
+    expect(scadaItems.map(d => d.label).sort()).toEqual(['Boundary Point', 'Indicator Diode', 'Label Frame', 'Meter (SCADA)', 'Text box']);
   });
 });

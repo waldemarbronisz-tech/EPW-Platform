@@ -42,7 +42,7 @@ def test_const_real_non_numeric_string_is_an_error():
     b = BlockRegistry.create_block("const.real")
     b.properties["Value"] = "not a number"
     errors = _errors_for(b)
-    assert any("REAL" in e and "poprawną liczbą" in e for e in errors)
+    assert any("REAL" in e and "valid number" in e for e in errors)
 
 def test_const_real_none_value_is_an_error_not_a_crash():
     b = BlockRegistry.create_block("const.real")
@@ -54,13 +54,13 @@ def test_const_real_nan_is_an_error():
     b = BlockRegistry.create_block("const.real")
     b.properties["Value"] = "nan"
     errors = _errors_for(b)
-    assert any("skończoną" in e for e in errors)
+    assert any("finite" in e for e in errors)
 
 def test_const_real_infinity_is_an_error():
     b = BlockRegistry.create_block("const.real")
     b.properties["Value"] = float("inf")
     errors = _errors_for(b)
-    assert any("skończoną" in e for e in errors)
+    assert any("finite" in e for e in errors)
 
 
 # ---- const.int ----------------------------------------------------------
@@ -74,7 +74,7 @@ def test_const_int_non_numeric_string_is_an_error():
     b = BlockRegistry.create_block("const.int")
     b.properties["Value"] = "abc"
     errors = _errors_for(b)
-    assert any("INT" in e and "poprawną liczbą całkowitą" in e for e in errors)
+    assert any("INT" in e and "valid integer" in e for e in errors)
 
 def test_const_int_list_value_is_an_error_not_a_crash():
     b = BlockRegistry.create_block("const.int")
@@ -99,13 +99,13 @@ def test_const_time_negative_is_an_error():
     b = BlockRegistry.create_block("const.time")
     b.properties["Time (ms)"] = -500
     errors = _errors_for(b)
-    assert any("ujemny" in e for e in errors)
+    assert any("negative" in e for e in errors)
 
 def test_const_time_non_numeric_is_an_error():
     b = BlockRegistry.create_block("const.time")
     b.properties["Time (ms)"] = "soon"
     errors = _errors_for(b)
-    assert any("poprawną liczbą całkowitą" in e for e in errors)
+    assert any("valid integer" in e for e in errors)
 
 
 # ---- Compilation actually fails on a bad const property -------------------

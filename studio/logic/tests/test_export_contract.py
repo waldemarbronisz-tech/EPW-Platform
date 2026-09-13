@@ -48,7 +48,7 @@ def _project_with_one_of_every_block():
 
     blocks_by_type = {}
     for category in BlockRegistry.get_categories():
-        if category == "Dokumentacja":
+        if category == "Documentation":
             continue
         for type_id in BlockRegistry.get_blocks_in_category(category):
             block = BlockRegistry.create_block(type_id)

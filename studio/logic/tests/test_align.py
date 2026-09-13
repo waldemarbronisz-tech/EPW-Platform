@@ -140,7 +140,7 @@ def test_align_bottom(qsettings):
 
 
 def test_align_center_vertical(qsettings):
-    """"Wyśrodkuj w pionie" — horizontal axes aligned (same Y). All three
+    """"Center vertically" — horizontal axes aligned (same Y). All three
     blocks are 40 tall here, so this coincides with align_top's result,
     but it must go through the center-based formula, not the top one."""
     _app()
@@ -157,7 +157,7 @@ def test_align_center_vertical(qsettings):
 
 
 def test_align_center_horizontal(qsettings):
-    """"Wyśrodkuj w poziomie" — vertical axes aligned (same X). Widths
+    """"Center horizontally" — vertical axes aligned (same X). Widths
     differ between an io block and a gate, so this is distinguishable
     from align_left/right."""
     _app()
@@ -299,8 +299,8 @@ def test_align_menu_actions_disabled_below_minimum_selection(qsettings):
     menu = QMenu()
     populate_align_menu(menu, window.scene)
     labels = {a.text(): a.isEnabled() for a in menu.actions() if a.text()}
-    assert labels["Wyrównaj do lewej"] is False
-    assert labels["Rozłóż równomiernie w poziomie"] is False
+    assert labels["Align left"] is False
+    assert labels["Distribute horizontally"] is False
     _close(window)
 
 
@@ -316,6 +316,6 @@ def test_align_menu_actions_enabled_at_minimum_selection(qsettings):
     menu = QMenu()
     populate_align_menu(menu, window.scene)
     labels = {a.text(): a.isEnabled() for a in menu.actions() if a.text()}
-    assert labels["Wyrównaj do lewej"] is True
-    assert labels["Rozłóż równomiernie w poziomie"] is True
+    assert labels["Align left"] is True
+    assert labels["Distribute horizontally"] is True
     _close(window)

@@ -58,10 +58,10 @@ def validate_internal_bit_name(name: str):
     uniqueness, which needs the full registry. Returns an error message
     string, or None if the name is valid on its own."""
     if not name:
-        return "Nazwa nie może być pusta."
+        return "The name cannot be empty."
     if _FORBIDDEN_CHARS_PATTERN.search(name):
-        return ("Nazwa nie może zawierać spacji, znaków / \\ \" ' "
-                "ani polskich znaków diakrytycznych.")
+        return ("The name cannot contain spaces, the characters / \\ \" ' "
+                "or Polish diacritic letters.")
     return None
 
 
@@ -83,14 +83,14 @@ def validate_internal_bits_registry(entries: list) -> list:
             lname = name.lower()
             if lname in seen_lower:
                 errors.append(
-                    f"Nazwa sygnału {name!r} koliduje z już istniejącą "
-                    f"{seen_lower[lname]!r} (porównanie bez uwzględniania "
-                    f"wielkości liter)."
+                    f"Signal name {name!r} clashes with the existing "
+                    f"{seen_lower[lname]!r} (case-insensitive "
+                    f"comparison)."
                 )
             else:
                 seen_lower[lname] = name
 
         if entry.get("type") not in VALID_TYPES:
-            errors.append(f"{name!r}: nieprawidłowy typ {entry.get('type')!r} (musi być BOOL albo REAL).")
+            errors.append(f"{name!r}: invalid type {entry.get('type')!r} (must be BOOL or REAL).")
 
     return errors

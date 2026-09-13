@@ -109,7 +109,7 @@ def test_validator_warns_on_unlabeled_free_end():
     c = Compiler(p)
     res = c.compile()
     assert res is not None  # warning, not an error
-    assert any("Niedokończony przewód" in w and (b.short_id in w) for w in c.warnings), c.warnings
+    assert any("Unfinished wire" in w and (b.short_id in w) for w in c.warnings), c.warnings
 
 def test_validator_does_not_warn_on_a_labeled_free_end():
     p = Project()
@@ -124,7 +124,7 @@ def test_validator_does_not_warn_on_a_labeled_free_end():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert not any("Niedokończony przewód" in w for w in c.warnings)
+    assert not any("Unfinished wire" in w for w in c.warnings)
 
 def test_validator_warns_on_a_whitespace_only_label_same_as_empty():
     """fix/wire-labels-and-project-integrity §A2 (user correction): a
@@ -143,7 +143,7 @@ def test_validator_warns_on_a_whitespace_only_label_same_as_empty():
     c = Compiler(p)
     res = c.compile()
     assert res is not None  # warning, not an error
-    assert any("Niedokończony przewód" in w for w in c.warnings), c.warnings
+    assert any("Unfinished wire" in w for w in c.warnings), c.warnings
 
 def test_validator_does_not_warn_on_a_fully_connected_unlabeled_wire():
     """The overwhelming common case -- a plain wire with no Wire record
@@ -158,7 +158,7 @@ def test_validator_does_not_warn_on_a_fully_connected_unlabeled_wire():
     c = Compiler(p)
     res = c.compile()
     assert res is not None
-    assert not any("Niedokończony przewód" in w for w in c.warnings)
+    assert not any("Unfinished wire" in w for w in c.warnings)
 
 
 # ---- §2.6: a free end without a label creates no graph edge, no crash ----

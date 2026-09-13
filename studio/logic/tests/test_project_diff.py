@@ -45,7 +45,7 @@ def test_identical_projects_have_no_differences():
     assert comparison["blocks_changed"] == []
     assert comparison["settings_changes"] == []
     assert has_changes(comparison) is False
-    assert summarize(comparison) == "Brak różnic"
+    assert summarize(comparison) == "No differences"
 
 
 # ---- added / removed --------------------------------------------------
@@ -202,8 +202,8 @@ def test_summarize_combines_every_category():
     text = summarize(comparison)
     assert "+1" in text
     assert "-1" in text
-    assert "1 zmienione" in text
-    assert "zmian ustawień" in text
+    assert "1 changed" in text
+    assert "settings changes" in text
 
 
 # ---- block_label() ------------------------------------------------------

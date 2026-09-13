@@ -148,16 +148,16 @@ def merge_and_validate_labels(view, errors: list, warnings: list) -> None:
         inputs = [p for p in pins if p.direction == Pin.DIR_INPUT]
 
         if not outputs:
-            errors.append(f"Etykieta '{label}' nie ma źródła.")
+            errors.append(f"Label '{label}' has no source.")
             continue
         if len(outputs) > 1:
             refs = sorted({_ref_for_pin(p, view.blocks) for p in outputs})
-            errors.append(f"Etykieta '{label}' ma więcej niż jedno źródło: {', '.join(refs)}.")
+            errors.append(f"Label '{label}' has more than one source: {', '.join(refs)}.")
             continue
         source = outputs[0]
 
         if not inputs:
-            warnings.append(f"Sygnał '{label}' nigdzie nie jest odbierany.")
+            warnings.append(f"Signal '{label}' is not received anywhere.")
             continue
 
         source_ref = _ref_for_pin(source, view.blocks)
@@ -165,6 +165,6 @@ def merge_and_validate_labels(view, errors: list, warnings: list) -> None:
             if not source.connect(target):
                 target_ref = _ref_for_pin(target, view.blocks)
                 errors.append(
-                    f"[{target_ref}] Niezgodny typ danych na wejściu połączonym przez "
-                    f"etykietę '{label}' ze źródłem [{source_ref}] (typ {source.data_type})."
+                    f"[{target_ref}] Data type mismatch on an input connected through "
+                    f"label '{label}' to source [{source_ref}] (type {source.data_type})."
                 )

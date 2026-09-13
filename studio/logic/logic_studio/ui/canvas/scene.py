@@ -461,7 +461,7 @@ class LogicScene(QGraphicsScene):
 
         if count and hasattr(window, 'statusBar'):
             window.statusBar().showMessage(
-                f"Wklejono {count} bloków wyjściowych z powielonymi adresami — popraw je przed kompilacją."
+                f"Pasted {count} output blocks with duplicated addresses — fix them before compiling."
             )
 
     def refresh_live_states(self):
@@ -645,7 +645,7 @@ class LogicScene(QGraphicsScene):
         # block_added (below) only records this INSTANCE under "Ostatnio
         # używane" — it says nothing about the brand new DEFINITION just
         # added to project.settings["macro_definitions"], so the library's
-        # own "Makrobloki" section needs its own explicit refresh here
+        # own "Macros" section needs its own explicit refresh here
         # (the usual set_project() choke point only fires when the whole
         # project is swapped — load/new/undo/redo — not for an in-place
         # settings change like this one).
@@ -770,6 +770,13 @@ class LogicScene(QGraphicsScene):
         super().mouseMoveEvent(event)
 
     def keyPressEvent(self, event):
+        # feat/text-formatting: a documentation block being edited in place
+        # (ui/canvas/doc_text_editor.py) owns the keyboard - Delete edits
+        # its text instead of deleting the selected blocks.
+        from logic_studio.ui.canvas.doc_text_editor import DocTextEditor
+        if isinstance(self.focusItem(), DocTextEditor):
+            super().keyPressEvent(event)
+            return
         if event.key() == Qt.Key_Delete:
             self.delete_selected_items()
             event.accept()
@@ -930,7 +937,7 @@ class LogicScene(QGraphicsScene):
         })
 
     def align_center_vertical(self):
-        """§2.1: "Wyśrodkuj w pionie" — aligns HORIZONTAL axes (same Y),
+        """§2.1: "Center vertically" — aligns HORIZONTAL axes (same Y),
         i.e. every block's own vertical center lands on the reference's."""
         def compute(blocks, ref):
             center_y = ref.pos().y() + ref.height / 2.0
@@ -938,7 +945,7 @@ class LogicScene(QGraphicsScene):
         self._run_align(compute)
 
     def align_center_horizontal(self):
-        """§2.1: "Wyśrodkuj w poziomie" — aligns VERTICAL axes (same X)."""
+        """§2.1: "Center horizontally" — aligns VERTICAL axes (same X)."""
         def compute(blocks, ref):
             center_x = ref.pos().x() + ref.width / 2.0
             return {b: (center_x - b.width / 2.0, b.pos().y()) for b in blocks if b is not ref}
@@ -995,7 +1002,7 @@ class LogicScene(QGraphicsScene):
         """feat/clipboard-and-align §4.1: sets every given BlockItem's
         logic_block.enabled to `enabled`, as exactly ONE undo entry
         regardless of how many blocks are given — the block's own
-        context-menu toggle ("Wyłącz blok"/"Włącz blok", block_item.py)
+        context-menu toggle ("Disable block"/"Enable block", block_item.py)
         calls this with a single-item list; the Edit menu's "Wyłącz/Włącz
         zaznaczone bloki" calls it with the whole selection. Both are
         force-to-a-direction, not a per-block flip, so a mixed-state
@@ -1036,19 +1043,19 @@ class LogicScene(QGraphicsScene):
 
 
 # feat/clipboard-and-align §2.1/§2.3: the 8 operations, shared between the
-# Edit menu ("Wyrównaj" submenu, main_window.py) and the canvas/block
+# Edit menu ("Align" submenu, main_window.py) and the canvas/block
 # context menu (block_item.py) so the list — and each operation's minimum
 # selection size — lives in exactly one place.
 ALIGN_OPERATIONS = [
-    ("Wyrównaj do lewej", "align_left", 2),
-    ("Wyrównaj do prawej", "align_right", 2),
-    ("Wyrównaj do góry", "align_top", 2),
-    ("Wyrównaj do dołu", "align_bottom", 2),
-    ("Wyśrodkuj w pionie", "align_center_vertical", 2),
-    ("Wyśrodkuj w poziomie", "align_center_horizontal", 2),
+    ("Align left", "align_left", 2),
+    ("Align right", "align_right", 2),
+    ("Align top", "align_top", 2),
+    ("Align bottom", "align_bottom", 2),
+    ("Center vertically", "align_center_vertical", 2),
+    ("Center horizontally", "align_center_horizontal", 2),
     (None, None, None),  # separator marker
-    ("Rozłóż równomiernie w poziomie", "distribute_horizontal", 3),
-    ("Rozłóż równomiernie w pionie", "distribute_vertical", 3),
+    ("Distribute horizontally", "distribute_horizontal", 3),
+    ("Distribute vertically", "distribute_vertical", 3),
 ]
 
 

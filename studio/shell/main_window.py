@@ -27,7 +27,7 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
 """
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSettings, QSize, QTimer
+from PySide6.QtCore import Qt, QElapsedTimer, QEventLoop, QSettings, QSize, QTimer
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
@@ -492,8 +492,14 @@ class StudioMainWindow(QMainWindow):
         tree.setItemDelegate(_TreeRowHeightDelegate(tree))
 
         style = self.style()
-        icon_screens = style.standardIcon(QStyle.StandardPixmap.SP_DesktopIcon)
-        icon_logic = style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        # The two DEPARTMENT icons. These were Qt standard icons - a
+        # desktop and a detailed-list-view - which said "a computer" and
+        # "a list", and told a user nothing about what either department
+        # holds. Both are now drawn in Studio's own set: an AND gate for
+        # LOGIKA and a fragment of a one-line diagram for SCHEMAT
+        # SYNOPTYCZNY, i.e. a picture of the thing itself.
+        icon_screens = icons.icon("synoptic")
+        icon_logic = icons.icon("logic")
         # Task "Studio: wyostrzenie stylu" Problem 3 - each inactive
         # branch gets a DIMMED version of the icon its own future active
         # counterpart would plausibly use (nav_tree.py's convention:
@@ -693,7 +699,15 @@ class StudioMainWindow(QMainWindow):
         self.act_shared_save_as.setEnabled(has_editor)
         self.act_shared_undo.setEnabled(has_editor and can_undo)
         self.act_shared_redo.setEnabled(has_editor and can_redo)
-        self.act_shared_help.setEnabled(has_editor)
+        # Pomoc is NOT an editor command and must not be greyed out with
+        # the rest of them. It used to be wired to has_editor like its
+        # neighbours, which left it dead (and, being disabled, drawn as
+        # a washed-out grey disc instead of its own blue "?" - the icon
+        # looked broken, which is how this was noticed) on a freshly
+        # started Studio, with no editor open: precisely the moment a
+        # user is most likely to reach for help. _help_topics() below
+        # now always has somewhere to go, so this is always live.
+        self.act_shared_help.setEnabled(True)
 
     def _shared_new(self):
         if self._active == _TREE_ITEM_LOGIC:
@@ -812,6 +826,30 @@ class StudioMainWindow(QMainWindow):
             self._set_shared_toolbar_enabled(False, False, False)
             self._set_core_toolbar_enabled(False, False, False)
 
+    def _apply_synoptic_mode_checks(self, state):
+        """Ticks the Synoptic toolbar's mode buttons (menus.py's
+        synoptic_mode_actions) from the state bridge: the armed drawing
+        tool, and the medium, wire style and routing a new wire gets."""
+        actions = getattr(self, "synoptic_mode_actions", None) or {}
+        frame = state.get("drawingFrame")
+        wanted = {
+            "wire": bool(state.get("drawingWire")),
+            "frame": frame == "PLAIN",
+            "building": frame == "BUILDING",
+        }
+        for key in ("medium", "style", "routing"):
+            value = state.get({"medium": "drawingMedium", "style": "drawingStyle", "routing": "wireRoutingMode"}[key])
+            for action_key in actions:
+                if action_key.startswith(key + ":"):
+                    wanted[action_key] = action_key == f"{key}:{value}"
+        for action_key, action in actions.items():
+            try:
+                if action.isChecked() != wanted.get(action_key, False):
+                    action.setChecked(wanted.get(action_key, False))
+            except RuntimeError:
+                # The toolbar was rebuilt and this action died with it.
+                continue
+
     def _apply_synoptic_toolbar_state(self, state):
         # Guards against a reply arriving after the user has already
         # switched away from Screens (runJavaScript's callback is
@@ -828,6 +866,7 @@ class StudioMainWindow(QMainWindow):
         self._set_shared_toolbar_enabled(
             bool(state.get("isDirty")), bool(state.get("canUndo")), bool(state.get("canRedo"))
         )
+        self._apply_synoptic_mode_checks(state)
         # hasSelection covers Copy/Delete honestly. Paste has no
         # equivalent signal in the read-only bridge (Blocker B's own
         # approved scope stopped at canUndo/canRedo/isDirty/
@@ -858,7 +897,11 @@ class StudioMainWindow(QMainWindow):
         self.act_view_reset_zoom.setEnabled(is_logic)
         self.act_view_grid.setEnabled(is_logic)
         self.act_view_snap.setEnabled(is_any)
-        self.act_menu_help_topics.setEnabled(is_any)
+        # Same reasoning as act_shared_help in _set_shared_toolbar_
+        # enabled(): Pomoc always has a destination, so the menu entry
+        # for it is never disabled either - the toolbar button and the
+        # menu item run the same handler and must agree.
+        self.act_menu_help_topics.setEnabled(True)
 
     def _view_zoom_in(self):
         if self._active == _TREE_ITEM_LOGIC:
@@ -905,10 +948,18 @@ class StudioMainWindow(QMainWindow):
             )
 
     def _help_topics(self):
+        """The active editor's own help topics or, when no editor is
+        open, Studio's own Pomoc section - the same one the tree's Pomoc
+        leaf opens. Without that last branch this method did nothing at
+        all outside Logika/Schemat synoptyczny, which is why its two
+        entry points had to be disabled there; now that it always lands
+        somewhere, both stay enabled."""
         if self._active == _TREE_ITEM_LOGIC:
             self._logic_panel.main_window().act_help.trigger()
         elif self._active == _TREE_ITEM_SCREENS:
             self._synoptic_panel.trigger_menu_item("Help Topics")
+        else:
+            self._open_help()
 
     def _open_contextual_help(self):
         """Task point 5.3 - F1 opens the help TOPIC for whatever
@@ -1086,16 +1137,102 @@ class StudioMainWindow(QMainWindow):
         elif kind == "inactive":
             self._open_inactive(key)
 
+    # ------------------------------------------------------------------
+    # Editor panels - construction and startup warm-up
+    # ------------------------------------------------------------------
+
+    def _ensure_synoptic_panel(self) -> bool:
+        """Builds the Synoptic panel if it does not exist yet; returns
+        True only if THIS call built it. The single place that knows
+        how, called both by _open_screens() (a real click) and by
+        preload_editors() (the startup warm-up), so the two can never
+        drift - the page_ready connection in particular is exactly the
+        kind of line that goes missing from a second copy."""
+        if self._synoptic_panel is not None:
+            return False
+        from studio.shell.synoptic_panel import SynopticPanel
+        self._synoptic_panel = SynopticPanel()
+        self._synoptic_panel.page_ready.connect(self._sync_device_registry_with_synoptic)
+        return True
+
+    def _ensure_logic_panel(self) -> bool:
+        """Same contract as _ensure_synoptic_panel() above."""
+        if self._logic_panel is not None:
+            return False
+        from studio.shell.logic_panel import LogicPanel
+        self._logic_panel = LogicPanel()
+        return True
+
+    def preload_editors(self, on_progress=None, timeout_ms: int = 15000) -> None:
+        """Builds BOTH editor panels up front, at startup, instead of on
+        the first click that happens to need one.
+
+        Why: lazily built panels meant the first visit to Logika or
+        Schemat synoptyczny paid the whole construction cost right
+        then, in front of the user. Synoptic's is the visible one - it
+        starts a loopback HTTP server and a QWebEngineView that needs
+        0.35-1.05s to load, with its own loading page on screen
+        meanwhile - and watching an editor assemble itself on arrival
+        reads as the application reloading. Built here instead, while
+        the splash is still up, both panels are simply there the first
+        time they are clicked.
+
+        The trade-off, stated plainly because it reverses an earlier
+        deliberate decision (see SynopticPanel's own docstring): a
+        session that never opens the screen editor now pays Chromium's
+        startup and memory cost anyway. That is the price of the first
+        click being instant.
+
+        `on_progress`, if given, is called with a short human-readable
+        string before each step - studio/main.py puts it on the splash.
+
+        Never raises. SynopticPanel already turns its own build
+        failures into an error page rather than an exception, and the
+        wait below is bounded by `timeout_ms` AND ends the moment the
+        page stops being pending, so neither a failed build nor a page
+        that never loads can hang startup."""
+        if on_progress is not None:
+            on_progress(tr("splash.loading_logic"))
+        self._ensure_logic_panel()
+
+        if on_progress is not None:
+            on_progress(tr("splash.loading_synoptic"))
+        self._ensure_synoptic_panel()
+
+        # A local QEventLoop is what actually lets the web view load
+        # while the splash is still up: the view needs a running event
+        # loop and QApplication.exec() has not started yet at this
+        # point. Polling is-it-still-pending (rather than just waiting
+        # on page_ready) is what makes a FAILED build cost nothing -
+        # that path never emits page_ready and would otherwise sit here
+        # for the full timeout.
+        if self._synoptic_panel.is_page_pending():
+            loop = QEventLoop()
+            elapsed = QElapsedTimer()
+            elapsed.start()
+            poll = QTimer()
+            poll.setInterval(50)
+            poll.timeout.connect(
+                lambda: (
+                    loop.quit()
+                    if not self._synoptic_panel.is_page_pending() or elapsed.hasExpired(timeout_ms)
+                    else None
+                )
+            )
+            poll.start()
+            loop.exec()
+            poll.stop()
+
+        if on_progress is not None:
+            on_progress(tr("splash.ready"))
+
     def _open_screens(self):
-        if self._synoptic_panel is None:
-            from studio.shell.synoptic_panel import SynopticPanel
-            self._synoptic_panel = SynopticPanel()
-            self._synoptic_panel.page_ready.connect(self._sync_device_registry_with_synoptic)
-        else:
-            # Already loaded from an earlier visit - page_ready won't
-            # fire again, so run the sync directly (query_device_
-            # registry() itself no-ops safely if the page somehow isn't
-            # ready, same guard as every other bridge call).
+        if not self._ensure_synoptic_panel():
+            # Already built - by an earlier visit or by preload_editors()
+            # at startup - so page_ready has either already fired or
+            # will fire on its own; run the sync directly here
+            # (query_device_registry() no-ops safely if the page isn't
+            # ready yet, same guard as every other bridge call).
             self._sync_device_registry_with_synoptic()
         self._show_aspect_container(
             _TREE_ITEM_SCREENS, self._synoptic_panel, build_synoptic_context_toolbar, self._synoptic_panel
@@ -1159,9 +1296,7 @@ class StudioMainWindow(QMainWindow):
         self._synoptic_panel.query_device_registry(_after_pull)
 
     def _open_logic(self):
-        if self._logic_panel is None:
-            from studio.shell.logic_panel import LogicPanel
-            self._logic_panel = LogicPanel()
+        self._ensure_logic_panel()
         # Task "jedno źródło listy kart": cheap even when nothing changed
         # (sync_cards_from_studio() own list-equality guard) - covers the
         # case this is the first-ever open (the constructor above never

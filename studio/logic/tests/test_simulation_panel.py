@@ -309,7 +309,7 @@ def test_card_filter_visible_and_populated_with_multiple_cards(qsettings):
 
     assert panel.card_filter.isHidden() is False
     labels = [panel.card_filter.itemText(i) for i in range(panel.card_filter.count())]
-    assert labels == ["Wszystkie karty", "ELA01", "ELA02"]
+    assert labels == ["All cards", "ELA01", "ELA02"]
 
 def test_selecting_a_card_shows_only_its_own_groups(qsettings):
     _app()

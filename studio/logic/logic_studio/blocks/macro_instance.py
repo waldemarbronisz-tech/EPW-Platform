@@ -10,7 +10,7 @@ prefix (core/macros.py::macro_def_id()) instead.
 from logic_studio.blocks.base import BaseLogicBlock
 from logic_studio.blocks.pin import Pin
 
-CATEGORY = "Makrobloki"
+CATEGORY = "Macros"
 
 
 class MacroInstanceBlock(BaseLogicBlock):
@@ -23,9 +23,9 @@ class MacroInstanceBlock(BaseLogicBlock):
     # drift from it.
     _TRANSIENT_FIELDS = BaseLogicBlock._TRANSIENT_FIELDS + ("def_id",)
 
-    def __init__(self, def_id: str = "", default_name: str = "Makroblok"):
+    def __init__(self, def_id: str = "", default_name: str = "Macro"):
         type_id = f"macro.{def_id}" if def_id else "macro."
-        super().__init__(type_id, default_name, CATEGORY, "Blok użytkownika (makroblok)")
+        super().__init__(type_id, default_name, CATEGORY, "User block (macro)")
         self.def_id = def_id
         self.color = "#6A4FB3"  # distinct from every built-in category, matches system.signal's precedent of a category-specific color
         self.width = 140.0
@@ -35,7 +35,7 @@ class MacroInstanceBlock(BaseLogicBlock):
         """Builds this instance's ACTUAL pins from a macro definition dict
         (core/macros.py's shape) — called once, right after construction,
         by whichever code path just created a genuinely new instance
-        ("Utwórz makroblok" / placing an existing one from the library),
+        ("Create macro" / placing an existing one from the library),
         or is deserializing an old one (see deserialize() below — that
         path builds untyped placeholder pins instead, sized only from the
         instance's OWN saved data, deliberately never consulting the live

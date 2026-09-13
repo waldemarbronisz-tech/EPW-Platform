@@ -5,7 +5,7 @@ characters nobody reads or reads out over the phone). e²TANGO shows
 something like "x181" instead — a category letter plus a running number.
 
 Format: <letter><n>, e.g. "g12", "i3", "o7". The letter is derived from the
-block's own type_id (or, for the generic "Elementy Analogowe" library
+block's own type_id (or, for the generic "Analog" library
 category, from that category — comparators/math/analog-processing blocks
 all share it and there's no shorter, equally clear split).
 
@@ -54,10 +54,10 @@ _PREFIX_BY_TYPE_ID = {
 }
 
 # Fallback lookup by library category, for type_ids not listed above.
-# "Elementy Analogowe" spans analog_processing.py, comparators.py and
+# "Analog" spans analog_processing.py, comparators.py and
 # math_blocks.py — different modules, same library category, same letter.
 _PREFIX_BY_CATEGORY = {
-    "Elementy Analogowe": "a",
+    "Analog": "a",
 }
 
 DEFAULT_PREFIX = "x"  # everything else: constants, system signals, buttons, LEDs, ...

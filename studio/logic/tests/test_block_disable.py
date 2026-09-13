@@ -264,10 +264,10 @@ def test_status_bar_shows_disabled_block_counter(qsettings):
     assert window.lbl_disabled_blocks.text() == ""
 
     window.scene.set_blocks_enabled([items[0]], False)
-    assert window.lbl_disabled_blocks.text() == "Wyłączone bloki: 1"
+    assert window.lbl_disabled_blocks.text() == "Disabled blocks: 1"
 
     window.scene.set_blocks_enabled([items[1]], False)
-    assert window.lbl_disabled_blocks.text() == "Wyłączone bloki: 2"
+    assert window.lbl_disabled_blocks.text() == "Disabled blocks: 2"
 
     window.scene.set_blocks_enabled(items, True)
     assert window.lbl_disabled_blocks.text() == ""
@@ -281,7 +281,7 @@ def test_undo_after_disabling_restores_the_status_bar_counter(qsettings):
     item = _block_item(window, window.project.blocks[0])
 
     window.scene.set_blocks_enabled([item], False)
-    assert window.lbl_disabled_blocks.text() == "Wyłączone bloki: 1"
+    assert window.lbl_disabled_blocks.text() == "Disabled blocks: 1"
 
     window._undo()
     assert window.lbl_disabled_blocks.text() == ""

@@ -382,7 +382,7 @@ def test_expand_project_detects_direct_self_reference_cycle():
 
     expanded, _wire_scopes, errors = expand_project(p)
     assert expanded == []
-    assert any("cykl" in e.lower() for e in errors)
+    assert any("cycle" in e.lower() for e in errors)
 
 def test_expand_project_supports_nesting_a_macro_inside_another_macro():
     """A macro definition ("WrapsA") whose OWN internal blocks include an
@@ -557,7 +557,7 @@ def test_expand_project_errors_when_boundary_anchors_directly_on_a_nested_instan
 
     assert expanded == []
     assert len(errors) >= 1
-    assert any("zagnieżdżon" in e for e in errors)
+    assert any("nested" in e for e in errors)
 
 def test_compile_reports_the_same_error_instead_of_silently_dropping_the_wire():
     """Same shape as above, through Compiler.compile() — must fail

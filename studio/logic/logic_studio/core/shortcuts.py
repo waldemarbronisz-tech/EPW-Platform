@@ -74,14 +74,14 @@ def shortcuts_markdown() -> str:
     """§3.3: the actual help TOPIC content — a table, generated fresh
     every time this is called."""
     rows = extract_shortcuts()
-    lines = ["# Skróty klawiszowe", ""]
+    lines = ["# Keyboard shortcuts", ""]
     if not rows:
-        lines.append("*(Brak zarejestrowanych skrótów.)*")
+        lines.append("*(No shortcuts registered.)*")
         return "\n".join(lines) + "\n"
-    lines.append("| Polecenie | Skrót |")
+    lines.append("| Command | Shortcut |")
     lines.append("|---|---|")
     for text, shortcut in rows:
         lines.append(f"| {text} | `{shortcut}` |")
     lines.append("")
-    lines.append("Dodatkowo: **F1** otwiera pomoc (na opisie zaznaczonego bloku, jeśli coś jest zaznaczone).")
+    lines.append("Also: **F1** opens help (on the description of the selected block, if something is selected).")
     return "\n".join(lines) + "\n"

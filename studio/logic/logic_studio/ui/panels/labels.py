@@ -28,11 +28,11 @@ def _rgb_style(prop, qcolor):
 class LabelsPanel(QWidget):
     """§A5: Etykieta | Typ | Źródło | Odbiorników | Stan — one row per
     network node compiler/label_merge.py's own grouping produces.
-    Double-click the "Etykieta" cell to rename the whole node (every
+    Double-click the "Label" cell to rename the whole node (every
     wire sharing the old label, via the SAME LabelNameDialog every
     other label-editing action already uses); double-click anywhere
     else in the row jumps to the resolved source, same as SignalsPanel's
-    own "Pokaż użycia sygnału"."""
+    own "Show signal uses"."""
 
     changed = Signal()
 
@@ -45,7 +45,7 @@ class LabelsPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["Etykieta", "Typ", "Źródło", "Odbiorników", "Stan"])
+        self.table.setHorizontalHeaderLabels(["Label", "Type", "Source", "Receivers", "State"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -62,7 +62,7 @@ class LabelsPanel(QWidget):
         layout.addWidget(self.table)
 
         self.empty_label = QLabel(
-            'Brak etykiet w projekcie — nadaj etykietę przewodowi lub "Dodaj odnośnik...".'
+            'No labels in the project — give a wire a label or use "Add reference...".'
         )
         self.empty_label.setWordWrap(True)
         self.empty_label.setAlignment(Qt.AlignCenter)
@@ -133,7 +133,7 @@ class LabelsPanel(QWidget):
 
         self.table.setItem(row, _COL_RECEIVERS, QTableWidgetItem(str(info["receiver_count"])))
 
-        state_item = QTableWidgetItem("Błąd" if info["has_error"] else "OK")
+        state_item = QTableWidgetItem("Error" if info["has_error"] else "OK")
         if info["has_error"]:
             for col in range(5):
                 item = self.table.item(row, col) or state_item
@@ -178,7 +178,7 @@ class LabelsPanel(QWidget):
         if not matching_wires:
             return
         window = logic_main_window(self)
-        text, similar = prompt_for_label(window, self.project, initial=matching_wires[0].label, title="Zmień nazwę etykiety")
+        text, similar = prompt_for_label(window, self.project, initial=matching_wires[0].label, title="Rename label")
         if text is None or text == matching_wires[0].label:
             return
 
@@ -188,7 +188,7 @@ class LabelsPanel(QWidget):
         if hasattr(window, "set_dirty"):
             window.set_dirty()
         if similar and hasattr(window, "statusBar"):
-            window.statusBar().showMessage(f"Podobna etykieta w projekcie: {similar}", 5000)
+            window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
 
         self._rebuild()
         self.changed.emit()

@@ -184,6 +184,6 @@ def test_submenu_is_always_present_in_the_real_context_menu_builder(qsettings):
 
     menu = QMenu()
     submenu = item.populate_duplicate_reference_menu(menu)
-    assert submenu.title() == "Inne bloki tego samego sygnału"
+    assert submenu.title() == "Other blocks with the same signal"
     assert submenu.menuAction().isEnabled() is False  # a gate has no signal reference at all
     _close(window)

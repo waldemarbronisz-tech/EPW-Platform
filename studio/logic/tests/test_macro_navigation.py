@@ -211,7 +211,7 @@ def test_nested_macro_breadcrumb_and_exit_commits_both_levels(qsettings):
         w.text() for w in window.breadcrumb_bar.findChildren(QPushButton)
         if w is not window.breadcrumb_bar._pins_button
     ]
-    assert button_texts == ["Główny", "MojMakro"]
+    assert button_texts == ["Main", "MojMakro"]
     current_labels = [w.text() for w in window.breadcrumb_bar.findChildren(QLabel) if "bold" in w.styleSheet()]
     assert current_labels == ["Wewnetrzny"]
 

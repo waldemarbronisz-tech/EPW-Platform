@@ -7,6 +7,8 @@
 import type { SynopticObject, SynopticConnection } from '../store';
 import type { MeterElement } from '../meter/MeterElement';
 import { computeMeterHeight } from '../meter/MeterElement';
+import type { WallElement } from '../elements/WallElement';
+import { drawnWallHeight } from '../elements/WallElement';
 
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 4;
@@ -56,6 +58,42 @@ export function computeContentBounds(objects: SynopticObject[], meters: MeterEle
   });
 
   return found ? { minX, minY, maxX, maxY } : null;
+}
+
+/**
+ * computeContentBounds plus the walls - what "fit the plan" has to fit.
+ *
+ * A floor plan is mostly walls, and a fit that ignored them zoomed in on
+ * the lamps and cut the room in half. Each wall counts with its own
+ * thickness and with the height it is DRAWN at, since the foreshortened
+ * wall body rises above its footprint on screen (WallElement.ts).
+ */
+export function computePlanBounds(
+  objects: SynopticObject[],
+  meters: MeterElement[],
+  connections: SynopticConnection[],
+  walls: WallElement[]
+): Bounds | null {
+  let bounds = computeContentBounds(objects, meters, connections);
+  for (const wall of walls) {
+    const half = (wall.thickness || 0) / 2;
+    const lift = drawnWallHeight(wall.height);
+    const box = {
+      minX: Math.min(wall.from.x, wall.to.x) - half,
+      minY: Math.min(wall.from.y, wall.to.y) - half - lift,
+      maxX: Math.max(wall.from.x, wall.to.x) + half,
+      maxY: Math.max(wall.from.y, wall.to.y) + half,
+    };
+    bounds = bounds
+      ? {
+        minX: Math.min(bounds.minX, box.minX),
+        minY: Math.min(bounds.minY, box.minY),
+        maxX: Math.max(bounds.maxX, box.maxX),
+        maxY: Math.max(bounds.maxY, box.maxY),
+      }
+      : box;
+  }
+  return bounds;
 }
 
 export interface View {

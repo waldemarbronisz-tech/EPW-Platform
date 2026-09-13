@@ -177,7 +177,7 @@ def test_pasting_a_do_block_with_a_used_address_warns_and_keeps_the_address(qset
 
     pasted = window.project.blocks[-1]
     assert pasted.properties["Address"] == "ADA01.DO.1"  # never silently cleared
-    assert "powielonymi adresami" in window.statusBar().currentMessage()
+    assert "duplicated addresses" in window.statusBar().currentMessage()
     _close(window)
 
 def test_pasting_a_do_block_with_a_free_address_does_not_warn(qsettings):

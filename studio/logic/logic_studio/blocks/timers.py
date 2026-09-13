@@ -5,13 +5,13 @@ import time
 
 class TimerBase(BaseLogicBlock):
     PIN_DESCRIPTIONS = {
-        "IN": "Wejście uruchamiające/warunkujące odliczanie czasu.",
-        "PT": "Nastawa czasu w milisekundach — jeśli podłączona, nadpisuje właściwość Preset (ms).",
-        "Q": "Wyjście czasowe timera (znaczenie zależy od typu — TON/TOF/TP).",
-        "ET": "Czas, jaki upłynął od uruchomienia bieżącego odliczania, w milisekundach.",
+        "IN": "Input that starts/enables the timing.",
+        "PT": "Time preset in milliseconds — when connected, overrides the Preset (ms) property.",
+        "Q": "Timer output (meaning depends on the type — TON/TOF/TP).",
+        "ET": "Time elapsed since the current timing started, in milliseconds.",
     }
     PROPERTY_DESCRIPTIONS = {
-        "Preset (ms)": "Domyślna nastawa czasu w milisekundach, używana gdy wejście PT nie jest podłączone.",
+        "Preset (ms)": "Default time preset in milliseconds, used when the PT input is not connected.",
     }
     PROPERTY_UNITS = {"Preset (ms)": "ms"}
 
@@ -52,7 +52,7 @@ class TimerBase(BaseLogicBlock):
 
 @BlockRegistry.register
 class TON(TimerBase):
-    def __init__(self, type_id="timer.ton", default_name="TON", category="Timery", description="Opóźnienie załączenia (TON) — Q włącza się PT po tym, jak IN stanie się prawdą; wyłącza się natychmiast, gdy IN wróci do fałszu."):
+    def __init__(self, type_id="timer.ton", default_name="TON", category="Timers", description="On-delay (TON) — Q turns on PT after IN becomes true; turns off immediately when IN returns to false."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["opóźnienie załączenia", "zwłoka"]
 
@@ -78,7 +78,7 @@ class TON(TimerBase):
 
 @BlockRegistry.register
 class TOF(TimerBase):
-    def __init__(self, type_id="timer.tof", default_name="TOF", category="Timery", description="Opóźnienie wyłączenia (TOF) — Q włącza się natychmiast z IN, ale wyłącza się dopiero PT po tym, jak IN wróci do fałszu."):
+    def __init__(self, type_id="timer.tof", default_name="TOF", category="Timers", description="Off-delay (TOF) — Q turns on immediately with IN, but turns off only PT after IN returns to false."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["opóźnienie wyłączenia"]
         self._q_state = False
@@ -127,7 +127,7 @@ class TOF(TimerBase):
 
 @BlockRegistry.register
 class TP(TimerBase):
-    def __init__(self, type_id="timer.tp", default_name="TP", category="Timery", description="Impuls czasowy (TP) — zbocze narastające na IN wyzwala impuls Q o stałej długości PT, niezależnie od dalszego zachowania IN."):
+    def __init__(self, type_id="timer.tp", default_name="TP", category="Timers", description="Pulse timer (TP) — a rising edge on IN fires a Q pulse of fixed length PT, regardless of what IN does next."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["impuls", "monostabilny"]
 

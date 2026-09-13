@@ -4,8 +4,8 @@ from logic_studio.blocks.registry import BlockRegistry
 
 class EdgeBase(BaseLogicBlock):
     PIN_DESCRIPTIONS = {
-        "In": "Sygnał obserwowany pod kątem zmiany stanu.",
-        "Out": "Impuls jednego cyklu skanu przy wykryciu zbocza/zmiany.",
+        "In": "Signal watched for a change of state.",
+        "Out": "One-scan pulse when an edge/change is detected.",
     }
 
     def __init__(self, type_id, default_name, category, description):
@@ -25,7 +25,7 @@ class EdgeBase(BaseLogicBlock):
 
 @BlockRegistry.register
 class RTrigBlock(EdgeBase):
-    def __init__(self, type_id="edge.rtrig", default_name="R_TRIG", category="Detekcja zboczy", description="Wykrywa zbocze narastające (0→1) na wejściu — impuls na jeden cykl skanu."):
+    def __init__(self, type_id="edge.rtrig", default_name="R_TRIG", category="Edge detection", description="Detects a rising edge (0→1) on the input — a one-scan pulse."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["zbocze narastające"]
 
@@ -36,7 +36,7 @@ class RTrigBlock(EdgeBase):
 
 @BlockRegistry.register
 class FTrigBlock(EdgeBase):
-    def __init__(self, type_id="edge.ftrig", default_name="F_TRIG", category="Detekcja zboczy", description="Wykrywa zbocze opadające (1→0) na wejściu — impuls na jeden cykl skanu."):
+    def __init__(self, type_id="edge.ftrig", default_name="F_TRIG", category="Edge detection", description="Detects a falling edge (1→0) on the input — a one-scan pulse."):
         super().__init__(type_id, default_name, category, description)
         self.aliases = ["zbocze opadające"]
         self._last_in = True # Assume stable high if evaluating
@@ -51,7 +51,7 @@ class FTrigBlock(EdgeBase):
 
 @BlockRegistry.register
 class ChangeBlock(EdgeBase):
-    def __init__(self, type_id="edge.change", default_name="CHANGE", category="Detekcja zboczy", description="Wykrywa dowolną zmianę stanu wejścia (0→1 lub 1→0) — impuls na jeden cykl skanu."):
+    def __init__(self, type_id="edge.change", default_name="CHANGE", category="Edge detection", description="Detects any change of the input state (0→1 or 1→0) — a one-scan pulse."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):

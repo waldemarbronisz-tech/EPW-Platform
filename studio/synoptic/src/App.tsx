@@ -1,10 +1,13 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
+import { FormatBar } from './components/FormatBar';
+import { ScreenTabs } from './components/ScreenTabs';
+import { SecondaryPanel } from './components/SecondaryPanel';
 import { Toolbox } from './components/Toolbox';
-import { Canvas } from './components/Canvas';
+import { ScreenWorkspace } from './components/ScreenWorkspace';
+import { CommandDialog } from './components/CommandDialog';
 import { PropertyInspector } from './components/PropertyInspector';
-import { MessagesPanel } from './components/MessagesPanel';
 import { StatusBar } from './components/StatusBar';
 import { useStore } from './store';
 import { validateDeviceBindings } from './project/DeviceBindingValidation';
@@ -12,15 +15,8 @@ import { syncObjectDesignationsAfterDeviceSave, formatDeviceSavedMessage, create
 import { getContextualHelpTopic } from './help/HelpContextResolver';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
-// Internal-audit fix: a full-screen preview only ever mounted from the
-// menu bar's "Style Preview" action - lazy so its code isn't part of the
-// bundle every session pays for on first load.
-const ScadaStylePreview = lazy(() =>
-  import('./components/ScadaStylePreview').then(m => ({ default: m.ScadaStylePreview }))
-);
-
-// feat/device-list-ui commit 1: same lazy-on-first-open convention as
-// ScadaStylePreview above.
+// feat/device-list-ui commit 1: lazy on first open, so the dialog's code
+// isn't part of the bundle every session pays for on first load.
 const DeviceRegistriesDialog = lazy(() =>
   import('./components/DeviceRegistriesDialog').then(m => ({ default: m.DeviceRegistriesDialog }))
 );
@@ -49,7 +45,6 @@ const DeviceFormDialog = lazy(() =>
 
 function App() {
   const { projectName, fileName, isDirty, objects, devices, deviceFormRequest, deviceCreateOrAssignRequest } = useStore();
-  const [showScadaPreview, setShowScadaPreview] = useState(false);
   const [showDeviceRegistries, setShowDeviceRegistries] = useState(false);
   const [showDeviceList, setShowDeviceList] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -138,7 +133,6 @@ function App() {
   return (
     <div className="app-container">
       <MenuBar
-        onOpenScadaPreview={() => setShowScadaPreview(true)}
         onOpenDeviceRegistries={() => setShowDeviceRegistries(true)}
         onOpenDeviceList={() => setShowDeviceList(true)}
         onOpenHelp={() => openHelp(getContextualHelpTopic(useStore.getState()))}
@@ -146,11 +140,6 @@ function App() {
       {showHelp && (
         <Suspense fallback={null}>
           <HelpWindow request={helpRequest} onClose={() => setShowHelp(false)} />
-        </Suspense>
-      )}
-      {showScadaPreview && (
-        <Suspense fallback={null}>
-          <ScadaStylePreview onClose={() => setShowScadaPreview(false)} />
         </Suspense>
       )}
       {showDeviceRegistries && (
@@ -230,6 +219,16 @@ function App() {
         </Suspense>
       )}
       <Toolbar />
+      {/* feat/text-formatting: text formatting, grouped as in a word
+          processor. Its own class, not .toolbar, so Studio (which hides
+          the drawing toolbar in favour of its own) keeps it visible. */}
+      <FormatBar />
+
+      {/* feat/workspace: the controller's own "czy zalaczyc?" window.
+          Rendered here, above every panel, because a command
+          confirmation that can be hidden behind something is not a
+          confirmation. It draws nothing until a command is requested. */}
+      <CommandDialog />
 
       <div className="main-workspace">
         <PanelGroup direction="horizontal" autoSaveId="epw-layout-main">
@@ -242,13 +241,30 @@ function App() {
           <Panel defaultSize={60} minSize={30} className="panel-container">
             <PanelGroup direction="vertical" autoSaveId="epw-layout-center">
               <Panel defaultSize={80} minSize={30} className="panel-container">
-                <Canvas />
+                {/* Directly above the canvas, not above the whole
+                    workspace: these tabs switch what the CANVAS shows,
+                    while the library and properties panels beside it are
+                    project-wide and do not change with the screen. */}
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <ScreenTabs />
+                  {/* feat/workspace: the whole drawing area, holding as
+                      many screens as the Widok menu has put on show -
+                      one of them the real editor, the rest monitors.
+                      The grey band that used to sit unused under a
+                      single canvas is where they go. */}
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    <ScreenWorkspace />
+                  </div>
+                </div>
               </Panel>
 
               <PanelResizeHandle className="resize-handle-horizontal" />
 
               <Panel defaultSize={20} minSize={10} className="panel-container">
-                <MessagesPanel />
+                {/* No longer only the message log - it can show a second
+                    screen instead, which is what makes watching one room
+                    while editing another possible. */}
+                <SecondaryPanel />
               </Panel>
             </PanelGroup>
           </Panel>

@@ -40,7 +40,6 @@ import panelChromeSource from '../components/PanelChrome.tsx?raw';
 import meterElementNodeSource from '../components/MeterElementNode.tsx?raw';
 import signalPanelElementNodeSource from '../components/SignalPanelElementNode.tsx?raw';
 import objectLabelRendererSource from '../components/ObjectLabelRenderer.tsx?raw';
-import scadaStylePreviewSource from '../components/ScadaStylePreview.tsx?raw';
 import propertyInspectorSource from '../components/PropertyInspector.tsx?raw';
 import meterWizardDialogSource from '../components/MeterWizardDialog.tsx?raw';
 import signalPanelWizardDialogSource from '../components/SignalPanelWizardDialog.tsx?raw';
@@ -89,7 +88,6 @@ describe('No hard-coded font name or size outside ScadaTheme (commit 1e)', () =>
     'MeterElementNode.tsx': meterElementNodeSource,
     'SignalPanelElementNode.tsx': signalPanelElementNodeSource,
     'ObjectLabelRenderer.tsx': objectLabelRendererSource,
-    'ScadaStylePreview.tsx': scadaStylePreviewSource,
     'PropertyInspector.tsx': propertyInspectorSource,
     'MeterWizardDialog.tsx': meterWizardDialogSource,
     'SignalPanelWizardDialog.tsx': signalPanelWizardDialogSource,

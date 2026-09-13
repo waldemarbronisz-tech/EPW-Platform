@@ -19,7 +19,7 @@ register_builtin_blocks()
 
 
 def test_library_tree_lists_every_registered_block(qsettings):
-    """Regression: an earlier draft of the tree excluded "Dokumentacja" the
+    """Regression: an earlier draft of the tree excluded "Documentation" the
     same way the compiler does, silently dropping Text/Note/Section from the
     library even though they're placeable canvas annotations."""
     _app()
@@ -29,7 +29,7 @@ def test_library_tree_lists_every_registered_block(qsettings):
     total = 0
     for i in range(panel.tree.topLevelItemCount()):
         item = panel.tree.topLevelItem(i)
-        if item.text(0) != "Ostatnio używane":
+        if item.text(0) != "Recently used":
             total += item.childCount()
 
     expected = sum(len(BlockRegistry.get_blocks_in_category(c)) for c in BlockRegistry.get_categories())
@@ -135,11 +135,11 @@ def test_expand_state_persisted_across_instances(qsettings):
     from logic_studio.ui.panels.library import LibraryPanel
 
     panel1 = LibraryPanel(settings=qsettings)
-    root = panel1._category_roots["Timery"]
+    root = panel1._category_roots["Timers"]
     root.setExpanded(False)  # triggers itemCollapsed -> persisted
 
     panel2 = LibraryPanel(settings=qsettings)
-    assert panel2._category_roots["Timery"].isExpanded() is False
+    assert panel2._category_roots["Timers"].isExpanded() is False
 
 def test_drag_threshold_is_four_pixels():
     from logic_studio.ui.panels.library import DRAG_THRESHOLD_PX
@@ -201,7 +201,7 @@ def test_preview_panel_canvas_selection_wins_over_library():
     assert panel.type_id_label.text() == "logic.or"
 
     panel.clear_canvas_selection()
-    assert panel.name_label.text() == "Brak zaznaczenia"
+    assert panel.name_label.text() == "Nothing selected"
 
 def test_preview_panel_highlights_safety_relevant_pins():
     _app()
@@ -218,7 +218,7 @@ def test_preview_panel_highlights_safety_relevant_pins():
     panel.show_block_instance(block)
 
     out_row = len(block.inputs)  # outputs listed after inputs
-    assert panel.pins_table.item(out_row, 3).text() == "istotne dla bezpieczeństwa"
+    assert panel.pins_table.item(out_row, 3).text() == "safety relevant"
 
 def test_doc_block_icon_renders():
     _app()
@@ -236,10 +236,10 @@ def test_dokumentacja_category_is_last_in_library_tree(qsettings):
 
     panel = LibraryPanel(settings=qsettings)
     names = [panel.tree.topLevelItem(i).text(0) for i in range(panel.tree.topLevelItemCount())]
-    assert "Dokumentacja" in names
+    assert "Documentation" in names
 
-    functional = [n for n in names if n != "Ostatnio używane" and "w przygotowaniu" not in n and n != "Dokumentacja"]
-    assert names.index("Dokumentacja") > max(names.index(n) for n in functional)
+    functional = [n for n in names if n != "Recently used" and "w przygotowaniu" not in n and n != "Documentation"]
+    assert names.index("Documentation") > max(names.index(n) for n in functional)
 
 def test_doc_search_alias_finds_all_three_doc_blocks(qsettings):
     _app()

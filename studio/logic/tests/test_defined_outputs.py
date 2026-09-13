@@ -23,13 +23,13 @@ register_builtin_blocks()
 
 
 def _every_executable_type_id():
-    """Every registered block type EXCEPT "Dokumentacja" -- those are
+    """Every registered block type EXCEPT "Documentation" -- those are
     non-executable (GraphBuilder excludes them from execution_order
     entirely, see compiler/graph.py) and have no evaluate() contract to
     check in the first place."""
     ids = []
     for category in BlockRegistry.get_categories():
-        if category == "Dokumentacja":
+        if category == "Documentation":
             continue
         ids.extend(BlockRegistry.get_blocks_in_category(category))
     return ids

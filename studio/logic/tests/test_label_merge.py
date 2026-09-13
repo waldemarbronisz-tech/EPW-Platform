@@ -327,7 +327,7 @@ def test_label_with_no_source_is_an_error():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    assert any("Orphan" in e and "nie ma źródła" in e for e in c.errors), c.errors
+    assert any("Orphan" in e and "has no source" in e for e in c.errors), c.errors
 
 def test_label_with_two_sources_is_an_error_naming_both_blocks():
     p = Project()
@@ -343,7 +343,7 @@ def test_label_with_two_sources_is_an_error_naming_both_blocks():
     c = Compiler(p)
     res = c.compile()
     assert res is None
-    matches = [e for e in c.errors if "TwoSources" in e and "więcej niż jedno źródło" in e]
+    matches = [e for e in c.errors if "TwoSources" in e and "more than one source" in e]
     assert len(matches) == 1
     assert di1.short_id in matches[0]
     assert di2.short_id in matches[0]
@@ -359,7 +359,7 @@ def test_label_with_source_but_no_receiver_is_a_warning_not_an_error():
     c = Compiler(p)
     res = c.compile()
     assert res is not None, c.errors
-    assert any("Unheard" in w and "nigdzie nie jest odbierany" in w for w in c.warnings), c.warnings
+    assert any("Unheard" in w and "not received anywhere" in w for w in c.warnings), c.warnings
 
 def test_incompatible_types_across_a_label_is_an_error_naming_the_label():
     """A REAL (non-Any) typed output feeding a REAL-typed input of a

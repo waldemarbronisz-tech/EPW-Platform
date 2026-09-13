@@ -1,3 +1,4 @@
+import { TextBoxSymbol } from './scada/TextBoxSymbol';
 import React from 'react';
 import { Group, Rect, Circle, Text } from 'react-konva';
 import { useStore } from '../store';
@@ -92,6 +93,18 @@ import { PressureSwitchSymbol } from './site/PressureSwitchSymbol';
 import { RainSensorSymbol } from './site/RainSensorSymbol';
 import { SprinklerHeadSymbol } from './site/SprinklerHeadSymbol';
 import { DripLineSymbol } from './site/DripLineSymbol';
+import { LuminaireSymbol } from './building/LuminaireSymbol';
+import { PendantLuminaireSymbol } from './building/PendantLuminaireSymbol';
+import { WallLuminaireSymbol } from './building/WallLuminaireSymbol';
+import { FluorescentLuminaireSymbol } from './building/FluorescentLuminaireSymbol';
+import { HalogenLuminaireSymbol } from './building/HalogenLuminaireSymbol';
+import { SocketOutletSymbol } from './building/SocketOutletSymbol';
+import { TableSymbol } from './building/TableSymbol';
+import { ChairSymbol } from './building/ChairSymbol';
+import { ShelfSymbol } from './building/ShelfSymbol';
+import { DoorSymbol } from './building/DoorSymbol';
+import { WindowSymbol } from './building/WindowSymbol';
+import { GateSymbol } from './building/GateSymbol';
 
 export interface SymbolProps {
   obj: SynopticObject;
@@ -125,7 +138,7 @@ export interface SymbolProps {
 export function symbolUsesTextField(type: string): boolean {
   if (type.startsWith('graphics.')) return true;
   if (type.startsWith('measurements.')) return true;
-  return type === 'scada.label_frame' || type === 'scada.boundary_point';
+  return type === 'scada.label_frame' || type === 'scada.boundary_point' || type === 'scada.text_box';
 }
 
 export const GenericSymbol: React.FC<SymbolProps> = ({ obj }) => {
@@ -188,6 +201,30 @@ export const SymbolRenderer: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
   }
 
   switch (obj.type) {
+    case 'building.luminaire':
+      return <LuminaireSymbol obj={obj} state={state} />;
+    case 'building.luminaire_pendant':
+      return <PendantLuminaireSymbol obj={obj} state={state} />;
+    case 'building.luminaire_wall':
+      return <WallLuminaireSymbol obj={obj} state={state} />;
+    case 'building.luminaire_fluorescent':
+      return <FluorescentLuminaireSymbol obj={obj} state={state} />;
+    case 'building.luminaire_halogen':
+      return <HalogenLuminaireSymbol obj={obj} state={state} />;
+    case 'building.socket_outlet':
+      return <SocketOutletSymbol obj={obj} state={state} />;
+    case 'building.table':
+      return <TableSymbol obj={obj} state={state} />;
+    case 'building.chair':
+      return <ChairSymbol obj={obj} state={state} />;
+    case 'building.shelf':
+      return <ShelfSymbol obj={obj} state={state} />;
+    case 'building.door':
+      return <DoorSymbol obj={obj} state={state} />;
+    case 'building.window':
+      return <WindowSymbol obj={obj} state={state} />;
+    case 'building.gate':
+      return <GateSymbol obj={obj} state={state} />;
     case 'electrical.circuit_breaker':
       return <CircuitBreakerSymbol obj={obj} state={state} />;
     case 'electrical.disconnect_switch':
@@ -364,6 +401,8 @@ export const SymbolRenderer: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
       return <SprinklerHeadSymbol obj={obj} state={state} terminalNetState={terminalNetState} />;
     case 'site.drip_line':
       return <DripLineSymbol obj={obj} state={state} terminalNetState={terminalNetState} />;
+    case 'scada.text_box':
+      return <TextBoxSymbol obj={obj} />;
     default:
       return <GenericSymbol obj={obj} state={state} />;
   }
