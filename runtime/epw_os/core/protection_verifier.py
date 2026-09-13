@@ -33,18 +33,12 @@ class ProtectionVerifier(QObject):
     log_msg = Signal(str)
     test_finished = Signal(object)
 
-    # Task "migracja adresacji", point 1.2 doprecyzowanie: which
-    # apparatus this verifier tests is a fixed ROLE (the "incoming
-    # feeder breaker" a protection pickup/trip-time test always runs
-    # against, regardless of which protection function is selected) -
-    # not a per-test-call parameter. Same ROLE_* convention as
-    # page_entry_gate.py's own Main View symbols; the apparatus bound to
-    # this role supplies BOTH sides (command = which output pulses the
-    # coil, feedback = which input the trip is observed on) from its
-    # own definition - this class asks for the role, never a bare
-    # address (Waldek's own "test przyjmuje JEDNO wskazanie: który
-    # aparat testujemy").
-    ROLE_TESTED_APPARATUS = "engineer_mode.tested_apparatus"
+    # Which apparatus a test runs against is chosen per test, by its id in
+    # the project's apparatus register (task "runtime czyta projekt.epw"
+    # 3.2: "test dostaje deviceId"). The apparatus supplies BOTH sides from
+    # its own definition - command = which output pulses the coil,
+    # feedback = which input the trip is observed on - never a bare
+    # address typed into the test.
     # Interlocks - OTHER apparatuses that must be open (feedback
     # inactive) before a test may start. Plural and optional by nature
     # (a site may have zero) - unlike ROLE_TESTED_APPARATUS, an empty
@@ -164,17 +158,17 @@ class ProtectionVerifier(QObject):
         with open(REPORTS_FILE, "w") as f:
             json.dump([asdict(r) for r in self.reports], f, indent=4)
             
-    def _tested_apparatus(self):
-        if self.apparatus_registry is None:
+    def _tested_apparatus(self, device_id):
+        if self.apparatus_registry is None or not device_id:
             return None
-        return self.apparatus_registry.get_by_role(self.ROLE_TESTED_APPARATUS)
+        return self.apparatus_registry.get(device_id)
 
-    def _tested_command_tag(self):
-        ap = self._tested_apparatus()
+    def _tested_command_tag(self, device_id):
+        ap = self._tested_apparatus(device_id)
         return ap.command[0] if ap is not None and ap.command else None
 
-    def _tested_feedback_tag(self):
-        ap = self._tested_apparatus()
+    def _tested_feedback_tag(self, device_id):
+        ap = self._tested_apparatus(device_id)
         return ap.feedback[0] if ap is not None and ap.feedback else None
 
     def _di_label(self, tag_name: str) -> str:
@@ -227,7 +221,7 @@ class ProtectionVerifier(QObject):
             detail = f"{tag_name}: " + reason.replace("\n", " ")
             self.audit_logger.record("PROTECTION_VERIFICATION_BLOCKED", actor, detail, success=False)
 
-    def check_safety_conditions(self) -> (bool, str):
+    def check_safety_conditions(self, device_id=None) -> (bool, str):
         if not self.access_manager.has_access(AccessLevel.ENGINEER):
             return False, "Engineer access is NOT ACTIVE.\nVerification requires Engineer access."
 
@@ -237,12 +231,12 @@ class ProtectionVerifier(QObject):
         # in plain words, rather than measuring against a guessed
         # channel (Waldek's own "test ma to powiedzieć i odmówić
         # uruchomienia, a nie mierzyć nie wiadomo czego").
-        command_tag = self._tested_command_tag()
-        feedback_tag = self._tested_feedback_tag()
+        command_tag = self._tested_command_tag(device_id)
+        feedback_tag = self._tested_feedback_tag(device_id)
         if command_tag is None or feedback_tag is None:
             return False, (
                 "Protection verification test is NOT CONFIGURED.\n"
-                "No apparatus with both an output and a feedback point is assigned to this test."
+                "No apparatus with both an output and a feedback point is selected for this test."
             )
 
         val_l1 = self.tag_manager.get_value("Meas.L1")
@@ -280,7 +274,7 @@ class ProtectionVerifier(QObject):
             
         return True, "PASS"
         
-    def start_verification(self, prot_name):
+    def start_verification(self, prot_name, device_id=None):
         # Format "27 Under Voltage - Stage 1"
         parts = prot_name.split(" - ")
         if len(parts) != 2:
@@ -311,7 +305,7 @@ class ProtectionVerifier(QObject):
         # same "never trust the caller already checked" stance every
         # other Engineer-gated action in this app already has), since
         # this method can in principle be called directly.
-        feedback_tag = self._tested_feedback_tag()
+        feedback_tag = self._tested_feedback_tag(device_id)
         if feedback_tag is None:
             self.log_msg.emit("TEST BLOCKED\nReason:\nProtection verification test is not configured.")
             return

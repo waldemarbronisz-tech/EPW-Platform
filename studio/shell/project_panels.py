@@ -96,6 +96,7 @@ from PySide6.QtWidgets import (
 from shared.addressing import format_address, parse_address
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
+    effective_location,
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
     LineInputMode, LineParametrization, LineType, Location, NORMAL_STATE_NC, NORMAL_STATE_NO,
     Point, PowerSupervision, ProcessProtection, Zone, default_value_windows,
@@ -553,19 +554,6 @@ def point_owner_map(project) -> dict:
 # A-Z/0-9, _LOCATION_CODE_RE) or "" (the explicit-blank override), so it
 # can be a QComboBox item's userData without ever colliding with one.
 _INHERIT_LOCATION_SENTINEL = "__inherit__"
-
-
-def effective_location(point: Point, card) -> str:
-    """User report 3.4 ("dziedziczenie z karty"): the location a reader
-    (export, validation, this panel's own combo) should actually SHOW -
-    `point.location` if the user explicitly set one (a real string,
-    "" included - "deliberately no location despite the card having
-    one"), otherwise the owning card's own `location` (or "" if `card`
-    is None or has none either). See Point.location's own docstring for
-    why None vs "" is the distinction that makes this possible."""
-    if point.location is not None:
-        return point.location
-    return card.location if card is not None else ""
 
 
 class ProjectInfoPanel(QWidget):

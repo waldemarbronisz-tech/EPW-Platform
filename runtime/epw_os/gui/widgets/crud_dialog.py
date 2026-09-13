@@ -16,7 +16,7 @@ from epw_os.i18n import tr
 
 
 def run_crud_dialog(parent, title, get_items, item_label, open_add_dialog, open_edit_dialog,
-                     on_add, on_edit, on_remove, remove_refused_message):
+                     on_add, on_edit, on_remove, remove_refused_message, allow_add_remove=True):
     """`get_items()` returns the current list; `item_label(item)` is the
     list row's display text; `open_add_dialog()`/`open_edit_dialog(item)`
     return a QDialog whose `.exec()` return value gates whether `on_add
@@ -52,6 +52,10 @@ def run_crud_dialog(parent, title, get_items, item_label, open_add_dialog, open_
     btn_row.addWidget(btn_add)
     btn_row.addWidget(btn_edit)
     btn_row.addWidget(btn_remove)
+    # projekt.epw: what exists is designed in Studio - the list can only be
+    # edited (settings), not grown or shrunk (task "runtime czyta projekt.epw" 3.4).
+    btn_add.setVisible(allow_add_remove)
+    btn_remove.setVisible(allow_add_remove)
     layout.addLayout(btn_row)
 
     btn_close = QPushButton(tr("pages.intrusion.btn_close"))

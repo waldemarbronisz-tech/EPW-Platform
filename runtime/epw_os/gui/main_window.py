@@ -38,7 +38,8 @@ class MainWindow(QMainWindow):
                  presentation_step_signal=None, api_host=None, intrusion_manager=None,
                  process_protection_manager=None,
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
-                 mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None):
+                 mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
+                 startup_issues=None):
         super().__init__()
         self.tag_manager = tag_manager
         # Task "migracja adresacji" - see epw_os/core/apparatus.py's own
@@ -47,6 +48,15 @@ class MainWindow(QMainWindow):
         # apparatus roles (PageEntryGate, PageEngineerMode) instead of
         # each keeping its own hardcoded DI/DO literals.
         self.apparatus_registry = apparatus_registry
+        # Problems EPWCore found while starting (task "runtime czyta
+        # projekt.epw") - shown once, when the window opens.
+        self.startup_issues = list(startup_issues or [])
+        # projekt.epw: structure is Studio's (ProjectManager.structure_
+        # editable()). Pages hide their create/remove tools and lock
+        # structural fields; a mock or an old project.json keeps everything
+        # editable, exactly as before.
+        _structure_check = getattr(project_manager, "structure_editable", None)
+        self.structure_editable = True if _structure_check is None else bool(_structure_check())
         self.command_manager = command_manager
         self.access_manager = access_manager
         # Task (page-split): passed straight through like intrusion_manager
@@ -401,16 +411,19 @@ class MainWindow(QMainWindow):
 
         # ALWAYS ON.
         self.page_di = PageDigitalInputs(self.tag_manager, self.access_manager,
-                                          switching_counters=self.switching_counters, service_notes=self.service_notes)
+                                          switching_counters=self.switching_counters, service_notes=self.service_notes,
+                                          descriptions_editable=self.structure_editable)
         _add_page("digital_inputs", self.page_di)
 
         self.page_ai = None
         if is_feature_enabled(self.enabled_features, "analog_inputs"):
-            self.page_ai = PageAnalogInputs(self.tag_manager, self.access_manager)
+            self.page_ai = PageAnalogInputs(self.tag_manager, self.access_manager,
+                                            structure_editable=self.structure_editable)
             _add_page("analog_inputs", self.page_ai)
 
         # ALWAYS ON.
-        self.page_do = PageControlOutputs(self.tag_manager, self.access_manager, service_notes=self.service_notes)
+        self.page_do = PageControlOutputs(self.tag_manager, self.access_manager, service_notes=self.service_notes,
+                                          descriptions_editable=self.structure_editable)
         _add_page("control_outputs", self.page_do)
 
         # Task (page-split): SYSTEM ALARMOWY is now 3 pages, not 1 - see
@@ -433,7 +446,8 @@ class MainWindow(QMainWindow):
             if is_feature_enabled(self.enabled_features, "intrusion_config"):
                 self.page_intrusion_config = PageIntrusionConfiguration(
                     self.intrusion_manager, self.access_manager, audit_logger=self.audit_logger,
-                    on_zones_or_lines_changed=self.page_intrusion_overview.refresh)
+                    on_zones_or_lines_changed=self.page_intrusion_overview.refresh,
+                    structure_editable=self.structure_editable)
                 _add_page("intrusion_config", self.page_intrusion_config)
 
         self.page_power = None
@@ -473,12 +487,14 @@ class MainWindow(QMainWindow):
         # manager (see epw_core.py's _start_process_protection()).
         self.page_protection_electrical = None
         if is_feature_enabled(self.enabled_features, "protection_settings"):
-            self.page_protection_electrical = PageProtectionElectrical(self.tag_manager, self.access_manager)
+            self.page_protection_electrical = PageProtectionElectrical(self.tag_manager, self.access_manager,
+                                                                       project_manager=self.project_manager)
             _add_page("protection_electrical", self.page_protection_electrical)
 
         self.page_protection_process = None
         if is_feature_enabled(self.enabled_features, "protection_process"):
-            self.page_protection_process = PageProtectionProcess(self.process_protection_manager, self.access_manager)
+            self.page_protection_process = PageProtectionProcess(self.process_protection_manager, self.access_manager,
+                                                                 structure_editable=self.structure_editable)
             _add_page("protection_process", self.page_protection_process)
 
         # Engineer Mode reuses Protection Settings' (Elektryczne's) own
@@ -504,6 +520,19 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentIndex(self._page_index["main_view"])
         self.nav_tree.set_current_page("main_view")
         self.nav_tree.page_requested.connect(self._navigate_to)
+
+        # Last screen (runtime_state.json - task "runtime czyta projekt.epw"
+        # 2.1): the page the panel showed before a restart, when that page
+        # still exists and opens without a PIN.
+        _last_screen = getattr(project_manager, "get_last_screen", None)
+        _last_screen = _last_screen() if _last_screen is not None else None
+        if (_last_screen and _last_screen != "main_view" and _last_screen in self._page_index
+                and _last_screen not in self._ENGINEER_GATED_PAGES):
+            self.stacked_widget.setCurrentIndex(self._page_index[_last_screen])
+            self._current_page_id = _last_screen
+            self.nav_tree.set_current_page(_last_screen)
+        if self.startup_issues:
+            QTimer.singleShot(0, self._show_startup_issues)
 
         self.setup_statusbar()
 
@@ -652,6 +681,12 @@ class MainWindow(QMainWindow):
         _add("menu.file_export", self._file_export_project, separator_before=True)
         _add("menu.file_import", self._file_import_project)
         _add("menu.file_exit", lambda: self.close(), separator_before=True)
+        if not self.structure_editable:
+            # projekt.epw is authored in Studio: no New/Save/Save As/Import
+            # here. Open installs a Studio project file, Export downloads the
+            # file exactly as this controller runs it.
+            for key in ("menu.file_new", "menu.file_save", "menu.file_save_as", "menu.file_import"):
+                self._file_actions[key].setVisible(False)
 
         # --- Edit: removed entirely (was an empty placeholder) ----------
 
@@ -1686,6 +1721,9 @@ class MainWindow(QMainWindow):
     def _file_open_project(self):
         if self._no_project_manager():
             return
+        if not self.structure_editable:
+            self._install_project_file()
+            return
         if not self._confirm_discard_changes():
             return
         path, _ = QFileDialog.getOpenFileName(
@@ -1726,8 +1764,39 @@ class MainWindow(QMainWindow):
         self._refresh_project_label()
         self._info(tr("dialog.saved"))
 
+    def _install_project_file(self):
+        """projekt.epw: File > Open copies a project file prepared in Studio
+        over this controller's own, after the shared reader accepted it
+        (ProjectManager.install_project_file()). It takes effect on the
+        next start - tags, modules and pages are built from the project
+        once, at startup. Engineer only, audited."""
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Install project file")
+            return
+        path, _ = QFileDialog.getOpenFileName(self, tr("dialog.open_title"), "", tr("dialog.project_epw_filter"))
+        if not path:
+            return
+        ok, error = self.project_manager.install_project_file(path)
+        if ok:
+            self._info(tr("dialog.project_installed_restart"))
+        else:
+            reason = tr(error["key"], error["text"], **error["params"])
+            self._warn(tr("dialog.project_install_refused", reason=reason))
+
     def _file_export_project(self):
         if self._no_project_manager():
+            return
+        if not self.structure_editable:
+            path, _ = QFileDialog.getSaveFileName(self, tr("dialog.export_title"), "projekt.epw",
+                                                  tr("dialog.project_epw_filter"))
+            if not path:
+                return
+            if not path.lower().endswith(".epw"):
+                path += ".epw"
+            if self.project_manager.export_to(path):
+                self._info(tr("dialog.exported"))
+            else:
+                self._warn(tr("dialog.invalid_project"))
             return
         path, _ = QFileDialog.getSaveFileName(
             self, tr("dialog.export_title"), "epw_project_backup.json",
@@ -2176,6 +2245,18 @@ class MainWindow(QMainWindow):
         "engineer_mode": "Engineer Mode",
     }
 
+    def _show_startup_issues(self):
+        """Non-modal: the controller is running and the operator must be
+        able to work while reading this. Every item is also an alarm."""
+        from PySide6.QtWidgets import QMessageBox
+        from epw_os.gui.startup_issues import format_startup_issue
+        text = tr("startup.intro") + "\n\n" + "\n\n".join(
+            "- " + format_startup_issue(issue) for issue in self.startup_issues)
+        box = QMessageBox(QMessageBox.Icon.Warning, tr("startup.title"), text, QMessageBox.StandardButton.Ok, self)
+        box.setModal(False)
+        box.show()
+        self._startup_issues_box = box
+
     def _navigate_to(self, page_id: str):
         """The one place a click - from the nav tree, or any other
         internal caller (on_access_timeout()'s "kick back to Main
@@ -2195,6 +2276,9 @@ class MainWindow(QMainWindow):
             return  # feature disabled / page doesn't exist right now - nothing to switch to
         self.stacked_widget.setCurrentIndex(index)
         self._current_page_id = page_id
+        _remember = getattr(self.project_manager, "set_last_screen", None)
+        if _remember is not None:
+            _remember(page_id)
         if page_id == "alarms":
             self.page_alarms.refresh()
         elif page_id == "audit_log":

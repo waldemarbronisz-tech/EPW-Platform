@@ -70,3 +70,10 @@ Thumbs.db
 # ---------- Notatki robocze — nigdy nie commitowane ----------
 raport.md
 audit-report-*.md
+
+# runtime: state and controller-local settings (never part of the project,
+# SPEC_PROJEKT_EPW.md "Plik stanu"), and the one-generation project backup
+runtime/runtime_state.json
+runtime/runtime_state.json.corrupt
+runtime/controller.local.json
+*.epw.bak

@@ -33,9 +33,18 @@ same "one source of truth" principle GRANICE already applies to
 Main View vs. System Topology (two screens, one real device list) and
 to intrusion_manager.py's own DI/AI candidate picker (one shared
 grammar check, not three disagreeing ones - see this task's own
-etap 1)."""
+etap 1).
+
+UPDATE (task "runtime czyta projekt.epw", 3.2): the registry is no longer
+empty in production - EPWCore.startup() fills it from projekt.epw's own
+apparatus register ("devices") through apparatuses_from_records(), and
+binds the Main View roles with bind_roles_by_designation() below. It is
+still a plain in-memory index; the project file remains the only place an
+apparatus is defined."""
 
 from dataclasses import dataclass, field
+
+from epw_os.core.logging import log
 
 
 @dataclass
@@ -50,6 +59,8 @@ class Apparatus:
     id: str
     feedback: list = field(default_factory=list)
     command: list = field(default_factory=list)
+    behavior: str = ""  # SWITCHED | SIGNAL | MEASURED | MODULATED | SELECTOR
+    kind: str = ""      # free-text label, no functional meaning (SPEC_PROJEKT_EPW.md)
 
 
 class ApparatusRegistry:
@@ -75,10 +86,8 @@ class ApparatusRegistry:
         self._role_bindings = {}
 
     def set_apparatuses(self, apparatuses):
-        """Replaces the whole known apparatus list - called by whoever
-        loads a project (today: nobody in production code; tests only.
-        See this module's own docstring for the future projekt.epw
-        wiring point)."""
+        """Replaces the whole known apparatus list - called by
+        EPWCore.startup() with the project's own apparatus register."""
         self._by_id = {a.id: a for a in apparatuses}
 
     def get(self, apparatus_id):
@@ -89,6 +98,12 @@ class ApparatusRegistry:
 
     def is_empty(self):
         return not self._by_id
+
+    def testable_ids(self):
+        """Apparatuses a protection verification test can run against: an
+        output to trip and a feedback to observe the trip on - both taken
+        from the apparatus's own definition."""
+        return sorted(a.id for a in self._by_id.values() if a.command and a.feedback)
 
     def set_role_binding(self, role: str, apparatus_id):
         """`apparatus_id=None` clears the binding (role has no
@@ -108,3 +123,52 @@ class ApparatusRegistry:
         if apparatus_id is None:
             return None
         return self._by_id.get(apparatus_id)
+
+
+def apparatuses_from_records(records):
+    """[{id, behavior, kind, feedback, command}] (ProjectManager.
+    get_apparatuses()) -> Apparatus objects."""
+    return [
+        Apparatus(id=r["id"], feedback=list(r.get("feedback", [])), command=list(r.get("command", [])),
+                  behavior=r.get("behavior", ""), kind=r.get("kind", ""))
+        for r in records
+    ]
+
+
+# Main View (page_entry_gate.py) is a FIXED drawing of an entry gate: main
+# incomer Q1, generator contactor KMG, feeders KM1/KM2 and the voltage
+# monitoring relay KVG1. Which real apparatus fills each symbol is decided
+# by its designation - the part of the apparatus id after the location
+# prefix (SPEC_PROJEKT_EPW.md: "KOT_KMG1 i MH_KMG1 to dwa różne aparaty"),
+# or the whole id when it has no prefix. projekt.epw has no field binding a
+# drawn symbol to an apparatus (that arrives with screens embedded in the
+# project, where every screen object carries its own deviceId), so this is
+# a naming rule, stated here and in the task report rather than guessed.
+MAIN_VIEW_ROLE_DESIGNATIONS = {
+    "main_view.q1": "Q1",
+    "main_view.kmg": "KMG",
+    "main_view.km1": "KM1",
+    "main_view.km2": "KM2",
+    "main_view.voltage_relay": "KVG1",
+}
+
+
+def bind_roles_by_designation(registry, role_designations):
+    """Binds each role to the ONE apparatus whose id is the designation or
+    ends with "_" + designation. No match, or more than one (the same
+    designation in two locations), leaves the role unbound - the page then
+    says "not configured" instead of picking one. Returns {role: id or None}."""
+    outcome = {}
+    ids = registry.list_ids()
+    for role, designation in role_designations.items():
+        matches = [i for i in ids if i == designation or i.endswith("_" + designation)]
+        if len(matches) == 1:
+            registry.set_role_binding(role, matches[0])
+            outcome[role] = matches[0]
+            continue
+        registry.set_role_binding(role, None)
+        outcome[role] = None
+        if len(matches) > 1:
+            log.warning(f"Main View symbol {designation} left unconfigured: several apparatuses match "
+                        f"({', '.join(matches)}).")
+    return outcome

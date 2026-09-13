@@ -25,25 +25,12 @@ class EPWCore:
         self.tag_manager = TagManager(self.event_bus)
         self.alarm_manager = AlarmManager(self.event_bus)
 
-        # Task "migracja adresacji", point 1.2 (Waldek's own doprecyzowanie,
-        # wariant C): runtime's one shared view of "what apparatuses
-        # (aparaty) exist" - page_entry_gate.py and protection_verifier.py
-        # both read THIS instead of each keeping its own DI2/DI3/DI4/
-        # DO01-04-style literal channel numbers. Empty by construction -
-        # "no apparatus configured" is the honest starting state.
-        #
-        # >>> FUTURE WIRING POINT <<< - task "runtime czyta projekt.epw"
-        # (not yet built): that task should call
-        # self.apparatus_registry.set_apparatuses(...) (and set_role_binding()
-        # for the fixed Main View roles - see page_entry_gate.py's own
-        # ROLE_* constants) here in startup(), from the loaded project's
-        # own rejestr aparatów, the same place project_manager.config
-        # gets populated by load_project(). Deliberately NOT project.json
-        # (that format is on its way out - Studio/projekt.epw is where a
-        # project's structure gets designed now) and NOT a new runtime
-        # settings screen (runtime is losing its own configuration
-        # wizards, not gaining one) - see apparatus.py's own module
-        # docstring for the full reasoning.
+        # Runtime's one shared view of "what apparatuses (aparaty) exist" -
+        # page_entry_gate.py and protection_verifier.py both read THIS
+        # instead of keeping their own literal channel numbers (task
+        # "migracja adresacji", point 1.2). Empty until startup() fills it
+        # from projekt.epw's own apparatus register (task "runtime czyta
+        # projekt.epw", 3.2) - see apparatus.py.
         from epw_os.core.apparatus import ApparatusRegistry
         self.apparatus_registry = ApparatusRegistry()
 
@@ -128,6 +115,14 @@ class EPWCore:
         # always overwrites this with normalize_enabled_features()'s
         # real result before anything else checks it.
         self.enabled_features = {}
+        # Problems found while starting that nobody should have to dig out
+        # of a log file (task "runtime czyta projekt.epw": a project that
+        # did not load, a lost arming state, logic or screens referring to
+        # a module this device does not have). Each is also raised as an
+        # alarm; MainWindow shows the list when it opens. Every entry:
+        # {"id", "key", "params", "text"} - key/params for tr(), text for
+        # logs and alarms.
+        self.startup_issues = []
         # Alarm event history for the intrusion module (Task: "historia
         # zdarzen alarmowych") - same deferred-to-startup() reason as
         # intrusion_manager itself just above (needs load_project() to
@@ -317,9 +312,28 @@ class EPWCore:
         """
         log.info("EPWCore Startup Sequence Initiated.")
         from epw_os.core.health_manager import SubsystemState
-        
+
+        # 0. Database first. *.db files are gitignored, so a fresh checkout
+        # (or a clean CI runner) has no database at all until migrations
+        # create it - and loading the project already writes audit entries
+        # (IntrusionManager restoring the arming state, settings written
+        # back to projekt.epw), so the tables must exist before step 1.
+        from epw_os.db.database import run_migrations
+        run_migrations()
+
         # 1. Initialize configuration / project
+        self.startup_issues = []
+        self.project_manager.set_audit_sink(self.audit_logger, lambda: self.access_manager.level)
         self.project_manager.load_project()
+        self._report_project_load()
+
+        # Apparatus register (task "runtime czyta projekt.epw", 3.2) - the
+        # project's "devices", plus the Main View symbol bindings by
+        # designation (see apparatus.bind_roles_by_designation()).
+        from epw_os.core.apparatus import (MAIN_VIEW_ROLE_DESIGNATIONS, apparatuses_from_records,
+                                           bind_roles_by_designation)
+        self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
+        bind_roles_by_designation(self.apparatus_registry, MAIN_VIEW_ROLE_DESIGNATIONS)
 
         # Feature configuration (Task: "okno konfiguracji, w ktorym
         # wlacza i wylacza sie poszczegolne funkcje sterownika") - read
@@ -332,6 +346,7 @@ class EPWCore:
         # as it always did.
         from epw_os.core.feature_config import normalize_enabled_features, is_feature_enabled
         self.enabled_features = normalize_enabled_features(self.project_manager.get_enabled_features())
+        self._report_state_problem()
 
         # Switching counters (Task: liczba przelaczen i czas w stanie
         # zamknietym per aparat) - constructed here, not in __init__,
@@ -460,6 +475,11 @@ class EPWCore:
         # defaults (e.g. custom DI labels saved from the GUI).
         for tag_name, desc in self.project_manager.get_tag_descriptions().items():
             self.tag_manager.set_description(tag_name, desc)
+        # Point registry (task "runtime czyta projekt.epw", 3.1): where each
+        # terminal is and the technician's note for it, onto its tag.
+        for point in self.project_manager.get_point_registry():
+            self.tag_manager.set_point_info(point["address"], location=point.get("location", ""),
+                                            technical_note=point.get("technical_note", ""))
 
         commands = self.project_manager.config.get("commands", {})
         if commands:
@@ -503,13 +523,15 @@ class EPWCore:
                 self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
         else:
             self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.DEGRADED)
+
+        # Composition vs. logic and screens (task "runtime czyta
+        # projekt.epw", 3.3) - see composition_check.py for exactly which
+        # files it reads today and what to change once screens and logic
+        # live inside projekt.epw.
+        self._report_composition()
         
-        # 2. Database & Historian
-        # *.db files are gitignored, so a fresh checkout (or a clean CI
-        # runner) has no database at all until migrations create it. Apply
-        # them now, before the Historian worker starts writing.
-        from epw_os.db.database import run_migrations
-        run_migrations()
+        # 2. Historian (the database itself was migrated at the top of
+        # startup(), step 0).
         # Deadband config (Task: ograniczenie zapisow na karcie SD) applied
         # before start() - see project_manager.py's get_deadband_config()/
         # historian.py's configure_deadband() for the optional
@@ -585,6 +607,66 @@ class EPWCore:
         self.health_manager.update_subsystem("API", SubsystemState.RUNNING)
         log.info("EPWCore Startup Sequence Complete.")
 
+    # --- Startup issues (task "runtime czyta projekt.epw") ---------------
+
+    def _startup_issue(self, issue_id: str, key: str, params: dict, text: str, priority: int, detail=None):
+        issue = {"id": issue_id, "key": key, "params": dict(params), "text": text}
+        if detail is not None:
+            issue["detail_key"], issue["detail_params"] = detail
+        self.startup_issues.append(issue)
+        (log.error if priority >= 3 else log.warning)(text)
+        self.alarm_manager.trigger_alarm(issue_id, text, source_tag="", priority=priority)
+
+    def _report_project_load(self):
+        pm = self.project_manager
+        if not pm.is_epw_project():
+            return
+        if pm.load_error is not None:
+            error = pm.load_error
+            if error["key"] == "startup.project_missing":
+                self._startup_issue("PROJECT_NOT_LOADED", "startup.project_missing", error["params"],
+                                    f"{error['text']} The controller runs with an empty project.", priority=4)
+            else:
+                self._startup_issue("PROJECT_NOT_LOADED", "startup.project_refused", {"path": pm.project_file},
+                                    f"Project {pm.project_file} was not loaded: {error['text']} "
+                                    f"The controller runs with an empty project.",
+                                    priority=4, detail=(error["key"], error["params"]))
+        elif pm.load_warnings:
+            self._startup_issue("PROJECT_LOAD_WARNINGS", "startup.project_warnings",
+                                {"path": pm.project_file, "count": len(pm.load_warnings)},
+                                f"Project {pm.project_file} loaded with {len(pm.load_warnings)} warning(s): "
+                                + "; ".join(str(w) for w in pm.load_warnings), priority=2)
+
+    def _report_state_problem(self):
+        """SPEC_PROJEKT_EPW.md: losing runtime_state.json is harmless EXCEPT
+        for the arming state. With intrusion zones in the project, a
+        missing or damaged state file means the zones came up DISARMED
+        whatever they were before - said out loud, as an alarm."""
+        from epw_os.core.feature_config import is_feature_enabled
+        pm = self.project_manager
+        problem = pm.state_load_problem if pm.is_epw_project() else None
+        if not problem or not is_feature_enabled(self.enabled_features, "intrusion") or not pm.get_intrusion_zones():
+            return
+        key = "startup.state_missing" if problem == "missing" else "startup.state_damaged"
+        self._startup_issue("RUNTIME_STATE_LOST", key, {"path": pm.state_file},
+                            f"Runtime state {pm.state_file} is {problem}: the intrusion arming state from before "
+                            f"the restart is unknown - every zone started DISARMED.", priority=4)
+
+    def _report_composition(self):
+        from epw_os.core.composition_check import find_signals_outside_composition
+        pm = self.project_manager
+        for issue in find_signals_outside_composition(self.enabled_features, logic_file=pm.get_logic_file(),
+                                                        synoptic_file=pm.get_synoptic_file()):
+            shown = ", ".join(issue.signals[:10]) + (" ..." if len(issue.signals) > 10 else "")
+            self._startup_issue(
+                f"COMPOSITION_{issue.module.upper()}_{issue.source_kind.upper()}",
+                f"startup.composition_{issue.source_kind}",
+                {"path": issue.path, "module": issue.module, "count": len(issue.signals), "signals": shown},
+                f"The {issue.source_kind} file {issue.path} refers to {len(issue.signals)} signal(s) of module "
+                f"'{issue.module}', which is not part of this controller: {shown}. Those references cannot "
+                f"work until the module is added to the device in Studio or the references are removed.",
+                priority=3)
+
     # --- Analog Inputs: dynamic points -----------------------------
     # (see startup()'s registration above and page_analog_inputs.py's
     # Add Point / Remove Point buttons for the GUI side)
@@ -599,6 +681,9 @@ class EPWCore:
         (DI/DO/Cabinet/...) - tag names are a single flat namespace."""
         from epw_os.core.tag_manager import TagType
         tag_name = point["tag"]
+        if not self.project_manager.structure_editable():
+            log.warning(f"Refused to add analog point {tag_name!r}: points are defined in the project (Studio).")
+            return False
         if self.tag_manager.get_tag(tag_name) is not None:
             return False
         self.tag_manager.add_tag(
@@ -616,6 +701,9 @@ class EPWCore:
         its persisted record, and stops the simulator from producing
         values for it. Returns False if tag_name isn't a currently
         registered tag at all."""
+        if not self.project_manager.structure_editable():
+            log.warning(f"Refused to remove analog point {tag_name!r}: points are defined in the project (Studio).")
+            return False
         if not self.tag_manager.remove_tag(tag_name):
             return False
         points = [p for p in self.project_manager.get_analog_points() if p["tag"] != tag_name]
@@ -628,9 +716,21 @@ class EPWCore:
         """Updates an existing point's description/signal config/
         technical note - not its tag name. Renaming a live tag isn't
         supported (same as every other tag in this system); remove and
-        re-add under the new name instead."""
-        self.tag_manager.set_description(tag_name, point.get("description", ""))
+        re-add under the new name instead. With projekt.epw the description
+        and technical note are the point registry's (Studio) - only the
+        scaling settings change here, and they go back into the project
+        file (see ProjectManager._write_project_settings())."""
         points = self.project_manager.get_analog_points()
+        if not self.project_manager.structure_editable():
+            current = next((p for p in points if p["tag"] == tag_name), None)
+            if current is None:
+                return False
+            for field in ("description", "technical_note"):
+                if field in point and point[field] != current.get(field, ""):
+                    log.warning(f"Refused to change {field} of analog point {tag_name!r}: it is defined in the "
+                                f"project's point registry (Studio).")
+                    return False
+        self.tag_manager.set_description(tag_name, point.get("description", ""))
         for p in points:
             if p["tag"] == tag_name:
                 p.update(point)
@@ -828,6 +928,10 @@ class EPWCore:
         if feature not in TOGGLABLE_FEATURES:
             log.warning(f"Refused to change unknown feature {feature!r}.")
             return {"success": False, "reason": f"Unknown feature '{feature}'."}
+        if not self.project_manager.structure_editable():
+            log.warning(f"Refused to change feature {feature!r}: the device composition is defined in the project "
+                        f"(Studio).")
+            return {"success": False, "reason": "The device composition is defined in the project (Studio)."}
         if level is not None:
             order = AccessLevel._ORDER
             try:

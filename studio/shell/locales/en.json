@@ -460,5 +460,20 @@
     "col_unit": "Unit",
     "error_write": "Could not write the file: {error}",
     "done": "Exported the point list to {path}"
+  },
+  "project_format": {
+    "unreadable": "Cannot read the project file: {detail}",
+    "not_json": "The file is not a valid EPW project file: {detail}",
+    "not_object": "The project file does not contain a JSON object.",
+    "wrong_format": "The file is not an EPW project (missing or wrong 'format' marker).",
+    "missing_field": "Required field {field} is missing.",
+    "invalid_required": "Required field {field} has an invalid value (expected {expected}, got {actual}).",
+    "newer_schema": "The file uses format version {version}, newer than the supported version {supported}. Update the program to open it.",
+    "wrong_type_default": "Field {field} has the wrong type (expected {expected}, got {actual}) - the default value is used.",
+    "wrong_type_skipped": "Field {field} has the wrong type (expected {expected}, got {actual}) - the record is skipped.",
+    "wrong_type_empty": "Field {field} has the wrong type (expected {expected}, got {actual}) - treated as empty.",
+    "record_not_object": "Entry {field} is not an object - skipped.",
+    "unknown_field": "Unknown field {field} - ignored.",
+    "duplicate_id": "{field} repeats the identifier '{value}' - only the first occurrence is kept."
   }
 }

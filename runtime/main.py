@@ -243,6 +243,9 @@ def main():
                     return self._core.feature_referenced_by_logic(feature)
                 def get_feature_tag_names(self, feature):
                     return self._core.get_feature_tag_names(feature)
+                def is_composition_editable(self):
+                    # projekt.epw: the composition is the project's (Studio).
+                    return self._core.project_manager.structure_editable()
 
             gui_feature_config = GUIFeatureConfigAdapter(core)
 
@@ -329,7 +332,8 @@ def main():
                                    feature_config=gui_feature_config,
                                    feature_config_changed_callback=rebuild_window,
                                    mqtt_manager=gui_mqtt, mqtt_status_changed_signal=bridge.mqtt_status_changed,
-                                   apparatus_registry=core.apparatus_registry)
+                                   apparatus_registry=core.apparatus_registry,
+                                   startup_issues=core.startup_issues)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,

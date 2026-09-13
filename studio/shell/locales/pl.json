@@ -460,5 +460,20 @@
     "col_unit": "Jednostka",
     "error_write": "Nie udało się zapisać pliku: {error}",
     "done": "Wyeksportowano listę punktów do {path}"
+  },
+  "project_format": {
+    "unreadable": "Nie można odczytać pliku projektu: {detail}",
+    "not_json": "Plik nie jest poprawnym plikiem projektu EPW: {detail}",
+    "not_object": "Plik projektu nie zawiera obiektu JSON.",
+    "wrong_format": "Plik nie jest projektem EPW (brak lub nieprawidłowy znacznik 'format').",
+    "missing_field": "Brak wymaganego pola {field}.",
+    "invalid_required": "Wymagane pole {field} ma nieprawidłową wartość (oczekiwano {expected}, jest {actual}).",
+    "newer_schema": "Plik ma wersję formatu {version}, nowszą niż obsługiwana ({supported}). Zaktualizuj program, żeby go otworzyć.",
+    "wrong_type_default": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - użyto wartości domyślnej.",
+    "wrong_type_skipped": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - rekord pominięty.",
+    "wrong_type_empty": "Pole {field} ma zły typ (oczekiwano {expected}, jest {actual}) - traktowane jako puste.",
+    "record_not_object": "Wpis {field} nie jest obiektem - pominięty.",
+    "unknown_field": "Nieznane pole {field} - zignorowane.",
+    "duplicate_id": "{field} powtarza identyfikator '{value}' - zachowano tylko pierwsze wystąpienie."
   }
 }

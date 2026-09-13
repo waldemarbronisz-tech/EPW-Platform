@@ -1,13 +1,32 @@
 import json
 import os
+import shutil
+
 from epw_os.core.logging import log
 
-# Absolute, anchored to the repo root (same directory as main.py) - not
-# relative to the process's CWD. A relative default here would silently
-# create/read a *different* project.json depending on where the app is
-# launched from (see AccessManager.DEFAULT_CONFIG_PATH for the confirmed
-# real-world case of this exact bug class with access.local.json).
-DEFAULT_PROJECT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "project.json")
+_RUNTIME_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+
+# Task "runtime czyta projekt.epw": the project runtime works from is the
+# one Studio writes - projekt.epw (shared/docs/SPEC_PROJEKT_EPW.md), read
+# through shared/project_format.py. Absolute, anchored to runtime/ (same
+# directory as main.py) - not relative to the process's CWD. A relative
+# default here would silently create/read a *different* file depending on
+# where the app is launched from (see AccessManager.DEFAULT_CONFIG_PATH for
+# the confirmed real-world case of this exact bug class).
+DEFAULT_PROJECT_FILE = os.path.join(_RUNTIME_ROOT, "projekt.epw")
+
+# The old single-file project. Runtime no longer reads it at start;
+# tools/migrate_project_json.py imports it once and leaves it in place as a
+# copy (the task's own GRANICE: "NIE KASUJ pliku, zostaw jako kopię").
+LEGACY_PROJECT_FILE = os.path.join(_RUNTIME_ROOT, "project.json")
+
+# Kept next to the project file: the state (SPEC_PROJEKT_EPW.md, "Plik
+# stanu") and the controller's own settings the project format does not
+# carry (UI language, REST host/port, MQTT, historian/audit retention,
+# service notes, the .epwsyn/.epwlogic paths - see _save_epw()).
+STATE_FILE_NAME = "runtime_state.json"
+SETTINGS_FILE_NAME = "controller.local.json"
+SETTINGS_FORMAT = "EPW_CONTROLLER_SETTINGS"
 
 PROJECT_FORMAT = "EPW_OS_PROJECT"
 PROJECT_SCHEMA_VERSION = 1
@@ -15,14 +34,79 @@ PROJECT_SCHEMA_VERSION = 1
 DEFAULT_LANGUAGE = "en"
 
 
+def _canonical(value) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+
+
 class ProjectManager:
-    def __init__(self, project_file: str = None):
-        self.project_file = project_file or DEFAULT_PROJECT_FILE
+    """Runtime's one door to project data. Every module reads and writes
+    flat sections of `self.config` (get_intrusion_zones(), set_switching_
+    counters(), ...) and calls save_project(); where a section physically
+    lives depends on the project file:
+
+    - projekt.epw (the default - task "runtime czyta projekt.epw"): three
+      files, split by SPEC_PROJEKT_EPW.md's own layers.
+        projekt.epw            structure + settings (nastawy); a panel
+                               write reaches it only for settings, bumps
+                               `revision`, sets modified_by="panel", and
+                               is audited - structure is refused
+                               (project_epw.diff_settings()).
+        runtime_state.json     counters, arming, bypass, alarm memory,
+                               last screen (runtime_state.py) - never the
+                               project file.
+        controller.local.json  settings of this controller the project
+                               format does not carry.
+      save_project() writes only the files whose part actually changed, so
+      a counter flush never touches projekt.epw.
+
+    - any other path (a *.json file): the old single-file project.json
+      behaviour, byte for byte. Nothing in the running program selects it
+      any more; it remains the storage the unit tests' scratch projects use
+      and what tools/migrate_project_json.py reads from.
+    """
+
+    def __init__(self, project_file: str = None, state_file: str = None, settings_file: str = None):
+        # EPW_PROJECT_FILE lets one installation run a project file kept
+        # somewhere else (a test bench, a second site on the same machine)
+        # without editing code; unset, runtime/projekt.epw is used.
+        self.project_file = project_file or os.environ.get("EPW_PROJECT_FILE") or DEFAULT_PROJECT_FILE
+        self._state_file = state_file
+        self._settings_file = settings_file
         self.config = {}
         # JSON snapshot of the last state that is known to match disk. Used
         # by is_dirty() to drive the "unsaved changes" prompt in the File
         # menu. None until the first load/save.
         self._saved_snapshot = None
+
+        # projekt.epw mode only:
+        self.project = None           # the shared Project dataclass as read, or None when unusable
+        self.load_error = None        # {"key", "params", "text"} when projekt.epw could not be used
+        self.load_warnings = []       # shared FormatIssue list the reader reported
+        self.state_load_problem = None  # RuntimeStateStore.load_problem
+        self._saved_parts = {}
+        self._audit_logger = None
+        self._actor_provider = None
+
+    # --- which storage ----------------------------------------------------
+
+    def is_epw_project(self) -> bool:
+        return str(self.project_file).lower().endswith(".epw")
+
+    def structure_editable(self) -> bool:
+        """False for projekt.epw: zones, lines, points, protections,
+        composition - everything that says WHAT exists - are designed in
+        Studio only (SPEC_PROJEKT_EPW.md, "Trzy warstwy dostępu"). Modules
+        ask this before any add/remove/rename; settings stay editable."""
+        return not self.is_epw_project()
+
+    @property
+    def state_file(self) -> str:
+        return self._state_file or os.path.join(os.path.dirname(os.path.abspath(self.project_file)), STATE_FILE_NAME)
+
+    @property
+    def settings_file(self) -> str:
+        return self._settings_file or os.path.join(os.path.dirname(os.path.abspath(self.project_file)),
+                                                   SETTINGS_FILE_NAME)
 
     # --- helpers ------------------------------------------------------
 
@@ -45,15 +129,25 @@ class ProjectManager:
         )
 
     def _snapshot(self) -> str:
-        return json.dumps(self.config, sort_keys=True, ensure_ascii=False)
+        return json.dumps(self.config, sort_keys=True, ensure_ascii=False, default=str)
 
     def _mark_clean(self):
         self._saved_snapshot = self._snapshot()
+        if self.is_epw_project():
+            self._saved_parts = {name: _canonical(self._part(name)) for name in ("project", "state", "settings")}
 
     def is_dirty(self) -> bool:
         """True when self.config has changed since the last load/save - i.e.
         there is unsaved work. A freshly created (never-saved) project also
-        counts as dirty."""
+        counts as dirty. With projekt.epw every part is written the moment
+        it changes (settings, state, controller settings - see _save_epw()
+        and save_runtime_state()), so this compares each part with what was
+        last written instead of one snapshot of everything: an immediate
+        state write must not leave the panel asking to "save changes" on
+        exit."""
+        if self.is_epw_project():
+            return any(_canonical(self._part(name)) != self._saved_parts.get(name)
+                       for name in ("project", "state", "settings"))
         return self._snapshot() != self._saved_snapshot
 
     def _write(self, path: str):
@@ -81,6 +175,8 @@ class ProjectManager:
     # --- lifecycle --------------------------------------------------
 
     def load_project(self):
+        if self.is_epw_project():
+            return self._load_epw(self.project_file)
         if os.path.exists(self.project_file):
             data = self._read(self.project_file)
 
@@ -98,22 +194,44 @@ class ProjectManager:
         return True
 
     def save_project(self):
+        if self.is_epw_project():
+            return self._save_epw()
         self._write(self.project_file)
         self._mark_clean()
+        return True
 
     def save_project_as(self, path: str):
-        """Make `path` the active project file and write to it."""
+        """Make `path` the active project file and write to it. Not for
+        projekt.epw - the panel does not author projects (see
+        structure_editable())."""
+        if self.is_epw_project():
+            log.warning("Refused Save As: projekt.epw is authored in Studio, the panel only writes settings back.")
+            return False
         self.project_file = path
-        self.save_project()
+        return self.save_project()
 
     def new_project(self):
         """Reset to a blank in-memory project. Not written to disk until the
         operator saves - so it shows up as unsaved (is_dirty() -> True)."""
+        if self.is_epw_project():
+            log.warning("Refused New Project: projects are created in Studio.")
+            return False
         self.config = self._default_config()
         # deliberately do NOT _mark_clean(): a brand-new project is unsaved
+        return True
 
     def load_from(self, path: str) -> bool:
-        """Open an external project file and make it the active project."""
+        """Open an external project file and make it the active project.
+        A projekt.epw is validated with the shared reader first - a file
+        that would be refused never replaces the working project."""
+        if str(path).lower().endswith(".epw"):
+            from epw_os.core import project_format as pf
+            result = pf.read_project(path)
+            if not result.ok:
+                log.error(f"Refused project {path}: {result.error}")
+                return False
+            self.project_file = path
+            return self._load_epw(path)
         data = self._read(path)
         if data is None or not self._is_valid(data):
             log.error(f"Invalid project format in {path}.")
@@ -127,6 +245,9 @@ class ProjectManager:
         """Pull an external project file's contents into the current project
         and persist to the active project file. Unlike load_from(), the
         active project path does not move to the imported file."""
+        if self.is_epw_project():
+            log.warning("Refused Import: projekt.epw is authored in Studio.")
+            return False
         data = self._read(path)
         if data is None or not self._is_valid(data):
             log.error(f"Invalid project format in {path}.")
@@ -137,8 +258,18 @@ class ProjectManager:
 
     def export_to(self, path: str):
         """Write a standalone backup copy of the current project. The active
-        project file is unchanged and dirty state is untouched."""
+        project file is unchanged and dirty state is untouched. For
+        projekt.epw that is the file itself, exactly as the controller
+        runs it (settings changed on the panel included) - what an engineer
+        downloads to compare with Studio."""
+        if self.is_epw_project():
+            if self.project is None or not os.path.exists(self.project_file):
+                log.error("Nothing to export: no valid projekt.epw is loaded.")
+                return False
+            shutil.copyfile(self.project_file, path)
+            return True
         self._write(path)
+        return True
 
     # --- typed accessors ------------------------------------------
 
@@ -165,21 +296,28 @@ class ProjectManager:
         return int(self.config.get("api_port", 8000))
 
     def set_tag_description(self, name: str, description: str):
+        """In projekt.epw a point's description is structure - it lives in
+        Studio's point registry and reaches tags from there."""
+        if self.is_epw_project():
+            log.warning(f"Refused to change the description of {name!r}: descriptions come from the "
+                        f"project's point registry (Studio).")
+            return False
         self.config.setdefault("tag_descriptions", {})[name] = description
+        return True
 
     def get_tag_descriptions(self) -> dict:
         return self.config.get("tag_descriptions", {})
 
     def set_output_description(self, name: str, description: str):
         """Persisted custom label for a Control Outputs row, keyed by its
-        visible Tag column text (e.g. "DO02") - see SwitchingDeviceRow in
-        page_control_outputs.py. Separate namespace from
-        set_tag_description() since DO0N tags aren't real TagManager tags
-        for the first 4 rows: DO01-DO04 resolve their live state from
-        DI1-DI4 instead of their own DO tag (see epw_core.py's default
-        command definitions), even though their command-routing
-        designation is the DO0N tag itself, same as every other channel."""
+        visible Tag column text. Same projekt.epw rule as
+        set_tag_description()."""
+        if self.is_epw_project():
+            log.warning(f"Refused to change the description of {name!r}: descriptions come from the "
+                        f"project's point registry (Studio).")
+            return False
         self.config.setdefault("output_descriptions", {})[name] = description
+        return True
 
     def get_output_descriptions(self) -> dict:
         return self.config.get("output_descriptions", {})
@@ -314,6 +452,10 @@ class ProjectManager:
         save_project() itself afterwards, same as every other
         project_manager setter in this codebase (e.g. set_language())."""
         from datetime import datetime, timezone
+        if self.is_epw_project():
+            log.warning("Refused to edit project properties: name, description and author are part of "
+                        "projekt.epw and are edited in Studio.")
+            return False
         meta = self.config.setdefault("metadata", {})
         meta["name"] = name
         meta["description"] = description
@@ -331,6 +473,8 @@ class ProjectManager:
         the first save this project has ever gone through under this
         feature - same "set once" contract as set_metadata()."""
         from datetime import datetime, timezone
+        if self.is_epw_project():
+            return  # projekt.epw stamps its own modified_at whenever it is written
         meta = self.config.setdefault("metadata", {})
         now = datetime.now(timezone.utc).isoformat()
         if meta.get("created") is None:
@@ -562,7 +706,11 @@ class ProjectManager:
         return self.config.get("enabled_features", {})
 
     def set_enabled_features(self, data: dict):
+        if self.is_epw_project():
+            log.warning("Refused to change the device composition: modules are defined in projekt.epw (Studio).")
+            return False
         self.config["enabled_features"] = dict(data)
+        return True
 
     # --- MQTT integration (Task: "integracja MQTT") ---------------------
     #
@@ -626,3 +774,290 @@ class ProjectManager:
     def set_mqtt_link_mappings(self, mappings: list):
         m = self.config.setdefault("mqtt", {})
         m["link_in"] = [dict(entry) for entry in mappings]
+
+    # --- projekt.epw: what the rest of runtime reads from the project ----
+
+    def get_modules(self) -> list:
+        """The device composition (SPEC_PROJEKT_EPW.md, "Skład urządzenia")."""
+        return list(self.config.get("modules", []))
+
+    def get_point_registry(self) -> list:
+        """[{address, kind, description, location, technical_note}] - the
+        location already resolved (a point without its own inherits its
+        card's)."""
+        return [dict(p) for p in self.config.get("point_registry", [])]
+
+    def get_apparatuses(self) -> list:
+        """[{id, behavior, kind, feedback, command}] from the project's
+        apparatus register ("devices" in projekt.epw)."""
+        return [dict(a) for a in self.config.get("apparatuses", [])]
+
+    def get_electrical_protection_stages(self) -> list:
+        return [dict(s) for s in self.config.get("electrical_protection_stages", [])]
+
+    def set_electrical_protection_stages(self, stages: list):
+        self.config["electrical_protection_stages"] = [dict(s) for s in stages]
+
+    # --- state that must be written at once ------------------------------
+
+    def get_intrusion_armed_zones(self) -> list:
+        return list(self.config.get("intrusion_armed_zones", []))
+
+    def get_intrusion_bypassed_lines(self) -> list:
+        return list(self.config.get("intrusion_bypassed_lines", []))
+
+    def set_intrusion_operation_state(self, armed_zones, bypassed_lines) -> bool:
+        """Which zones are armed and which lines bypassed - written to disk
+        before this returns (SPEC_PROJEKT_EPW.md: arming state "musi być
+        natychmiastowy przy każdej zmianie"). Returns False when the write
+        failed; the caller logs it as an error."""
+        self.config["intrusion_armed_zones"] = sorted(armed_zones)
+        self.config["intrusion_bypassed_lines"] = sorted(bypassed_lines)
+        return self.save_runtime_state()
+
+    def get_last_screen(self):
+        return self.config.get("last_screen")
+
+    def set_last_screen(self, screen_id: str) -> bool:
+        if self.config.get("last_screen") == screen_id:
+            return True
+        self.config["last_screen"] = screen_id
+        if not self.is_epw_project():
+            return True  # an old project.json is not rewritten on every page change
+        return self.save_runtime_state()
+
+    def save_runtime_state(self) -> bool:
+        """Writes only the state part - runtime_state.json for projekt.epw,
+        the whole file for an old project.json."""
+        if not self.is_epw_project():
+            self.save_project()
+            return True
+        from epw_os.core.runtime_state import RuntimeStateStore
+        state = self._part("state")
+        if not RuntimeStateStore(self.state_file).save(state):
+            return False
+        self._saved_parts["state"] = _canonical(state)
+        self._saved_snapshot = self._snapshot()
+        return True
+
+    def install_project_file(self, source_path):
+        """Puts a projekt.epw prepared in Studio in place of this
+        controller's project file - only after the shared reader accepted
+        it, keeping the replaced file as projekt.epw.bak. Takes effect on the
+        next start: tags, modules and pages are built from the project once,
+        at startup, and swapping them under a running controller is not
+        something this method pretends to do. Returns (True, None) or
+        (False, {"key", "params", "text"}) with the reader's refusal."""
+        from epw_os.core import project_format as pf
+        result = pf.read_project(source_path)
+        if not result.ok:
+            return False, {"key": "project_format." + result.error.key, "params": dict(result.error.params),
+                           "text": str(result.error)}
+        target = self.project_file if self.is_epw_project() else DEFAULT_PROJECT_FILE
+        try:
+            if os.path.exists(target) and os.path.samefile(source_path, target):
+                return True, None
+            payload = open(source_path, "rb").read()
+            if os.path.exists(target):
+                shutil.copy2(target, target + ".bak")
+            temporary = target + ".installing"
+            with open(temporary, "wb") as f:
+                f.write(payload)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, target)
+        except OSError as e:
+            return False, {"key": "project_format.unreadable", "params": {"detail": str(e)}, "text": str(e)}
+        self._audit("PROJECT_FILE_INSTALLED",
+                    f"{source_path} installed as {target} (revision {result.project.revision}, "
+                    f"last saved by {result.project.modified_by}) - active after restart")
+        return True, None
+
+    # --- projekt.epw: header, audit ---------------------------------------
+
+    def set_audit_sink(self, audit_logger, actor_provider=None):
+        """Settings written back to projekt.epw are audited here, the one
+        place every writer passes through. `actor_provider()` returns who
+        is logged in (EPWCore passes the access manager's level)."""
+        self._audit_logger = audit_logger
+        self._actor_provider = actor_provider
+
+    def _audit(self, event_type: str, detail: str, success: bool = True):
+        if self._audit_logger is None:
+            return
+        actor = "SYSTEM"
+        if self._actor_provider is not None:
+            try:
+                actor = self._actor_provider() or "SYSTEM"
+            except Exception:
+                actor = "SYSTEM"
+        self._audit_logger.record(event_type, actor, detail, success=success)
+
+    def get_project_header(self) -> dict:
+        """What GET /api/v1/project reports - which project the controller
+        runs and which revision of it (task etap 5.2)."""
+        if not self.is_epw_project():
+            return {"source": "project.json", "path": os.path.abspath(self.project_file), "loaded": True,
+                    "name": self.get_metadata().get("name") or self.config.get("project_id", ""),
+                    "revision": None, "modified_by": None, "modified_at": None, "load_error": None}
+        from epw_os.core import project_format as pf
+        project = self.project
+        header = {
+            "source": "projekt.epw",
+            "path": os.path.abspath(self.project_file),
+            "format": pf.FORMAT_MARKER,
+            "schema_version": pf.SCHEMA_VERSION,
+            "loaded": project is not None,
+            "load_error": self.load_error["text"] if self.load_error else None,
+            "warnings": [str(w) for w in self.load_warnings],
+        }
+        if project is not None:
+            header.update({
+                "name": project.metadata.name,
+                "description": project.metadata.description,
+                "author": project.metadata.author,
+                "created_at": project.metadata.created_at,
+                "modified_at": project.metadata.modified_at,
+                "revision": project.revision,
+                "modified_by": project.modified_by,
+                "modules": list(project.modules),
+                "counts": {
+                    "cards": len(project.cards), "points": len(project.points), "devices": len(project.devices),
+                    "zones": len(project.zones), "lines": len(project.lines),
+                    "process_protections": len(project.process_protections),
+                    "electrical_protection_stages": len(project.electrical_protection_stages),
+                },
+            })
+        return header
+
+    # --- projekt.epw: reading and writing ---------------------------------
+
+    def _part(self, name: str) -> dict:
+        from epw_os.core.project_epw import PROJECT_KEYS
+        from epw_os.core.runtime_state import STATE_KEYS, default_state
+        if name == "project":
+            return {key: self.config.get(key) for key in PROJECT_KEYS}
+        if name == "state":
+            defaults = default_state()
+            return {key: self.config.get(key, defaults[key]) for key in STATE_KEYS}
+        return {key: value for key, value in self.config.items()
+                if key not in PROJECT_KEYS and key not in STATE_KEYS}
+
+    def _empty_project(self):
+        from epw_os.core import project_format as pf
+        return pf.Project(metadata=pf.ProjectMetadata(name=""))
+
+    def _load_epw(self, path) -> bool:
+        """Never raises. A missing or refused projekt.epw leaves runtime
+        with an EMPTY project (no cards, no modules) and `load_error` set -
+        the controller still comes up and says why, instead of dying at
+        startup (task point 1.2). A refused file is never overwritten:
+        _write_project_settings() refuses while `self.project` is None."""
+        from epw_os.core import project_format as pf
+        from epw_os.core.local_json import read_json_object
+        from epw_os.core.project_epw import PROJECT_KEYS, build_project_view
+        from epw_os.core.runtime_state import STATE_KEYS, RuntimeStateStore
+
+        store = RuntimeStateStore(self.state_file)
+        state = store.load()
+        self.state_load_problem = store.load_problem
+
+        settings, settings_problem = read_json_object(self.settings_file)
+        if settings_problem == "corrupt":
+            log.error(f"Controller settings {self.settings_file} are unreadable - defaults used.")
+        settings = {key: value for key, value in (settings or {}).items()
+                    if key not in ("format", "schema_version") and key not in PROJECT_KEYS and key not in STATE_KEYS}
+
+        self.load_warnings = []
+        if not os.path.exists(path):
+            self.project = None
+            self.load_error = {"key": "startup.project_missing", "params": {"path": str(path)},
+                               "text": f"No project file at {path}."}
+        else:
+            result = pf.read_project(path)
+            if result.ok:
+                self.project = result.project
+                self.load_error = None
+                self.load_warnings = list(result.warnings)
+            else:
+                self.project = None
+                self.load_error = {"key": "project_format." + result.error.key, "params": dict(result.error.params),
+                                   "text": str(result.error)}
+
+        view = build_project_view(self.project if self.project is not None else self._empty_project())
+        self.config = {**settings, **view, **state}
+
+        for warning in self.load_warnings:
+            log.warning(f"{path}: {warning}")
+        if self.load_error:
+            log.error(f"Project {path} was not loaded: {self.load_error['text']} "
+                      f"Runtime starts with an empty project.")
+        else:
+            log.info(f"Loaded project {path}: '{self.project.metadata.name}', revision {self.project.revision} "
+                     f"(last saved by {self.project.modified_by}).")
+        self._mark_clean()
+        return self.project is not None
+
+    def _save_epw(self) -> bool:
+        from epw_os.core.local_json import atomic_write_json
+        ok = True
+        if _canonical(self._part("state")) != self._saved_parts.get("state"):
+            ok = self.save_runtime_state() and ok
+        settings = self._part("settings")
+        if _canonical(settings) != self._saved_parts.get("settings"):
+            try:
+                atomic_write_json(self.settings_file, {"format": SETTINGS_FORMAT, "schema_version": 1, **settings})
+                self._saved_parts["settings"] = _canonical(settings)
+            except OSError as e:
+                log.error(f"Could not write controller settings {self.settings_file}: {e}")
+                ok = False
+        if _canonical(self._part("project")) != self._saved_parts.get("project"):
+            ok = self._write_project_settings() and ok
+        self._saved_snapshot = self._snapshot()
+        return ok
+
+    def _restore_project_view(self):
+        from epw_os.core.project_epw import PROJECT_KEYS, build_project_view
+        view = build_project_view(self.project if self.project is not None else self._empty_project())
+        for key in PROJECT_KEYS:
+            self.config[key] = view[key]
+        self._saved_parts["project"] = _canonical(self._part("project"))
+
+    def _write_project_settings(self) -> bool:
+        """Etap 4: a setting changed on the panel goes back into
+        projekt.epw - revision + 1, modified_by "panel", one audit entry per
+        changed value. Anything structural in the difference refuses the
+        whole write (and is audited as refused); the in-memory sections
+        are put back to what the project says."""
+        from epw_os.core import project_format as pf
+        from epw_os.core.project_epw import apply_changes, diff_settings
+
+        if self.project is None:
+            log.error("Refused to write settings: no valid projekt.epw is loaded, and a file that could not "
+                      "be read is never overwritten.")
+            self._restore_project_view()
+            return False
+
+        diff = diff_settings(self.project, self.config)
+        if diff.structural:
+            detail = "Structural change(s) refused - edit the project in Studio: " + ", ".join(diff.structural)
+            log.error(detail)
+            self._audit("PROJECT_STRUCTURE_CHANGE_REFUSED", detail, success=False)
+            self._restore_project_view()
+            return False
+
+        if diff.changes:
+            apply_changes(self.project, diff.changes)
+            try:
+                pf.save_project(self.project, self.project_file, modified_by="panel")
+            except OSError as e:
+                log.error(f"Could not write settings to {self.project_file}: {e}")
+                self._audit("PROJECT_SETTING_WRITE_FAILED", str(e), success=False)
+                return False
+            for change in diff.changes:
+                self._audit("PROJECT_SETTING_CHANGED",
+                            f"{change.describe()} (projekt.epw revision {self.project.revision})")
+            log.info(f"Wrote {len(diff.changes)} setting change(s) to {self.project_file}, "
+                     f"revision {self.project.revision}.")
+        self._restore_project_view()
+        return True

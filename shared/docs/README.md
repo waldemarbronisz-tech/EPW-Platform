@@ -6,6 +6,8 @@ tutaj dotyczy wszystkich trzech części platformy i wymaga uzgodnienia.
 | Plik | Co opisuje |
 |---|---|
 | `SPEC_FORMAT_EPW.md` | Projekt formatu `.epw` — jeden plik na cały projekt |
+| `SPEC_PROJEKT_EPW.md` | Obowiązujący kontrakt pliku `projekt.epw` (Studio — runtime) |
+| `PROJEKT_EPW_ZADANIA.md` | Jak runtime czyta `projekt.epw`, na czym opiera się kontrola składu, zadania do zgłoszenia i dług |
 | `RUNTIME_CONTRACT.md` | Kontrakt między edytorem ekranów a runtime'em |
 | `REJESTR_UZUPELNIENIE.md` | Pełna lista sygnałów wystawianych przez runtime |
 | `PL_TERMINOLOGIA_DO_PRZEGLADU.md` | Terminologia polska do ujednolicenia |

@@ -118,5 +118,9 @@ def test_module_has_no_qt_dependency():
         "bad=[m for m in sys.modules if m.startswith(('PyQt6','PySide6'))]; "
         "print(bad); sys.exit(1 if bad else 0)"
     )
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    # cwd: runtime/ - the child process must find epw_os the same way
+    # whether pytest itself was started from runtime/ or the repo root.
+    from pathlib import Path
+    runtime_root = Path(__file__).resolve().parents[2]
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=runtime_root)
     assert result.returncode == 0, f"i18n pulled in Qt: {result.stdout.strip()}"

@@ -220,10 +220,15 @@ class PageAnalogInputs(QWidget):
     button - a per-row button, visible Engineer-only, opening a
     per-point dialog."""
 
-    def __init__(self, tag_manager, access_manager, parent=None):
+    def __init__(self, tag_manager, access_manager, parent=None, structure_editable=True):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.access_manager = access_manager
+        # projekt.epw: which analog points exist, their description and
+        # technical note are the point registry's (Studio); the scaling
+        # settings and the unit stay editable here and go back into the
+        # project file (task "runtime czyta projekt.epw" 3.1 / 4).
+        self.structure_editable = structure_editable
         # Row index -> tag name, kept in sync with the table by
         # _rebuild_table() - the table no longer has a fixed, computable
         # row<->tag relationship (AI{row+1}) now that tags are arbitrary,
@@ -249,6 +254,12 @@ class PageAnalogInputs(QWidget):
         toolbar.addWidget(self.btn_remove)
         toolbar.addStretch()
         layout.addLayout(toolbar)
+        if not self.structure_editable:
+            self.btn_add.setVisible(False)
+            self.btn_remove.setVisible(False)
+            settings_note = QLabel(tr("pages.analog_inputs.settings_only_note"))
+            settings_note.setWordWrap(True)
+            layout.addWidget(settings_note)
 
         # No "Address" column - unlike DI/DO's %IX0.N/%QX0.N (a real PLC
         # register slot), a dynamic point has no fixed hardware address;
@@ -322,7 +333,8 @@ class PageAnalogInputs(QWidget):
                 if item is None:
                     continue
                 flags = item.flags()
-                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable if can_edit
+                editable = can_edit and (self.structure_editable or _EDITABLE_COLUMNS[col] == "unit")
+                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable if editable
                               else flags & ~Qt.ItemFlag.ItemIsEditable)
         self.table.blockSignals(False)
 
@@ -464,6 +476,11 @@ class PageAnalogInputs(QWidget):
         old_value = point.get(field, "")
         if new_value == old_value:
             return
+        if not self.structure_editable and field != "unit":
+            self.table.blockSignals(True)
+            item.setText(old_value)
+            self.table.blockSignals(False)
+            return
 
         # Execution-time re-check (Task: real per-level permissions) -
         # the ItemIsEditable flag already stops the in-place editor from
@@ -529,6 +546,8 @@ class PageAnalogInputs(QWidget):
         self._refresh_value_cell(row)
 
     def _add_point(self):
+        if not self.structure_editable:
+            return  # points are defined in the project (Studio)
         if not self.access_manager.has_access(AccessLevel.ENGINEER):
             self.window().deny_access(AccessLevel.ENGINEER, "Add Analog Point")
             return
@@ -563,6 +582,8 @@ class PageAnalogInputs(QWidget):
         self._rebuild_table()
 
     def _remove_point(self):
+        if not self.structure_editable:
+            return  # points are defined in the project (Studio)
         if not self.access_manager.has_access(AccessLevel.ENGINEER):
             self.window().deny_access(AccessLevel.ENGINEER, "Remove Analog Point")
             return

@@ -1647,7 +1647,11 @@ class StudioMainWindow(QMainWindow):
         try:
             project = load_project(path)
         except (ProjectFormatError, OSError) as exc:
-            QMessageBox.critical(self, tr("project_info.open_failed_title"), str(exc))
+            # A refusal carries a key + params (shared/project_format.py has
+            # no text of its own) - translated here, English as the fallback.
+            message = (tr("project_format." + exc.key, str(exc), **exc.params)
+                       if isinstance(exc, ProjectFormatError) else str(exc))
+            QMessageBox.critical(self, tr("project_info.open_failed_title"), message)
             self._remove_recent_project(path)  # a saved-but-now-broken/missing entry is worse than none
             return
         self._project = project
