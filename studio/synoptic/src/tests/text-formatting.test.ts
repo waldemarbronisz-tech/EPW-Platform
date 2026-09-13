@@ -49,7 +49,7 @@ describe('the text box element', () => {
 describe('character formatting', () => {
   it('fills in word-processor defaults for text saved before formatting existed', () => {
     expect(textFormatOf(box())).toEqual({
-      font: 'Tahoma', fontSize: 13, bold: false, italic: false, underline: false, align: 'left', style: 'normal',
+      font: 'Tahoma', fontSize: 13, bold: false, italic: false, underline: false, align: 'left', style: 'normal', color: '#000000',
     });
   });
 

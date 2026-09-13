@@ -88,6 +88,26 @@
   "text": {
     "placeholder": "Tekst"
   },
+  "room": {
+    "title": "Pomieszczenie",
+    "name": "Nazwa",
+    "location": "Lokalizacja",
+    "no_location": "(brak)",
+    "mixed": "(różne)",
+    "layout": "Położenie i rozmiar",
+    "width": "Szerokość",
+    "height": "Wysokość",
+    "measures": "Wymiary",
+    "walls": "Ściany",
+    "perimeter": "Obwód",
+    "floor_area": "Powierzchnia podłogi",
+    "not_closed": "nie jest zamkniętym pomieszczeniem",
+    "move_hint": "Przesunięcie pomieszczenia - przeciągnięciem ściany albo polami X / Y - zabiera ze sobą symbole w środku.",
+    "select_whole": "Zaznacz całe pomieszczenie"
+  },
+  "format": {
+    "text_color": "Kolor tekstu"
+  },
   "symbol": {
     "automation.plc": "Sterownik PLC",
     "automation.remote_io": "Wyspa wejść/wyjść (Remote IO)",

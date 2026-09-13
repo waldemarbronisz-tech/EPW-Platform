@@ -152,7 +152,7 @@ export const TextEditOverlay: React.FC = () => {
         resize: 'none',
         overflow: 'hidden',
         background: 'rgba(255,255,255,0.92)',
-        color: obj.color || COLOR_OUTLINE,
+        color: obj.textColor || obj.color || COLOR_OUTLINE,
         fontFamily: format.font,
         fontSize: format.fontSize * zoom,
         fontWeight: format.bold ? 'bold' : 'normal',

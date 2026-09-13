@@ -13,12 +13,13 @@ import { useStore } from '../store';
 import type { SynopticObject } from '../store';
 import { FONT_SIZE_BASE, FONT_UI } from '../theme/ScadaTheme';
 import {
-  clampFontSize, commonTextFormat, FONT_FAMILIES, FONT_SIZES, isTextFormattable,
+  clampFontSize, commonTextFormat, FONT_FAMILIES, FONT_SIZES, isTextFormattable, TEXT_BOX_TYPE,
   stepFontSize, styleUpdates, TEXT_STYLES,
 } from '../project/TextFormatting';
 import type { TextAlign, TextStyleId } from '../project/TextFormatting';
 import { insertTextBox } from './insertTextBox';
 import { fitTextBoxHeight } from '../utils/TextMeasure';
+import { tr } from '../i18n/tr';
 
 const ALIGNMENTS: { id: TextAlign; title: string; icon: string }[] = [
   { id: 'left', title: 'Align text left', icon: 'text_align_left' },
@@ -34,13 +35,17 @@ export const FormatBar: React.FC = () => {
   const nextTextFormat = useStore(s => s.nextTextFormat);
 
   const targets = useMemo(
-    () => objects.filter(o => selectedIds.includes(o.id) && isTextFormattable(o.type)),
+    // fix/text-size: every selected element that carries text - a text
+    // box, a label frame, the label of a symbol. It used to be text boxes
+    // only, so with a symbol or a label frame selected the bar showed the
+    // default 13 and edited nothing but the NEXT text box.
+    () => objects.filter(o => selectedIds.includes(o.id)),
     [objects, selectedIds]
   );
   // Nothing selected: show (and edit) the format the next text box gets.
   const common = commonTextFormat(targets.length > 0
     ? targets
-    : [{ font: FONT_UI, fontSize: FONT_SIZE_BASE, textAlign: 'left', textStyle: 'normal', ...nextTextFormat } as SynopticObject]);
+    : [{ type: TEXT_BOX_TYPE, font: FONT_UI, fontSize: FONT_SIZE_BASE, textAlign: 'left', textStyle: 'normal', ...nextTextFormat } as SynopticObject]);
   const enabled = !previewMode;
 
   const apply = (updates: Partial<SynopticObject>) => {
@@ -53,7 +58,7 @@ export const FormatBar: React.FC = () => {
     // A larger font or a new style can need more height - the box grows
     // to fit instead of clipping the last lines.
     state.updateObjects(targets.map(o => {
-      const needed = fitTextBoxHeight({ ...o, ...updates });
+      const needed = isTextFormattable(o.type) ? fitTextBoxHeight({ ...o, ...updates }) : o.height;
       return { id: o.id, updates: needed > o.height ? { ...updates, height: needed } : updates };
     }));
     state.saveHistory();
@@ -190,6 +195,20 @@ export const FormatBar: React.FC = () => {
             <StudioIcon name={icon} />
           </button>
         ))}
+      </div>
+
+      <div className="format-bar-divider" />
+
+      <div className="format-bar-group">
+        <input
+          type="color"
+          title={tr('format.text_color')}
+          aria-label={tr('format.text_color')}
+          disabled={!enabled}
+          value={common.color ?? '#000000'}
+          onChange={e => apply({ textColor: e.target.value })}
+          style={{ width: 32, height: 22, padding: 0 }}
+        />
       </div>
     </div>
   );

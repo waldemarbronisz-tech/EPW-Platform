@@ -4,7 +4,7 @@
 // `StateCreator<AppState, [], [], ItsOwnSlice>` - Zustand's own
 // documented "slices" pattern - without a circular VALUE import back to
 // store.ts (this file has no runtime code in it at all, only the type).
-import type { WorkMode } from '../project/WorkModes';
+import type { SelectionIds, WorkMode } from '../project/WorkModes';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
@@ -279,6 +279,7 @@ export interface AppState {
   updateSignalPanel: (id: string, updates: Partial<SignalPanelElement>) => void;
   addWall: (wall: Omit<WallElement, 'id'>) => void;
   updateWall: (id: string, updates: Partial<WallElement>) => void;
+  updateWalls: (updates: { id: string; updates: Partial<WallElement> }[]) => void;
   // feat/room-plan: copy one wall's thickness/height/material onto
   // every wall joined to it. Editing a wall usually means editing the
   // ROOM - you pick OSB for the workshop, not for its north wall -
@@ -339,6 +340,8 @@ export interface AppState {
   // frame/connection moves by (dx, dy) together, as one history entry
   // per keypress.
   moveSelectionBy: (dx: number, dy: number) => void;
+  /** Moves exactly these elements (walls included) - a room with its contents. One history entry unless saveHistory is false (a live drag saves once at the end). */
+  moveElementsBy: (selection: SelectionIds, dx: number, dy: number, saveHistory?: boolean) => void;
 
   // Clipboard
   copySelected: () => void;

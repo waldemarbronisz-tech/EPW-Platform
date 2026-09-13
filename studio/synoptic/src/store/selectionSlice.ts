@@ -10,7 +10,7 @@ import type { AppState } from './appState';
 export type SelectionSlice = Pick<AppState,
   | 'selectedIds' | 'selectedConnectionIds' | 'selectedMeterIds' | 'selectedSignalPanelIds' | 'selectedFrameIds' | 'selectedGroupCommandIds' | 'selectedSetpointPanelIds' | 'selectedWallIds'
   | 'selectObjects' | 'selectConnections' | 'selectMeters' | 'selectSignalPanels' | 'selectFrames' | 'selectGroupCommands' | 'selectSetpointPanels' | 'selectWalls'
-  | 'selectMixed' | 'selectAll' | 'clearSelection' | 'moveSelectionBy'
+  | 'selectMixed' | 'selectAll' | 'clearSelection' | 'moveSelectionBy' | 'moveElementsBy'
 >;
 
 export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice> = (set, get) => ({
@@ -202,52 +202,55 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
 
   clearSelection: () => set({ selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] }),
 
-  // Locked objects are skipped, same as an ordinary drag already
-  // refuses to move them (draggable={!obj.locked} in Canvas.tsx) -
-  // arrow-key movement is not a back door around a lock. Meters and
-  // connections have no lock flag of their own, so every selected one
-  // of those always moves. A single set() call, then one saveHistory()
-  // - one history entry per keypress, not per moved item.
+  // Arrow keys: the current selection, through the same primitive a room
+  // drag uses.
   moveSelectionBy: (dx, dy) => {
-    const { selectedIds, selectedMeterIds, selectedConnectionIds, selectedSignalPanelIds, selectedFrameIds, selectedGroupCommandIds, selectedSetpointPanelIds, selectedWallIds } = get();
-    if (selectedIds.length === 0 && selectedMeterIds.length === 0 && selectedConnectionIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0 && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0 && selectedWallIds.length === 0) return;
+    const s = get();
+    get().moveElementsBy({
+      objectIds: s.selectedIds,
+      connectionIds: s.selectedConnectionIds,
+      meterIds: s.selectedMeterIds,
+      signalPanelIds: s.selectedSignalPanelIds,
+      frameIds: s.selectedFrameIds,
+      groupCommandIds: s.selectedGroupCommandIds,
+      setpointPanelIds: s.selectedSetpointPanelIds,
+      wallIds: s.selectedWallIds,
+    }, dx, dy);
+  },
+
+  // Locked objects are skipped, same as an ordinary drag already refuses
+  // to move them - a move is not a back door around a lock. A single set()
+  // call, then one saveHistory() - one history entry per move, not per
+  // moved item (a live drag passes saveHistory=false and saves once when
+  // it ends).
+  moveElementsBy: (selection, dx, dy, saveHistory = true) => {
+    const { objectIds: ids, meterIds, connectionIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds } = selection;
+    const nothing = [ids, meterIds, connectionIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds].every(list => list.length === 0);
+    if (nothing || (dx === 0 && dy === 0)) return;
     set((state) => ({
-      objects: state.objects.map(o => (selectedIds.includes(o.id) && !o.locked) ? { ...o, x: o.x + dx, y: o.y + dy } : o),
-      meters: state.meters.map(m => selectedMeterIds.includes(m.id) ? { ...m, x: m.x + dx, y: m.y + dy } : m),
-      signalPanels: state.signalPanels.map(p => selectedSignalPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
-      frames: state.frames.map(f => selectedFrameIds.includes(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f),
+      objects: state.objects.map(o => (ids.includes(o.id) && !o.locked) ? { ...o, x: o.x + dx, y: o.y + dy } : o),
+      meters: state.meters.map(m => meterIds.includes(m.id) ? { ...m, x: m.x + dx, y: m.y + dy } : m),
+      signalPanels: state.signalPanels.map(p => signalPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
+      frames: state.frames.map(f => frameIds.includes(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f),
       // A wall has no x/y of its own - both endpoints move together
       // (moveWall), which is the only way it cannot deform.
-      walls: state.walls.map(w => selectedWallIds.includes(w.id) ? { ...w, ...moveWall(w, dx, dy) } : w),
-      groupCommands: state.groupCommands.map(g => selectedGroupCommandIds.includes(g.id) ? { ...g, x: g.x + dx, y: g.y + dy } : g),
-      setpointPanels: state.setpointPanels.map(p => selectedSetpointPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
-      // fix/wiring-and-library-groups commit 3: a selected connection's
-      // own points used to be shifted by the plain (dx,dy) vector as a
-      // bare {x,y} literal - silently dropping any `anchor` field along
-      // the way, with no message, no matter WHY the point was moving.
-      // That is correct ONLY when this same group move is deliberately
-      // detaching the wire from a terminal it is not moving together
-      // with (its own anchor's symbol id is not part of THIS move) -
-      // the same "manually moving an anchored point breaks the anchor"
-      // rule ConnectionNode.tsx's own per-point drag already applies,
-      // now extended to this coarser, whole-connection move. When the
-      // anchor's OWN symbol IS moving together with it (selectedIds
-      // includes it too - e.g. a rubber-band selection spanning both a
-      // symbol and its own wire), the point keeps its anchor: both move
-      // by the identical vector, so the numbers agree either way, and
-      // the very next saveHistory's own syncAnchoredConnections simply
-      // confirms it rather than fighting a stale, silently-broken one
-      // the next time the symbol alone moves.
-      connections: state.connections.map(c => selectedConnectionIds.includes(c.id)
+      walls: state.walls.map(w => wallIds.includes(w.id) ? { ...w, ...moveWall(w, dx, dy) } : w),
+      groupCommands: state.groupCommands.map(g => groupCommandIds.includes(g.id) ? { ...g, x: g.x + dx, y: g.y + dy } : g),
+      setpointPanels: state.setpointPanels.map(p => setpointPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
+      // A moved wire keeps a point's anchor only when the anchor's own
+      // symbol moves with it; otherwise the point is detached, as a
+      // manual move of an anchored point always has been.
+      connections: state.connections.map(c => connectionIds.includes(c.id)
         ? { ...c, points: c.points.map(p => {
-            if (p.anchor && !selectedIds.includes(p.anchor.symbolId)) {
+            if (p.anchor && !ids.includes(p.anchor.symbolId)) {
               const { anchor: _anchor, ...rest } = p;
               return { ...rest, x: p.x + dx, y: p.y + dy };
             }
             return { ...p, x: p.x + dx, y: p.y + dy };
           }) }
-        : c)
+        : c),
+      isDirty: true,
     }));
-    get().saveHistory();
+    if (saveHistory) get().saveHistory();
   },
 });

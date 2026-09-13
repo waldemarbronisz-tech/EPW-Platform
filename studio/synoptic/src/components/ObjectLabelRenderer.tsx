@@ -4,6 +4,7 @@ import { Group, Rect, Text } from 'react-konva';
 import { useStore } from '../store';
 import type { SynopticObject } from '../store';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
+import { konvaFontStyle, textFormatOf } from '../project/TextFormatting';
 import { COLOR_OUTLINE, COLOR_WHITE, FONT_UI, FONT_SIZE_BASE, FONT_SIZE_SMALL } from '../theme/ScadaTheme';
 
 interface ObjectLabelRendererProps {
@@ -15,8 +16,26 @@ interface ObjectLabelRendererProps {
 // (designation) is "etykiety obiektow" - FONT_SIZE_BASE. The
 // secondary line (name) is the theme's own literal example of
 // FONT_SIZE_SMALL's purpose ("druga linia etykiety").
-const PRIMARY_FONT_SIZE = FONT_SIZE_BASE;
-const SECONDARY_FONT_SIZE = FONT_SIZE_SMALL;
+// fix/text-size: these used to be the label's sizes, full stop -
+// PRIMARY_FONT_SIZE = FONT_SIZE_BASE, i.e. 13, whatever the object said.
+// The label now takes its format from the object (labelTextFormat below);
+// FONT_SIZE_BASE is only the default.
+const LABEL_MIN_FONT_SIZE = 6;
+
+/** The format a symbol's label is drawn with, from the object: size (second line in proportion), font, bold (the default), italic, underline, colour. */
+// oxlint-disable-next-line react/only-export-components -- kept beside the renderer that uses it, testable without Konva.
+export function labelTextFormat(obj: SynopticObject) {
+  const format = textFormatOf(obj);
+  return {
+    primarySize: format.fontSize,
+    secondarySize: Math.max(LABEL_MIN_FONT_SIZE, Math.round((format.fontSize * FONT_SIZE_SMALL) / FONT_SIZE_BASE)),
+    family: obj.font || FONT_UI,
+    bold: format.bold,
+    italic: format.italic,
+    underline: format.underline,
+    fill: obj.textColor || COLOR_OUTLINE,
+  };
+}
 const PADDING_X = 4;
 const PADDING_Y = 2;
 const LINE_GAP = 1;
@@ -128,8 +147,9 @@ export const ObjectLabelRenderer: React.FC<ObjectLabelRendererProps> = ({ obj, o
   const counterRot = -(obj.rotation || 0);
 
   const maxTextWidth = boxWidth - PADDING_X * 2;
-  const primaryLine = measureLabelLine(primaryText, PRIMARY_FONT_SIZE, maxTextWidth);
-  const secondaryLine = measureLabelLine(secondaryText, SECONDARY_FONT_SIZE, maxTextWidth);
+  const format = labelTextFormat(obj);
+  const primaryLine = measureLabelLine(primaryText, format.primarySize, maxTextWidth);
+  const secondaryLine = measureLabelLine(secondaryText, format.secondarySize, maxTextWidth);
   const bgWidth = Math.min(boxWidth, Math.max(primaryLine.width, secondaryLine.width) + PADDING_X * 2);
   const bgHeight =
     PADDING_Y * 2 +
@@ -205,13 +225,14 @@ export const ObjectLabelRenderer: React.FC<ObjectLabelRendererProps> = ({ obj, o
             height={primaryLine.height}
             text={primaryText}
             align={align}
-            fontSize={PRIMARY_FONT_SIZE}
-            fontFamily={FONT_UI}
+            fontSize={format.primarySize}
+            fontFamily={format.family}
             lineHeight={LINE_HEIGHT_FACTOR}
             wrap="word"
             ellipsis={true}
-            fontStyle="bold"
-            fill={COLOR_OUTLINE}
+            fontStyle={konvaFontStyle(format)}
+            textDecoration={format.underline ? 'underline' : ''}
+            fill={format.fill}
           />
         )}
         {secondaryText && (
@@ -222,12 +243,13 @@ export const ObjectLabelRenderer: React.FC<ObjectLabelRendererProps> = ({ obj, o
             height={secondaryLine.height}
             text={secondaryText}
             align={align}
-            fontSize={SECONDARY_FONT_SIZE}
-            fontFamily={FONT_UI}
+            fontSize={format.secondarySize}
+            fontFamily={format.family}
             lineHeight={LINE_HEIGHT_FACTOR}
             wrap="word"
             ellipsis={true}
-            fill={COLOR_OUTLINE}
+            fontStyle={format.italic ? 'italic' : 'normal'}
+            fill={format.fill}
           />
         )}
       </Group>
@@ -244,8 +266,8 @@ export const ObjectLabelRenderer: React.FC<ObjectLabelRendererProps> = ({ obj, o
             width: editPos.width,
             zIndex: 10000,
             fontWeight: 'bold',
-            fontSize: PRIMARY_FONT_SIZE,
-            fontFamily: FONT_UI,
+            fontSize: format.primarySize,
+            fontFamily: format.family,
             border: `1px solid ${COLOR_OUTLINE}`,
             background: COLOR_WHITE,
             color: COLOR_OUTLINE,

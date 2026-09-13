@@ -30,7 +30,9 @@ export interface GroupDragApi {
   // when that element is part of a selection of MORE than one item;
   // otherwise clears any previous group-drag state so a lone drag
   // falls through to that element's own existing solo behavior.
-  start: (key: DragKey) => void;
+  // fix/room-move-and-edit: `extra` adds elements that are not selected
+  // but must move too - what lies inside a dragged frame.
+  start: (key: DragKey, extra?: import('../../project/WorkModes').SelectionIds) => void;
   isActive: () => boolean;
   // Called from the leader's own onDragMove with how far ITS OWN Konva
   // node has moved from where the drag started (raw, unsnapped - final

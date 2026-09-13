@@ -121,6 +121,8 @@ export interface SynopticObject {
   fontUnderline?: boolean;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   textStyle?: 'normal' | 'title' | 'heading1' | 'heading2' | 'caption';
+  /** The colour the element's text is drawn in - a text box, the label on a symbol, a label frame. Absent: black. */
+  textColor?: string;
 }
 
 export interface CanvasState {

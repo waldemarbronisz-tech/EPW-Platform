@@ -88,6 +88,26 @@
   "text": {
     "placeholder": "Text"
   },
+  "room": {
+    "title": "Room",
+    "name": "Name",
+    "location": "Location",
+    "no_location": "(none)",
+    "mixed": "(different)",
+    "layout": "Position and size",
+    "width": "Width",
+    "height": "Height",
+    "measures": "Measures",
+    "walls": "Walls",
+    "perimeter": "Perimeter",
+    "floor_area": "Floor area",
+    "not_closed": "not a closed room",
+    "move_hint": "Moving the room - by dragging a wall or with X / Y - takes the symbols inside it along.",
+    "select_whole": "Select the whole room"
+  },
+  "format": {
+    "text_color": "Text colour"
+  },
   "symbol": {
     "automation.plc": "PLC",
     "automation.remote_io": "Remote IO",

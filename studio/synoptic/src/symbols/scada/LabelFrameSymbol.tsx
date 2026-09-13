@@ -17,8 +17,12 @@ const PADDING_Y = 10;
 // in 1c's typography spec). getBoundaryPointWidth's own tests
 // (scada-editor.test.ts) only check clamp/relative-size behavior, not
 // an exact pixel width, so this shrink is safe - see raport.md.
-const TITLE_FONT_SIZE = FONT_SIZE_TITLE;
-const DESC_FONT_SIZE = FONT_SIZE_BASE;
+// fix/text-size: the title and description sizes used to be fixed here;
+// they now follow the object's own font size (FONT_SIZE_BASE by default),
+// the title keeping the theme's proportion to it.
+function frameFontSizes(fontSize: number = FONT_SIZE_BASE): { title: number; description: number } {
+  return { title: Math.round((fontSize * FONT_SIZE_TITLE) / FONT_SIZE_BASE), description: fontSize };
+}
 const LINE_GAP = 4;
 const FRAME_OUTLINE_WIDTH = 4; // per this symbol's own spec, not OUTLINE_WIDTH
 
@@ -33,11 +37,12 @@ function estimateTextWidth(text: string, fontSize: number): number {
 }
 
 // oxlint-disable-next-line react/only-export-components -- one file per symbol is required; this helper belongs beside its component.
-export function getLabelFrameSize(title: string, description: string): { width: number; height: number } {
-  const titleWidth = estimateTextWidth(title, TITLE_FONT_SIZE);
-  const descWidth = estimateTextWidth(description, DESC_FONT_SIZE);
+export function getLabelFrameSize(title: string, description: string, fontSize: number = FONT_SIZE_BASE): { width: number; height: number } {
+  const sizes = frameFontSizes(fontSize);
+  const titleWidth = estimateTextWidth(title, sizes.title);
+  const descWidth = estimateTextWidth(description, sizes.description);
   const width = Math.max(titleWidth, descWidth) + PADDING_X * 2;
-  const height = PADDING_Y * 2 + TITLE_FONT_SIZE + LINE_GAP + DESC_FONT_SIZE;
+  const height = PADDING_Y * 2 + sizes.title + LINE_GAP + sizes.description;
   return { width, height };
 }
 
@@ -49,17 +54,22 @@ export interface LabelFrameSymbolProps {
   // caller is unaffected. Added for BoundaryPointSymbol, which is built
   // on this component but clamps its width to a min/max range.
   width?: number;
+  /** The description's size; the title keeps its proportion. FONT_SIZE_BASE when absent. */
+  fontSize?: number;
+  fontFamily?: string;
+  color?: string;
 }
 
-export const LabelFrameSymbol: React.FC<LabelFrameSymbolProps> = ({ title, description, width: widthOverride }) => {
-  const { width: autoWidth, height } = getLabelFrameSize(title, description);
+export const LabelFrameSymbol: React.FC<LabelFrameSymbolProps> = ({ title, description, width: widthOverride, fontSize, fontFamily, color }) => {
+  const { width: autoWidth, height } = getLabelFrameSize(title, description, fontSize);
+  const sizes = frameFontSizes(fontSize);
   const width = widthOverride ?? autoWidth;
 
   return (
     <Group>
       <Rect x={0} y={0} width={width} height={height} fill={COLOR_PANEL} stroke={COLOR_OUTLINE} strokeWidth={FRAME_OUTLINE_WIDTH} />
-      <Text x={PADDING_X} y={PADDING_Y} text={title} fontSize={TITLE_FONT_SIZE} fontFamily={FONT_UI} fontStyle="bold" fill={COLOR_OUTLINE} />
-      <Text x={PADDING_X} y={PADDING_Y + TITLE_FONT_SIZE + LINE_GAP} text={description} fontSize={DESC_FONT_SIZE} fontFamily={FONT_UI} fill={COLOR_OUTLINE} />
+      <Text x={PADDING_X} y={PADDING_Y} text={title} fontSize={sizes.title} fontFamily={fontFamily || FONT_UI} fontStyle="bold" fill={color || COLOR_OUTLINE} />
+      <Text x={PADDING_X} y={PADDING_Y + sizes.title + LINE_GAP} text={description} fontSize={sizes.description} fontFamily={fontFamily || FONT_UI} fill={color || COLOR_OUTLINE} />
     </Group>
   );
 };

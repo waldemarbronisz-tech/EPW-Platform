@@ -54,7 +54,7 @@ export const TextBoxSymbol: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
           verticalAlign="top"
           wrap="word"
           lineHeight={TEXT_LINE_HEIGHT}
-          fill={obj.color || COLOR_OUTLINE}
+          fill={obj.textColor || obj.color || COLOR_OUTLINE}
           opacity={empty ? 0.4 : 1}
           listening={false}
         />

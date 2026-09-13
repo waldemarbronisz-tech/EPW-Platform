@@ -105,8 +105,11 @@ const RoomOptions: React.FC = () => {
 
 export const ModeOptionsBar: React.FC = () => {
   const workMode = useStore(s => s.workMode);
+  const selectedCount = useStore(s => s.selectedIds.length);
 
   if (workMode === 'ANNOTATIONS') return <FormatBar />;
+  // The text of a selected symbol - its label - is formatted the same way.
+  if (workMode === 'SYMBOLS' && selectedCount > 0) return <FormatBar />;
   if (workMode === 'ROOMS') return <RoomOptions />;
   return (
     <div className="format-bar mode-options-bar" data-mode-options={workMode}>
