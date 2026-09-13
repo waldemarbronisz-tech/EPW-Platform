@@ -114,17 +114,17 @@ describe('library wiring (source scan)', () => {
   });
 
   it('offers a search box and the recent section in the panel', () => {
-    expect(toolboxSource).toContain('RECENT_LABEL');
-    expect(toolboxSource).toContain('matchesQuery');
-    expect(toolboxSource).toContain('Search...');
+    expect(toolboxSource).toContain("tr('library.recent')");
+    expect(toolboxSource).toContain('entryMatches');
+    expect(toolboxSource).toContain("tr('library.search_placeholder')");
   });
 
   it('opens a folder that still has results, instead of hiding them inside it', () => {
-    expect(toolboxSource).toContain('const open = searching || expanded[category] !== false');
+    expect(toolboxSource).toContain('const isOpen = (folder: string) => searching || !closed[folder];');
   });
 
   it('says so when a search finds nothing', () => {
-    expect(toolboxSource).toContain('No symbols match');
+    expect(toolboxSource).toContain("tr('library.no_results', { query })");
   });
 
   it('keeps the recent list out of the project file', () => {

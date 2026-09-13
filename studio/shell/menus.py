@@ -45,11 +45,14 @@ merge the two editors' own undo/dirty mechanisms):
     MenuBar.tsx/Toolbar.tsx already renders.
 """
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QActionGroup, QCursor
-from PySide6.QtWidgets import QMenuBar, QToolBar, QWidget
+from PySide6.QtGui import QAction, QActionGroup, QCursor, QKeySequence
+from PySide6.QtWidgets import QMenuBar, QToolBar, QWidget, QToolButton
 
 from studio.shell import icons
 from studio.shell.i18n import get_language, tr
+
+# The Synoptic editor's work modes, in switcher order (synoptic/src/project/WorkModes.ts).
+SYNOPTIC_WORK_MODES = ("SYMBOLS", "ROOMS", "CONNECTIONS", "ANNOTATIONS")
 
 
 def _mirror(container, label, source_action, shortcut=None, icon_name=None):
@@ -468,50 +471,92 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     _build_core_group(toolbar, studio_window)
 
-    _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"), icon_name="reroute")
-    toolbar.addSeparator()
-
-    # Wire drawing - the tool, frames, medium, wire style and routing - is
-    # used constantly while drawing, so it stays on this bar. Inserting
-    # meters/panels lives in Synoptic's library (SCADA department).
-    # Mode buttons are checkable and remembered on the window, which
-    # ticks the active ones from Synoptic's state bridge on every poll
-    # (main_window._apply_synoptic_mode_checks) - so the toolbar shows
-    # which tool, medium, style and routing are armed.
+    # feat/synoptic-modes: the work-mode switch - SYMBOLS / ROOMS /
+    # CONNECTIONS / ANNOTATIONS - as four named, mutually exclusive
+    # buttons (Ctrl+1..4), then the tools of the current mode, each group
+    # between separators. A mode decides what a click on the canvas can
+    # reach, so only its own tools are shown; the window ticks the active
+    # mode and shows its group from Synoptic's state bridge on every poll
+    # (main_window._apply_synoptic_mode_checks).
+    command = lambda cmd: (lambda: synoptic_panel.trigger_command(cmd))
     modes = {}
-    modes["wire"] = _add(toolbar, tr("canvas.draw_wire"), _toolbar_clicker(synoptic_panel, "Draw Wire", exact=False), icon_name="draw_wire")
-    modes["frame"] = _add(toolbar, tr("canvas.draw_frame"), _toolbar_clicker(synoptic_panel, "Draw Frame", exact=False), icon_name="draw_frame")
-    modes["building"] = _add(toolbar, tr("canvas.draw_building"), _toolbar_clicker(synoptic_panel, "Draw Building", exact=False), icon_name="draw_building")
-    toolbar.addSeparator()
-    modes["medium:ELECTRICAL"] = _add(toolbar, tr("canvas.medium_electrical"), _toolbar_clicker(synoptic_panel, "Electrical"), icon_name="medium_electrical")
-    modes["medium:WATER"] = _add(toolbar, tr("canvas.medium_water"), _toolbar_clicker(synoptic_panel, "Water"), icon_name="medium_water")
-    modes["medium:VENTILATION"] = _add(toolbar, tr("canvas.medium_ventilation"), _toolbar_clicker(synoptic_panel, "Ventilation"), icon_name="medium_ventilation")
-    toolbar.addSeparator()
-    modes["style:NORMAL"] = _add(toolbar, tr("canvas.wire_style_normal"), _toolbar_clicker(synoptic_panel, "Normal"), icon_name="wire_style_normal")
-    modes["style:BUS"] = _add(toolbar, tr("canvas.wire_style_bus"), _toolbar_clicker(synoptic_panel, "Bus", exact=False), icon_name="wire_style_bus")
-    toolbar.addSeparator()
-    modes["routing:STRAIGHT"] = _add(toolbar, tr("canvas.routing_direct"), _toolbar_clicker(synoptic_panel, "Direct", exact=False), icon_name="routing_direct")
-    modes["routing:AVOID"] = _add(toolbar, tr("canvas.routing_avoid"), _toolbar_clicker(synoptic_panel, "Avoid", exact=False), icon_name="routing_avoid")
-    for action in modes.values():
+    mode_group = QActionGroup(toolbar)
+    mode_group.setExclusive(True)
+    for index, mode in enumerate(SYNOPTIC_WORK_MODES):
+        name = tr(f"canvas.mode_{mode.lower()}")
+        shortcut = f"Ctrl+{index + 1}"
+        action = QAction(name, toolbar)
         action.setCheckable(True)
+        action.setShortcut(QKeySequence(shortcut))
+        action.setToolTip(tr("canvas.mode_tooltip", name=name, shortcut=shortcut))
+        action.setChecked(mode == "SYMBOLS")
+        action.triggered.connect(command(f"mode:{mode}"))
+        mode_group.addAction(action)
+        button = QToolButton(toolbar)
+        button.setDefaultAction(action)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        button.setObjectName(f"SynopticMode_{mode}")
+        toolbar.addWidget(button)
+        modes[f"mode:{mode}"] = action
+    toolbar.addSeparator()
+
+    groups = {mode: [] for mode in SYNOPTIC_WORK_MODES}
+
+    def tool(mode, key, label_key, cmd, icon):
+        action = _add(toolbar, tr(label_key), command(cmd), icon_name=icon)
+        groups[mode].append(action)
+        if key:
+            action.setCheckable(True)
+            modes[key] = action
+        return action
+
+    def separator(mode):
+        groups[mode].append(toolbar.addSeparator())
+
+    # SYMBOLS - arranging what is placed.
+    tool("SYMBOLS", None, "canvas.bring_front", "bring_front", "bring_front")
+    tool("SYMBOLS", None, "canvas.send_back", "send_back", "send_back")
+    separator("SYMBOLS")
+    tool("SYMBOLS", None, "canvas.lock", "lock", "lock")
+    tool("SYMBOLS", None, "canvas.unlock", "unlock", "unlock")
+    separator("SYMBOLS")
+    tool("SYMBOLS", None, "canvas.rotate_left", "rotate_left", "rotate_left")
+    tool("SYMBOLS", None, "canvas.rotate_right", "rotate_right", "rotate_right")
+    separator("SYMBOLS")
+
+    # ROOMS - walls and rooms, then frames and building outlines.
+    tool("ROOMS", "wall", "canvas.draw_wall", "draw_wall", "draw_wall")
+    tool("ROOMS", "room", "canvas.draw_room", "draw_room", "draw_room")
+    separator("ROOMS")
+    tool("ROOMS", "frame", "canvas.draw_frame", "draw_frame", "draw_frame")
+    tool("ROOMS", "building", "canvas.draw_building", "draw_building", "draw_building")
+    separator("ROOMS")
+
+    # CONNECTIONS - the wire tool, medium, wire style, routing.
+    tool("CONNECTIONS", "wire", "canvas.draw_wire", "draw_wire", "draw_wire")
+    reroute = _add(toolbar, tr("menu.edit.reroute"), _clicker(synoptic_panel, "Reroute"), icon_name="reroute")
+    groups["CONNECTIONS"].append(reroute)
+    separator("CONNECTIONS")
+    tool("CONNECTIONS", "medium:ELECTRICAL", "canvas.medium_electrical", "medium:ELECTRICAL", "medium_electrical")
+    tool("CONNECTIONS", "medium:WATER", "canvas.medium_water", "medium:WATER", "medium_water")
+    tool("CONNECTIONS", "medium:VENTILATION", "canvas.medium_ventilation", "medium:VENTILATION", "medium_ventilation")
+    separator("CONNECTIONS")
+    tool("CONNECTIONS", "style:NORMAL", "canvas.wire_style_normal", "style:NORMAL", "wire_style_normal")
+    tool("CONNECTIONS", "style:BUS", "canvas.wire_style_bus", "style:BUS", "wire_style_bus")
+    separator("CONNECTIONS")
+    tool("CONNECTIONS", "routing:STRAIGHT", "canvas.routing_direct", "routing:STRAIGHT", "routing_direct")
+    tool("CONNECTIONS", "routing:AVOID", "canvas.routing_avoid", "routing:AVOID", "routing_avoid")
+    separator("CONNECTIONS")
+
+    # ANNOTATIONS - text boxes (their formatting is the row under the bar).
+    tool("ANNOTATIONS", None, "canvas.text_box", "text_box", "text_box")
+    separator("ANNOTATIONS")
+
+    for mode, actions in groups.items():
+        for action in actions:
+            action.setVisible(mode == "SYMBOLS")
     studio_window.synoptic_mode_actions = modes
-    toolbar.addSeparator()
-
-    # feat/toolbar-grouping: drawing wires/frames, the wire medium/style/
-    # routing options and inserting meters/panels moved into Synoptic's
-    # Object Library (SCADA department); text formatting has its own
-    # Word-style bar inside the editor. This bar keeps the basics:
-    # the core group and arranging (the align/distribute buttons were
-    # dropped at the user's request).
-    _add(toolbar, tr("canvas.bring_front"), _toolbar_clicker(synoptic_panel, "Bring to Front"), icon_name="bring_front")
-    _add(toolbar, tr("canvas.send_back"), _toolbar_clicker(synoptic_panel, "Send to Back"), icon_name="send_back")
-    _add(toolbar, tr("canvas.lock"), _toolbar_clicker(synoptic_panel, "Lock"), icon_name="lock")
-    _add(toolbar, tr("canvas.unlock"), _toolbar_clicker(synoptic_panel, "Unlock"), icon_name="unlock")
-    _add(toolbar, tr("canvas.rotate_left"), _toolbar_clicker(synoptic_panel, "Rotate Left"), icon_name="rotate_left")
-    _add(toolbar, tr("canvas.rotate_right"), _toolbar_clicker(synoptic_panel, "Rotate Right"), icon_name="rotate_right")
-    toolbar.addSeparator()
-
-    toolbar.addSeparator()
+    studio_window.synoptic_mode_groups = groups
 
     _add(toolbar, tr("menu.devices.project_registers"), _clicker(synoptic_panel, "Project Registers"), icon_name="project_registers")
     _add(toolbar, tr("menu.devices.device_list"), _clicker(synoptic_panel, "Device List"), icon_name="device_list")

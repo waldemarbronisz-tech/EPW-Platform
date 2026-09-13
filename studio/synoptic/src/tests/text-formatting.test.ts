@@ -16,7 +16,8 @@ import type { SynopticObject } from '../store';
 
 import formatBarSource from '../components/FormatBar.tsx?raw';
 import toolbarSource from '../components/Toolbar.tsx?raw';
-import scadaToolsSource from '../components/ScadaTools.tsx?raw';
+import modeOptionsBarSource from '../components/ModeOptionsBar.tsx?raw';
+import libraryDomainsSource from '../project/LibraryDomains.ts?raw';
 import objectNodeSource from '../components/canvas/ObjectNode.tsx?raw';
 import canvasSource from '../components/Canvas.tsx?raw';
 import appSource from '../App.tsx?raw';
@@ -120,7 +121,10 @@ describe('wiring (source scan)', () => {
 
   it('keeps its own class so Studio, which hides the drawing toolbar, still shows it', () => {
     expect(formatBarSource).toContain('className="format-bar"');
-    expect(appSource).toContain('<FormatBar />');
+    // feat/synoptic-modes: the row under the toolbar shows the options of
+    // the work mode, and in ANNOTATIONS those are the format bar.
+    expect(appSource).toContain('<ModeOptionsBar />');
+    expect(modeOptionsBarSource).toContain("if (workMode === 'ANNOTATIONS') return <FormatBar />;");
   });
 
   it('opens a text box for typing on double-click and straight after it is dropped', () => {
@@ -129,13 +133,13 @@ describe('wiring (source scan)', () => {
     expect(canvasSource).toContain('data.type === TEXT_BOX_TYPE');
   });
 
-  it('leaves the top toolbar with the basics and moves inserting into the SCADA library department', () => {
-    for (const moved of ['Add Meter', 'Add Signal Panel']) {
-      expect(toolbarSource, moved).not.toContain(`title="${moved}`);
-      expect(scadaToolsSource, moved).toContain(moved);
+  it('leaves inserting panels to the Object Library and keeps the basics on the toolbar, each with a stable command', () => {
+    for (const moved of ['Add Meter', 'Add Signal Panel', 'addMeter', 'addSignalPanel']) {
+      expect(toolbarSource, moved).not.toContain(moved);
     }
-    for (const basic of ['Undo', 'Redo', 'Copy', 'Paste', 'Delete']) {
-      expect(toolbarSource, basic).toContain(`title="${basic}"`);
+    expect(libraryDomainsSource).toContain("'widget.meter', 'widget.signal_panel'");
+    for (const basic of ['undo', 'redo', 'copy', 'paste', 'delete']) {
+      expect(toolbarSource, basic).toContain(`cmd="${basic}"`);
     }
   });
 });

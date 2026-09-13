@@ -109,7 +109,7 @@ describe('Frame render order - background layer, below wires and symbols (14)', 
   // must appear before both connections.map and the sorted objects.map
   // - see Canvas.tsx's own comment at the frame render block for the
   // full reasoning.
-  const framesIndex = canvasSource.indexOf('{frames.map((frame)');
+  const framesIndex = canvasSource.indexOf('{framesInHitOrder(frames).map((frame)');
   const connectionsIndex = canvasSource.indexOf('{connections.map(conn =>');
   const objectsIndex = canvasSource.indexOf('.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)).map((obj)');
 

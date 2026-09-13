@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { moveWall } from '../elements/WallElement';
+import { restrictSelectionToMode } from '../project/WorkModes';
 import type { AppState } from './appState';
 
 // The seven parallel "selected ids" arrays (one per element kind - see
@@ -38,7 +39,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedIds: newSelection };
     }
-    return { selectedIds: ids, selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedIds: ids, selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectConnections: (ids, multi = false) => set((state) => {
@@ -51,7 +55,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedConnectionIds: newSelection };
     }
-    return { selectedConnectionIds: ids, selectedIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedConnectionIds: ids, selectedIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectMeters: (ids, multi = false) => set((state) => {
@@ -64,7 +71,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedMeterIds: newSelection };
     }
-    return { selectedMeterIds: ids, selectedIds: [], selectedConnectionIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedMeterIds: ids, selectedIds: [], selectedConnectionIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectSignalPanels: (ids, multi = false) => set((state) => {
@@ -77,7 +87,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedSignalPanelIds: newSelection };
     }
-    return { selectedSignalPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedSignalPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectWalls: (ids, multi = false) => set((state) => {
@@ -90,6 +103,9 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedWallIds: newSelection };
     }
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
     return { selectedWallIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
   }),
 
@@ -103,7 +119,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedFrameIds: newSelection };
     }
-    return { selectedFrameIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedFrameIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectGroupCommands: (ids, multi = false) => set((state) => {
@@ -116,7 +135,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedGroupCommandIds: newSelection };
     }
-    return { selectedGroupCommandIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedGroupCommandIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectSetpointPanels: (ids, multi = false) => set((state) => {
@@ -129,7 +151,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedSetpointPanelIds: newSelection };
     }
-    return { selectedSetpointPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedSetpointPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedWallIds: [] };
   }),
 
   // The rubber-band (commit 3, feat/editing-and-signal-panel) selects
@@ -148,17 +173,30 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
     selectedSetpointPanelIds: selection.setpointPanelIds || []
   }),
 
+  // Ctrl+A takes everything the WORK MODE can reach on the current
+  // screen - not the walls while placing symbols, not the symbols while
+  // drawing rooms.
   selectAll: () => {
-    const { objects, connections, meters, signalPanels, frames, groupCommands, setpointPanels } = get();
+    const { objects, connections, meters, signalPanels, frames, groupCommands, setpointPanels, walls, workMode } = get();
+    const reachable = restrictSelectionToMode({
+      objectIds: objects.map(o => o.id),
+      connectionIds: connections.map(c => c.id),
+      meterIds: meters.map(m => m.id),
+      signalPanelIds: signalPanels.map(p => p.id),
+      frameIds: frames.map(f => f.id),
+      groupCommandIds: groupCommands.map(g => g.id),
+      setpointPanelIds: setpointPanels.map(p => p.id),
+      wallIds: walls.map(w => w.id),
+    }, objects, workMode);
     set({
-      selectedIds: objects.map(o => o.id),
-      selectedConnectionIds: connections.map(c => c.id),
-      selectedMeterIds: meters.map(m => m.id),
-      selectedSignalPanelIds: signalPanels.map(p => p.id),
-      selectedFrameIds: frames.map(f => f.id),
-      selectedWallIds: get().walls.map(w => w.id),
-      selectedGroupCommandIds: groupCommands.map(g => g.id),
-      selectedSetpointPanelIds: setpointPanels.map(p => p.id)
+      selectedIds: reachable.objectIds,
+      selectedConnectionIds: reachable.connectionIds,
+      selectedMeterIds: reachable.meterIds,
+      selectedSignalPanelIds: reachable.signalPanelIds,
+      selectedFrameIds: reachable.frameIds,
+      selectedWallIds: reachable.wallIds,
+      selectedGroupCommandIds: reachable.groupCommandIds,
+      selectedSetpointPanelIds: reachable.setpointPanelIds
     });
   },
 

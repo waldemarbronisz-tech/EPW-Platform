@@ -4,6 +4,7 @@ import type { SynopticConnection } from './types';
 import type { AppState } from './appState';
 import { WALL_DEFAULT_THICKNESS, WALL_DEFAULT_HEIGHT, clampWallThickness, clampWallHeight } from '../elements/WallElement';
 import { DEFAULT_WALL_MATERIAL } from '../theme/Materials';
+import { DEFAULT_WORK_MODE, restrictSelectionToMode, TOOL_MODE } from '../project/WorkModes';
 
 // The canvas viewport and the currently-armed drawing tool (wire/frame/
 // building) and its options - all UI/interaction state, none of it ever
@@ -15,6 +16,7 @@ export type ToolsSlice = Pick<AppState,
   | 'isDrawingWall' | 'isDrawingRoom' | 'wallDrawThickness' | 'wallDrawHeight' | 'wallDrawMaterial'
   | 'setDrawingWallMode' | 'setDrawingRoomMode' | 'setWallDrawThickness' | 'setWallDrawHeight' | 'setWallDrawMaterial'
   | 'previewMode' | 'setPreviewMode' | 'setFloorMaterial'
+  | 'workMode' | 'setWorkMode'
   | 'showIlluminance' | 'setShowIlluminance'
   | 'editingTextId' | 'setEditingTextId' | 'nextTextFormat' | 'setNextTextFormat'
   | 'drawingMedium' | 'drawingStyle' | 'setDrawingMedium' | 'setDrawingStyle'
@@ -22,7 +24,7 @@ export type ToolsSlice = Pick<AppState,
   | 'wireRoutingMode' | 'setWireRoutingMode'
 >;
 
-export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set) => ({
+export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set, get) => ({
   canvasState: { zoom: 1, panX: 0, panY: 0 },
   isDrawingConnection: false,
   isDrawingFrame: false,
@@ -32,6 +34,7 @@ export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set
   wallDrawHeight: WALL_DEFAULT_HEIGHT,
   wallDrawMaterial: DEFAULT_WALL_MATERIAL,
   previewMode: false,
+  workMode: DEFAULT_WORK_MODE,
   showIlluminance: false,
   editingTextId: null,
   nextTextFormat: {},
@@ -49,16 +52,51 @@ export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set
   // not one of them - test 23).
   wireRoutingMode: 'AVOID' as 'STRAIGHT' | 'AVOID',
 
-  setDrawingMode: (active) => set({
-    isDrawingConnection: active
+  // feat/synoptic-modes: arming a tool switches to the work mode it
+  // belongs to, so what it draws can be selected straight afterwards.
+  setWorkMode: (mode) => set((state) => {
+    const kept = restrictSelectionToMode({
+      objectIds: state.selectedIds,
+      connectionIds: state.selectedConnectionIds,
+      meterIds: state.selectedMeterIds,
+      signalPanelIds: state.selectedSignalPanelIds,
+      frameIds: state.selectedFrameIds,
+      groupCommandIds: state.selectedGroupCommandIds,
+      setpointPanelIds: state.selectedSetpointPanelIds,
+      wallIds: state.selectedWallIds,
+    }, state.objects, mode);
+    return {
+      workMode: mode,
+      // A tool of another mode is put down: it could only draw things
+      // this mode cannot select.
+      isDrawingConnection: mode === TOOL_MODE.wire ? state.isDrawingConnection : false,
+      isDrawingWall: mode === TOOL_MODE.wall ? state.isDrawingWall : false,
+      isDrawingRoom: mode === TOOL_MODE.room ? state.isDrawingRoom : false,
+      isDrawingFrame: mode === TOOL_MODE.frame ? state.isDrawingFrame : false,
+      selectedIds: kept.objectIds,
+      selectedConnectionIds: kept.connectionIds,
+      selectedMeterIds: kept.meterIds,
+      selectedSignalPanelIds: kept.signalPanelIds,
+      selectedFrameIds: kept.frameIds,
+      selectedGroupCommandIds: kept.groupCommandIds,
+      selectedSetpointPanelIds: kept.setpointPanelIds,
+      selectedWallIds: kept.wallIds,
+    };
   }),
+
+  setDrawingMode: (active) => {
+    if (active) get().setWorkMode(TOOL_MODE.wire);
+    set({ isDrawingConnection: active });
+  },
 
   // Turning the frame tool on also turns the wire tool off (mutually
   // exclusive drawing tools, same as clicking the wire tool already
   // implicitly is the only such tool today) - a stray in-progress wire
   // drag and a frame drag fighting over the same mouse gesture would
   // be a genuine conflict, not just visual noise.
-  setDrawingFrameMode: (active, variant, continuous) => set((state) => ({
+  setDrawingFrameMode: (active, variant, continuous) => {
+    if (active) get().setWorkMode(TOOL_MODE.frame);
+    set((state) => ({
     isDrawingFrame: active,
     drawingFrameVariant: variant || state.drawingFrameVariant,
     isDrawingConnection: active ? false : state.isDrawingConnection,
@@ -68,7 +106,8 @@ export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set
     // turned off, always reset to false so a later plain (non-Shift)
     // re-arm never inherits a stale continuous flag from before.
     frameToolContinuous: active ? !!continuous : false
-  })),
+  }));
+  },
 
   // Arming the wall tool turns the other two drawing tools off - three
   // tools fighting over the same mouse gesture would be a genuine
@@ -76,23 +115,29 @@ export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set
   // It also leaves Podglad mode, which is not a drawing mode at all:
   // being armed to draw walls while clicks are meant to operate
   // circuits is a contradiction, not a combination.
-  setDrawingWallMode: (active) => set((state) => ({
+  setDrawingWallMode: (active) => {
+    if (active) get().setWorkMode(TOOL_MODE.wall);
+    set((state) => ({
     isDrawingWall: active,
     isDrawingRoom: active ? false : state.isDrawingRoom,
     isDrawingConnection: active ? false : state.isDrawingConnection,
     isDrawingFrame: active ? false : state.isDrawingFrame,
     previewMode: active ? false : state.previewMode,
-  })),
+  }));
+  },
 
   // The room tool is a DRAG, the wall tool is a chain of CLICKS - two
   // different gestures over the same canvas, so only one may be armed.
-  setDrawingRoomMode: (active) => set((state) => ({
+  setDrawingRoomMode: (active) => {
+    if (active) get().setWorkMode(TOOL_MODE.room);
+    set((state) => ({
     isDrawingRoom: active,
     isDrawingWall: active ? false : state.isDrawingWall,
     isDrawingConnection: active ? false : state.isDrawingConnection,
     isDrawingFrame: active ? false : state.isDrawingFrame,
     previewMode: active ? false : state.previewMode,
-  })),
+  }));
+  },
   setWallDrawThickness: (thickness) => set({ wallDrawThickness: clampWallThickness(thickness) }),
   setWallDrawHeight: (height) => set({ wallDrawHeight: clampWallHeight(height) }),
   setWallDrawMaterial: (material) => set({ wallDrawMaterial: material }),

@@ -138,6 +138,8 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
         selectedFrameIds: [],
         selectedGroupCommandIds: [],
         selectedSetpointPanelIds: [],
+        // Walls too: after an undo the selected wall may not exist any more.
+        selectedWallIds: [],
         isDirty: true
       });
     }
@@ -165,6 +167,8 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
         selectedFrameIds: [],
         selectedGroupCommandIds: [],
         selectedSetpointPanelIds: [],
+        // Walls too: after an undo the selected wall may not exist any more.
+        selectedWallIds: [],
         isDirty: true
       });
     }

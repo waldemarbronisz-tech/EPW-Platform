@@ -91,7 +91,10 @@ describe('Selection across kinds (Shift+click, Ctrl+A, Escape)', () => {
     expect(useStore.getState().selectedMeterIds).toEqual(['M1']);
   });
 
-  it('selectAll selects every object, connection and meter currently in the project', () => {
+  // feat/synoptic-modes: Ctrl+A takes what the work mode reaches -
+  // symbols and meters in SYMBOLS, the wires in CONNECTIONS.
+  it('selectAll selects every object and meter in SYMBOLS mode, and the connections in CONNECTIONS mode', () => {
+    useStore.setState({ workMode: 'SYMBOLS' });
     useStore.setState({
       objects: [makeObj('A', 0, 0), makeObj('B', 100, 100)],
       connections: [{ id: 'W1', points: [{ x: 0, y: 0 }, { x: 16, y: 0 }], medium: 'ELECTRICAL', style: 'NORMAL', state: 'LIVE' }],
@@ -102,8 +105,15 @@ describe('Selection across kinds (Shift+click, Ctrl+A, Escape)', () => {
     useStore.getState().selectAll();
 
     expect(useStore.getState().selectedIds.sort()).toEqual(['A', 'B']);
-    expect(useStore.getState().selectedConnectionIds).toEqual(['W1']);
+    expect(useStore.getState().selectedConnectionIds).toEqual([]);
     expect(useStore.getState().selectedMeterIds.length).toBe(1);
+
+    useStore.getState().setWorkMode('CONNECTIONS');
+    useStore.getState().selectAll();
+    expect(useStore.getState().selectedConnectionIds).toEqual(['W1']);
+    expect(useStore.getState().selectedIds).toEqual([]);
+    expect(useStore.getState().selectedMeterIds).toEqual([]);
+    useStore.setState({ workMode: 'SYMBOLS' });
   });
 
   it('clearSelection empties all three kinds at once', () => {

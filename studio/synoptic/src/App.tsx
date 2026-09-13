@@ -1,7 +1,7 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
-import { FormatBar } from './components/FormatBar';
+import { ModeOptionsBar } from './components/ModeOptionsBar';
 import { ScreenTabs } from './components/ScreenTabs';
 import { SecondaryPanel } from './components/SecondaryPanel';
 import { Toolbox } from './components/Toolbox';
@@ -222,7 +222,7 @@ function App() {
       {/* feat/text-formatting: text formatting, grouped as in a word
           processor. Its own class, not .toolbar, so Studio (which hides
           the drawing toolbar in favour of its own) keeps it visible. */}
-      <FormatBar />
+      <ModeOptionsBar />
 
       {/* feat/workspace: the controller's own "czy zalaczyc?" window.
           Rendered here, above every panel, because a command

@@ -4,6 +4,7 @@
 // `StateCreator<AppState, [], [], ItsOwnSlice>` - Zustand's own
 // documented "slices" pattern - without a circular VALUE import back to
 // store.ts (this file has no runtime code in it at all, only the type).
+import type { WorkMode } from '../project/WorkModes';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
@@ -134,6 +135,8 @@ export interface AppState {
   clipboardGroupCommands: GroupCommandElement[];
   clipboardSetpointPanels: SetpointPanelElement[];
   clipboardConnections: SynopticConnection[];
+  /** Walls copied with the rest of a selection, so a room copies as a room. */
+  clipboardWalls: WallElement[];
   history: HistorySnapshot[];
   historyIndex: number;
 
@@ -211,6 +214,9 @@ export interface AppState {
   showIlluminance: boolean;
   setShowIlluminance: (active: boolean) => void;
   previewMode: boolean;
+  /** feat/synoptic-modes: what a click can reach - SYMBOLS, ROOMS, CONNECTIONS or ANNOTATIONS (project/WorkModes.ts). Session state, never saved. */
+  workMode: WorkMode;
+  setWorkMode: (mode: WorkMode) => void;
   setPreviewMode: (active: boolean) => void;
   toggleCircuitAt: (objectId: string) => void;
   isDrawingFrame: boolean;

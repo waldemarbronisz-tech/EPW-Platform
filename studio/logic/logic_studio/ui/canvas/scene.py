@@ -777,6 +777,16 @@ class LogicScene(QGraphicsScene):
         if isinstance(self.focusItem(), DocTextEditor):
             super().keyPressEvent(event)
             return
+        if event.key() == Qt.Key_F2:
+            # One way of editing text in all of Studio: F2 on a single
+            # selected text/note/section starts the in-place editor, as it
+            # does on a selected text box in the Synoptic editor.
+            from logic_studio.ui.canvas.block_item import BlockItem
+            docs = [i for i in self.selectedItems() if isinstance(i, BlockItem) and i.shape_style == "DOC"]
+            if len(docs) == 1:
+                docs[0]._start_doc_edit()
+                event.accept()
+                return
         if event.key() == Qt.Key_Delete:
             self.delete_selected_items()
             event.accept()

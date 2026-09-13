@@ -69,7 +69,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtWidgets import QLabel, QStackedWidget, QVBoxLayout, QWidget
 
-from studio.shell.i18n import tr
+from studio.shell.i18n import get_language, tr
 
 SYNOPTIC_DIR = Path(__file__).resolve().parents[1] / "synoptic"
 _SYNOPTIC_MAIN_PATH = SYNOPTIC_DIR / "main.py"
@@ -205,7 +205,8 @@ class SynopticPanel(QWidget):
         port = launcher._free_port()
         launcher.serve_dist(port)
         self._view.loadFinished.connect(self._on_load_finished)
-        self._view.load(QUrl(f"http://127.0.0.1:{port}/"))
+        # The editor's interface follows Studio's own language.
+        self._view.load(QUrl(f"http://127.0.0.1:{port}/?lang={get_language()}"))
 
     def _on_load_finished(self, ok: bool):
         if ok:
@@ -287,6 +288,22 @@ class SynopticPanel(QWidget):
         js = (
             "(function(){"
             f"const b = Array.from(document.querySelectorAll('.toolbar button')).find(b => {cmp_expr});"
+            "if (b) { b.click(); return true; } return false;"
+            "})();"
+        )
+        self._view.page().runJavaScript(js)
+
+    def trigger_command(self, command: str):
+        """Clicks the Synoptic toolbar button whose stable data-cmd is
+        `command` (Toolbar.tsx) - "mode:ROOMS", "draw_wall", "medium:WATER".
+        Commands, unlike titles, do not change with the interface language.
+        Fire-and-forget, like trigger_toolbar_button."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        selector = json.dumps(f'.toolbar [data-cmd="{command}"]')
+        js = (
+            "(function(){"
+            f"const b = document.querySelector({selector});"
             "if (b) { b.click(); return true; } return false;"
             "})();"
         )

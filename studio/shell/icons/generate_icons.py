@@ -418,6 +418,31 @@ def icon_draw_building(img):
     outline_rect(img, 10, 10, 11, 11, BLACK)
 
 
+def icon_draw_wall(img):
+    """Draw wall (ROOMS mode): a thick hatched wall segment with a pencil
+    point at its free end - one wall, drawn corner to corner."""
+    rect(img, 2, 9, 11, 12, GREY_DARK)
+    outline_rect(img, 2, 9, 11, 12, BLACK)
+    for x in range(3, 11, 2):
+        px(img, x, 10, WHITE)
+        px(img, x + 1, 11, WHITE)
+    line(img, 12, 8, 14, 2, NAVY)
+    line(img, 13, 8, 15, 2, NAVY)
+    px(img, 12, 9, BLACK)
+
+
+def icon_draw_room(img):
+    """Draw room (ROOMS mode): a closed rectangle of thick walls - four
+    walls at once - with a door gap in the bottom wall."""
+    rect(img, 2, 2, 13, 13, GREY_DARK)
+    rect(img, 4, 4, 11, 11, QColor(232, 228, 216))
+    outline_rect(img, 2, 2, 13, 13, BLACK)
+    outline_rect(img, 4, 4, 11, 11, BLACK)
+    rect(img, 6, 12, 8, 13, QColor(232, 228, 216))
+    line(img, 6, 11, 6, 13, BLACK)
+    line(img, 8, 11, 8, 13, BLACK)
+
+
 def _raised_tile(img, face):
     """The raised tile the two medium icons sit on - the classic SCADA
     look the user asked for: a light face, a white top-left edge and a

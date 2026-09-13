@@ -94,3 +94,15 @@ function normalize(value: string): string {
     .split(STROKED_L)
     .join('l');
 }
+
+/**
+ * Whether any of several names - a symbol's Polish name, its English name,
+ * its registry label - or its type matches what was typed. The library
+ * search uses it so a query finds a symbol in either language, whichever
+ * language the interface is in.
+ */
+export function matchesAnyName(names: string[], type: string, query: string): boolean {
+  const needle = normalize(query);
+  if (!needle) return true;
+  return names.some(name => normalize(name).includes(needle)) || normalize(type).includes(needle);
+}
