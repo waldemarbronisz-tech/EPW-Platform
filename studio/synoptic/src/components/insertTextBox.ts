@@ -10,6 +10,7 @@ import { FONT_SIZE_BASE, FONT_UI } from '../theme/ScadaTheme';
 /** Places a new, empty text box in the visible part of the canvas and opens it for typing. */
 export function insertTextBox(): void {
   const state = useStore.getState();
+  state.setWorkMode('ANNOTATIONS');
   const def = getSymbolDefinition(TEXT_BOX_TYPE);
   const { zoom, panX, panY } = state.canvasState;
   const x = Math.round((-panX + 80) / zoom / 16) * 16;

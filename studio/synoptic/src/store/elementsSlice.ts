@@ -23,7 +23,7 @@ export type ElementsSlice = Pick<AppState,
   | 'addMeter' | 'updateMeter'
   | 'addSignalPanel' | 'updateSignalPanel'
   | 'addFrame' | 'updateFrame'
-  | 'addWall' | 'updateWall' | 'applyWallStyleToRoom' | 'addRoomWalls' | 'toggleCircuitAt'
+  | 'addWall' | 'updateWall' | 'updateWalls' | 'applyWallStyleToRoom' | 'addRoomWalls' | 'toggleCircuitAt'
   | 'scaleSelection'
   | 'circuits' | 'setCircuitDevice'
   | 'addGroupCommand' | 'updateGroupCommand'
@@ -81,6 +81,15 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
     set((state) => ({
       walls: state.walls.map(w => w.id === id ? { ...w, ...updates } : w),
       isDirty: true
+    }));
+  },
+
+  updateWalls: (updates) => {
+    if (updates.length === 0) return;
+    const byId = new Map(updates.map(u => [u.id, u.updates]));
+    set((state) => ({
+      walls: state.walls.map(w => (byId.has(w.id) ? { ...w, ...byId.get(w.id) } : w)),
+      isDirty: true,
     }));
   },
 

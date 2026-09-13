@@ -70,6 +70,7 @@ export interface TextFormat {
   underline: boolean;
   align: TextAlign;
   style: TextStyleId;
+  color: string;
 }
 
 /** The first family of a CSS font stack, unquoted - "Tahoma, Verdana, sans-serif" is shown and edited as "Tahoma". */
@@ -99,12 +100,20 @@ export function textFormatOf(obj: SynopticObject): TextFormat {
   return {
     font: primaryFontFamily(obj.font),
     fontSize: clampFontSize(obj.fontSize || FONT_SIZE_BASE),
-    bold: !!obj.fontBold,
+    // A symbol's label is bold unless set otherwise; a text box is not.
+    bold: obj.fontBold ?? !isTextFormattable(obj.type),
     italic: !!obj.fontItalic,
     underline: !!obj.fontUnderline,
     align: obj.textAlign || 'left',
     style: obj.textStyle || 'normal',
+    color: textColorOf(obj),
   };
+}
+
+/** The colour an element's text is drawn in: its own text colour, else its colour, else black. Always #rrggbb, so a colour input can show it. */
+export function textColorOf(obj: Pick<SynopticObject, 'textColor' | 'color'>): string {
+  const candidate = obj.textColor || obj.color || '';
+  return /^#[0-9a-f]{6}$/i.test(candidate) ? candidate : '#000000';
 }
 
 /** Konva's fontStyle string for a format: 'normal', 'bold', 'italic' or 'italic bold'. */
@@ -135,6 +144,7 @@ export interface CommonTextFormat {
   underline: boolean | null;
   align: TextAlign | null;
   style: TextStyleId | null;
+  color: string | null;
 }
 
 export function commonTextFormat(objects: SynopticObject[]): CommonTextFormat {
@@ -152,5 +162,6 @@ export function commonTextFormat(objects: SynopticObject[]): CommonTextFormat {
     underline: pick('underline'),
     align: pick('align'),
     style: pick('style'),
+    color: pick('color'),
   };
 }

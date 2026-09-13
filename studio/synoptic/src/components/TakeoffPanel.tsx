@@ -14,7 +14,7 @@ import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { buildRoomTakeoff } from '../project/RoomTakeoff';
 import { RoomTakeoffDialog } from './RoomTakeoffDialog';
-import { formatLength, pxToCm } from '../theme/Scale';
+import { pxToCm } from '../theme/Scale';
 import {
   COLOR_ALARM, COLOR_BEVEL_DARK, COLOR_OUTLINE, COLOR_PANEL, COLOR_RUN,
   COLOR_VALUE_FIELD, FONT_SIZE_SMALL, FONT_SIZE_TITLE, FONT_UI,
@@ -49,7 +49,9 @@ export const TakeoffPanel: React.FC = () => {
   const { totals } = takeoff;
 
   const cards: { label: string; value: string; alarm?: boolean }[] = [
-    { label: 'Wall length', value: formatLength(totals.wallLength) },
+    // totals.wallLength is already in metres (RoomTakeoff converts it);
+    // formatLength expects PIXELS, so a 20.7 m room used to read '26 cm'.
+    { label: 'Wall length', value: `${totals.wallLength.toFixed(2).replace('.', ',')} m` },
     { label: 'Wall area', value: `${areaInSquareMetres(totals.wallArea).toFixed(1).replace('.', ',')} m2` },
     { label: 'Floor area', value: `${areaInSquareMetres(totals.floorArea).toFixed(1).replace('.', ',')} m2` },
     { label: 'Devices', value: `${totals.fixtures} pcs` },

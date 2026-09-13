@@ -1,126 +1,118 @@
 /** @vitest-environment jsdom */
 // feat/editing-and-signal-panel, follow-up task: "podlaczyc istniejacy
-// element panelu sygnalizacyjnego do interfejsu". Investigation (see
-// raport.md) found the panel's Toolbar button and store wiring already
-// present and working against this branch's pushed HEAD - no code
-// change was needed. This test is the one explicitly requested
-// regardless: a component-level regression test that renders the REAL
-// Toolbar against the REAL store (no mocking) and clicks its buttons,
-// so the exact class of bug described in the task - an element fully
-// implemented in the store/resolver/Properties layer but with no
-// button anywhere a user can actually click to place one on the
-// canvas - fails loudly here the moment it happens again, for ANY
-// toolbar-inserted element (meter or signal panel), not just the one
-// that prompted this task.
+// element panelu sygnalizacyjnego do interfejsu". The class of bug this
+// suite guards: an element fully implemented in the store/resolver/
+// Properties layer but with nothing a user can actually click to place
+// it on the canvas. Renders the REAL component against the REAL store
+// (no mocking) and clicks it.
 //
-// Deliberately NOT a Konva/canvas-rendering test - Toolbar.tsx itself
-// has no Konva dependency, so this runs in jsdom (already a
-// devDependency, no new one added) without needing a live browser.
+// feat/synoptic-library: the four screen panels (meter, signal panel,
+// group command button, setpoint panel) are entries of the Object
+// Library now - under "Control & SCADA screen" - clicked or dragged like
+// any symbol. The regression guarded is the same: every inserted element
+// must be reachable.
+//
+// Deliberately NOT a Konva/canvas-rendering test - the library has no
+// Konva dependency, so this runs in jsdom without a live browser.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { useStore } from '../store';
 import { Toolbox } from '../components/Toolbox';
 import { getSymbolsByCategory } from '../symbols/SymbolRegistry';
+import { LIBRARY_DOMAIN_ORDER, WIDGET_TYPES } from '../project/LibraryDomains';
+import { setLanguage } from '../i18n/tr';
 
 function resetStore() {
+  setLanguage('en');
   useStore.setState({
-    objects: [], connections: [], meters: [], signalPanels: [],
+    objects: [], connections: [], meters: [], signalPanels: [], groupCommands: [], setpointPanels: [],
     selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [],
+    selectedGroupCommandIds: [], selectedSetpointPanelIds: [],
     clipboard: [], clipboardMeters: [], clipboardSignalPanels: [], clipboardConnections: [],
     history: [{ objects: [], connections: [], meters: [], signalPanels: [], frames: [] }],
-    historyIndex: 0
+    historyIndex: 0,
+    screenContents: {},
+    recentSymbols: [],
+    workMode: 'ROOMS',
   });
 }
 
-// feat/toolbar-grouping: inserting a meter or a signal panel moved from
-// the top toolbar to the Object Library's SCADA department
-// (ScadaTools.tsx). The regression this suite guards is unchanged -
-// every inserted element must be reachable from somewhere a user can
-// click - so the same assertions now run against the library.
-describe('SCADA library tools - every inserted element (meter, signal panel) is actually reachable from the UI', () => {
+const entry = (type: string) => document.querySelector(`.library-item[data-type="${type}"]`) as HTMLElement | null;
+
+describe('screen panels - every inserted element (meter, signal panel, ...) is reachable from the library', () => {
   beforeEach(resetStore);
   afterEach(cleanup);
 
-  it('renders a "Add Meter" button', () => {
+  it('lists all four panels in the library, named', () => {
     render(<Toolbox />);
-    expect(screen.getByTitle('Add Meter')).toBeTruthy();
+    expect(WIDGET_TYPES.map(type => entry(type)?.textContent?.trim())).toEqual([
+      '▣ Meter panel', '▣ Signal panel', '▣ Group command button', '▣ Setpoint panel',
+    ]);
   });
 
-  it('renders a "Add Signal Panel" button - the exact bug this task reported', () => {
+  it('clicking "Meter panel" actually places a meter, selects it and switches to the SYMBOLS mode where it can be moved', () => {
     render(<Toolbox />);
-    expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
-  });
-
-  it('clicking "Add Meter" actually places a meter and selects it', () => {
-    render(<Toolbox />);
-    fireEvent.click(screen.getByTitle('Add Meter'));
-
+    fireEvent.click(entry('widget.meter')!);
     const state = useStore.getState();
     expect(state.meters.length).toBe(1);
     expect(state.selectedMeterIds).toEqual([state.meters[0].id]);
+    expect(state.workMode).toBe('SYMBOLS');
   });
 
-  it('clicking "Add Signal Panel" actually places a signal panel and selects it - the same mechanism as the meter, not a different one', () => {
+  it('clicking "Signal panel" places and selects a signal panel - the exact bug this suite was written for', () => {
     render(<Toolbox />);
-    fireEvent.click(screen.getByTitle('Add Signal Panel'));
-
+    fireEvent.click(entry('widget.signal_panel')!);
     const state = useStore.getState();
     expect(state.signalPanels.length).toBe(1);
     expect(state.selectedSignalPanelIds).toEqual([state.signalPanels[0].id]);
   });
 
-  it('both buttons live in the toolbar side by side, so neither can go missing without the other being right there to notice', () => {
+  it('clicking the group command button and the setpoint panel entries places each of them', () => {
     render(<Toolbox />);
-    expect(screen.getByTitle('Add Meter')).toBeTruthy();
-    expect(screen.getByTitle('Add Signal Panel')).toBeTruthy();
+    fireEvent.click(entry('widget.group_command')!);
+    fireEvent.click(entry('widget.setpoint_panel')!);
+    const state = useStore.getState();
+    expect(state.groupCommands.length).toBe(1);
+    expect(state.setpointPanels.length).toBe(1);
+    expect(state.selectedSetpointPanelIds).toEqual([state.setpointPanels[0].id]);
+  });
+
+  it('a placed panel is remembered as recently used, like a dropped symbol', () => {
+    render(<Toolbox />);
+    fireEvent.click(entry('widget.meter')!);
+    expect(useStore.getState().recentSymbols[0]).toBe('widget.meter');
   });
 });
 
 describe('Toolbox (Object Library) - every visible symbol in the registry is actually listed to drag', () => {
+  beforeEach(resetStore);
   afterEach(cleanup);
 
-  // The symmetric regression for symbols themselves (as opposed to the
-  // meter/panel, which are not symbols at all - see above): a symbol
-  // silently flipped to hiddenFromLibrary, or a category the Toolbox
-  // fails to enumerate, would strand it exactly the same way the panel
-  // was reported stranded, just one layer down. getSymbolsByCategory()
-  // is the same "visible" source of truth terminal-centering.test.ts
-  // already iterates for a different property (terminal geometry) -
-  // this iterates it for reachability instead.
-  it('lists exactly the symbols getSymbolsByCategory() considers visible, one .library-item per symbol - every folder already expanded, nothing to click first', () => {
-    // feat/appearance-selection-frames commit 4a fixed the discoverability
-    // quirk this test used to have to work around (HVAC/Instrumentation
-    // started collapsed, so this test used to expand every folder by
-    // hand before counting - see mandatory test 16's own dedicated test
-    // below for the direct "starts expanded" assertion). No expand step
-    // needed here any more: if every folder is already open, this and
-    // that test are asserting the same reachability from two angles.
+  it('lists exactly the symbols the registry considers visible, one draggable entry per symbol, nothing to click open first', () => {
     render(<Toolbox />);
-
     const expected = Object.values(getSymbolsByCategory()).flat();
     const rendered = screen.getAllByText(/^📄 /);
-
     expect(rendered.length).toBe(expected.length);
     const renderedLabels = rendered.map(el => el.textContent?.replace('📄 ', '')).sort();
     const expectedLabels = expected.map(def => def.label).sort();
     expect(renderedLabels).toEqual(expectedLabels);
+    expect(rendered.every(el => el.getAttribute('draggable') === 'true')).toBe(true);
   });
 
   // 16. every Object Library group is expanded by default
-  it('every category starts expanded - no collapsed folder icon anywhere on first render', () => {
+  it('every domain folder starts expanded - no collapsed folder icon anywhere on first render', () => {
     render(<Toolbox />);
     expect(screen.queryByText('📁')).toBeNull();
-    // and every category actually rendered as open (📂), not just
-    // "no closed icon found because nothing rendered at all"
-    const categoryCount = Object.keys(getSymbolsByCategory()).length;
-    expect(categoryCount).toBeGreaterThan(0);
-    expect(screen.getAllByText('📂').length).toBe(categoryCount);
+    expect(screen.getAllByText('📂').length).toBe(LIBRARY_DOMAIN_ORDER.length);
   });
 
-  it('every SCADA-category symbol expected to be visible right now is listed (Label Frame, Indicator Diode, Meter (SCADA), Boundary Point) - and no more, no less', () => {
-    render(<Toolbox />);
+  it('every SCADA-category symbol expected to be visible right now is listed (Label Frame, Indicator Diode, Meter (SCADA), Boundary Point, Text box) - and no more, no less', () => {
     const scadaItems = getSymbolsByCategory().SCADA || [];
     expect(scadaItems.map(d => d.label).sort()).toEqual(['Boundary Point', 'Indicator Diode', 'Label Frame', 'Meter (SCADA)', 'Text box']);
+    render(<Toolbox />);
+    for (const def of scadaItems) {
+      expect(entry(def.type), def.type).not.toBeNull();
+    }
   });
 });

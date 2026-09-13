@@ -24,6 +24,9 @@ import { FONT_SIZE_BASE, FONT_SIZE_SMALL } from '../theme/ScadaTheme';
 import type { SynopticConnection, SynopticObject } from '../store';
 import { describeObject } from '../utils/ObjectDisplay';
 import { resolveNets } from '../project/NetResolver';
+import { RoomInspector } from './RoomInspector';
+import { connectedWallIds } from '../project/AreaMove';
+import { tr } from '../i18n/tr';
 
 // Internal-audit fix: these two wizards are only ever mounted after an
 // explicit "+ Wizard" click (see showMeterWizard/showSignalPanelWizard
@@ -64,6 +67,16 @@ export const PropertyInspector: React.FC = () => {
   // early, the same shape every other element kind here uses. Placed
   // BEFORE the empty-selection guard so selecting only a wall is not
   // mistaken for selecting nothing.
+  // fix/room-move-and-edit: walls selected together are a ROOM - its own
+  // panel (name, location, position, size), where this used to fall
+  // through to "No object selected".
+  const onlyWallsSelected = selectedWallIds.length >= 2 && selectedIds.length === 0 && selectedConnectionIds.length === 0
+    && selectedMeterIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0
+    && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0;
+  if (onlyWallsSelected) {
+    return <RoomInspector wallIds={selectedWallIds} />;
+  }
+
   const selectedWall = selectedWallIds.length === 1 ? walls.find(w => w.id === selectedWallIds[0]) : null;
   if (selectedWall) {
     return (
@@ -108,6 +121,15 @@ export const PropertyInspector: React.FC = () => {
                 onClick={() => applyWallStyleToRoom(selectedWall.id)}
               >
                 Apply to the whole room
+              </button>
+            </div>
+            <div className="property-row">
+              <button
+                type="button"
+                style={{ width: '100%' }}
+                onClick={() => useStore.getState().selectWalls(connectedWallIds(walls, selectedWall.id))}
+              >
+                {tr('room.select_whole')}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { moveWall } from '../elements/WallElement';
+import { restrictSelectionToMode } from '../project/WorkModes';
 import type { AppState } from './appState';
 
 // The seven parallel "selected ids" arrays (one per element kind - see
@@ -9,7 +10,7 @@ import type { AppState } from './appState';
 export type SelectionSlice = Pick<AppState,
   | 'selectedIds' | 'selectedConnectionIds' | 'selectedMeterIds' | 'selectedSignalPanelIds' | 'selectedFrameIds' | 'selectedGroupCommandIds' | 'selectedSetpointPanelIds' | 'selectedWallIds'
   | 'selectObjects' | 'selectConnections' | 'selectMeters' | 'selectSignalPanels' | 'selectFrames' | 'selectGroupCommands' | 'selectSetpointPanels' | 'selectWalls'
-  | 'selectMixed' | 'selectAll' | 'clearSelection' | 'moveSelectionBy'
+  | 'selectMixed' | 'selectAll' | 'clearSelection' | 'moveSelectionBy' | 'moveElementsBy'
 >;
 
 export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice> = (set, get) => ({
@@ -38,7 +39,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedIds: newSelection };
     }
-    return { selectedIds: ids, selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedIds: ids, selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectConnections: (ids, multi = false) => set((state) => {
@@ -51,7 +55,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedConnectionIds: newSelection };
     }
-    return { selectedConnectionIds: ids, selectedIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedConnectionIds: ids, selectedIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectMeters: (ids, multi = false) => set((state) => {
@@ -64,7 +71,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedMeterIds: newSelection };
     }
-    return { selectedMeterIds: ids, selectedIds: [], selectedConnectionIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedMeterIds: ids, selectedIds: [], selectedConnectionIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectSignalPanels: (ids, multi = false) => set((state) => {
@@ -77,7 +87,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedSignalPanelIds: newSelection };
     }
-    return { selectedSignalPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedSignalPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectWalls: (ids, multi = false) => set((state) => {
@@ -90,6 +103,9 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedWallIds: newSelection };
     }
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
     return { selectedWallIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
   }),
 
@@ -103,7 +119,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedFrameIds: newSelection };
     }
-    return { selectedFrameIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedFrameIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectGroupCommands: (ids, multi = false) => set((state) => {
@@ -116,7 +135,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedGroupCommandIds: newSelection };
     }
-    return { selectedGroupCommandIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedSetpointPanelIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedGroupCommandIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] };
   }),
 
   selectSetpointPanels: (ids, multi = false) => set((state) => {
@@ -129,7 +151,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
       });
       return { selectedSetpointPanelIds: newSelection };
     }
-    return { selectedSetpointPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [] };
+    // A plain click replaces the WHOLE selection - every kind, walls and
+    // frames included (they used to survive a click on anything else,
+    // and Delete then removed them too).
+    return { selectedSetpointPanelIds: ids, selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedWallIds: [] };
   }),
 
   // The rubber-band (commit 3, feat/editing-and-signal-panel) selects
@@ -148,68 +173,84 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
     selectedSetpointPanelIds: selection.setpointPanelIds || []
   }),
 
+  // Ctrl+A takes everything the WORK MODE can reach on the current
+  // screen - not the walls while placing symbols, not the symbols while
+  // drawing rooms.
   selectAll: () => {
-    const { objects, connections, meters, signalPanels, frames, groupCommands, setpointPanels } = get();
+    const { objects, connections, meters, signalPanels, frames, groupCommands, setpointPanels, walls, workMode } = get();
+    const reachable = restrictSelectionToMode({
+      objectIds: objects.map(o => o.id),
+      connectionIds: connections.map(c => c.id),
+      meterIds: meters.map(m => m.id),
+      signalPanelIds: signalPanels.map(p => p.id),
+      frameIds: frames.map(f => f.id),
+      groupCommandIds: groupCommands.map(g => g.id),
+      setpointPanelIds: setpointPanels.map(p => p.id),
+      wallIds: walls.map(w => w.id),
+    }, objects, workMode);
     set({
-      selectedIds: objects.map(o => o.id),
-      selectedConnectionIds: connections.map(c => c.id),
-      selectedMeterIds: meters.map(m => m.id),
-      selectedSignalPanelIds: signalPanels.map(p => p.id),
-      selectedFrameIds: frames.map(f => f.id),
-      selectedWallIds: get().walls.map(w => w.id),
-      selectedGroupCommandIds: groupCommands.map(g => g.id),
-      selectedSetpointPanelIds: setpointPanels.map(p => p.id)
+      selectedIds: reachable.objectIds,
+      selectedConnectionIds: reachable.connectionIds,
+      selectedMeterIds: reachable.meterIds,
+      selectedSignalPanelIds: reachable.signalPanelIds,
+      selectedFrameIds: reachable.frameIds,
+      selectedWallIds: reachable.wallIds,
+      selectedGroupCommandIds: reachable.groupCommandIds,
+      selectedSetpointPanelIds: reachable.setpointPanelIds
     });
   },
 
   clearSelection: () => set({ selectedIds: [], selectedConnectionIds: [], selectedMeterIds: [], selectedSignalPanelIds: [], selectedFrameIds: [], selectedGroupCommandIds: [], selectedSetpointPanelIds: [], selectedWallIds: [] }),
 
-  // Locked objects are skipped, same as an ordinary drag already
-  // refuses to move them (draggable={!obj.locked} in Canvas.tsx) -
-  // arrow-key movement is not a back door around a lock. Meters and
-  // connections have no lock flag of their own, so every selected one
-  // of those always moves. A single set() call, then one saveHistory()
-  // - one history entry per keypress, not per moved item.
+  // Arrow keys: the current selection, through the same primitive a room
+  // drag uses.
   moveSelectionBy: (dx, dy) => {
-    const { selectedIds, selectedMeterIds, selectedConnectionIds, selectedSignalPanelIds, selectedFrameIds, selectedGroupCommandIds, selectedSetpointPanelIds, selectedWallIds } = get();
-    if (selectedIds.length === 0 && selectedMeterIds.length === 0 && selectedConnectionIds.length === 0 && selectedSignalPanelIds.length === 0 && selectedFrameIds.length === 0 && selectedGroupCommandIds.length === 0 && selectedSetpointPanelIds.length === 0 && selectedWallIds.length === 0) return;
+    const s = get();
+    get().moveElementsBy({
+      objectIds: s.selectedIds,
+      connectionIds: s.selectedConnectionIds,
+      meterIds: s.selectedMeterIds,
+      signalPanelIds: s.selectedSignalPanelIds,
+      frameIds: s.selectedFrameIds,
+      groupCommandIds: s.selectedGroupCommandIds,
+      setpointPanelIds: s.selectedSetpointPanelIds,
+      wallIds: s.selectedWallIds,
+    }, dx, dy);
+  },
+
+  // Locked objects are skipped, same as an ordinary drag already refuses
+  // to move them - a move is not a back door around a lock. A single set()
+  // call, then one saveHistory() - one history entry per move, not per
+  // moved item (a live drag passes saveHistory=false and saves once when
+  // it ends).
+  moveElementsBy: (selection, dx, dy, saveHistory = true) => {
+    const { objectIds: ids, meterIds, connectionIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds } = selection;
+    const nothing = [ids, meterIds, connectionIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds].every(list => list.length === 0);
+    if (nothing || (dx === 0 && dy === 0)) return;
     set((state) => ({
-      objects: state.objects.map(o => (selectedIds.includes(o.id) && !o.locked) ? { ...o, x: o.x + dx, y: o.y + dy } : o),
-      meters: state.meters.map(m => selectedMeterIds.includes(m.id) ? { ...m, x: m.x + dx, y: m.y + dy } : m),
-      signalPanels: state.signalPanels.map(p => selectedSignalPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
-      frames: state.frames.map(f => selectedFrameIds.includes(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f),
+      objects: state.objects.map(o => (ids.includes(o.id) && !o.locked) ? { ...o, x: o.x + dx, y: o.y + dy } : o),
+      meters: state.meters.map(m => meterIds.includes(m.id) ? { ...m, x: m.x + dx, y: m.y + dy } : m),
+      signalPanels: state.signalPanels.map(p => signalPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
+      frames: state.frames.map(f => frameIds.includes(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f),
       // A wall has no x/y of its own - both endpoints move together
       // (moveWall), which is the only way it cannot deform.
-      walls: state.walls.map(w => selectedWallIds.includes(w.id) ? { ...w, ...moveWall(w, dx, dy) } : w),
-      groupCommands: state.groupCommands.map(g => selectedGroupCommandIds.includes(g.id) ? { ...g, x: g.x + dx, y: g.y + dy } : g),
-      setpointPanels: state.setpointPanels.map(p => selectedSetpointPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
-      // fix/wiring-and-library-groups commit 3: a selected connection's
-      // own points used to be shifted by the plain (dx,dy) vector as a
-      // bare {x,y} literal - silently dropping any `anchor` field along
-      // the way, with no message, no matter WHY the point was moving.
-      // That is correct ONLY when this same group move is deliberately
-      // detaching the wire from a terminal it is not moving together
-      // with (its own anchor's symbol id is not part of THIS move) -
-      // the same "manually moving an anchored point breaks the anchor"
-      // rule ConnectionNode.tsx's own per-point drag already applies,
-      // now extended to this coarser, whole-connection move. When the
-      // anchor's OWN symbol IS moving together with it (selectedIds
-      // includes it too - e.g. a rubber-band selection spanning both a
-      // symbol and its own wire), the point keeps its anchor: both move
-      // by the identical vector, so the numbers agree either way, and
-      // the very next saveHistory's own syncAnchoredConnections simply
-      // confirms it rather than fighting a stale, silently-broken one
-      // the next time the symbol alone moves.
-      connections: state.connections.map(c => selectedConnectionIds.includes(c.id)
+      walls: state.walls.map(w => wallIds.includes(w.id) ? { ...w, ...moveWall(w, dx, dy) } : w),
+      groupCommands: state.groupCommands.map(g => groupCommandIds.includes(g.id) ? { ...g, x: g.x + dx, y: g.y + dy } : g),
+      setpointPanels: state.setpointPanels.map(p => setpointPanelIds.includes(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p),
+      // A moved wire keeps a point's anchor only when the anchor's own
+      // symbol moves with it; otherwise the point is detached, as a
+      // manual move of an anchored point always has been.
+      connections: state.connections.map(c => connectionIds.includes(c.id)
         ? { ...c, points: c.points.map(p => {
-            if (p.anchor && !selectedIds.includes(p.anchor.symbolId)) {
+            if (p.anchor && !ids.includes(p.anchor.symbolId)) {
               const { anchor: _anchor, ...rest } = p;
               return { ...rest, x: p.x + dx, y: p.y + dy };
             }
             return { ...p, x: p.x + dx, y: p.y + dy };
           }) }
-        : c)
+        : c),
+      isDirty: true,
     }));
-    get().saveHistory();
+    if (saveHistory) get().saveHistory();
   },
 });

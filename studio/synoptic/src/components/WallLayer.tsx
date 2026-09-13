@@ -152,6 +152,9 @@ export interface WallLayerProps {
   previewMode: boolean;
   onSelect: (wallId: string, e: any) => void;
   onDragEnd: (wallId: string, dx: number, dy: number) => void;
+  /** A drag of a wall is starting / under way - Canvas moves a selected room live from these. */
+  onDragStart?: (wallId: string) => void;
+  onDragMove?: (wallId: string, dx: number, dy: number) => void;
 }
 
 /**
@@ -342,7 +345,7 @@ const BandBody: React.FC<{ band: WallBand; openings: WallOpening[] }> = ({ band,
 };
 
 export const WallLayer: React.FC<WallLayerProps> = ({
-  walls, objects, selectedWallIds, previewMode, onSelect, onDragEnd,
+  walls, objects, selectedWallIds, previewMode, onSelect, onDragEnd, onDragStart, onDragMove,
 }) => {
   if (walls.length === 0) return null;
 
@@ -404,6 +407,8 @@ export const WallLayer: React.FC<WallLayerProps> = ({
           draggable: !previewMode,
           onClick: (e: any) => onSelect(wall.id, e),
           onTap: (e: any) => onSelect(wall.id, e),
+          onDragStart: () => onDragStart?.(wall.id),
+          onDragMove: (e: any) => onDragMove?.(wall.id, e.target.x(), e.target.y()),
           onDragEnd: (e: any) => {
             const node = e.target;
             const dx = node.x();

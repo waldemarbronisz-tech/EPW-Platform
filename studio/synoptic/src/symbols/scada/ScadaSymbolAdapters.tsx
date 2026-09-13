@@ -43,7 +43,13 @@ export const ScadaBusbarAdapter: React.FC<SymbolProps> = ({ obj, state }) => (
 export const ScadaWireNodeAdapter: React.FC<SymbolProps> = () => <WireNodeSymbol />;
 
 export const ScadaLabelFrameAdapter: React.FC<SymbolProps> = ({ obj }) => (
-  <LabelFrameSymbol title={obj.designation || obj.name || 'LABEL'} description={obj.description || obj.text || ''} />
+  <LabelFrameSymbol
+    title={obj.designation || obj.name || 'LABEL'}
+    description={obj.description || obj.text || ''}
+    fontSize={obj.fontSize || undefined}
+    fontFamily={obj.font || undefined}
+    color={obj.textColor || undefined}
+  />
 );
 
 export const ScadaMotorAdapter: React.FC<SymbolProps> = ({ state }) => (

@@ -1,3 +1,4 @@
+import { hasAnySelection } from './utils/SelectionFlags';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -65,6 +66,9 @@ type SynopticStudioState = {
   drawingMedium: string;
   drawingStyle: string;
   wireRoutingMode: string;
+  workMode: string;
+  drawingWallTool: boolean;
+  drawingRoomTool: boolean;
 };
 type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
 (window as unknown as StudioStateBridge).__synopticStudioState = (): SynopticStudioState => {
@@ -73,19 +77,15 @@ type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
     canUndo: s.historyIndex > 0,
     canRedo: s.historyIndex < s.history.length - 1,
     isDirty: s.isDirty,
-    hasSelection:
-      s.selectedIds.length > 0 ||
-      s.selectedConnectionIds.length > 0 ||
-      s.selectedMeterIds.length > 0 ||
-      s.selectedSignalPanelIds.length > 0 ||
-      s.selectedFrameIds.length > 0 ||
-      s.selectedGroupCommandIds.length > 0 ||
-      s.selectedSetpointPanelIds.length > 0,
+    hasSelection: hasAnySelection(s),
     drawingWire: !!s.isDrawingConnection,
     drawingFrame: s.isDrawingFrame ? s.drawingFrameVariant : null,
     drawingMedium: s.drawingMedium,
     drawingStyle: s.drawingStyle,
     wireRoutingMode: s.wireRoutingMode,
+    workMode: s.workMode,
+    drawingWallTool: !!s.isDrawingWall,
+    drawingRoomTool: !!s.isDrawingRoom,
   };
 };
 

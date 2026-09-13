@@ -11,6 +11,7 @@ import formatBarSource from '../components/FormatBar.tsx?raw';
 const namesUsed = (source: string) => [
   ...Array.from(source.matchAll(/<StudioIcon name="([a-z_]+)"/g), m => m[1]),
   ...Array.from(source.matchAll(/icon: '([a-z_]+)'/g), m => m[1]),
+  ...Array.from(source.matchAll(/icon="([a-z_]+)"/g), m => m[1]),
 ];
 
 describe('Studio pixel icons in the Synoptic editor', () => {

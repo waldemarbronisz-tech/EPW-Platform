@@ -29,6 +29,7 @@ import { shade, wallFaceTones, WALL_MATERIALS, FLOOR_MATERIALS } from '../theme/
 
 import canvasSource from '../components/Canvas.tsx?raw';
 import toolboxSource from '../components/Toolbox.tsx?raw';
+import toolbarSource from '../components/Toolbar.tsx?raw';
 import buildingRegistrySource from '../symbols/registry/building.ts?raw';
 
 const wall = (from: [number, number], to: [number, number], extra: Partial<WallElement> = {}): WallElement => ({
@@ -303,7 +304,7 @@ describe('wiring (source scan - no runnable harness for these)', () => {
     // the moment depth-sorting turned it into a sort().map() chain,
     // while the render order it exists to check was unchanged.
     const wallsAt = canvasSource.indexOf('<WallLayer');
-    const framesAt = canvasSource.indexOf('frames.map(');
+    const framesAt = canvasSource.indexOf('framesInHitOrder(frames).map(');
     expect(floorAt).toBeGreaterThan(-1);
     expect(floorAt).toBeLessThan(wallsAt);
     expect(wallsAt).toBeLessThan(framesAt);
@@ -314,8 +315,11 @@ describe('wiring (source scan - no runnable harness for these)', () => {
     expect(canvasSource).toContain('if (previewMode)');
   });
 
-  it('puts the wall TOOL in the same Object Library department as the building elements', () => {
-    expect(toolboxSource).toContain("BUILDING_CATEGORY = 'BUILDING'");
-    expect(toolboxSource).toContain('setDrawingWallMode');
+  // feat/synoptic-modes: the library is a catalogue of things you insert;
+  // the wall tool is a tool, and lives in the ROOMS work mode.
+  it('puts the wall TOOL in the ROOMS work mode of the toolbar, not in the Object Library', () => {
+    expect(toolbarSource).toContain('cmd="draw_wall"');
+    expect(toolbarSource).toContain('setDrawingWallMode');
+    expect(toolboxSource).not.toContain('setDrawingWallMode');
   });
 });

@@ -38,6 +38,15 @@ export const TextEditOverlay: React.FC = () => {
     if (!id || doneRef.current) return;
     doneRef.current = true;
     const current = state.objects.find(o => o.id === id);
+    // A box that ends its edit with no text is removed: an empty box is
+    // invisible junk that still takes clicks (it used to stay behind,
+    // drawn as a grey placeholder, after Esc or a click away on a fresh
+    // box). Removing it is one undo step, like any delete.
+    if (current && (value ?? current.text ?? '').trim() === '') {
+      state.setEditingTextId(null);
+      state.deleteObjects([id]);
+      return;
+    }
     if (current) {
       if (value === null) {
         if (current.height !== originalHeightRef.current) {
@@ -143,7 +152,7 @@ export const TextEditOverlay: React.FC = () => {
         resize: 'none',
         overflow: 'hidden',
         background: 'rgba(255,255,255,0.92)',
-        color: obj.color || COLOR_OUTLINE,
+        color: obj.textColor || obj.color || COLOR_OUTLINE,
         fontFamily: format.font,
         fontSize: format.fontSize * zoom,
         fontWeight: format.bold ? 'bold' : 'normal',

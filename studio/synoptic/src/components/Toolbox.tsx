@@ -1,336 +1,168 @@
-import { ScadaTools } from './ScadaTools';
-import React, { useState, useMemo } from 'react';
-import { getSymbolsByCategory, getSymbolDefinition } from '../symbols/SymbolRegistry';
-import { matchesQuery, RECENT_LABEL } from '../project/RecentSymbols';
-import { RoomTakeoffDialog } from './RoomTakeoffDialog';
+// feat/synoptic-library: the Object Library - a catalogue of the things
+// you insert, and nothing else.
+//
+// The drawing tools (walls, rooms, frames, wires) used to live here, in
+// between the valves; they now belong to the work modes on the toolbar.
+// What is left, top to bottom:
+//
+//   Search         - by Polish name, English name or type. With some
+//                    eighty entries, typing three letters beats any
+//                    folder structure.
+//   In this project - what is already on the screens, most used first:
+//                    a project reuses its own handful of symbols.
+//   Recently used  - the same list the Logic editor keeps.
+//   Domains        - one criterion, the installation domain
+//                    (project/LibraryDomains.ts).
+//
+// Symbols are dragged onto the canvas. The text box and the four screen
+// panels can also simply be clicked - they land at the top-left of the
+// view.
+
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
+import { getLanguage, tr } from '../i18n/tr';
 import {
-  WALL_MIN_THICKNESS, WALL_MAX_THICKNESS,
-  WALL_MIN_HEIGHT, WALL_MAX_HEIGHT,
-} from '../elements/WallElement';
-import {
-  FLOOR_MATERIALS, WALL_MATERIALS,
-  DEFAULT_FLOOR_MATERIAL,
-} from '../theme/Materials';
-import type { FloorMaterialId, WallMaterialId } from '../theme/Materials';
+  allLibraryEntries, entryMatches, groupLibrary, libraryEntry, projectSymbolUsage,
+} from '../project/LibraryDomains';
+import type { LibraryEntry, ScreenSymbols, WidgetType } from '../project/LibraryDomains';
+import { insertWidget } from './insertWidget';
+import { insertTextBox } from './insertTextBox';
+import { TEXT_BOX_TYPE } from '../project/TextFormatting';
 
-// feat/room-plan: the BUDYNEK department. Walls, luminaires and sockets
-// belong to ONE section of this tree, and the wall TOOL belongs there
-// with them - it is the third way of putting a building element on the
-// canvas, not a global drawing mode that happens to live in the
-// toolbar. The room's own surfaces (wall material, floor material) are
-// here too, for the same reason: everything needed to build a room is
-// in the one place you go to build one.
-//
-// The tool is a CLICK entry, not a draggable one: you arm it and then
-// click corners on the canvas. Every other entry in this tree is
-// dragged onto the canvas. Both live in the same folder because they
-// answer the same question ("what do I want to add?"), and the two
-// behave visibly differently - an armed tool stays highlighted.
-const BUILDING_CATEGORY = 'BUILDING';
-
-// feat/toolbar-grouping: inserting meters, panels, text and drawing
-// wires/frames now lives in the SCADA department (ScadaTools.tsx)
-// instead of the top toolbar.
-const SCADA_CATEGORY = 'SCADA';
-
-// feat/library-recent-and-search: two things the Logic editor's own
-// library has always had and this one did not - a search box, and the
-// symbols you last used kept at the top.
-//
-// Both matter more here than they look. The library is past sixty
-// symbols across seven departments, which is well past the point where
-// scrolling to find one is slower than typing three letters of its name;
-// and a working session uses the same handful over and over, so the list
-// of those IS the shortest path to most of what gets drawn.
-//
-// The search is deliberately the same rule as the Logic editor's: it
-// matches the label and the type, case- and accent-insensitively, hides
-// what does not match, and opens any folder that still has something in
-// it. A search that leaves its results inside a collapsed folder is a
-// search that looks like it found nothing.
+const IN_PROJECT_FOLDER = 'in-project';
+const RECENT_FOLDER = 'recent';
 
 export const Toolbox: React.FC = () => {
-  const library = useMemo(() => getSymbolsByCategory(), []);
+  const language = getLanguage();
+  const entries = useMemo(() => allLibraryEntries(language), [language]);
   const recentSymbols = useStore(s => s.recentSymbols);
+  const objects = useStore(s => s.objects);
+  const meters = useStore(s => s.meters);
+  const signalPanels = useStore(s => s.signalPanels);
+  const groupCommands = useStore(s => s.groupCommands);
+  const setpointPanels = useStore(s => s.setpointPanels);
+  const screenContents = useStore(s => s.screenContents);
+  const activeScreenId = useStore(s => s.activeScreenId);
   const [query, setQuery] = useState('');
+  // Folders the user closed. Everything starts open; a search opens all.
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
 
-  const isDrawingWall = useStore(s => s.isDrawingWall);
-  const setDrawingWallMode = useStore(s => s.setDrawingWallMode);
-  const isDrawingRoom = useStore(s => s.isDrawingRoom);
-  const setDrawingRoomMode = useStore(s => s.setDrawingRoomMode);
-  const wallDrawThickness = useStore(s => s.wallDrawThickness);
-  const setWallDrawThickness = useStore(s => s.setWallDrawThickness);
-  const wallDrawHeight = useStore(s => s.wallDrawHeight);
-  const setWallDrawHeight = useStore(s => s.setWallDrawHeight);
-  const wallDrawMaterial = useStore(s => s.wallDrawMaterial);
-  const setWallDrawMaterial = useStore(s => s.setWallDrawMaterial);
-  const floorMaterial = useStore(s => s.canvasConfig.floorMaterial);
-  const setFloorMaterial = useStore(s => s.setFloorMaterial);
-  const showIlluminance = useStore(s => s.showIlluminance);
-  const setShowIlluminance = useStore(s => s.setShowIlluminance);
+  const searching = query.trim().length > 0;
+  const groups = groupLibrary(entries, query, language);
 
-  // feat/appearance-selection-frames commit 4a: this used to be a
-  // literal three-category object (Electrical/Water/SCADA) written
-  // before HVAC and Instrumentation existed - both silently defaulted
-  // to collapsed ever since, hiding seven symbols until a user
-  // happened to click their folders. Every category the registry
-  // actually returns now starts expanded, derived directly from
-  // `library` itself so a future category can never repeat this same
-  // bug by omission.
-  const [showTakeoff, setShowTakeoff] = useState(false);
+  // The active screen lives in the store's own arrays; the stored copy of
+  // it in screenContents may be stale, so it is skipped there.
+  const usage = useMemo(() => {
+    const screens: ScreenSymbols[] = [
+      { objects, meters, signalPanels, groupCommands, setpointPanels },
+      ...Object.entries(screenContents || {})
+        .filter(([id]) => id !== activeScreenId)
+        .map(([, content]) => content),
+    ];
+    return projectSymbolUsage(screens, language);
+  }, [objects, meters, signalPanels, groupCommands, setpointPanels, screenContents, activeScreenId, language]);
 
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(Object.keys(library).map(category => [category, true]))
-  );
+  const inProject = usage
+    .map(u => ({ entry: libraryEntry(u.type, language), count: u.count }))
+    .filter((u): u is { entry: LibraryEntry; count: number } => u.entry !== null)
+    .filter(u => !searching || entryMatches(u.entry, query));
 
-  const toggleFolder = (folder: string) => {
-    setExpanded(prev => ({ ...prev, [folder]: !prev[folder] }));
-  };
+  const recent = recentSymbols
+    .map(type => libraryEntry(type, language))
+    .filter((entry): entry is LibraryEntry => entry !== null)
+    .filter(entry => !searching || entryMatches(entry, query));
 
-  const handleDragStart = (e: React.DragEvent, type: string, category: string) => {
-    e.dataTransfer.setData('application/reactflow', JSON.stringify({ type, category }));
+  const toggle = (folder: string) => setClosed(prev => ({ ...prev, [folder]: !prev[folder] }));
+  const isOpen = (folder: string) => searching || !closed[folder];
+
+  const handleDragStart = (e: React.DragEvent, entry: LibraryEntry) => {
+    e.dataTransfer.setData('application/reactflow', JSON.stringify({ type: entry.type, category: entry.category }));
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const renderBuildingTools = () => (
-    <>
-      <div
-        className="library-item"
-        onClick={() => setDrawingWallMode(!isDrawingWall)}
-        style={{
-          cursor: 'pointer',
-          fontWeight: isDrawingWall ? 'bold' : undefined,
-          background: isDrawingWall ? '#00A800' : undefined,
-          color: isDrawingWall ? '#FFFFFF' : undefined,
-        }}
-        title="Click the room's corners - each new wall starts where the previous one ended. Esc finishes."
-      >
-        {isDrawingWall ? '■' : '□'} Draw wall
-      </div>
+  const clickInserts = (entry: LibraryEntry) => entry.isWidget || entry.type === TEXT_BOX_TYPE;
 
-      <div
-        className="library-item"
-        onClick={() => setDrawingRoomMode(!isDrawingRoom)}
-        style={{
-          cursor: 'pointer',
-          fontWeight: isDrawingRoom ? 'bold' : undefined,
-          background: isDrawingRoom ? '#00A800' : undefined,
-          color: isDrawingRoom ? '#FFFFFF' : undefined,
-        }}
-        title="Drag a rectangle - four walls are created at once, closed into a room."
-      >
-        {isDrawingRoom ? '■' : '□'} Draw room (rectangle)
-      </div>
+  const handleClick = (entry: LibraryEntry) => {
+    if (entry.isWidget) insertWidget(entry.type as WidgetType);
+    else if (entry.type === TEXT_BOX_TYPE) insertTextBox();
+  };
 
-      {/* The tool's own options, shown only while it is armed - they
-          describe the NEXT wall, so they are noise when no wall is
-          about to be drawn. An already-placed wall is re-edited by
-          selecting it and using Properties instead. */}
-      {(isDrawingWall || isDrawingRoom) && (
-        <div style={{ padding: '4px 8px 6px 20px', fontSize: 11 }}>
-          <label style={{ display: 'block', marginBottom: 4 }}>
-            Thickness: {wallDrawThickness}
-            <input
-              type="range"
-              min={WALL_MIN_THICKNESS}
-              max={WALL_MAX_THICKNESS}
-              value={wallDrawThickness}
-              onChange={e => setWallDrawThickness(Number(e.target.value))}
-              style={{ width: '100%' }}
-            />
-          </label>
-          {/* Labelled as a VIEW property on purpose. Everything else
-              in this department is to scale (theme/Scale.ts), but a
-              real 2.5 m wall would extrude 200 px here and bury the
-              room it encloses - so this one number is a depth cue, not
-              a dimension, and the label must not pretend otherwise. */}
-          <label style={{ display: 'block', marginBottom: 4 }}>
-            Wall height (3D view): {wallDrawHeight}
-            <input
-              type="range"
-              min={WALL_MIN_HEIGHT}
-              max={WALL_MAX_HEIGHT}
-              value={wallDrawHeight}
-              onChange={e => setWallDrawHeight(Number(e.target.value))}
-              style={{ width: '100%' }}
-            />
-          </label>
-          <label style={{ display: 'block' }}>
-            Wall material
-            <select
-              value={wallDrawMaterial}
-              onChange={e => setWallDrawMaterial(e.target.value as WallMaterialId)}
-              style={{ width: '100%' }}
-            >
-              {Object.entries(WALL_MATERIALS).map(([id, m]) => (
-                <option key={id} value={id}>{m.label}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+  const renderItem = (entry: LibraryEntry, keyPrefix: string, count?: number) => (
+    <div
+      key={`${keyPrefix}-${entry.type}`}
+      className="library-item"
+      draggable
+      data-type={entry.type}
+      onDragStart={e => handleDragStart(e, entry)}
+      onClick={clickInserts(entry) ? () => handleClick(entry) : undefined}
+      style={clickInserts(entry) ? { cursor: 'pointer' } : undefined}
+      title={clickInserts(entry)
+        ? tr('library.click_to_insert', { name: entry.name })
+        : tr('library.item_title', { name: entry.name, type: entry.type })}
+    >
+      {entry.isWidget ? '▣' : '📄'} {entry.name}
+      {count !== undefined && (
+        <span className="library-count" title={tr('library.used_count', { count })}> ({count})</span>
       )}
-
-      {/* The lighting calculation. A VIEW of the room rather than
-          something added to it, which is why it toggles like the wall
-          tool rather than being dragged onto the canvas. */}
-      <div
-        className="library-item"
-        onClick={() => setShowIlluminance(!showIlluminance)}
-        style={{
-          cursor: 'pointer',
-          fontWeight: showIlluminance ? 'bold' : undefined,
-          background: showIlluminance ? '#00A800' : undefined,
-          color: showIlluminance ? '#FFFFFF' : undefined,
-        }}
-        title="Illuminance on the working plane - false colours and isolux lines. Direct component only."
-      >
-        {showIlluminance ? '■' : '□'} Illuminance
-      </div>
-
-      {/* The schedule. Lives in this department because it counts what
-          this department draws, and because the moment you have drawn a
-          room the next question is how much of everything is in it. */}
-      <div
-        className="library-item"
-        onClick={() => setShowTakeoff(true)}
-        style={{ cursor: 'pointer' }}
-        title="How much wall, floor, luminaires and sockets - counted from the drawing."
-      >
-        &#931; Quantities
-      </div>
-
-      {/* The floor is a property of the room, not of any one element -
-          it is derived from whatever walls enclose an area (see
-          RoomFloors.ts), so this is the only place it can be set. */}
-      <div style={{ padding: '4px 8px 6px 20px', fontSize: 11 }}>
-        <label style={{ display: 'block' }}>
-          Floor
-          <select
-            value={floorMaterial ?? DEFAULT_FLOOR_MATERIAL}
-            onChange={e => setFloorMaterial(e.target.value as FloorMaterialId)}
-            style={{ width: '100%' }}
-          >
-            {Object.entries(FLOOR_MATERIALS).map(([id, m]) => (
-              <option key={id} value={id}>{m.label}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-    </>
+    </div>
   );
 
-  const searching = query.trim().length > 0;
+  const renderFolder = (id: string, title: string, children: React.ReactNode) => (
+    <div key={id} className="folder" data-folder={id}>
+      <div className="folder-header" onClick={() => toggle(id)}>
+        <span className="folder-icon">{isOpen(id) ? '📂' : '📁'}</span>
+        <span className="folder-name">{title}</span>
+      </div>
+      {isOpen(id) && <div className="folder-items">{children}</div>}
+    </div>
+  );
 
-  /** The entries of one category that survive the current search. */
-  const visibleItems = (items: { type: string; label: string }[]) =>
-    searching ? items.filter(def => matchesQuery(def.label, def.type, query)) : items;
-
-  /** The recently-used entries, resolved back to definitions - a type that has since been removed from the registry is dropped rather than drawn as a blank row. */
-  const recentItems = recentSymbols
-    .map(type => {
-      const def = getSymbolDefinition(type);
-      return def ? { type, label: def.label, category: def.category } : null;
-    })
-    .filter((entry): entry is { type: string; label: string; category: string } => entry !== null)
-    .filter(entry => !searching || matchesQuery(entry.label, entry.type, query));
-
-  const anyResult = recentItems.length > 0
-    || Object.values(library).some(items => visibleItems(items).length > 0);
+  const nothingFound = searching && inProject.length === 0 && recent.length === 0 && groups.length === 0;
 
   return (
     <div className="toolbox">
-      {showTakeoff && <RoomTakeoffDialog onClose={() => setShowTakeoff(false)} />}
-      <div className="toolbox-header">Object Library</div>
+      <div className="toolbox-header">{tr('library.title')}</div>
 
       <div style={{ padding: 4, display: 'flex', gap: 4 }}>
         <input
           type="search"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Search..."
-          title="Search by symbol name or type"
+          placeholder={tr('library.search_placeholder')}
+          title={tr('library.search_title')}
+          aria-label={tr('library.search_title')}
           style={{ flex: 1, minWidth: 0 }}
         />
         {searching && (
-          <button onClick={() => setQuery('')} title="Clear search" style={{ padding: '0 6px' }}>
+          <button onClick={() => setQuery('')} title={tr('library.clear_search')} style={{ padding: '0 6px' }}>
             x
           </button>
         )}
       </div>
 
       <div className="toolbox-content">
-        {/* Ostatnio uzywane, first - the same section the Logic editor's
-            library opens with. Hidden when empty rather than shown as an
-            empty folder: on a fresh install there is nothing to say. */}
-        {recentItems.length > 0 && (
-          <div className="folder">
-            <div className="folder-header" onClick={() => toggleFolder(RECENT_LABEL)}>
-              <span className="folder-icon">{expanded[RECENT_LABEL] !== false ? '📂' : '📁'}</span>
-              <span className="folder-name">{RECENT_LABEL}</span>
-            </div>
-            {expanded[RECENT_LABEL] !== false && (
-              <div className="folder-items">
-                {recentItems.map(entry => (
-                  <div
-                    key={`recent-${entry.type}`}
-                    className="library-item"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, entry.type, entry.category)}
-                    title={`${entry.label} (${entry.category})`}
-                  >
-                    📄 {entry.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Hidden when empty rather than shown as an empty folder. */}
+        {inProject.length > 0 && renderFolder(
+          IN_PROJECT_FOLDER,
+          tr('library.in_project'),
+          inProject.map(u => renderItem(u.entry, IN_PROJECT_FOLDER, u.count))
         )}
 
-        {Object.entries(library).map(([category, items]) => {
-          const shown = visibleItems(items);
-          // While searching, a department with nothing matching in it is
-          // hidden entirely - seven empty folders is not a result list.
-          if (searching && shown.length === 0) return null;
-          // A search opens whatever still has something in it, so results
-          // are never left inside a folder the user closed yesterday.
-          const open = searching || expanded[category] !== false;
-          return (
-            <div key={category} className="folder">
-              <div
-                className="folder-header"
-                onClick={() => toggleFolder(category)}
-              >
-                <span className="folder-icon">{open ? '📂' : '📁'}</span>
-                <span className="folder-name">{category.replace('_', ' ')}</span>
-              </div>
-              {open && (
-                <div className="folder-items">
-                  {/* The building tools are part of the department, not
-                      of the search results - hidden while searching so a
-                      query never returns a toggle it does not match. */}
-                  {category === BUILDING_CATEGORY && !searching && renderBuildingTools()}
-                  {category === SCADA_CATEGORY && !searching && <ScadaTools />}
-                  {shown.map(def => (
-                    <div
-                      key={def.type}
-                      className="library-item"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, def.type, category)}
-                      title={`${def.label} (${def.type})`}
-                    >
-                      📄 {def.label}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {recent.length > 0 && renderFolder(
+          RECENT_FOLDER,
+          tr('library.recent'),
+          recent.map(entry => renderItem(entry, RECENT_FOLDER))
+        )}
 
-        {searching && !anyResult && (
+        {groups.map(group => renderFolder(
+          `domain-${group.domain}`,
+          tr(`domain.${group.domain}`),
+          group.entries.map(entry => renderItem(entry, group.domain))
+        ))}
+
+        {nothingFound && (
           <div style={{ padding: 10, opacity: 0.8 }}>
-            No symbols match "{query}".
+            {tr('library.no_results', { query })}
           </div>
         )}
       </div>

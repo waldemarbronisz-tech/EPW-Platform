@@ -827,21 +827,29 @@ class StudioMainWindow(QMainWindow):
             self._set_core_toolbar_enabled(False, False, False)
 
     def _apply_synoptic_mode_checks(self, state):
-        """Ticks the Synoptic toolbar's mode buttons (menus.py's
-        synoptic_mode_actions) from the state bridge: the armed drawing
-        tool, and the medium, wire style and routing a new wire gets."""
+        """Brings the Synoptic toolbar in line with the editor (menus.py's
+        synoptic_mode_actions / synoptic_mode_groups): ticks the active work
+        mode, shows only that mode's tool group, and ticks the armed tool
+        and the medium, wire style and routing a new wire gets."""
         actions = getattr(self, "synoptic_mode_actions", None) or {}
+        groups = getattr(self, "synoptic_mode_groups", None) or {}
+        work_mode = state.get("workMode") or "SYMBOLS"
         frame = state.get("drawingFrame")
         wanted = {
             "wire": bool(state.get("drawingWire")),
             "frame": frame == "PLAIN",
             "building": frame == "BUILDING",
+            "wall": bool(state.get("drawingWallTool")),
+            "room": bool(state.get("drawingRoomTool")),
         }
         for key in ("medium", "style", "routing"):
             value = state.get({"medium": "drawingMedium", "style": "drawingStyle", "routing": "wireRoutingMode"}[key])
             for action_key in actions:
                 if action_key.startswith(key + ":"):
                     wanted[action_key] = action_key == f"{key}:{value}"
+        for action_key in actions:
+            if action_key.startswith("mode:"):
+                wanted[action_key] = action_key == f"mode:{work_mode}"
         for action_key, action in actions.items():
             try:
                 if action.isChecked() != wanted.get(action_key, False):
@@ -849,6 +857,13 @@ class StudioMainWindow(QMainWindow):
             except RuntimeError:
                 # The toolbar was rebuilt and this action died with it.
                 continue
+        for mode, group in groups.items():
+            for action in group:
+                try:
+                    if action.isVisible() != (mode == work_mode):
+                        action.setVisible(mode == work_mode)
+                except RuntimeError:
+                    continue
 
     def _apply_synoptic_toolbar_state(self, state):
         # Guards against a reply arriving after the user has already

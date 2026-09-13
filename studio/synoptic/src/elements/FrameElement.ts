@@ -56,3 +56,17 @@ export function computeFrameRectFromDrag(x1: number, y1: number, x2: number, y2:
   const height = clampFrameSize(Math.abs(y2 - y1));
   return { x, y, width, height };
 }
+
+/**
+ * Frames in drawing - and so clicking - order: the largest first. Every
+ * frame takes clicks over its whole interior, so a big frame drawn after a
+ * small one inside it used to swallow every click meant for the small one;
+ * with the small one on top, both stay reachable. Equal sizes keep their
+ * order.
+ */
+export function framesInHitOrder<T extends { width: number; height: number }>(frames: T[]): T[] {
+  return frames
+    .map((frame, index) => ({ frame, index }))
+    .sort((a, b) => (b.frame.width * b.frame.height) - (a.frame.width * a.frame.height) || a.index - b.index)
+    .map(entry => entry.frame);
+}

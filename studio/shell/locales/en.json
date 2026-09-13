@@ -179,6 +179,14 @@
     "unlock": "Unlock",
     "rotate_left": "Rotate Left",
     "rotate_right": "Rotate Right",
+    "mode_symbols": "Symbols",
+    "mode_rooms": "Rooms",
+    "mode_connections": "Connections",
+    "mode_annotations": "Annotations",
+    "mode_tooltip": "{name} mode ({shortcut})",
+    "draw_wall": "Draw wall",
+    "draw_room": "Draw room (rectangle)",
+    "text_box": "Text box",
     "background_color": "Canvas Background Color..."
   },
   "color_picker": {

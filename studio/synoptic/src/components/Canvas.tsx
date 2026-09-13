@@ -9,7 +9,7 @@ import { pathFromPoints, getConductorCoreColor } from './ConnectionLine';
 import type { WireSegmentCollision } from './ConnectionLine';
 import { findAllCollisions } from '../project/WireCollision';
 import { ObjectLabelRenderer } from './ObjectLabelRenderer';
-import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI, MARQUEE_CROSSING, MARQUEE_CROSSING_FILL, MARQUEE_DASH, MARQUEE_STROKE_WIDTH, MARQUEE_TOOL_FILL, MARQUEE_WINDOW, MARQUEE_WINDOW_FILL, WIRE_TERMINAL_SNAP_DISTANCE } from '../theme/ScadaTheme';
+import { COLOR_ALARM, COLOR_CANVAS_BACKGROUND, COLOR_LAMP_LIT, COLOR_OUTLINE, COLOR_PANEL, COLOR_WHITE, CONDUCTOR_WIDTH, FONT_SIZE_BASE, FONT_SIZE_SMALL, FONT_UI, MARQUEE_CROSSING, MARQUEE_CROSSING_FILL, MARQUEE_DASH, MARQUEE_STROKE_WIDTH, MARQUEE_TOOL_FILL, MARQUEE_WINDOW, MARQUEE_WINDOW_FILL, WIRE_TERMINAL_SNAP_DISTANCE, FONT_SIZE_TITLE } from '../theme/ScadaTheme';
 import { snapValue, shouldSnapToGrid } from '../utils/GridSnap';
 import {
   snapPointToGrid, appendWirePoint, removeLastWirePoint,
@@ -44,6 +44,13 @@ import { wallsBounds } from '../project/GroupScale';
 import type { ScaleBox } from '../project/GroupScale';
 import { clampZoom, computeFitView, computePlanBounds, GRID_THIN_BELOW_ZOOM } from '../utils/CanvasView';
 import { FrameElementNode } from './FrameElementNode';
+import { isKindActive, modeForKind, objectKind, restrictSelectionToMode } from '../project/WorkModes';
+import type { ElementKind } from '../project/WorkModes';
+import { editorShortcut } from '../utils/EditorShortcuts';
+import { areaContents, mergeSelections, pointInsideRooms, roomLabels } from '../project/AreaMove';
+import type { SelectionIds } from '../project/WorkModes';
+import { isWidgetType } from '../project/LibraryDomains';
+import { insertWidget } from './insertWidget';
 import { WallLayer } from './WallLayer';
 import { RoomFloorLayer } from './RoomFloorLayer';
 import { IlluminanceLayer } from './IlluminanceLayer';
@@ -52,7 +59,7 @@ import { IlluminanceLegend } from './IlluminanceLegend';
 import { isDegenerateWall, moveWall } from '../elements/WallElement';
 import { isOpeningType, seatOpeningInWall } from '../project/WallOpenings';
 import type { SynopticObject } from '../store';
-import { computeFrameRectFromDrag } from '../elements/FrameElement';
+import { computeFrameRectFromDrag, framesInHitOrder } from '../elements/FrameElement';
 import { shouldExitInsertModeAfterPlacing } from '../utils/InsertMode';
 import { isAltKeyDown, isSpaceKeyDown, setAltKeyDown, setSpaceKeyDown } from '../utils/CanvasInputState';
 import type { DragKey, GroupDragApi } from './canvas/types';
@@ -124,6 +131,69 @@ export const Canvas: React.FC = () => {
 
   const handleObjectChange = (obj: SynopticObject, attrs: Partial<SynopticObject>) => {
     updateObject(obj.id, seatIfOpening(obj, attrs));
+  };
+
+  // feat/synoptic-modes: what a click can reach in the current work mode.
+  // Everything else stays drawn at full strength - you draw a room AROUND
+  // the devices - it simply does not listen. In Preview a click operates
+  // symbols whatever the mode.
+  const workMode = useStore(s => s.workMode);
+  const kindListens = (kind: ElementKind) => isKindActive(workMode, kind) || (previewMode && kind === 'symbol');
+  const objectListens = (obj: SynopticObject) => kindListens(objectKind(obj.type));
+
+  // fix/room-move-and-edit: dragging a wall of a selected ROOM (two or more
+  // walls) moves the room - every selected element plus whatever lies
+  // inside it - live, on the grid, as ONE undo step. A lone wall still
+  // drags as a wall. The step is applied as the pointer moves, so the room
+  // and its contents visibly travel with the cursor.
+  const areaDragRef = useRef<{ selection: SelectionIds; applied: { x: number; y: number } } | null>(null);
+  const startAreaDrag = (wallId: string) => {
+    const s = useStore.getState();
+    if (!s.selectedWallIds.includes(wallId) || s.selectedWallIds.length < 2) {
+      areaDragRef.current = null;
+      return;
+    }
+    const selected: SelectionIds = {
+      objectIds: s.selectedIds, connectionIds: s.selectedConnectionIds, meterIds: s.selectedMeterIds,
+      signalPanelIds: s.selectedSignalPanelIds, frameIds: s.selectedFrameIds, groupCommandIds: s.selectedGroupCommandIds,
+      setpointPanelIds: s.selectedSetpointPanelIds, wallIds: s.selectedWallIds,
+    };
+    areaDragRef.current = { selection: mergeSelections(selected, areaContents(s, s.selectedWallIds, s.selectedFrameIds)), applied: { x: 0, y: 0 } };
+  };
+  /** Applies the part of the drag not yet applied; returns false when no room drag is under way. */
+  const moveAreaDrag = (rawDx: number, rawDy: number, finished: boolean): boolean => {
+    const drag = areaDragRef.current;
+    if (!drag) return false;
+    const x = snapValue(rawDx, gridSize, isAltKeyDown());
+    const y = snapValue(rawDy, gridSize, isAltKeyDown());
+    if (x !== drag.applied.x || y !== drag.applied.y) {
+      useStore.getState().moveElementsBy(drag.selection, x - drag.applied.x, y - drag.applied.y, false);
+      drag.applied = { x, y };
+    }
+    if (finished) {
+      areaDragRef.current = null;
+      useStore.getState().saveHistory();
+    }
+    return true;
+  };
+
+  // Grabbing the FLOOR of a selected room (ROOMS mode) moves the room just
+  // as grabbing one of its walls does - instead of starting a marquee that
+  // drops the selection.
+  const floorDragRef = useRef<{ x: number; y: number } | null>(null);
+  const canvasPointFromStage = (pos: { x: number; y: number }) => ({
+    x: (pos.x - canvasState.panX) / canvasState.zoom,
+    y: (pos.y - canvasState.panY) / canvasState.zoom,
+  });
+  const startFloorDrag = (pos: { x: number; y: number }): boolean => {
+    const s = useStore.getState();
+    if (s.workMode !== 'ROOMS' || s.previewMode) return false;
+    const point = canvasPointFromStage(pos);
+    if (!pointInsideRooms(s.walls, s.selectedWallIds, point.x, point.y)) return false;
+    startAreaDrag(s.selectedWallIds[0]);
+    if (!areaDragRef.current) return false;
+    floorDragRef.current = point;
+    return true;
   };
 
   const handleObjectClick = (objectId: string, e: any) => {
@@ -216,7 +286,25 @@ export const Canvas: React.FC = () => {
   // React state, since it only ever needs to be read/written from Konva
   // event handlers mid-gesture, never from a render.
   const dragNodeRefs = useRef<Map<DragKey, any>>(new Map());
-  const groupDragRef = useRef<{ leaderKey: DragKey; keys: DragKey[] } | null>(null);
+  const groupDragRef = useRef<{ leaderKey: DragKey; keys: DragKey[]; withSelectedWalls: boolean } | null>(null);
+
+  const selectionToKeys = (sel: SelectionIds): DragKey[] => [
+    ...sel.objectIds.map(id => `obj:${id}`),
+    ...sel.meterIds.map(id => `meter:${id}`),
+    ...sel.signalPanelIds.map(id => `panel:${id}`),
+    ...sel.frameIds.map(id => `frame:${id}`),
+    ...sel.groupCommandIds.map(id => `groupcmd:${id}`),
+    ...sel.setpointPanelIds.map(id => `setpoint:${id}`),
+    ...sel.connectionIds.map(id => `conn:${id}`),
+  ];
+
+  const keysToSelection = (keys: DragKey[]): SelectionIds => {
+    const of = (prefix: string) => keys.filter(k => k.startsWith(prefix)).map(k => k.slice(prefix.length));
+    return {
+      objectIds: of('obj:'), meterIds: of('meter:'), signalPanelIds: of('panel:'), frameIds: of('frame:'),
+      groupCommandIds: of('groupcmd:'), setpointPanelIds: of('setpoint:'), connectionIds: of('conn:'), wallIds: [],
+    };
+  };
 
   const getSelectionKeys = (): DragKey[] => [
     ...selectedIds.map(id => `obj:${id}`),
@@ -233,9 +321,11 @@ export const Canvas: React.FC = () => {
       if (node) dragNodeRefs.current.set(key, node);
       else dragNodeRefs.current.delete(key);
     },
-    start: (key) => {
-      const keys = getSelectionKeys();
-      groupDragRef.current = (keys.length > 1 && keys.includes(key)) ? { leaderKey: key, keys } : null;
+    start: (key, extra) => {
+      const selectionKeys = getSelectionKeys();
+      const inSelection = selectionKeys.includes(key);
+      const keys = [...new Set([...(inSelection ? selectionKeys : [key]), ...(extra ? selectionToKeys(extra) : [])])];
+      groupDragRef.current = keys.length > 1 ? { leaderKey: key, keys, withSelectedWalls: inSelection } : null;
     },
     isActive: () => !!groupDragRef.current,
     follow: (dx, dy) => {
@@ -267,7 +357,12 @@ export const Canvas: React.FC = () => {
     commit: (dx, dy) => {
       const g = groupDragRef.current;
       if (!g) return;
-      useStore.getState().moveSelectionBy(dx, dy);
+      const s = useStore.getState();
+      s.moveElementsBy(
+        mergeSelections(keysToSelection(g.keys), { ...keysToSelection([]), wallIds: g.withSelectedWalls ? s.selectedWallIds : [] }),
+        dx,
+        dy
+      );
       // A follower connection's move-Group has no store-driven x/y at
       // all (see ConnectionNode) - the store update alone will not put
       // it back to neutral, so it must be reset by hand, the same way
@@ -390,6 +485,18 @@ export const Canvas: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Alt') setAltKeyDown(true);
       if (isTypingInField()) return;
+      // Undo, redo and the work-mode switch (Ctrl+Z / Ctrl+Y /
+      // Ctrl+Shift+Z / Ctrl+1..4) - checked first, so Ctrl+1 is not
+      // also read as "1 = electrical medium" further down.
+      const shortcut = editorShortcut(e);
+      if (shortcut) {
+        e.preventDefault();
+        const s = useStore.getState();
+        if (shortcut.kind === 'undo') s.undo();
+        else if (shortcut.kind === 'redo') s.redo();
+        else s.setWorkMode(shortcut.mode);
+        return;
+      }
       if (e.key === 'Escape') {
         // fix/handles-insert-mode-diodes commit 2: Escape exits insert
         // mode back to select. Cancels any in-progress wire polyline
@@ -725,6 +832,10 @@ export const Canvas: React.FC = () => {
 
     // Check if clicking on empty stage
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.name() === 'grid';
+    if (clickedOnEmpty && !e.evt.shiftKey && e.evt.button === 0) {
+      const pointer = e.target.getStage().getPointerPosition();
+      if (pointer && startFloorDrag(pointer)) return;
+    }
     if (clickedOnEmpty) {
       if (!e.evt.shiftKey) {
         clearSelection();
@@ -768,6 +879,15 @@ export const Canvas: React.FC = () => {
       }
     }
 
+    if (floorDragRef.current) {
+      const pointer = e.target.getStage()?.getPointerPosition();
+      if (pointer) {
+        const point = canvasPointFromStage(pointer);
+        moveAreaDrag(point.x - floorDragRef.current.x, point.y - floorDragRef.current.y, false);
+      }
+      return;
+    }
+
     if (isPanningRef.current) {
       const dx = e.evt.clientX - lastPanPosRef.current.x;
       const dy = e.evt.clientY - lastPanPosRef.current.y;
@@ -807,6 +927,15 @@ export const Canvas: React.FC = () => {
     if (e.evt.button === 1 || isPanningRef.current) {
       isPanningRef.current = false;
       if (containerRef.current) containerRef.current.style.cursor = 'default';
+      return;
+    }
+
+    if (floorDragRef.current) {
+      const start = floorDragRef.current;
+      floorDragRef.current = null;
+      const pointer = e.target.getStage()?.getPointerPosition();
+      const point = pointer ? canvasPointFromStage(pointer) : start;
+      moveAreaDrag(point.x - start.x, point.y - start.y, true);
       return;
     }
 
@@ -938,15 +1067,22 @@ export const Canvas: React.FC = () => {
       // something this editor could do.
       const wallIds = walls.filter(w => isWallInBox(w, box, mode)).map(w => w.id);
 
-      if (objectIds.length > 0 || meterIds.length > 0 || signalPanelIds.length > 0 || frameIds.length > 0 || groupCommandIds.length > 0 || setpointPanelIds.length > 0 || connectionIds.length > 0 || wallIds.length > 0) {
+      // feat/synoptic-modes: the box only catches what the work mode can
+      // reach - a room marquee does not pick up the valves inside it.
+      const caught = restrictSelectionToMode(
+        { objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds },
+        objects,
+        useStore.getState().workMode
+      );
+      if (Object.values(caught).some(ids => ids.length > 0)) {
         if (e.evt.shiftKey) {
           // Shift+drag adds to whatever was already selected, per kind.
           selectMixed(mergeSelectionAdditive(
             { objectIds: selectedIds, connectionIds: selectedConnectionIds, meterIds: selectedMeterIds, signalPanelIds: selectedSignalPanelIds, frameIds: selectedFrameIds, groupCommandIds: selectedGroupCommandIds, setpointPanelIds: selectedSetpointPanelIds, wallIds: selectedWallIds },
-            { objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds }
+            caught
           ));
         } else {
-          selectMixed({ objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds });
+          selectMixed(caught);
         }
       }
       // An empty box selects nothing new - a non-shift click already
@@ -1074,6 +1210,13 @@ export const Canvas: React.FC = () => {
     x = snapValue(x, gridSize, isAltKeyDown() || e.altKey);
     y = snapValue(y, gridSize, isAltKeyDown() || e.altKey);
 
+    // feat/synoptic-library: the four screen panels come from the library
+    // too, and land where they are dropped.
+    if (isWidgetType(data.type)) {
+      insertWidget(data.type, x, y);
+      return;
+    }
+
     const def = getSymbolDefinition(data.type);
     const width = def?.defaultWidth || 80;
     const height = def?.defaultHeight || 80;
@@ -1108,6 +1251,10 @@ export const Canvas: React.FC = () => {
       tooltip: '',
       customProperties: {}
     });
+
+    // What was just dropped has to be selectable: the editor moves to the
+    // work mode it belongs to (a text box to ANNOTATIONS, a valve to SYMBOLS).
+    useStore.getState().setWorkMode(modeForKind(objectKind(data.type)));
 
     // feat/text-formatting: a text box dropped from the library opens
     // straight away for typing.
@@ -1316,6 +1463,7 @@ export const Canvas: React.FC = () => {
               excluded from the ordinary objects.map pass below so
               nothing renders twice. */}
           {objects.filter((obj) => getSymbolDefinition(obj.type)?.isSurface).map((obj) => (
+            <Group key={obj.id} listening={objectListens(obj)}>
             <ObjectNode
               key={obj.id}
               obj={obj}
@@ -1328,6 +1476,7 @@ export const Canvas: React.FC = () => {
               highlightedTerminalId={highlightedTerminal?.objId === obj.id ? highlightedTerminal.terminalId : null}
               drawingMedium={isDrawingConnection ? drawingMedium : null}
             />
+            </Group>
           ))}
           {/* feat/room-plan: the floor and its light pools go BELOW
               everything - they are the ground the room stands on. Then
@@ -1340,13 +1489,17 @@ export const Canvas: React.FC = () => {
           {/* Walls are painted as merged BODIES (WallGeometry.ts) so a
               room is one mitred shape rather than four overlapping
               rectangles; selection and dragging stay per wall. */}
+          <Group listening={kindListens('wall')}>
           <WallLayer
             walls={walls}
             objects={objects}
             selectedWallIds={selectedWallIds}
             previewMode={previewMode}
             onSelect={(wallId, e) => { if (!previewMode) selectWalls([wallId], !!e?.evt?.shiftKey); }}
+            onDragStart={(wallId) => startAreaDrag(wallId)}
+            onDragMove={(_wallId, dx, dy) => { moveAreaDrag(dx, dy, false); }}
             onDragEnd={(wallId, dx, dy) => {
+              if (moveAreaDrag(dx, dy, true)) return;
               const snappedDx = snapValue(dx, gridSize, isAltKeyDown());
               const snappedDy = snapValue(dy, gridSize, isAltKeyDown());
               if (snappedDx === 0 && snappedDy === 0) return;
@@ -1356,6 +1509,23 @@ export const Canvas: React.FC = () => {
               useStore.getState().saveHistory();
             }}
           />
+          </Group>
+          {/* A named room shows its name - and its location - on the floor. */}
+          {roomLabels(walls).map((label, i) => (
+            <Text
+              key={`room-label-${i}`}
+              x={label.x - 160}
+              y={label.y - 9}
+              width={320}
+              align="center"
+              text={[label.name, label.location].filter(Boolean).join(' - ')}
+              fontSize={FONT_SIZE_TITLE}
+              fontStyle="bold"
+              fontFamily={FONT_UI}
+              fill={COLOR_OUTLINE}
+              listening={false}
+            />
+          ))}
           {/* The wall being drawn right now - a plain hairline, not a
               full extruded body: it is a measurement in progress, and
               painting it as a finished wall would hide the grid and the
@@ -1369,7 +1539,8 @@ export const Canvas: React.FC = () => {
               listening={false}
             />
           )}
-          {frames.map((frame) => (
+          <Group listening={kindListens('frame')}>
+          {framesInHitOrder(frames).map((frame) => (
             <FrameElementNode
               key={frame.id}
               frame={frame}
@@ -1377,7 +1548,8 @@ export const Canvas: React.FC = () => {
               onShapeRef={(node) => { groupDrag.registerNode(`frame:${frame.id}`, node); registerFrameShapeRef(frame.id, node); }}
               onDragStart={() => {
                 if (isAltKeyDown()) useStore.getState().duplicateFrameInPlace(frame.id);
-                groupDrag.start(`frame:${frame.id}`);
+                // A frame is an area: what lies inside it moves with it.
+                groupDrag.start(`frame:${frame.id}`, areaContents(useStore.getState(), [], selectedFrameIds.includes(frame.id) ? selectedFrameIds : [frame.id]));
               }}
               onDragMove={(x, y) => {
                 if (groupDrag.isActive()) groupDrag.follow(x - frame.x, y - frame.y);
@@ -1406,11 +1578,13 @@ export const Canvas: React.FC = () => {
               }}
             />
           ))}
+          </Group>
           {/* Node-based wiring model: a connection draws itself straight
               through its own points array now - no from/to object lookup
               needed here at all (that whole indirection is gone). A
               finished wire can be selected, dragged as a whole, or have
               one of its own bends grabbed and moved (ConnectionNode). */}
+          <Group listening={kindListens('connection')}>
           {connections.map(conn => (
             <ConnectionNode
               key={conn.id}
@@ -1425,6 +1599,7 @@ export const Canvas: React.FC = () => {
               onCollisionHover={setCollisionTooltip}
             />
           ))}
+          </Group>
           {/* In-progress wire preview: a thin line through every point
               placed so far plus the live (grid-snapped) cursor position
               - thinner than the real conductor (not a committed
@@ -1456,6 +1631,7 @@ export const Canvas: React.FC = () => {
             <Group
               key={`obj-${obj.id}`}
               opacity={showIlluminance && !isLuminaire(obj.type) ? 0.42 : 1}
+              listening={objectListens(obj)}
             >
             <ObjectNode
               key={obj.id}
@@ -1489,6 +1665,7 @@ export const Canvas: React.FC = () => {
           {/* The meter element (feat/meter-element): its own array, not
               a symbol - see MeterElement.ts's own header comment. Layer
               5 - after every symbol and junction, before labels. */}
+          <Group listening={kindListens('meter')}>
           {meters.map((meter) => (
             <MeterElementNode
               key={meter.id}
@@ -1523,9 +1700,11 @@ export const Canvas: React.FC = () => {
               }}
             />
           ))}
+          </Group>
           {/* The signal panel element (commit 6): same mechanism as the
               meter, its own array - see elements/SignalPanelElement.ts.
               Same layer 5 as the meter. */}
+          <Group listening={kindListens('signalPanel')}>
           {signalPanels.map((panel) => (
             <SignalPanelElementNode
               key={panel.id}
@@ -1556,10 +1735,12 @@ export const Canvas: React.FC = () => {
               }}
             />
           ))}
+          </Group>
           {/* The group command button (feat/control-elements commit 2):
               same mechanism as the meter/signal panel, its own array -
               see elements/GroupCommandElement.ts. No onResize (fixed-size
               button - see that file's own header for why). */}
+          <Group listening={kindListens('groupCommand')}>
           {groupCommands.map((el) => (
             <GroupCommandElementNode
               key={el.id}
@@ -1587,10 +1768,12 @@ export const Canvas: React.FC = () => {
               }}
             />
           ))}
+          </Group>
           {/* The setpoint panel element (feat/selector-symbol-setpoint-alarm):
               same mechanism as the meter/signal panel, for MODULATED
               devices instead of MEASURED ones - see
               elements/SetpointElement.ts. */}
+          <Group listening={kindListens('setpointPanel')}>
           {setpointPanels.map((panel) => (
             <SetpointElementNode
               key={panel.id}
@@ -1621,6 +1804,7 @@ export const Canvas: React.FC = () => {
               }}
             />
           ))}
+          </Group>
           {/* Layer 6, labels: a SEPARATE pass over every object, drawn
               after every symbol/junction/meter so a label never falls
               under another object's own shape - each wrapped in its own

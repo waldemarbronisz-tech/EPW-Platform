@@ -5,6 +5,7 @@ import { useStore } from '../store';
 import type { ScreenKind } from '../store';
 import { GRID_SIZE } from '../theme/ScadaTheme';
 import { HELP_DEFAULT_LANGUAGE } from '../i18n/HelpLanguage';
+import type { FloorMaterialId } from '../theme/Materials';
 
 export class ProjectManager {
   // feat/isometric-engine commit 5: kind defaults to SCHEMATIC, same as
@@ -148,7 +149,10 @@ export class ProjectManager {
         // installed a grid pitch that disagreed with GRID_SIZE
         // everywhere else in the app, instead of GRID_SIZE actually
         // being that single source of truth.
-        gridSize: project.canvas.gridSize || GRID_SIZE
+        gridSize: project.canvas.gridSize || GRID_SIZE,
+        // Saved with the canvas but dropped here, so every reopened
+        // project fell back to the default floor.
+        floorMaterial: (project.canvas as { floorMaterial?: FloorMaterialId }).floorMaterial,
       },
       isDirty: isDirty,
       selectedIds: [],

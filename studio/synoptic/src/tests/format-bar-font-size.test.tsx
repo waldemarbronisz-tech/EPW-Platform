@@ -60,8 +60,10 @@ describe('font size box', () => {
   });
 
   it('a size picked from the list applies at once', () => {
-    fireEvent.input(sizeBox(), { target: { value: '18' }, inputType: 'insertReplacementText' });
+    fireEvent.click(screen.getByTitle('Show all font sizes'));
+    fireEvent.mouseDown(screen.getByRole('option', { name: '18' }));
     expect(fontSize()).toBe(18);
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 
   it('A+ and A- step through the size list', () => {

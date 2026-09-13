@@ -17,6 +17,7 @@ import {
   konvaFontStyle, textFormatOf, TEXT_BOX_PADDING, TEXT_LINE_HEIGHT,
 } from '../../project/TextFormatting';
 import { COLOR_OUTLINE } from '../../theme/ScadaTheme';
+import { tr } from '../../i18n/tr';
 
 export const TextBoxSymbol: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
   const editing = useStore(s => s.editingTextId === obj.id);
@@ -44,7 +45,7 @@ export const TextBoxSymbol: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
           y={TEXT_BOX_PADDING}
           width={innerWidth}
           height={innerHeight}
-          text={empty ? 'Text' : obj.text}
+          text={empty ? tr('text.placeholder') : obj.text}
           fontFamily={format.font}
           fontSize={format.fontSize}
           fontStyle={konvaFontStyle(format)}
@@ -53,7 +54,7 @@ export const TextBoxSymbol: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
           verticalAlign="top"
           wrap="word"
           lineHeight={TEXT_LINE_HEIGHT}
-          fill={obj.color || COLOR_OUTLINE}
+          fill={obj.textColor || obj.color || COLOR_OUTLINE}
           opacity={empty ? 0.4 : 1}
           listening={false}
         />

@@ -54,6 +54,12 @@ export interface WallElement {
   // is the thing you click to change it. Optional and additive -
   // absent falls back to DEFAULT_WALL_MATERIAL.
   material?: WallMaterialId;
+  // fix/room-move-and-edit: what the ROOM these walls enclose is called
+  // and which project location it belongs to. A room has no record of
+  // its own - it is whatever its walls close - so its data lives on its
+  // walls and travels with them (save, undo, copy). Optional.
+  roomName?: string;
+  roomLocation?: string;
 }
 
 // A wall thinner than this stops reading as a wall at normal zoom; one

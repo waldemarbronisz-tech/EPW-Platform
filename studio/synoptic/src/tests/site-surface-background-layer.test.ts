@@ -44,7 +44,7 @@ describe('9. grass and concrete road lie in the background layer', () => {
     // "warstwa podkladu" position FrameElement itself uses) - textual
     // order in the source is exactly Konva's own draw order within one Layer.
     const surfacePassIndex = canvasSource.indexOf('isSurface)');
-    const framesIndex = canvasSource.indexOf('frames.map((frame)');
+    const framesIndex = canvasSource.indexOf('framesInHitOrder(frames).map((frame)');
     const connectionsIndex = canvasSource.indexOf('connections.map(conn');
     expect(surfacePassIndex).toBeGreaterThan(-1);
     expect(framesIndex).toBeGreaterThan(-1);
