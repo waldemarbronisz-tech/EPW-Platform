@@ -13,14 +13,28 @@ whichever program shows it (see ISSUE_TEXT_EN below). Read that document before
 changing anything here; this module's own docstrings quote it rather than
 restate it from memory, so the two don't quietly drift apart.
 
-Scope of THIS module, deliberately: the "structural" fields the contract
-itself groups under Studio's exclusive editing layer (Nagłówek, Skład
-urządzenia, Sprzęt, Punkty, Aparaty, Alarmówka, Nastawy zabezpieczeń) -
-not yet `screens`/`logic` (embedding the Synoptic/Logic Studio editors'
-own content into this file is a separate, much larger integration -
-SynopticPanel/LogicPanel keep their own .epwsyn/.epwlogic save flow
-entirely unchanged until that lands, so nothing about how Ekrany/Logika
-save today is touched by this module).
+Scope of THIS module: the "structural" fields the contract groups under
+Studio's exclusive editing layer (Nagłówek, Skład urządzenia, Sprzęt,
+Punkty, Aparaty, Alarmówka, Nastawy zabezpieczeń) AND - task "Studio
+osadza ekrany i logikę w projekt.epw" (user report: "tworząc synoptykę
+w projekcie i zapisując projekt na głównym pasku, synoptyka nie zapisuje
+się [...] dalej to traktowane jest jako osobne programy") - the two
+editors' own documents, embedded whole:
+
+  screens        the Synoptic Editor's project (the EPW_SYNOPTIC
+                 document, identical to a .epwsyn file's content -
+                 SPEC: "struktura obiektu pozostaje identyczna")
+  logic          the Logic Studio project (EPW_LOGIC - the editable
+                 source, blocks and wires)
+  logic_runtime  the compiled logic (EPW_RUNTIME_LOGIC - what runtime's
+                 LogicEngine executes; refreshed by Studio on every save
+                 the source compiles on)
+
+All three are plain dicts kept verbatim - this module validates that
+they are objects, nothing more; each editor/loader validates its own
+document (ProjectManager.loadProject, Project.deserialize,
+epwsyn_loader, LogicEngine). .epwsyn/.epwlogic stay as EXCHANGE formats
+(SPEC: "format wymiany"), never the project's source of truth.
 
 ElectricalProtectionStage/ProcessProtection ("Zabezpieczenia: na maksa
 dużo opcji") are TWO DIFFERENT real domains, kept separate here exactly
@@ -105,10 +119,10 @@ import zlib
 from dataclasses import MISSING, asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 FORMAT_MARKER = "EPW_PROJECT_FILE"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _utc_now_iso() -> str:
@@ -130,8 +144,24 @@ class ProjectMetadata:
 @dataclass
 class Card:
     """SPEC_PROJEKT_EPW.md, "Sprzęt": `id (nadane przez użytkownika),
-    model, rodzaj kanałów, liczba kanałów`. Example from the contract:
-    id="DI1", model="ELA01", kind="DI", channels=32.
+    model, kanały (rodzaj -> liczba kanałów)`. Example from the
+    contract's own single-kind case: id="DI1", model="ELA01",
+    channel_kinds={"DI": 32}.
+
+    `channel_kinds` (task follow-up, user report: "karta ELA1 ma DI oraz
+    AI" - real hardware, one physical module with more than one channel
+    kind) maps EVERY kind this card actually has to ITS OWN channel
+    count - {"DI": 8, "AI": 4} for a mixed digital+analog module,
+    {"DI": 32} for the common single-kind case. One Card row is one
+    physical module - one id, one Modbus address, one location.
+    (An earlier version of this fix represented a mixed module as TWO
+    Card rows sharing an id, one per kind - abandoned because it forced
+    modbus_unit_id/location to be entered twice and kept in sync by
+    hand, for no reason the address grammar, <id>.<KIND>.<channel> with
+    KIND already its own segment, ever required.) schema_version 1
+    files hand-copy their old "kind"/"channels" pair into this shape on
+    load - see _migrate_schema_v1_cards() below; saving always writes
+    the current shape.
 
     `modbus_unit_id` (task: "ELA i ADA i EPM będą łączyły się z orange
     pi [...] po modbus - trzeba dać opcję adresowania") is GREENFIELD -
@@ -153,8 +183,7 @@ class Card:
 
     id: str
     model: str
-    kind: str
-    channels: int
+    channel_kinds: Dict[str, int] = field(default_factory=dict)
     modbus_unit_id: Optional[int] = None
     location: str = ""
 
@@ -246,6 +275,19 @@ class Device:
     command: list[str] = field(default_factory=list)
     supervision: dict = field(default_factory=dict)
     safe_state: dict = field(default_factory=dict)  # onStartup, onLinkLoss
+    # Task "wyłącznik jednocewkowy bistabilny" - HOW `command` drives a
+    # SWITCHED apparatus (SPEC_PROJEKT_EPW.md, "Aparaty"):
+    #   MAINTAINED   a level - energized = ON (one output), or one output
+    #                per direction held energized (two outputs)
+    #   PULSE        a `pulse_ms` pulse per direction, separate coils
+    #   PULSE_TOGGLE one impulse-relay coil (R15/3P-class) behind one or
+    #                two outputs: EVERY pulse toggles, so the runtime
+    #                pulses only when feedback[0] (the CLOSED contact,
+    #                always first) says the apparatus is not already in
+    #                the requested state - feedback is mandatory.
+    # File keys: "commandStyle"/"pulseMs" (camelCase, like safeState).
+    command_style: str = "MAINTAINED"
+    pulse_ms: int = 0
 
 
 @dataclass
@@ -426,6 +468,11 @@ class Project:
     electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
     process_protections: list[ProcessProtection] = field(default_factory=list)
     modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
+    # The two editors' documents, embedded whole - see the module
+    # docstring. {} = nothing drawn / no logic yet (a fresh project).
+    screens: dict = field(default_factory=dict)
+    logic: dict = field(default_factory=dict)
+    logic_runtime: dict = field(default_factory=dict)
     # SPEC_PROJEKT_EPW.md, "Wersjonowanie": incremented on every save,
     # by Studio or (once that connection exists) by runtime - kept from
     # day one even though the "reject an older revision on upload"
@@ -486,6 +533,8 @@ def _to_json_dict(project: Project) -> dict:
                 "command": list(d.command),
                 "supervision": dict(d.supervision),
                 "safeState": dict(d.safe_state),  # contract's own field name, camelCase
+                "commandStyle": d.command_style,
+                "pulseMs": d.pulse_ms,
             }
             for d in project.devices
         ]
@@ -522,6 +571,13 @@ def _to_json_dict(project: Project) -> dict:
     bus = project.modbus_bus
     if bus.port or bus.host:
         data["modbus_bus"] = asdict(bus)
+    # Embedded editor documents - same "omitted when empty" reading.
+    if project.screens:
+        data["screens"] = project.screens
+    if project.logic:
+        data["logic"] = project.logic
+    if project.logic_runtime:
+        data["logic_runtime"] = project.logic_runtime
     return data
 
 
@@ -803,7 +859,50 @@ def _records(data: dict, key: str, where: str, cls, warnings: list, id_field=Non
 _TOP_LEVEL_KEYS = {
     "format", "schema_version", "project", "revision", "modified_by", "modules", "cards",
     "locations", "points", "devices", "intrusion", "protection", "modbus_bus",
+    "screens", "logic", "logic_runtime",
 }
+
+
+def _migrate_schema_v1_cards(data: dict, warnings: list) -> None:
+    """schema_version 1 stored one channel kind per Card row ("kind":
+    "DI", "channels": 32); schema_version 2 replaced that with
+    channel_kinds ({"DI": 32}), one row per physical module (see Card's
+    own docstring for why). Rewrites data["cards"] in place, raw dict to
+    raw dict, before _records()/_build() ever see it - _build() only
+    knows "does this key exist for the CURRENT dataclass shape", it has
+    no notion of an older version's different key meaning, so the
+    translation has to happen here, once, up front.
+
+    channel_kinds has no default-required tension the way "channels"
+    did in schema 1 (it defaults to {}, a legitimate "not configured
+    yet" card - see Card's own docstring), so _build() has no hook left
+    to catch a v1 record that declared a "kind" without a usable
+    "channels" the way it would once have caught a plain missing/wrong-
+    typed required field. Handled here instead, in the SAME spirit as
+    every other skippable-record wrong-type problem this reader already
+    reports: a warning naming the field, and the record dropped - Card
+    records have always been skippable (_records()'s own id_field="id"
+    call below never passes skippable=False), so this doesn't create a
+    new failure mode, only keeps an old one working the same way through
+    the migration."""
+    cards = data.get("cards")
+    if not isinstance(cards, list):
+        return
+    migrated = []
+    for index, raw in enumerate(cards):
+        if not isinstance(raw, dict) or "channel_kinds" in raw or "kind" not in raw:
+            migrated.append(raw)
+            continue
+        kind = raw.pop("kind")
+        channels = raw.pop("channels", None)
+        if isinstance(kind, str) and isinstance(channels, int) and not isinstance(channels, bool):
+            raw["channel_kinds"] = {kind: channels}
+            migrated.append(raw)
+        else:
+            warnings.append(FormatIssue("wrong_type_skipped", {
+                "field": f"cards[{index}].channels", "expected": "int", "actual": _json_type_name(channels),
+            }))
+    data["cards"] = migrated
 
 
 def _parse(path) -> tuple:
@@ -831,8 +930,9 @@ def _parse(path) -> tuple:
                                  actual=_json_type_name(schema_version))
     if schema_version > SCHEMA_VERSION:
         raise ProjectFormatError("newer_schema", version=schema_version, supported=SCHEMA_VERSION)
-    # schema_version OLDER than SCHEMA_VERSION would be migrated here once
-    # SCHEMA_VERSION > 1 exists - nothing to migrate from at version 1.
+    warnings = []
+    if schema_version < 2:
+        _migrate_schema_v1_cards(data, warnings)
 
     if "project" not in data:
         raise ProjectFormatError("missing_field", field="project")
@@ -840,7 +940,6 @@ def _parse(path) -> tuple:
         raise ProjectFormatError("invalid_required", field="project", expected="object",
                                  actual=_json_type_name(data["project"]))
 
-    warnings = []
     metadata = _build(ProjectMetadata, data["project"], "project", warnings, skippable=False)
 
     modules = []
@@ -859,7 +958,8 @@ def _parse(path) -> tuple:
         locations=_records(data, "locations", "locations", Location, warnings, id_field="code"),
         points=_records(data, "points", "points", Point, warnings, id_field="address"),
         devices=_records(data, "devices", "devices", Device, warnings, id_field="id",
-                         json_names={"safe_state": "safeState"}),
+                         json_names={"safe_state": "safeState", "command_style": "commandStyle",
+                                     "pulse_ms": "pulseMs"}),
     )
 
     intrusion = _section(data, "intrusion", "intrusion", dict, warnings)
@@ -887,6 +987,13 @@ def _parse(path) -> tuple:
         bus = _build(ModbusBusConfig, data["modbus_bus"], "modbus_bus", warnings)
         if bus is not None:
             project.modbus_bus = bus
+
+    # Embedded editor documents: kept verbatim, only their container type
+    # is checked here (a non-object is a warning and empty, like any other
+    # section) - each editor validates its own document on load.
+    project.screens = _section(data, "screens", "screens", dict, warnings)
+    project.logic = _section(data, "logic", "logic", dict, warnings)
+    project.logic_runtime = _section(data, "logic_runtime", "logic_runtime", dict, warnings)
 
     revision = data.get("revision", 0)
     if isinstance(revision, int) and not isinstance(revision, bool):

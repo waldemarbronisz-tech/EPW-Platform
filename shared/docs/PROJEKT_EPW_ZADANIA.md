@@ -76,6 +76,11 @@ Moduł spoza składu w ogóle nie jest tworzony: nie ma obiektu, wątków ani ta
 
 ## 4. ZADANIE DO ZGŁOSZENIA: „Studio osadza ekrany, logikę i settings_hash w projekt.epw"
 
+> **Stan 2026-09-15:** sekcje `screens` / `logic` / `logic_runtime` — ZROBIONE
+> (zapis/odczyt w Studio, runtime czyta je z projektu, `composition_check._sources()`
+> przepięte, ścieżki plików tylko jako zapas). Pozostają: `settings_hash` oraz
+> Main View po `deviceId`.
+
 **Warunek wstępny renderera ekranów i pełnego wersjonowania nastaw.**
 
 Zakres:
