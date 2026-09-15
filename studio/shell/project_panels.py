@@ -93,7 +93,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from shared.addressing import format_address, parse_address
+from shared.addressing import format_address, parse_address, try_parse_address
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
@@ -105,6 +105,10 @@ from studio.shell.project_format import (
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
 _ANALOG_KINDS = {"AI", "AO"}
 DEVICE_BEHAVIORS = ["SWITCHED", "SIGNAL", "MEASURED", "MODULATED", "SELECTOR"]
+# Task "wyłącznik jednocewkowy bistabilny" - see project_format.Device.
+# command_style for what each means; PULSE and PULSE_TOGGLE need pulse_ms.
+COMMAND_STYLES = ["MAINTAINED", "PULSE", "PULSE_TOGGLE"]
+_PULSED_STYLES = {"PULSE", "PULSE_TOGGLE"}
 
 # "Skład urządzenia" (task "fix/project-format-integrity", point 2/3) -
 # mirrored from runtime/epw_os/core/feature_config.py's own
@@ -432,16 +436,24 @@ def ensure_electrical_protection_seeded(project) -> bool:
 
 
 def _card_channel_addresses(card: Card):
-    """`<id>.<kind>.<channel>` for channel in 1..card.channels - the
-    SPEC's own card-relative addressing rule (already the same shape
-    Synoptic's own ChannelAddress uses, DeviceSchema.ts's own docstring:
-    'CARD.KIND.CHANNEL'). Built through shared/addressing.py's own
-    format_address() rather than a hand-rolled f-string - task "migracja
-    adresacji" etap-3 follow-up ("jedna funkcja walidująca, nie trzy
-    kopie"): runtime and Logic Studio already build every address this
-    way, so this was the one remaining Python address-generation site
-    with its own independent copy of the same three-segment rule."""
-    return [format_address(card.id, card.kind, n) for n in range(1, card.channels + 1)]
+    """`<id>.<kind>.<channel>` for every (kind, channel) the card's own
+    channel_kinds has - the SPEC's own card-relative addressing rule
+    (already the same shape Synoptic's own ChannelAddress uses,
+    DeviceSchema.ts's own docstring: 'CARD.KIND.CHANNEL'). One card can
+    have more than one kind (task follow-up, user report: "karta ELA1
+    ma DI oraz AI") - every kind contributes its OWN channel range under
+    the same id, KIND being its own address segment already. Built
+    through shared/addressing.py's own format_address() rather than a
+    hand-rolled f-string - task "migracja adresacji" etap-3 follow-up
+    ("jedna funkcja walidująca, nie trzy kopie"): runtime and Logic
+    Studio already build every address this way, so this was the one
+    remaining Python address-generation site with its own independent
+    copy of the same three-segment rule."""
+    return [
+        format_address(card.id, kind, n)
+        for kind, channels in card.channel_kinds.items()
+        for n in range(1, channels + 1)
+    ]
 
 
 def points_for_card(project, card: Card):
@@ -472,23 +484,28 @@ def sync_points_for_card(project, card: Card):
     contract's own "nie wpisujesz ich ręcznie" only promises points
     appear/disappear WITH the card, not that Studio watches continuously."""
     wanted = _card_channel_addresses(card)
-    existing = {p.address: p for p in project.points if p.address.startswith(f"{card.id}.{card.kind}.")}
-    # Drop points whose address belongs to this card but is no longer
-    # in range (channel count shrank).
     wanted_set = set(wanted)
+    # Every kind this card has, its own prefix - a card with several
+    # kinds (task follow-up: "karta ELA1 ma DI oraz AI") owns points
+    # under ALL of them, not just one. str.startswith() takes a tuple of
+    # prefixes directly.
+    prefixes = tuple(f"{card.id}.{kind}." for kind in card.channel_kinds)
+    existing_addresses = {p.address for p in project.points}
+    # Drop points whose address belongs to this card but is no longer
+    # in range (a kind's channel count shrank, or a kind was removed).
     project.points = [
         p for p in project.points
-        if not (p.address.startswith(f"{card.id}.{card.kind}.") and p.address not in wanted_set)
+        if not (p.address.startswith(prefixes) and p.address not in wanted_set)
     ]
     for addr in wanted:
-        if addr not in existing:
+        if addr not in existing_addresses:
             project.points.append(Point(address=addr))
     project.points.sort(key=lambda p: _address_sort_key(p.address))
 
 
 def remove_points_for_card(project, card: Card):
-    prefix = f"{card.id}.{card.kind}."
-    project.points = [p for p in project.points if not p.address.startswith(prefix)]
+    prefixes = tuple(f"{card.id}.{kind}." for kind in card.channel_kinds)
+    project.points = [p for p in project.points if not p.address.startswith(prefixes)]
 
 
 # -- Synoptic bridge field-name mapping ------------------------------------
@@ -499,17 +516,51 @@ def remove_points_for_card(project, card: Card):
 # caller; kept here (not in synoptic_panel.py, which stays a thin JS
 # bridge with no knowledge of Studio's own dataclasses).
 
-def card_to_synoptic_dict(card: Card) -> dict:
-    return {"id": card.id, "model": card.model, "channelKind": card.kind, "channelCount": card.channels}
+def card_to_synoptic_dicts(card: Card) -> list:
+    """One CardEntry dict per (kind, channels) pair a card has -
+    Synoptic's own DeviceSchema.ts has no multi-kind-per-entry concept,
+    nor any reason to: it never reads Modbus/location, the two fields
+    channel_kinds exists to stop duplicating in the first place (see
+    Card's own docstring). A Studio card with several kinds (task
+    follow-up, user report: "karta ELA1 ma DI oraz AI") is flattened to
+    several CardEntry dicts sharing an id here - exactly the shape
+    Synoptic's own validateDeviceRegistry/validateChannelAddress
+    (DeviceValidation.ts) already treat as normal, not a conflict."""
+    return [
+        {"id": card.id, "model": card.model, "channelKind": kind, "channelCount": channels}
+        for kind, channels in card.channel_kinds.items()
+    ]
 
 
-def card_from_synoptic_dict(data: dict) -> Card:
-    kind = data.get("channelKind") or CHANNEL_KINDS[0]
-    try:
-        channels = int(data.get("channelCount") or 0)
-    except (TypeError, ValueError):
-        channels = 0
-    return Card(id=data["id"], model=data.get("model", ""), kind=kind, channels=channels)
+def cards_from_synoptic_dicts(entries: list) -> list:
+    """Inverse of card_to_synoptic_dicts() - COLLAPSES Synoptic's flat,
+    one-CardEntry-per-kind list back into Studio's own one-row-per-
+    physical-module Card list, grouped by id (first-seen order).
+    modbus_unit_id/location have no Synoptic-side equivalent, so a
+    collapsed Card never sets them - see this function's only caller,
+    main_window.py's _sync_device_registry_with_synoptic(), for how a
+    newly-pulled-in id is handled."""
+    order = []
+    channel_kinds_by_id = {}
+    model_by_id = {}
+    for entry in entries:
+        card_id = entry.get("id")
+        if not card_id:
+            continue
+        kind = entry.get("channelKind") or CHANNEL_KINDS[0]
+        try:
+            channels = int(entry.get("channelCount") or 0)
+        except (TypeError, ValueError):
+            channels = 0
+        if card_id not in channel_kinds_by_id:
+            order.append(card_id)
+            channel_kinds_by_id[card_id] = {}
+            model_by_id[card_id] = entry.get("model", "")
+        channel_kinds_by_id[card_id][kind] = channels
+    return [
+        Card(id=card_id, model=model_by_id[card_id], channel_kinds=channel_kinds_by_id[card_id])
+        for card_id in order
+    ]
 
 
 def location_to_synoptic_dict(location: Location) -> dict:
@@ -643,22 +694,96 @@ class ProjectInfoPanel(QWidget):
             self._studio_window._on_project_changed()
 
 
+class _ChannelKindsEditor(QWidget):
+    """One card row's "which channel kinds does it have, and how many
+    of each" - task follow-up, user report: "karta ELA1 ma DI oraz AI".
+    A checkbox per kind (DI/DO/AI/AO), each revealing its own channel-
+    count spinbox only once checked. Replaces the old single "kind"
+    combo + "channels" number pair: a physical module (an ELA card with
+    both digital and analog inputs, say) is one Card row with several
+    kinds now, not two rows sharing an id (that earlier shape forced
+    modbus_unit_id/location to be entered twice, kept in sync by hand,
+    for no reason the address grammar - KIND already its own segment -
+    ever required). No kind checked is a real, if useless, in-between
+    state - same as a freshly-added row before a model has been typed;
+    never auto-checked with a guessed kind, same "we consequently
+    assign, never suggest" stance the no-default-address fix for a
+    freshly-placed DI/DO block already takes."""
+
+    changed = Signal()
+    _MAX_CHANNELS = 999
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 0, 4, 0)
+        layout.setSpacing(6)
+        self._checks = {}
+        self._spins = {}
+        for kind in CHANNEL_KINDS:
+            check = QCheckBox(kind)
+            check.setToolTip(tr("cards.kind_tooltip", kind=kind))
+            spin = QSpinBox()
+            spin.setRange(1, self._MAX_CHANNELS)
+            spin.setValue(1)
+            # User report (real screenshot): "liczba nie wiadomo jest do
+            # czego" - a greyed "1" next to every UNCHECKED kind read as
+            # four unexplained numbers in a row. An unchecked kind now
+            # shows no number at all (hidden, not just disabled), and the
+            # number a checked kind does show carries its own unit, so
+            # "DI 16 ch." can only mean one thing.
+            spin.setSuffix(tr("cards.channels_suffix"))
+            spin.setFixedWidth(64)
+            spin.setVisible(False)
+            check.toggled.connect(lambda checked, k=kind: self._on_toggled(k, checked))
+            spin.valueChanged.connect(lambda _v: self.changed.emit())
+            layout.addWidget(check)
+            layout.addWidget(spin)
+            self._checks[kind] = check
+            self._spins[kind] = spin
+        layout.addStretch(1)
+
+    def _on_toggled(self, kind, checked):
+        self._spins[kind].setVisible(checked)
+        self.changed.emit()
+
+    def channel_kinds(self) -> dict:
+        return {kind: self._spins[kind].value() for kind in CHANNEL_KINDS if self._checks[kind].isChecked()}
+
+    def set_channel_kinds(self, channel_kinds: dict):
+        """Populates from `channel_kinds` without emitting `changed` -
+        each checkbox/spinbox is blocked individually (QWidget.
+        blockSignals() does not propagate to children)."""
+        for kind in CHANNEL_KINDS:
+            check, spin = self._checks[kind], self._spins[kind]
+            count = channel_kinds.get(kind)
+            has_it = count is not None
+            check.blockSignals(True)
+            spin.blockSignals(True)
+            check.setChecked(has_it)
+            spin.setVisible(has_it)
+            if has_it:
+                spin.setValue(max(1, count))
+            check.blockSignals(False)
+            spin.blockSignals(False)
+
+
 class CardsPanel(QWidget):
     """"Skład urządzenia" - the physical ELA/ADA/EPM I/O module registry:
-    address (id), model, channel kind (DI/DO/AI/AO), channel count -
-    SPEC's own "Sprzęt" section, plus each module's own Modbus unit
-    address (task: "ELA i ADA i EPM będą łączyły się z orange pi [...]
-    po modbus - trzeba dać opcję adresowania") and the one shared bus
-    (port/baud, or a TCP gateway) every module sits on - see
-    project_format.ModbusBusConfig's own docstring for why this is
-    GREENFIELD, not copied from an existing runtime driver. Locations
-    moved out to their own LocationsPanel/tree branch (task "ostatnie
-    dwa działy"). Editing a card's kind/channels re-runs
-    sync_points_for_card() - "karty rodzą punkty" happens HERE, not in
-    the point registry panel, which only ever shows what cards already
-    produced."""
+    address (id), model, channel kinds (DI/DO/AI/AO, each with its own
+    channel count - _ChannelKindsEditor above) - SPEC's own "Sprzęt"
+    section, plus each module's own Modbus unit address (task: "ELA i
+    ADA i EPM będą łączyły się z orange pi [...] po modbus - trzeba dać
+    opcję adresowania") and the one shared bus (port/baud, or a TCP
+    gateway) every module sits on - see project_format.ModbusBusConfig's
+    own docstring for why this is GREENFIELD, not copied from an
+    existing runtime driver. Locations moved out to their own
+    LocationsPanel/tree branch (task "ostatnie dwa działy"). Editing a
+    card's channel kinds re-runs sync_points_for_card() - "karty rodzą
+    punkty" happens HERE, not in the point registry panel, which only
+    ever shows what cards already produced."""
 
-    _CARD_COLS = ["id", "model", "kind", "channels", "modbus_unit_id", "location"]
+    _CARD_COLS = ["id", "model", "channel_kinds", "modbus_unit_id", "location"]
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -671,11 +796,15 @@ class CardsPanel(QWidget):
 
         self.cards_table = QTableWidget(0, len(self._CARD_COLS))
         self.cards_table.setHorizontalHeaderLabels([
-            tr("cards.col_id"), tr("cards.col_model"), tr("cards.col_kind"), tr("cards.col_channels"),
+            tr("cards.col_id"), tr("cards.col_model"), tr("cards.col_channel_kinds"),
             tr("cards.col_modbus_unit_id"), tr("cards.col_location"),
         ])
         _prep_table(self.cards_table)
         _make_column_resizable(self.cards_table, 1, 220)
+        # Four "kind + count" pairs side by side (_ChannelKindsEditor) -
+        # wide enough for all four with their counts shown, still
+        # draggable like every other column.
+        _make_column_resizable(self.cards_table, 2, 470)
         layout.addWidget(self.cards_table)
 
         self.cards_table.itemChanged.connect(self._on_card_item_changed)
@@ -764,15 +893,13 @@ class CardsPanel(QWidget):
         self.cards_table.insertRow(row)
         self.cards_table.setItem(row, 0, QTableWidgetItem(card.id))
         self.cards_table.setItem(row, 1, QTableWidgetItem(card.model))
-        kind_combo = QComboBox()
-        kind_combo.addItems(CHANNEL_KINDS)
-        kind_combo.setCurrentText(card.kind if card.kind in CHANNEL_KINDS else CHANNEL_KINDS[0])
-        kind_combo.currentTextChanged.connect(lambda _text, r=row: self._on_card_kind_changed(r))
-        self.cards_table.setCellWidget(row, 2, kind_combo)
-        self.cards_table.setItem(row, 3, QTableWidgetItem(str(card.channels)))
+        kinds_editor = _ChannelKindsEditor()
+        kinds_editor.set_channel_kinds(card.channel_kinds)
+        kinds_editor.changed.connect(lambda r=row: self._on_channel_kinds_changed(r))
+        self.cards_table.setCellWidget(row, 2, kinds_editor)
         modbus_item = QTableWidgetItem(_fmt(card.modbus_unit_id))
         self._style_modbus_item(modbus_item, card.modbus_unit_id)
-        self.cards_table.setItem(row, 4, modbus_item)
+        self.cards_table.setItem(row, 3, modbus_item)
 
         # User report 3.4: where the MODULE itself physically sits - the
         # default every one of its own points inherits (project_panels.py's
@@ -785,14 +912,14 @@ class CardsPanel(QWidget):
         idx = card_loc_combo.findData(card.location)
         card_loc_combo.setCurrentIndex(idx if idx >= 0 else 0)
         card_loc_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_card_location_changed(r))
-        self.cards_table.setCellWidget(row, 5, card_loc_combo)
+        self.cards_table.setCellWidget(row, 4, card_loc_combo)
 
     def _on_card_location_changed(self, row):
         if self._loading:
             return
         project = self._studio_window._project
         card = project.cards[row]
-        combo = self.cards_table.cellWidget(row, 5)
+        combo = self.cards_table.cellWidget(row, 4)
         card.location = combo.currentData() or ""
         project.touch()
         self._studio_window._on_project_changed()
@@ -817,7 +944,11 @@ class CardsPanel(QWidget):
         project = self._studio_window._project
         existing_ids = {c.id for c in project.cards}
         new_id = _next_unique(existing_ids, "KARTA")
-        card = Card(id=new_id, model="", kind=CHANNEL_KINDS[0], channels=8)
+        # No kind checked yet - "we consequently assign, never suggest",
+        # same stance the no-default-address fix for a freshly-placed
+        # DI/DO block already takes; the user picks what this card has
+        # in _ChannelKindsEditor rather than starting from a guess.
+        card = Card(id=new_id, model="", channel_kinds={})
         # User report #2: the id stays "KARTA<n>" until a model is
         # typed - see _on_card_item_changed()'s own model-column branch,
         # which re-suggests it from the model while this flag is set,
@@ -857,7 +988,7 @@ class CardsPanel(QWidget):
         row = item.row()
         project = self._studio_window._project
         card = project.cards[row]
-        old_id, old_kind = card.id, card.kind
+        old_id = card.id
 
         if item.column() == 0:
             # Editing the id directly takes it out of "auto" mode - it
@@ -890,6 +1021,12 @@ class CardsPanel(QWidget):
             self._loading = False
             new_id = card.id
         elif new_id and new_id != card.id and any(c.id == new_id for c in project.cards if c is not card):
+            # id is unique again, plain and simple - a card can now have
+            # several channel kinds ITSELF (task follow-up, user report:
+            # "karta ELA1 ma DI oraz AI"; see Card's own docstring for
+            # why an earlier version of this fix, two rows sharing an
+            # id, was abandoned), so there is no longer a "same id,
+            # different kind" case to make room for here.
             QMessageBox.warning(self, tr("cards.duplicate_id_title"), tr("cards.duplicate_id_text", id=new_id))
             self._loading = True
             self.cards_table.item(row, 0).setText(card.id)
@@ -897,19 +1034,12 @@ class CardsPanel(QWidget):
             new_id = card.id
         card.id = new_id or card.id
         card.model = new_model
-        try:
-            card.channels = max(0, int(self.cards_table.item(row, 3).text()))
-        except ValueError:
-            card.channels = card.channels
-            self._loading = True
-            self.cards_table.item(row, 3).setText(str(card.channels))
-            self._loading = False
 
         # User report #3: range AND uniqueness both validated, each with
         # its own message - a duplicate address is a different mistake
         # from a non-numeric/out-of-range one, and conflating them into
         # one generic warning would leave the user guessing which it was.
-        modbus_text = self.cards_table.item(row, 4).text().strip()
+        modbus_text = self.cards_table.item(row, 3).text().strip()
         if not modbus_text:
             card.modbus_unit_id = None
         elif not modbus_text.isdigit() or not (1 <= int(modbus_text) <= 247):
@@ -917,7 +1047,7 @@ class CardsPanel(QWidget):
                 self, tr("cards.invalid_modbus_unit_title"), tr("cards.invalid_modbus_unit_text")
             )
             self._loading = True
-            self.cards_table.item(row, 4).setText(_fmt(card.modbus_unit_id))
+            self.cards_table.item(row, 3).setText(_fmt(card.modbus_unit_id))
             self._loading = False
         else:
             unit_id = int(modbus_text)
@@ -927,34 +1057,43 @@ class CardsPanel(QWidget):
                     tr("cards.duplicate_modbus_unit_text", unit_id=unit_id),
                 )
                 self._loading = True
-                self.cards_table.item(row, 4).setText(_fmt(card.modbus_unit_id))
+                self.cards_table.item(row, 3).setText(_fmt(card.modbus_unit_id))
                 self._loading = False
             else:
                 card.modbus_unit_id = unit_id
-        self._style_modbus_item(self.cards_table.item(row, 4), card.modbus_unit_id)
+        self._style_modbus_item(self.cards_table.item(row, 3), card.modbus_unit_id)
 
-        if old_id != card.id or old_kind != card.kind:
-            # Address prefix changed - the OLD points are orphaned
-            # (their address no longer matches anything this card would
-            # generate); drop them under the old identity, then
-            # regenerate under the new one, same as a fresh card.
-            project.points = [
-                p for p in project.points if not p.address.startswith(f"{old_id}.{old_kind}.")
-            ]
+        if old_id != card.id:
+            # id changed - the OLD points are orphaned (their address no
+            # longer matches anything this card would generate); drop
+            # them under the old identity, then regenerate under the
+            # new one, same as a fresh card.
+            old_prefixes = tuple(f"{old_id}.{kind}." for kind in card.channel_kinds)
+            project.points = [p for p in project.points if not p.address.startswith(old_prefixes)]
         sync_points_for_card(project, card)
         project.touch()
         self._studio_window._on_project_changed()
 
-    def _on_card_kind_changed(self, row):
+    def _on_channel_kinds_changed(self, row):
         project = self._studio_window._project
         card = project.cards[row]
-        combo = self.cards_table.cellWidget(row, 2)
-        old_kind = card.kind
-        new_kind = combo.currentText()
-        if old_kind == new_kind:
+        editor = self.cards_table.cellWidget(row, 2)
+        new_kinds = editor.channel_kinds()
+        if new_kinds == card.channel_kinds:
             return
-        project.points = [p for p in project.points if not p.address.startswith(f"{card.id}.{old_kind}.")]
-        card.kind = new_kind
+        # A kind's count SHRINKING is handled by sync_points_for_card()
+        # itself (that kind's prefix is still in card.channel_kinds, so
+        # its own cleanup pass still sees it) - but a kind REMOVED
+        # entirely (unchecked) drops its prefix from channel_kinds along
+        # with it, and sync_points_for_card() can only clean up prefixes
+        # it still knows about. Those points would otherwise be orphaned
+        # forever - removed explicitly here first, same as an id CHANGE
+        # already has to (_on_card_item_changed above).
+        removed_kinds = set(card.channel_kinds) - set(new_kinds)
+        if removed_kinds:
+            removed_prefixes = tuple(f"{card.id}.{kind}." for kind in removed_kinds)
+            project.points = [p for p in project.points if not p.address.startswith(removed_prefixes)]
+        card.channel_kinds = new_kinds
         sync_points_for_card(project, card)
         project.touch()
         self._studio_window._on_project_changed()
@@ -1101,14 +1240,17 @@ class PointRegistryPanel(QWidget):
         self.card_filter.clear()
         self.card_filter.addItem(tr("points.filter_all"), None)
         for card in project.cards:
-            self.card_filter.addItem(f"{card.id} ({card.kind})", card.id)
+            # A card can have more than one kind now (task follow-up,
+            # user report: "karta ELA1 ma DI oraz AI") - every kind it
+            # has, in CHANNEL_KINDS' own canonical order.
+            kinds_label = ", ".join(k for k in CHANNEL_KINDS if k in card.channel_kinds)
+            self.card_filter.addItem(f"{card.id} ({kinds_label})", card.id)
         idx = self.card_filter.findData(current_filter)
         self.card_filter.setCurrentIndex(idx if idx >= 0 else 0)
         self.card_filter.blockSignals(False)
         active_filter = self.card_filter.currentData()
 
         location_codes = [l.code for l in project.locations]
-        kind_by_card = {c.id: c.kind for c in project.cards}
         card_by_id = {c.id: c for c in project.cards}
         owners = point_owner_map(project)
 
@@ -1117,22 +1259,24 @@ class PointRegistryPanel(QWidget):
         # one DI/DO card is noise, not "wyszarzone nie usunięte" (that
         # rule is for a MIXED table, not a single-kind filtered view).
         # Filtered to one card whose kind is digital -> hide them
-        # outright; filtered to an analog card, or "Wszystkie karty"
-        # (mixed kinds, can't pick one answer), keep them visible.
-        filtered_kind = kind_by_card.get(active_filter) if active_filter else None
-        hide_analog_cols = filtered_kind is not None and filtered_kind not in _ANALOG_KINDS
+        # outright; filtered to an analog card, a card spanning both
+        # digital and analog kinds, or "Wszystkie karty" (mixed kinds,
+        # can't pick one answer), keep them visible.
+        filtered_card = card_by_id.get(active_filter) if active_filter else None
+        filtered_kinds = set(filtered_card.channel_kinds) if filtered_card is not None else None
+        hide_analog_cols = bool(filtered_kinds) and not (filtered_kinds & _ANALOG_KINDS)
         for col in range(4, 11):
             self.table.setColumnHidden(col, hide_analog_cols)
 
         self.table.setRowCount(0)
         points = sorted(project.points, key=lambda p: _address_sort_key(p.address))
         for point in points:
-            card_id = point.address.split(".", 1)[0] if "." in point.address else point.address
-            if active_filter and card_id != active_filter:
+            addr_card, addr_kind, _channel = parse_address(point.address)
+            if active_filter and addr_card != active_filter:
                 continue
             self._append_point_row(
-                point, kind_by_card.get(card_id, ""), location_codes, owners.get(point.address),
-                card_by_id.get(card_id),
+                point, addr_kind, location_codes, owners.get(point.address),
+                card_by_id.get(addr_card),
             )
         self._loading = False
 
@@ -1386,7 +1530,7 @@ class DevicesPanel(QWidget):
     is Studio's own registry, built the same incremental way Points
     was (a plain, generic version first)."""
 
-    _COLS = ["id", "behavior", "kind", "feedback", "command"]
+    _COLS = ["id", "behavior", "kind", "feedback", "command", "command_style", "pulse_ms"]
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1399,6 +1543,7 @@ class DevicesPanel(QWidget):
 
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"devices.col_{c}") for c in self._COLS])
+        _make_column_resizable(self.table, 5, 200)
         _prep_table(self.table)
         _make_column_resizable(self.table, 2, 260)
         layout.addWidget(self.table)
@@ -1434,6 +1579,51 @@ class DevicesPanel(QWidget):
         command_btn = QPushButton(self._summary(device.command))
         command_btn.clicked.connect(lambda _c=False, r=row: self._edit_points(r, "command"))
         self.table.setCellWidget(row, 4, command_btn)
+
+        # Task "wyłącznik jednocewkowy bistabilny": HOW the command
+        # outputs drive the apparatus - a style, and the pulse time the
+        # pulsed styles need. Only a SWITCHED apparatus is commanded at
+        # all, so the two are inert for every other behavior.
+        style_combo = QComboBox()
+        for style in COMMAND_STYLES:
+            style_combo.addItem(tr(f"devices.style_{style.lower()}"), style)
+        idx = style_combo.findData(device.command_style)
+        style_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        style_combo.setToolTip(tr("devices.style_tooltip"))
+        style_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_command_style_changed(r))
+        self.table.setCellWidget(row, 5, style_combo)
+
+        pulse_spin = QSpinBox()
+        pulse_spin.setRange(0, 60_000)
+        pulse_spin.setSuffix(" ms")
+        pulse_spin.setValue(int(device.pulse_ms or 0))
+        pulse_spin.valueChanged.connect(lambda _v, r=row: self._on_pulse_ms_changed(r))
+        self.table.setCellWidget(row, 6, pulse_spin)
+        self._sync_command_widgets(row, device)
+
+    def _sync_command_widgets(self, row, device: Device):
+        is_switched = device.behavior == "SWITCHED"
+        self.table.cellWidget(row, 5).setEnabled(is_switched)
+        self.table.cellWidget(row, 6).setEnabled(is_switched and device.command_style in _PULSED_STYLES)
+
+    def _on_command_style_changed(self, row):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        device = project.devices[row]
+        device.command_style = self.table.cellWidget(row, 5).currentData()
+        self._sync_command_widgets(row, device)
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_pulse_ms_changed(self, row):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        device = project.devices[row]
+        device.pulse_ms = self.table.cellWidget(row, 6).value()
+        project.touch()
+        self._studio_window._on_project_changed()
 
     @staticmethod
     def _summary(addresses):
@@ -1494,6 +1684,7 @@ class DevicesPanel(QWidget):
         device = project.devices[row]
         combo = self.table.cellWidget(row, 1)
         device.behavior = combo.currentText()
+        self._sync_command_widgets(row, device)
         project.touch()
         self._studio_window._on_project_changed()
 
@@ -1520,11 +1711,15 @@ def points_of_kind(project, kind: str):
     here so LineConfigDialog's own point picker can't offer the wrong
     kind in the first place, same "impossible to assign the wrong type"
     stance as that module's own picker."""
-    kind_by_card = {c.id: c.kind for c in project.cards}
+    # A point's own address already names its kind (the grammar's own
+    # middle segment) - reading it straight from there, rather than
+    # looking a card up by id first, is correct regardless of how many
+    # kinds that card itself has (task follow-up, user report: "karta
+    # ELA1 ma DI oraz AI" - see Card's own docstring).
     result = []
     for point in sorted(project.points, key=lambda p: _address_sort_key(p.address)):
-        card_id = point.address.split(".", 1)[0] if "." in point.address else point.address
-        if kind_by_card.get(card_id) == kind:
+        _card, point_kind, _channel = parse_address(point.address)
+        if point_kind == kind:
             result.append(point)
     return result
 
@@ -1543,7 +1738,8 @@ def _grouped_export_points(project):
     location_order = {loc.code: i for i, loc in enumerate(project.locations)}
 
     def _card_id_of(address):
-        return address.split(".", 1)[0] if "." in address else address
+        card, _kind, _channel = parse_address(address)
+        return card
 
     points_by_card = {}
     for point in project.points:
@@ -1574,12 +1770,17 @@ def _grouped_export_points(project):
     return groups
 
 
-def _analog_export_fields(point: Point, card_kind: str):
+def _analog_export_fields(point: Point):
     """The task's own "dla AI/AO zakresy i jednostka" column group -
-    empty for every non-analog card kind, same "wyszarzone/puste, nie
+    empty for every non-analog point, same "wyszarzone/puste, nie
     wymyślone" stance PointRegistryPanel's own analog columns already
-    take for a DI/DO row."""
-    if card_kind not in _ANALOG_KINDS:
+    take for a DI/DO row. Reads the KIND straight from the point's own
+    address rather than its owning card's, since one card can now have
+    more than one kind (task follow-up, user report: "karta ELA1 ma DI
+    oraz AI") - a card's kind alone would no longer say which of ITS
+    points this particular one is."""
+    _card, kind, _channel = parse_address(point.address)
+    if kind not in _ANALOG_KINDS:
         return "", "", ""
     raw_range = f"{_fmt(point.raw_min)}…{_fmt(point.raw_max)}" if (point.raw_min is not None or point.raw_max is not None) else ""
     eng_range = f"{_fmt(point.eng_min)}…{_fmt(point.eng_max)}" if (point.eng_min is not None or point.eng_max is not None) else ""
@@ -1611,7 +1812,7 @@ def export_points_csv(project) -> str:
         for location, points in location_groups:
             location_label = location or tr("export.no_location")
             for point in points:
-                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                raw_range, eng_range, unit = _analog_export_fields(point)
                 writer.writerow([
                     point.address, point.description, location_label, point.technical_note,
                     owners.get(point.address, ""), raw_range, eng_range, unit,
@@ -1658,13 +1859,18 @@ def export_points_html(project) -> str:
     if not groups:
         parts.append(f"<p>{html_lib.escape(tr('export.no_points'))}</p>")
     for card, location_groups in groups:
-        parts.append(f"<h2>{html_lib.escape(card.id)} — {html_lib.escape(card.model)} ({html_lib.escape(card.kind)})</h2>")
+        # A card can have more than one kind now (task follow-up, user
+        # report: "karta ELA1 ma DI oraz AI") - every kind it has, in
+        # CHANNEL_KINDS' own canonical order, not whatever order the
+        # user happened to check the boxes in.
+        kinds_label = ", ".join(k for k in CHANNEL_KINDS if k in card.channel_kinds)
+        parts.append(f"<h2>{html_lib.escape(card.id)} — {html_lib.escape(card.model)} ({html_lib.escape(kinds_label)})</h2>")
         for location, points in location_groups:
             location_label = location or tr("export.no_location")
             parts.append(f"<h3>{html_lib.escape(location_label)}</h3>")
             parts.append("<table><tr>" + "".join(f"<th>{html_lib.escape(c)}</th>" for c in cols) + "</tr>")
             for point in points:
-                raw_range, eng_range, unit = _analog_export_fields(point, card.kind)
+                raw_range, eng_range, unit = _analog_export_fields(point)
                 row_cells = [
                     location_label, point.address, point.description, point.technical_note,
                     owners.get(point.address, ""), raw_range, eng_range, unit,
@@ -2872,12 +3078,30 @@ def validate_project(project) -> list:
     "modules"."""
     issues = []
     point_addresses = {p.address for p in project.points}
-    card_ids = {c.id for c in project.cards}
     card_by_id = {c.id: c for c in project.cards}
     location_codes = {loc.code for loc in project.locations}
 
-    def _card_id_of(address):
-        return address.split(".", 1)[0] if "." in address else address
+    def _address_card_and_kind(address):
+        """(card_id, kind) from `address`, tolerant of a malformed one -
+        try_parse_address() (not parse_address()) because `address` here
+        comes from a device's own feedback/command list, user-editable
+        text that IS legitimately allowed to be malformed (that's
+        exactly what check 1 below flags), unlike a Point's own always-
+        machine-generated address elsewhere in this module."""
+        parsed = try_parse_address(address)
+        if parsed:
+            return parsed[0], parsed[1]
+        return (address.split(".", 1)[0] if "." in address else address), None
+
+    def _card_exists_for(address):
+        # A card can have more than one kind now (task follow-up, user
+        # report: "karta ELA1 ma DI oraz AI") - "the card still exists"
+        # has to mean it exists AND still has the exact kind this
+        # address names, not just a matching id: a device pointing at
+        # "ELA1.AI.3" is NOT covered by an ELA1 card that only has DI.
+        card_id, kind = _address_card_and_kind(address)
+        card = card_by_id.get(card_id)
+        return card is not None and kind in card.channel_kinds
 
     # 1) "aparat wskazuje punkt, który nie istnieje"
     # 2) "aparat wskazuje punkt z karty, która została usunięta"
@@ -2892,12 +3116,12 @@ def validate_project(project) -> list:
                     tr("validation.msg_device_missing_point", device=device.id, address=address),
                     "devices", "select_device", device.id,
                 ))
-            elif _card_id_of(address) not in card_ids:
+            elif not _card_exists_for(address):
                 issues.append(ValidationIssue(
                     "error",
                     tr(
                         "validation.msg_device_point_deleted_card",
-                        device=device.id, address=address, card=_card_id_of(address),
+                        device=device.id, address=address, card=_address_card_and_kind(address)[0],
                     ),
                     "devices", "select_device", device.id,
                 ))
@@ -2915,7 +3139,8 @@ def validate_project(project) -> list:
     # 3.4: a card's own now-stale location must surface here exactly
     # the same way a point's own stale explicit one always did.
     for point in project.points:
-        card = card_by_id.get(_card_id_of(point.address))
+        card_id, _kind = _address_card_and_kind(point.address)
+        card = card_by_id.get(card_id)
         resolved = effective_location(point, card)
         if resolved and resolved not in location_codes:
             issues.append(ValidationIssue(
@@ -2953,6 +3178,37 @@ def validate_project(project) -> list:
                 tr("validation.msg_process_not_ai_point", protection=pp.id, address=pp.analog_tag),
                 "process_protection", "select_protection", pp.id,
             ))
+
+    # 8) Task "wyłącznik jednocewkowy bistabilny" - a SWITCHED apparatus
+    # whose command style can't be executed honestly: a pulsed style
+    # with no pulse time, or a single-coil impulse relay (PULSE_TOGGLE)
+    # with no feedback (every pulse toggles - without knowing the
+    # current state the runtime would flip it the wrong way) or with
+    # more than two outputs. Mirrors runtime's apparatus_command_
+    # definitions(), which refuses exactly these and logs instead of
+    # guessing - better to see it here, before upload.
+    for device in project.devices:
+        if device.behavior != "SWITCHED" or not device.command:
+            continue
+        if device.command_style in _PULSED_STYLES and not (device.pulse_ms and device.pulse_ms > 0):
+            issues.append(ValidationIssue(
+                "error",
+                tr("validation.msg_device_pulse_missing_ms", device=device.id, style=device.command_style),
+                "devices", "select_device", device.id,
+            ))
+        if device.command_style == "PULSE_TOGGLE":
+            if not device.feedback:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr("validation.msg_device_toggle_needs_feedback", device=device.id),
+                    "devices", "select_device", device.id,
+                ))
+            if len(device.command) > 2:
+                issues.append(ValidationIssue(
+                    "error",
+                    tr("validation.msg_device_toggle_too_many_outputs", device=device.id, n=len(device.command)),
+                    "devices", "select_device", device.id,
+                ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"
     for feature_id in MODULE_IDS:

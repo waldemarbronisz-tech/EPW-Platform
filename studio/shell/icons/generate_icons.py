@@ -1126,6 +1126,23 @@ def icon_preview_mode(img):
     rect(img, 7, 12, 9, 12, BLACK)
 
 
+def icon_wizard(img):
+    """Device wizard (user report: "kreator urządzenia ... krok po
+    kroku"): a magic wand - the one glyph every wizard-style dialog of
+    the era used - a navy stick rising to the top-right with a yellow
+    four-point star at its tip and two small sparkles beside it."""
+    for d in range(2):
+        line(img, 2 + d, 13, 10 + d, 5, NAVY)
+    # The star: a plus and an x meeting at (12, 3).
+    for (x, y) in [(12, 1), (12, 2), (12, 3), (12, 4), (12, 5), (10, 3), (11, 3), (13, 3), (14, 3),
+                   (11, 2), (13, 2), (11, 4), (13, 4)]:
+        px(img, x, y, YELLOW)
+    px(img, 12, 3, WHITE)
+    # Sparkles.
+    for (x, y) in [(8, 2), (15, 7), (14, 8), (15, 9)]:
+        px(img, x, y, YELLOW)
+
+
 NAME_TO_FUNC = {
     name[len("icon_"):]: func
     for name, func in list(globals().items())

@@ -148,13 +148,20 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     studio_window.act_menu_open = _add(file_menu, tr("menu.file.open"), studio_window._shared_open)
     studio_window.act_menu_save = _add(file_menu, tr("menu.file.save"), studio_window._shared_save)
     studio_window.act_menu_save_as = _add(file_menu, tr("menu.file.save_as"), studio_window._shared_save_as)
+    # User report ("stwórz kreator urządzenia gdzie krok po kroku mówi
+    # co gdzie dodawać") - the guided way to build a project's own
+    # composition: info -> modules -> locations -> cards, then a summary
+    # naming where the rest (points, apparatus, screens, logic) lives.
+    studio_window.act_menu_device_wizard = _add(
+        file_menu, tr("menu.file.device_wizard"), studio_window._run_device_wizard, icon_name="wizard"
+    )
     file_menu.addSeparator()
-    # Task point 8.1 - "Ostatnio otwarte projekty" - projekt.epw itself
-    # (this menu's act_menu_open/save above are the SEPARATE Logic/
-    # Synoptic document lifecycle - see _shared_open's own docstring),
-    # so this submenu's own entries call _open_recent_project(), never
-    # act_menu_open. Built once, refreshed by content (menu.clear() +
-    # rebuild), same "shape never changes, content does" split every
+    # Task point 8.1 - "Ostatnio otwarte projekty" - projekt.epw, the
+    # same file act_menu_open/save above now operate on (user report:
+    # the top bar is the PROJECT's - see main_window._build_shared_
+    # toolbar). This submenu's own entries call _open_recent_project()
+    # directly, no dialog. Built once, refreshed by content (menu.clear()
+    # + rebuild), same "shape never changes, content does" split every
     # other fixed-menu item in this function already follows.
     studio_window.menu_recent_projects = file_menu.addMenu(tr("menu.file.recent_projects"))
     studio_window._refresh_recent_projects_menu()
@@ -291,6 +298,17 @@ def build_logic_context_toolbar(toolbar, logic_panel, studio_window):
     _build_core_group(toolbar, studio_window)
     mw = logic_panel.main_window()
 
+    # The LOGIC DIAGRAM's own document (.epwlogic) - its lifecycle moved
+    # here from the fixed top toolbar, which is the project's
+    # (projekt.epw) now on every branch (user report, see main_window.
+    # _build_shared_toolbar). Labelled as the diagram's, not "Save", so
+    # the two never read as the same button.
+    _mirror(toolbar, tr("toolbar.logic_new"), mw.act_new, icon_name="new")
+    _mirror(toolbar, tr("toolbar.logic_open"), mw.act_open, icon_name="open")
+    _mirror(toolbar, tr("toolbar.logic_save"), mw.act_save, icon_name="save")
+    _mirror(toolbar, tr("toolbar.logic_save_as"), mw.act_save_as, icon_name="save_as")
+    toolbar.addSeparator()
+
     # Zoom In/Zoom Out/Grid/Cut now live in the core group above (real
     # here, grayed in Synoptic) - not repeated here to avoid the same
     # function appearing twice in one toolbar. Reset Zoom stays here:
@@ -358,18 +376,14 @@ def build_modules_toolbar(toolbar, _panel, _studio_window):
 
 
 def build_project_info_toolbar(toolbar, _panel, studio_window):
-    """Project lifecycle (Nowy/Otwórz/Zapisz/Zapisz jako projekt) lives
-    HERE, on the "Informacje o projekcie" branch's own toolbar - not on
-    the fixed top toolbar, which already means "the active aspect's own
-    document" (Logic diagram / Synoptic screen). Redefining THAT would
-    silently make Logic/Synoptic's own save unreachable from Studio's
-    chrome - two lifecycles, two places, both real, see
-    project_panels.py's own module docstring for the full reasoning."""
+    """The project lifecycle (Nowy/Otwórz/Zapisz/Zapisz jako projekt)
+    used to live HERE and only here - user report ("nie działa pasek na
+    górze gdzie wpisujemy projekt zapis odczyt"): it is the fixed top
+    toolbar's now, on every branch (main_window._build_shared_toolbar),
+    so this toolbar no longer repeats it. What this branch keeps is the
+    one thing that starts here: the guided device wizard."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-    _add(toolbar, tr("project_info.new"), studio_window._new_project, icon_name="new")
-    _add(toolbar, tr("project_info.open"), studio_window._open_project, icon_name="open")
-    _add(toolbar, tr("project_info.save"), studio_window._save_project, icon_name="save")
-    _add(toolbar, tr("project_info.save_as"), studio_window._save_project_as, icon_name="save_as")
+    _add(toolbar, tr("menu.file.device_wizard"), studio_window._run_device_wizard, icon_name="wizard")
 
 
 def build_cards_toolbar(toolbar, panel, _studio_window):
@@ -470,6 +484,19 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     Copy/Paste/Delete/Snap (now the core, immediately above)."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     _build_core_group(toolbar, studio_window)
+
+    # The SCREEN's own document (.epwsyn) - its lifecycle moved here from
+    # the fixed top toolbar, which is the project's (projekt.epw) now on
+    # every branch (user report, see main_window._build_shared_toolbar).
+    # Same trigger_menu_item() route the top bar used to take.
+    _add(toolbar, tr("toolbar.synoptic_new"), lambda: synoptic_panel.trigger_menu_item("New", exact=True),
+         icon_name="new")
+    _add(toolbar, tr("toolbar.synoptic_open"), lambda: synoptic_panel.trigger_menu_item("Open"), icon_name="open")
+    _add(toolbar, tr("toolbar.synoptic_save"), lambda: synoptic_panel.trigger_menu_item("Save", exact=True),
+         icon_name="save")
+    _add(toolbar, tr("toolbar.synoptic_save_as"), lambda: synoptic_panel.trigger_menu_item("Save As"),
+         icon_name="save_as")
+    toolbar.addSeparator()
 
     # feat/synoptic-modes: the work-mode switch - SYMBOLS / ROOMS /
     # CONNECTIONS / ANNOTATIONS - as four named, mutually exclusive

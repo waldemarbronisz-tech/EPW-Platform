@@ -14,8 +14,8 @@ from studio.shell.project_panels import (
     ELECTRICAL_PROTECTION_CATALOG,
     MODULE_CATALOG,
     MODULE_IDS,
-    card_from_synoptic_dict,
-    card_to_synoptic_dict,
+    cards_from_synoptic_dicts,
+    card_to_synoptic_dicts,
     effective_location,
     ensure_electrical_protection_seeded,
     export_points_csv,
@@ -43,7 +43,7 @@ def _project():
 
 def test_sync_points_for_card_creates_one_point_per_channel():
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=4)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 4})
     project.cards.append(card)
     sync_points_for_card(project, card)
     addresses = [p.address for p in project.points]
@@ -56,7 +56,7 @@ def test_sync_points_for_card_orders_channels_numerically_not_alphabetically():
     before "2". 12 channels is the smallest count that actually exposes
     this (need a two-digit channel in the mix)."""
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=12)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 12})
     project.cards.append(card)
     sync_points_for_card(project, card)
     addresses = [p.address for p in project.points]
@@ -69,7 +69,7 @@ def test_sync_points_for_card_preserves_existing_descriptions():
     change its address space) must never wipe out a name a user already
     typed into an existing point."""
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
     project.cards.append(card)
     sync_points_for_card(project, card)
     project.points[0].description = "Wylacznik glowny"
@@ -82,12 +82,12 @@ def test_sync_points_for_card_preserves_existing_descriptions():
 
 def test_sync_points_for_card_drops_points_beyond_shrunk_channel_count():
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=4)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 4})
     project.cards.append(card)
     sync_points_for_card(project, card)
     project.points[3].description = "Doomed"
 
-    card.channels = 2
+    card.channel_kinds["DI"] = 2
     sync_points_for_card(project, card)
 
     addresses = [p.address for p in project.points]
@@ -96,12 +96,12 @@ def test_sync_points_for_card_drops_points_beyond_shrunk_channel_count():
 
 def test_sync_points_for_card_grows_without_touching_existing_ones():
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
     project.cards.append(card)
     sync_points_for_card(project, card)
     project.points[0].description = "Named"
 
-    card.channels = 3
+    card.channel_kinds["DI"] = 3
     sync_points_for_card(project, card)
 
     assert [p.address for p in project.points] == ["ELA1.DI.1", "ELA1.DI.2", "ELA1.DI.3"]
@@ -111,14 +111,14 @@ def test_sync_points_for_card_grows_without_touching_existing_ones():
 
 def test_sync_points_for_card_does_not_touch_other_cards():
     project = _project()
-    card_a = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
-    card_b = Card(id="ADA1", model="ADA01", kind="DO", channels=2)
+    card_a = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
+    card_b = Card(id="ADA1", model="ADA01", channel_kinds={"DO": 2})
     project.cards.extend([card_a, card_b])
     sync_points_for_card(project, card_a)
     sync_points_for_card(project, card_b)
     next(p for p in project.points if p.address == "ADA1.DO.1").description = "Untouched"
 
-    card_a.channels = 3
+    card_a.channel_kinds["DI"] = 3
     sync_points_for_card(project, card_a)
 
     by_address = {p.address: p.description for p in project.points}
@@ -128,8 +128,8 @@ def test_sync_points_for_card_does_not_touch_other_cards():
 
 def test_remove_points_for_card_removes_only_its_own_points():
     project = _project()
-    card_a = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
-    card_b = Card(id="ADA1", model="ADA01", kind="DO", channels=2)
+    card_a = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
+    card_b = Card(id="ADA1", model="ADA01", channel_kinds={"DO": 2})
     project.cards.extend([card_a, card_b])
     sync_points_for_card(project, card_a)
     sync_points_for_card(project, card_b)
@@ -142,7 +142,7 @@ def test_remove_points_for_card_removes_only_its_own_points():
 
 def test_points_for_card_filters_by_address_prefix():
     project = _project()
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
     project.cards.append(card)
     sync_points_for_card(project, card)
     project.points.append(Point(address="ADA1.DO.1"))
@@ -196,11 +196,25 @@ def test_point_owner_map_omits_unassigned_points():
 
 
 def test_card_synoptic_dict_round_trip():
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=32)
-    data = card_to_synoptic_dict(card)
-    assert data == {"id": "ELA1", "model": "ELA01", "channelKind": "DI", "channelCount": 32}
-    restored = card_from_synoptic_dict(data)
-    assert restored == card
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 32})
+    data = card_to_synoptic_dicts(card)
+    assert data == [{"id": "ELA1", "model": "ELA01", "channelKind": "DI", "channelCount": 32}]
+    restored = cards_from_synoptic_dicts(data)
+    assert restored == [card]
+
+
+def test_card_synoptic_dict_round_trip_with_more_than_one_kind():
+    """User report: "karta ELA1 ma DI oraz AI" - one Studio Card with
+    several kinds flattens to several Synoptic dicts sharing an id, and
+    collapses back to exactly the same Card."""
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 8, "AI": 4})
+    data = card_to_synoptic_dicts(card)
+    assert data == [
+        {"id": "ELA1", "model": "ELA01", "channelKind": "DI", "channelCount": 8},
+        {"id": "ELA1", "model": "ELA01", "channelKind": "AI", "channelCount": 4},
+    ]
+    restored = cards_from_synoptic_dicts(data)
+    assert restored == [card]
 
 
 def test_location_synoptic_dict_round_trip():
@@ -218,8 +232,8 @@ def test_points_of_kind_filters_by_the_owning_cards_kind():
     impossible-to-assign-the-wrong-type stance
     intrusion_manager.py's own picker has on the runtime side."""
     project = _project()
-    di_card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
-    ai_card = Card(id="ELA1B", model="ELA01B", kind="AI", channels=2)
+    di_card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
+    ai_card = Card(id="ELA1B", model="ELA01B", channel_kinds={"AI": 2})
     project.cards.extend([di_card, ai_card])
     sync_points_for_card(project, di_card)
     sync_points_for_card(project, ai_card)
@@ -234,6 +248,21 @@ def test_points_of_kind_filters_by_the_owning_cards_kind():
 def test_points_of_kind_empty_when_no_matching_card():
     project = _project()
     assert points_of_kind(project, "AI") == []
+
+
+def test_points_of_kind_correct_for_a_card_with_more_than_one_kind():
+    """User report: "karta ELA1 ma DI oraz AI" - one physical module,
+    one Card row with both kinds (see Card's own docstring for why this
+    is ONE row, not two rows sharing an id). Reading a point's kind from
+    its own address (not from a card lookup) means points_of_kind() is
+    correct regardless of how many kinds the owning card itself has."""
+    project = _project()
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2, "AI": 2})
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+
+    assert {p.address for p in points_of_kind(project, "DI")} == {"ELA1.DI.1", "ELA1.DI.2"}
+    assert {p.address for p in points_of_kind(project, "AI")} == {"ELA1.AI.1", "ELA1.AI.2"}
 
 
 def _catalog_stage_count():
@@ -381,9 +410,33 @@ def test_validate_project_flags_device_point_whose_card_was_deleted():
     assert "ELA1" in issues[0].message
 
 
+def test_validate_project_no_false_deleted_card_error_for_a_card_with_more_than_one_kind():
+    """User report: "karta ELA1 ma DI oraz AI" - a device correctly
+    wired to ELA1's AI channels must not be flagged as pointing at a
+    deleted card just because ELA1 ALSO has DI channels."""
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2, "AI": 2}))
+    project.points.append(Point(address="ELA1.AI.1"))
+    project.devices.append(Device(id="D1", behavior="MEASURED", feedback=["ELA1.AI.1"]))
+    assert validate_project(project) == []
+
+
+def test_validate_project_still_flags_the_missing_kind_when_the_id_exists_for_a_different_kind():
+    """The other half of the same fix: ELA1 existing as DI must NOT
+    forgive a reference to ELA1's (nonexistent) AI row - a coarser,
+    id-only "card exists" check would wrongly treat this as fine."""
+    project = new_project("Test")
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}))
+    project.points.append(Point(address="ELA1.AI.1"))
+    project.devices.append(Device(id="D1", behavior="MEASURED", feedback=["ELA1.AI.1"]))
+    issues = validate_project(project)
+    assert len(issues) == 1 and issues[0].severity == "error"
+    assert "ELA1" in issues[0].message
+
+
 def test_validate_project_flags_two_devices_on_the_same_point():
     project = new_project("Test")
-    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=4))
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 4}))
     project.points.append(Point(address="ELA1.DI.1"))
     project.devices.append(Device(id="D1", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
     project.devices.append(Device(id="D2", behavior="SWITCHED", feedback=["ELA1.DI.1"]))
@@ -426,7 +479,7 @@ def test_validate_project_flags_process_protection_missing_point():
 def test_validate_project_flags_process_protection_pointing_at_a_non_ai_point():
     project = new_project("Test")
     project.modules.append("protection_process")
-    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=4))
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 4}))
     project.points.append(Point(address="ELA1.DI.1"))
     project.process_protections.append(ProcessProtection(id="PP1", name="Temp", analog_tag="ELA1.DI.1"))
     issues = validate_project(project)
@@ -457,8 +510,8 @@ def test_validate_project_no_orphan_warning_once_the_module_is_in_composition():
 # this file's module docstring already draws everywhere else.
 def _export_demo_project():
     project = new_project("Test")
-    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=2))
-    project.cards.append(Card(id="ADA1", model="ADA01", kind="AI", channels=1))
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}))
+    project.cards.append(Card(id="ADA1", model="ADA01", channel_kinds={"AI": 1}))
     project.locations.append(Location(code="KOT", description="Kotlownia"))
     project.points.append(Point(
         address="ELA1.DI.1", description="Czujnik drzwi", location="KOT",
@@ -525,7 +578,7 @@ def test_export_points_html_groups_by_card_then_location():
 
 def test_export_points_html_escapes_user_supplied_text():
     project = new_project("Test")
-    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=1))
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}))
     project.points.append(Point(address="ELA1.DI.1", description="<script>alert(1)</script>"))
     text = export_points_html(project)
     assert "<script>alert(1)</script>" not in text
@@ -536,6 +589,36 @@ def test_export_points_html_of_an_empty_project_has_no_group_headers():
     assert "<h2>" not in export_points_html(new_project("Test"))
 
 
+def test_export_grouping_correct_for_a_card_with_more_than_one_kind():
+    """User report: "karta ELA1 ma DI oraz AI" - one physical module,
+    one Card row with both kinds. Every point prints exactly once, under
+    ITS OWN kind's analog fields (or lack of them) - not the whole
+    card's, since a mixed card's DI points and AI points are not
+    interchangeable for that purpose."""
+    import csv
+    import io
+
+    project = new_project("Test")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1, "AI": 1})
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    ai_point = next(p for p in project.points if p.address == "ELA1.AI.1")
+    ai_point.raw_min, ai_point.raw_max, ai_point.unit = 4.0, 20.0, "mA"
+
+    rows = list(csv.reader(io.StringIO(export_points_csv(project))))[1:]
+    by_address = [row[0] for row in rows]
+    assert by_address.count("ELA1.DI.1") == 1
+    assert by_address.count("ELA1.AI.1") == 1  # neither point duplicated
+
+    by_address_map = {row[0]: row for row in rows}
+    assert by_address_map["ELA1.DI.1"][5:8] == ["", "", ""]        # DI: no analog fields
+    assert by_address_map["ELA1.AI.1"][5:8] == ["4…20", "", "mA"]  # AI: its own, not DI's blanks
+
+    html = export_points_html(project)
+    assert html.count("ELA1.DI.1") == 1
+    assert html.count("ELA1.AI.1") == 1
+
+
 def test_export_points_csv_orders_channels_numerically_not_alphabetically():
     """Same bug as test_sync_points_for_card_orders_channels_numerically_
     not_alphabetically, but through the export path - _grouped_export_
@@ -544,7 +627,7 @@ def test_export_points_csv_orders_channels_numerically_not_alphabetically():
     import io
 
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=12)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 12})
     project.cards.append(card)
     sync_points_for_card(project, card)
     addresses = [row[0] for row in list(csv.reader(io.StringIO(export_points_csv(project))))[1:]]
@@ -571,15 +654,15 @@ def test_next_free_modbus_unit_id_starts_at_one():
 
 def test_next_free_modbus_unit_id_skips_whats_taken():
     project = new_project("Test")
-    project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=1, modbus_unit_id=1))
-    project.cards.append(Card(id="ELA2", model="ELA01", kind="DI", channels=1, modbus_unit_id=2))
+    project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, modbus_unit_id=1))
+    project.cards.append(Card(id="ELA2", model="ELA01", channel_kinds={"DI": 1}, modbus_unit_id=2))
     assert _next_free_modbus_unit_id(project) == 3
 
 
 def test_next_free_modbus_unit_id_excludes_the_given_card():
     """A card editing its OWN address mustn't see itself as "taken"."""
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, modbus_unit_id=1)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, modbus_unit_id=1)
     project.cards.append(card)
     assert _next_free_modbus_unit_id(project, exclude_card=card) == 1
 
@@ -591,20 +674,20 @@ def test_sync_points_for_card_creates_points_with_location_none():
     None means "inherit the card's", the correct default (not "" - see
     Point.location's own docstring for why the two aren't the same)."""
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}, location="KOT")
     project.cards.append(card)
     sync_points_for_card(project, card)
     assert all(p.location is None for p in project.points)
 
 
 def test_effective_location_inherits_from_the_card_by_default():
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     point = Point(address="ELA1.DI.1")  # location=None (default)
     assert effective_location(point, card) == "KOT"
 
 
 def test_effective_location_explicit_override_wins():
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     point = Point(address="ELA1.DI.1", location="PIWNICA")
     assert effective_location(point, card) == "PIWNICA"
 
@@ -612,7 +695,7 @@ def test_effective_location_explicit_override_wins():
 def test_effective_location_explicit_blank_beats_the_cards_location():
     """A point can deliberately have NO location even though its card
     has one - "" is a real, explicit override, not "unset"."""
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     point = Point(address="ELA1.DI.1", location="")
     assert effective_location(point, card) == ""
 
@@ -630,7 +713,7 @@ def test_changing_the_cards_location_does_not_touch_a_points_own_override():
     this holds by construction - no propagation code needed, which is
     exactly what this test proves."""
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}, location="KOT")
     project.cards.append(card)
     sync_points_for_card(project, card)
     project.points[0].location = "PIWNICA"  # explicit override on point 1
@@ -645,7 +728,7 @@ def test_grouped_export_points_uses_the_effective_location():
     """export_points_csv/html group by RESOLVED location - otherwise
     every card-default point would print under "no location"."""
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     project.cards.append(card)
     sync_points_for_card(project, card)
 
@@ -662,7 +745,7 @@ def test_validate_project_flags_a_stale_inherited_location():
     renamed/removed) - the warning must fire for an INHERITED value
     exactly as it already does for an explicit one."""
     project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="GHOST")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="GHOST")
     project.cards.append(card)
     sync_points_for_card(project, card)
 

@@ -30,7 +30,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QElapsedTimer, QEventLoop, QSettings, QSize, QTimer
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
-    QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
+    QDialog, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
     QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
     QVBoxLayout,
 )
@@ -363,6 +363,8 @@ class StudioMainWindow(QMainWindow):
 
         self._synoptic_panel = None
         self._logic_panel = None
+        self._synoptic_dirty = False  # last isDirty read off the Synoptic state bridge
+        self._logic_dirty_seen = False
         self._project_info_panel = None
         self._modules_panel = None
         self._cards_panel = None
@@ -645,11 +647,23 @@ class StudioMainWindow(QMainWindow):
     def _build_shared_toolbar(self):
         """Task 1.2 - the fixed top toolbar: Nowy/Otwórz/Zapisz/Zapisz
         jako/Cofnij/Ponów/Pomoc, always the same regardless of the
-        active aspect. Each handler dispatches to whichever aspect is
-        currently active's own mechanism (never a Studio-level
-        implementation of its own); Save/Undo/Redo's enabled state is
-        kept honest by _refresh_shared_toolbar_state() (unchanged from
-        the previous stage - GRANICE: "nie ruszaj mostu stanu")."""
+        active aspect.
+
+        User report ("nie działa pasek na górze gdzie wpisujemy projekt
+        zapis odczyt"): Nowy/Otwórz/Zapisz/Zapisz jako are THE PROJECT's
+        (projekt.epw - _new_project()/_open_project()/_save_project()/
+        _save_project_as() below), on every aspect. They used to
+        dispatch to the active editor's OWN document instead (Logic's
+        .epwlogic / Synoptic's .epwsyn) and do nothing at all on every
+        other branch - Cards, Point Registry, Locations... - which is
+        exactly where a user configuring a project spends most of the
+        time, and where "the top bar is dead" was reported from. The
+        editor documents' own lifecycle is not lost: it moved to each
+        editor's contextual toolbar (menus.py's build_logic_context_
+        toolbar()/build_synoptic_context_toolbar()), next to the rest of
+        that editor's own tools. Undo/Redo stay the active editor's (a
+        project table has no undo stack) - their enabled state is kept
+        honest by _refresh_shared_toolbar_state()."""
         tb = QToolBar(tr("app.title"), self)
         tb.setObjectName("SharedToolbar")
         tb.setMovable(False)
@@ -685,18 +699,21 @@ class StudioMainWindow(QMainWindow):
         self.act_shared_redo = _make("toolbar.redo", "redo", self._shared_redo)
         tb.addSeparator()
         self.act_shared_help = _make("toolbar.help", "help", self._help_topics)
-        self._set_shared_toolbar_enabled(False, False, False)
+        self._set_shared_toolbar_enabled(False, False)
 
     # ------------------------------------------------------------------
     # Shared (fixed) toolbar - state
     # ------------------------------------------------------------------
 
-    def _set_shared_toolbar_enabled(self, can_save, can_undo, can_redo):
+    def _set_shared_toolbar_enabled(self, can_undo, can_redo):
+        # Nowy/Otwórz/Zapisz/Zapisz jako are the project's own (see
+        # _build_shared_toolbar) - there is always a project, so they
+        # are always live, whatever branch of the tree is open.
+        self.act_shared_new.setEnabled(True)
+        self.act_shared_open.setEnabled(True)
+        self.act_shared_save.setEnabled(True)
+        self.act_shared_save_as.setEnabled(True)
         has_editor = self._active is not None
-        self.act_shared_new.setEnabled(has_editor)
-        self.act_shared_open.setEnabled(has_editor)
-        self.act_shared_save.setEnabled(has_editor and can_save)
-        self.act_shared_save_as.setEnabled(has_editor)
         self.act_shared_undo.setEnabled(has_editor and can_undo)
         self.act_shared_redo.setEnabled(has_editor and can_redo)
         # Pomoc is NOT an editor command and must not be greyed out with
@@ -710,28 +727,16 @@ class StudioMainWindow(QMainWindow):
         self.act_shared_help.setEnabled(True)
 
     def _shared_new(self):
-        if self._active == _TREE_ITEM_LOGIC:
-            self._logic_panel.main_window().act_new.trigger()
-        elif self._active == _TREE_ITEM_SCREENS:
-            self._synoptic_panel.trigger_menu_item("New", exact=True)
+        self._new_project()
 
     def _shared_open(self):
-        if self._active == _TREE_ITEM_LOGIC:
-            self._logic_panel.main_window().act_open.trigger()
-        elif self._active == _TREE_ITEM_SCREENS:
-            self._synoptic_panel.trigger_menu_item("Open")
+        self._open_project()
 
     def _shared_save(self):
-        if self._active == _TREE_ITEM_LOGIC:
-            self._logic_panel.main_window().act_save.trigger()
-        elif self._active == _TREE_ITEM_SCREENS:
-            self._synoptic_panel.trigger_menu_item("Save", exact=True)
+        self._save_project()
 
     def _shared_save_as(self):
-        if self._active == _TREE_ITEM_LOGIC:
-            self._logic_panel.main_window().act_save_as.trigger()
-        elif self._active == _TREE_ITEM_SCREENS:
-            self._synoptic_panel.trigger_menu_item("Save As")
+        self._save_project_as()
 
     def _shared_undo(self):
         if self._active == _TREE_ITEM_LOGIC:
@@ -806,11 +811,14 @@ class StudioMainWindow(QMainWindow):
         self.act_core_snap.setEnabled(has_editor)
 
     def _refresh_shared_toolbar_state(self):
+        if self._logic_panel is not None:
+            logic_dirty = self._logic_panel.is_dirty()
+            if logic_dirty != self._logic_dirty_seen:
+                self._logic_dirty_seen = logic_dirty
+                self._on_project_changed()
         if self._active == _TREE_ITEM_LOGIC and self._logic_panel is not None:
             mw = self._logic_panel.main_window()
-            self._set_shared_toolbar_enabled(
-                mw.is_dirty, len(mw.project.undo_stack) > 0, len(mw.project.redo_stack) > 0
-            )
+            self._set_shared_toolbar_enabled(len(mw.project.undo_stack) > 0, len(mw.project.redo_stack) > 0)
             # Point 5's own "korzystaj z mostu stanu, który już
             # zbudowałeś" - Logic Studio's own _update_clipboard_
             # actions()/selection tracking already keeps these three
@@ -823,8 +831,13 @@ class StudioMainWindow(QMainWindow):
         elif self._active == _TREE_ITEM_SCREENS and self._synoptic_panel is not None:
             self._synoptic_panel.query_state(self._apply_synoptic_toolbar_state)
         else:
-            self._set_shared_toolbar_enabled(False, False, False)
+            self._set_shared_toolbar_enabled(False, False)
             self._set_core_toolbar_enabled(False, False, False)
+            # The screens are part of the project file - their unsaved
+            # state has to show in the project's own marker even while
+            # another branch is open.
+            if self._synoptic_panel is not None and self._synoptic_panel.is_page_ready():
+                self._synoptic_panel.query_state(self._note_synoptic_dirty)
 
     def _apply_synoptic_mode_checks(self, state):
         """Brings the Synoptic toolbar in line with the editor (menus.py's
@@ -865,6 +878,12 @@ class StudioMainWindow(QMainWindow):
                 except RuntimeError:
                     continue
 
+    def _note_synoptic_dirty(self, state):
+        dirty = bool(state.get("isDirty")) if state else False
+        if dirty != self._synoptic_dirty:
+            self._synoptic_dirty = dirty
+            self._on_project_changed()
+
     def _apply_synoptic_toolbar_state(self, state):
         # Guards against a reply arriving after the user has already
         # switched away from Screens (runJavaScript's callback is
@@ -875,12 +894,11 @@ class StudioMainWindow(QMainWindow):
         if self._active != _TREE_ITEM_SCREENS:
             return
         if state is None:
-            self._set_shared_toolbar_enabled(False, False, False)
+            self._set_shared_toolbar_enabled(False, False)
             self._set_core_toolbar_enabled(False, False, False)
             return
-        self._set_shared_toolbar_enabled(
-            bool(state.get("isDirty")), bool(state.get("canUndo")), bool(state.get("canRedo"))
-        )
+        self._note_synoptic_dirty(state)
+        self._set_shared_toolbar_enabled(bool(state.get("canUndo")), bool(state.get("canRedo")))
         self._apply_synoptic_mode_checks(state)
         # hasSelection covers Copy/Delete honestly. Paste has no
         # equivalent signal in the read-only bridge (Blocker B's own
@@ -1036,6 +1054,22 @@ class StudioMainWindow(QMainWindow):
             if selector is not None:
                 selector(issue.arg)
 
+    def _run_device_wizard(self):
+        """User report: "stwórz kreator urządzenia gdzie krok po kroku
+        mówi co gdzie dodawać" - device_wizard.DeviceWizard, prefilled
+        from the current project, written back only on Finish (add-and-
+        update, never removal - see that module's docstring). Ends on the
+        Point Registry: the first thing a freshly-carded project has to
+        show, and the branch the wizard's own last page points at."""
+        from studio.shell.device_wizard import DeviceWizard
+        wizard = DeviceWizard(self._project, self)
+        if wizard.exec() != QDialog.DialogCode.Accepted:
+            return
+        wizard.apply_to_project(self._project)
+        self._on_project_changed()
+        self._refresh_all_project_panels()
+        self._open_point_registry()
+
     def _export_point_list(self):
         """Task point 7 - "Eksportuj listę punktów": Waldek's own
         technical notes in the point registry, turned into a printable
@@ -1168,6 +1202,9 @@ class StudioMainWindow(QMainWindow):
         from studio.shell.synoptic_panel import SynopticPanel
         self._synoptic_panel = SynopticPanel()
         self._synoptic_panel.page_ready.connect(self._sync_device_registry_with_synoptic)
+        # Task "Studio osadza ekrany i logikę w projekt.epw": a project
+        # opened before the page was up hands its screens over now.
+        self._synoptic_panel.page_ready.connect(self._push_screens_to_synoptic)
         return True
 
     def _ensure_logic_panel(self) -> bool:
@@ -1273,22 +1310,42 @@ class StudioMainWindow(QMainWindow):
 
         def _after_pull(registry):
             from studio.shell.project_panels import (
-                card_from_synoptic_dict, card_to_synoptic_dict,
+                cards_from_synoptic_dicts, card_to_synoptic_dicts,
                 location_from_synoptic_dict, location_to_synoptic_dict,
                 sync_points_for_card,
             )
             project = self._project
             changed = False
             if registry:
-                existing_card_ids = {c.id for c in project.cards}
-                for card_data in registry.get("cards", []):
-                    if card_data.get("id") in existing_card_ids:
+                # A card id is unique again - one physical module, one
+                # Card row, with its OWN several kinds when it has them
+                # (see Card's own docstring: "karta ELA1 ma DI oraz AI").
+                # Synoptic's own registry stays flat, one CardEntry per
+                # kind (it never reads Modbus/location, so it has no
+                # reason to merge them into one row - see
+                # cards_from_synoptic_dicts()'s own docstring).
+                # "already have this" now means "already have this KIND
+                # under this id": pulling in Synoptic's AI entry for a
+                # module Studio already has a DI row for must ADD the AI
+                # kind to that existing row, not skip it as "id already
+                # exists" and not create a second row for the same id.
+                cards_by_id = {c.id: c for c in project.cards}
+                for candidate in cards_from_synoptic_dicts(registry.get("cards", [])):
+                    existing = cards_by_id.get(candidate.id)
+                    if existing is None:
+                        project.cards.append(candidate)
+                        cards_by_id[candidate.id] = candidate
+                        sync_points_for_card(project, candidate)
+                        changed = True
                         continue
-                    card = card_from_synoptic_dict(card_data)
-                    project.cards.append(card)
-                    sync_points_for_card(project, card)
-                    existing_card_ids.add(card.id)
-                    changed = True
+                    new_kinds = {
+                        kind: channels for kind, channels in candidate.channel_kinds.items()
+                        if kind not in existing.channel_kinds
+                    }
+                    if new_kinds:
+                        existing.channel_kinds.update(new_kinds)
+                        sync_points_for_card(project, existing)
+                        changed = True
                 existing_codes = {l.code for l in project.locations}
                 for location_data in registry.get("locations", []):
                     if location_data.get("code") in existing_codes:
@@ -1304,7 +1361,7 @@ class StudioMainWindow(QMainWindow):
                     self._cards_panel.refresh()
                 if self._point_registry_panel is not None:
                     self._point_registry_panel.refresh()
-            cards_out = [card_to_synoptic_dict(c) for c in self._project.cards]
+            cards_out = [d for c in self._project.cards for d in card_to_synoptic_dicts(c)]
             locations_out = [location_to_synoptic_dict(l) for l in self._project.locations]
             self._synoptic_panel.push_device_registry(cards_out, locations_out)
 
@@ -1511,7 +1568,7 @@ class StudioMainWindow(QMainWindow):
         already refreshes on entry, which is the only time stale data
         would actually be visible."""
         name = self._project.metadata.name or tr("project_info.default_name")
-        marker = "*" if self._project.is_dirty else ""
+        marker = "*" if (self._project.is_dirty or self._editors_dirty()) else ""
         self._status_project.setText(f"{name}{marker}")
         if self._project_info_panel is not None:
             self._project_info_panel.refresh()
@@ -1582,7 +1639,7 @@ class StudioMainWindow(QMainWindow):
     def _confirm_discard_project(self) -> bool:
         """True = caller may proceed (nothing unsaved, or the user chose
         Save/Discard). False = Cancel, caller must stop."""
-        if not self._project.is_dirty:
+        if not self._project.is_dirty and not self._editors_dirty():
             return True
         reply = QMessageBox.question(
             self, tr("project_info.unsaved_title"), tr("project_info.unsaved_text"),
@@ -1624,6 +1681,7 @@ class StudioMainWindow(QMainWindow):
             return
         self._project = new_project(tr("project_info.default_name"))
         self._project_path = None
+        self._push_editor_documents()
         self._on_project_changed()
         self._refresh_all_project_panels()
 
@@ -1658,6 +1716,7 @@ class StudioMainWindow(QMainWindow):
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
         self._remember_recent_project(path)
+        self._push_editor_documents()
         self._on_project_changed()
         self._refresh_all_project_panels()
 
@@ -1707,11 +1766,14 @@ class StudioMainWindow(QMainWindow):
     def _save_project(self) -> bool:
         if self._project_path is None:
             return self._save_project_as()
+        if not self._collect_editor_documents():
+            return False
         try:
             save_project(self._project, self._project_path)
         except OSError as exc:
             QMessageBox.critical(self, tr("project_info.save_failed_title"), str(exc))
             return False
+        self._mark_editors_saved()
         self._on_project_changed()
         return True
 
@@ -1724,6 +1786,8 @@ class StudioMainWindow(QMainWindow):
             return False
         if not path.lower().endswith(".epw"):
             path += ".epw"
+        if not self._collect_editor_documents():
+            return False
         try:
             save_project(self._project, path)
         except OSError as exc:
@@ -1732,8 +1796,96 @@ class StudioMainWindow(QMainWindow):
         self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
         self._remember_recent_project(path)
+        self._mark_editors_saved()
         self._on_project_changed()
         return True
+
+    # ------------------------------------------------------------------
+    # Task "Studio osadza ekrany i logikę w projekt.epw" - user report:
+    # "tworząc synoptykę w projekcie i zapisując projekt na głównym pasku,
+    # synoptyka nie zapisuje się, podejrzewam że to samo jest z logiką -
+    # dalej to traktowane jest jako osobne programy". The two editors'
+    # documents are part of the project now (Project.screens / logic /
+    # logic_runtime): Save reads them out of the live editors first, Open/
+    # New hand them back in. SPEC: "Ekrany są W ŚRODKU pliku projektu".
+    # ------------------------------------------------------------------
+
+    _SYNOPTIC_DOCUMENT_TIMEOUT_MS = 4000
+
+    def _collect_editor_documents(self) -> bool:
+        """Pulls the current Logic and Synoptic documents into
+        self._project before it is written. False = do NOT save: the
+        Synoptic editor refused to produce its document (its own
+        validation - the same refusal its Save As shows) and the user
+        chose not to keep the previously saved screens instead. A page
+        that is not up yet simply keeps the project's current `screens`
+        (nothing was edited there to lose)."""
+        if self._logic_panel is not None:
+            self._project.logic = self._logic_panel.document()
+            compiled = self._logic_panel.runtime_document()
+            if compiled is not None:
+                self._project.logic_runtime = compiled
+            elif self._project.logic.get("blocks"):
+                self.statusBar().showMessage(tr("project_info.logic_not_compiled"), 8000)
+
+        panel = self._synoptic_panel
+        if panel is None or not panel.is_page_ready():
+            return True
+        outcome = {"done": False, "document": None}
+        loop = QEventLoop()
+
+        def _received(document):
+            outcome["done"] = True
+            outcome["document"] = document
+            loop.quit()
+
+        panel.query_project_data(_received)
+        QTimer.singleShot(self._SYNOPTIC_DOCUMENT_TIMEOUT_MS, loop.quit)
+        loop.exec()
+        if outcome["done"] and outcome["document"] is not None:
+            self._project.screens = outcome["document"]
+            return True
+        reply = QMessageBox.question(
+            self, tr("project_info.screens_unavailable_title"), tr("project_info.screens_unavailable_text"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _mark_editors_saved(self):
+        name = self._project.metadata.name or tr("project_info.default_name")
+        if self._logic_panel is not None:
+            self._logic_panel.mark_saved()
+        if self._synoptic_panel is not None:
+            self._synoptic_panel.mark_saved(name)
+        self._synoptic_dirty = False
+        self._logic_dirty_seen = False
+
+    def _push_editor_documents(self):
+        """After a New/Open: the editors show what the project holds.
+        A Logic document this build cannot open (an unknown block type,
+        a newer schema) is reported, never silently turned into an empty
+        canvas - and the project itself stays open."""
+        if self._logic_panel is not None:
+            try:
+                self._logic_panel.load_document(self._project.logic)
+            except Exception as exc:  # Project.deserialize() raises ValueError, but never trust one type
+                QMessageBox.critical(self, tr("project_info.logic_load_failed_title"), str(exc))
+        self._push_screens_to_synoptic()
+        self._synoptic_dirty = False
+        self._logic_dirty_seen = False
+
+    def _push_screens_to_synoptic(self):
+        if self._synoptic_panel is None or not self._synoptic_panel.is_page_ready():
+            return  # page_ready (connected in _ensure_synoptic_panel) calls this again
+        name = self._project.metadata.name or tr("project_info.default_name")
+        self._synoptic_panel.load_project_data(self._project.screens, name)
+
+    def _editors_dirty(self) -> bool:
+        """Unsaved work in either editor counts as unsaved project work -
+        it is part of the project file now."""
+        if self._logic_panel is not None and self._logic_panel.is_dirty():
+            return True
+        return bool(self._synoptic_dirty)
 
     def _show_aspect_container(self, key, editor_widget, toolbar_builder, panel_for_builder):
         """Wraps `editor_widget` in an _AspectContainer (breadcrumb +

@@ -67,7 +67,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtWidgets import QLabel, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QLabel, QStackedWidget, QVBoxLayout, QWidget
 
 from studio.shell.i18n import get_language, tr
 
@@ -98,6 +98,14 @@ _PAGE_VIEW = 2
 # runtime CSS/DOM effects on the page Synoptic already serves.
 _STUDIO_SKIN_JS = """
 (function(){
+    // Bug fix ("ten pasek nie działa" - Save/Open silently did
+    // nothing): tells ProjectFileService.ts (src/types/file-system-
+    // access.d.ts has the full story) that showOpenFilePicker/
+    // showSaveFilePicker exist here but never actually resolve - so it
+    // must use its own already-written browser-download/native-<input>
+    // fallback instead, same as it would in a browser too old to have
+    // the File System Access API at all.
+    window.__EPW_STUDIO_EMBED__ = true;
     const root = document.documentElement;
     root.style.setProperty('--scada-panel', '#D4D0C8');
     root.style.setProperty('--scada-bevel-light', '#FFFFFF');
@@ -185,6 +193,21 @@ class SynopticPanel(QWidget):
         self._view = QWebEngineView(self)
         self._pages.addWidget(self._view)              # index _PAGE_VIEW
 
+        # Bug fix ("ten pasek nie działa" - the shared Save/Save As
+        # buttons produced no visible effect at all): QtWebEngine's
+        # bundled Chromium has no File System Access API
+        # (window.showSaveFilePicker/showOpenFilePicker are both
+        # undefined), so ProjectFileService.saveFile()/saveFileAs()
+        # (studio/synoptic/src/project/ProjectFileService.ts) always
+        # falls through to their browser-download fallback: a Blob +
+        # a hidden <a download> + .click(). Left unanswered, Qt's own
+        # default for QWebEngineProfile.downloadRequested is to drop
+        # the download silently - no dialog, no error, literally
+        # nothing on screen, which is exactly what made the toolbar
+        # look dead. Answering it with a real native Save dialog turns
+        # that silent no-op into an actual .epwsyn file on disk.
+        self._view.page().profile().downloadRequested.connect(self._on_download_requested)
+
         self._pages.setCurrentIndex(_PAGE_LOADING)
 
         try:
@@ -207,6 +230,27 @@ class SynopticPanel(QWidget):
         self._view.loadFinished.connect(self._on_load_finished)
         # The editor's interface follows Studio's own language.
         self._view.load(QUrl(f"http://127.0.0.1:{port}/?lang={get_language()}"))
+
+    def _on_download_requested(self, download):
+        """Answers QWebEngineProfile.downloadRequested - see the
+        connect() call in __init__ for why this exists at all. `download`
+        is a QWebEngineDownloadRequest; suggestedFileName() carries
+        whatever name ProjectFileService.saveFileAs() proposed (the
+        project's own file name, or "<project>.epwsyn" for a first
+        save). Cancelling on a dismissed dialog is required, not just
+        tidy - an accepted-then-abandoned QWebEngineDownloadRequest
+        otherwise sits open."""
+        suggested = download.suggestedFileName() or download.downloadFileName() or "project.epwsyn"
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr("toolbar.save_as"), suggested, "EPW Synoptic Files (*.epwsyn)"
+        )
+        if not path:
+            download.cancel()
+            return
+        target = Path(path)
+        download.setDownloadDirectory(str(target.parent))
+        download.setDownloadFileName(target.name)
+        download.accept()
 
     def _on_load_finished(self, ok: bool):
         if ok:
@@ -413,5 +457,63 @@ class SynopticPanel(QWidget):
         js = (
             "typeof window.__synopticImportCardsAndLocations === 'function' "
             f"&& window.__synopticImportCardsAndLocations({json.dumps(cards)}, {json.dumps(locations)});"
+        )
+        self._view.page().runJavaScript(js)
+
+    # -- the whole document in and out (task "Studio osadza ekrany i
+    # logikę w projekt.epw") ---------------------------------------------
+    # User report: "tworząc synoptykę w projekcie i zapisując projekt na
+    # głównym pasku, synoptyka nie zapisuje się". The screens live INSIDE
+    # projekt.epw now (shared/project_format.py's Project.screens) - Studio's
+    # own Save reads this editor's document out through query_project_data(),
+    # its Open/New hand one back through load_project_data(). main.tsx's
+    # __synopticProjectData/__synopticLoadProjectData/__synopticMarkSaved -
+    # see studio/synoptic/src/project/StudioBridge.ts.
+
+    def query_project_data(self, callback):
+        """`callback` receives the EPW_SYNOPTIC document as a dict, or
+        None when the page isn't up, the bridge is missing (an old,
+        un-rebuilt dist/) or the editor's own validation refused to
+        produce a document (the same refusal its Save As shows)."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            callback(None)
+            return
+        js = (
+            "typeof window.__synopticProjectData === 'function' "
+            "? (window.__synopticProjectData() || '') : ''"
+        )
+
+        def _handle(result):
+            if not result:
+                callback(None)
+                return
+            try:
+                callback(json.loads(result))
+            except ValueError:
+                callback(None)
+
+        self._view.page().runJavaScript(js, _handle)
+
+    def load_project_data(self, document, name: str):
+        """Replaces the editor's content with `document` (a dict - the
+        project's `screens` section) or, when it is empty, with a fresh
+        empty project named `name`. Clean afterwards - it is exactly what
+        the project file holds."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        text = json.dumps(document) if document else None
+        js = (
+            "typeof window.__synopticLoadProjectData === 'function' "
+            f"&& window.__synopticLoadProjectData({json.dumps(text)}, {json.dumps(name)});"
+        )
+        self._view.page().runJavaScript(js)
+
+    def mark_saved(self, name: str):
+        """Studio just wrote projekt.epw with this editor's document inside."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        js = (
+            "typeof window.__synopticMarkSaved === 'function' "
+            f"&& window.__synopticMarkSaved({json.dumps(name)});"
         )
         self._view.page().runJavaScript(js)
