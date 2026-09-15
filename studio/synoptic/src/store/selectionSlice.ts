@@ -173,9 +173,10 @@ export const createSelectionSlice: StateCreator<AppState, [], [], SelectionSlice
     selectedSetpointPanelIds: selection.setpointPanelIds || []
   }),
 
-  // Ctrl+A takes everything the WORK MODE can reach on the current
-  // screen - not the walls while placing symbols, not the symbols while
-  // drawing rooms.
+  // Ctrl+A takes everything on the current screen, whatever the work
+  // mode - editing is mode-independent (WorkModes.ts header);
+  // restrictSelectionToMode() is kept in the chain as the one place that
+  // rule lives, today it excludes nothing.
   selectAll: () => {
     const { objects, connections, meters, signalPanels, frames, groupCommands, setpointPanels, walls, workMode } = get();
     const reachable = restrictSelectionToMode({

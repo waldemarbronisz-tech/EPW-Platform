@@ -434,9 +434,11 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
 
   const outputHint = switched ? {
     '1-MAINTAINED': 'One maintained output - a typical contactor/valve with a single coil held energized in the ON state.',
-    '1-PULSE': 'One pulsed output - a typical bistable relay driven by a short pulse.',
+    '1-PULSE': 'One pulsed output - a short pulse on one coil, ON direction only (OFF is not commanded from here).',
     '2-MAINTAINED': 'Two maintained outputs - a typical actuator/three-position valve with separate OPEN/CLOSE coils.',
-    '2-PULSE': 'Two pulsed outputs - a typical bistable contactor with separate ON/OFF pulses.'
+    '2-PULSE': 'Two pulsed outputs - a typical bistable contactor with separate ON/OFF pulses.',
+    '1-PULSE_TOGGLE': 'One output pulsing a single-coil impulse relay (R15/3P-class): EVERY pulse toggles ON<->OFF, so the runtime pulses only when the feedback says the device is not already in the requested state. Feedback required.',
+    '2-PULSE_TOGGLE': 'Two outputs (ON / OFF), both wired to ONE impulse-relay coil (R15/3P-class) - each pulse toggles regardless of which output, or a local push-button, delivered it; the runtime pulses only when the feedback says the device is not already in the requested state. Feedback required.'
   }[`${switched.command.outputCount}-${switched.command.style}`] : '';
 
   // fix/inline-device-creation commit 4: which of SWITCHED's own
@@ -673,6 +675,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                   <select value={switched.command.style} onChange={e => patchSwitchedCommand({ style: e.target.value as SwitchedOwnFields['command']['style'] })} style={inputStyle}>
                     <option value="MAINTAINED">MAINTAINED</option>
                     <option value="PULSE">PULSE</option>
+                    <option value="PULSE_TOGGLE">PULSE_TOGGLE (single-coil impulse relay)</option>
                   </select>
                 </div>
                 <div style={hintStyle}>{outputHint}</div>
@@ -688,7 +691,7 @@ export const DeviceFormDialog: React.FC<DeviceFormDialogProps> = ({ mode, initia
                     <FieldErrors messages={fieldErrors.get('command.doOpen')} fieldKey="command.doOpen" />
                   </div>
                 )}
-                {switched.command.style === 'PULSE' && (
+                {switched.command.style !== 'MAINTAINED' && (
                   <div className="property-row" {...rowBlurProps('command.pulseMs')}>
                     <label>Pulse Time (ms)</label>
                     <input type="number" value={switched.command.pulseMs ?? ''} onChange={e => patchSwitchedCommand({ pulseMs: Number(e.target.value) })} style={inputStyle} />

@@ -133,10 +133,12 @@ export const Canvas: React.FC = () => {
     updateObject(obj.id, seatIfOpening(obj, attrs));
   };
 
-  // feat/synoptic-modes: what a click can reach in the current work mode.
-  // Everything else stays drawn at full strength - you draw a room AROUND
-  // the devices - it simply does not listen. In Preview a click operates
-  // symbols whatever the mode.
+  // feat/synoptic-modes, revised (user report: "bez względu na tryb
+  // edycja była możliwa cały czas"): every kind listens in every work
+  // mode - selecting/moving is mode-independent, the mode only picks the
+  // drawing tools (WorkModes.ts header). isKindActive() is kept as the
+  // one place that rule lives; an armed drawing tool, not the mode, is
+  // what keeps a room-drawing click off the valve under the cursor.
   const workMode = useStore(s => s.workMode);
   const kindListens = (kind: ElementKind) => isKindActive(workMode, kind) || (previewMode && kind === 'symbol');
   const objectListens = (obj: SynopticObject) => kindListens(objectKind(obj.type));
@@ -187,7 +189,9 @@ export const Canvas: React.FC = () => {
   });
   const startFloorDrag = (pos: { x: number; y: number }): boolean => {
     const s = useStore.getState();
-    if (s.workMode !== 'ROOMS' || s.previewMode) return false;
+    // Moving a selected room by dragging its floor works in every mode -
+    // editing is mode-independent (WorkModes.ts header); Preview only.
+    if (s.previewMode) return false;
     const point = canvasPointFromStage(pos);
     if (!pointInsideRooms(s.walls, s.selectedWallIds, point.x, point.y)) return false;
     startAreaDrag(s.selectedWallIds[0]);
@@ -1067,8 +1071,10 @@ export const Canvas: React.FC = () => {
       // something this editor could do.
       const wallIds = walls.filter(w => isWallInBox(w, box, mode)).map(w => w.id);
 
-      // feat/synoptic-modes: the box only catches what the work mode can
-      // reach - a room marquee does not pick up the valves inside it.
+      // The box keeps everything it caught, whatever the work mode -
+      // editing is mode-independent (WorkModes.ts header); restrict-
+      // SelectionToMode() stays in the chain as the one place that rule
+      // lives, today it excludes nothing.
       const caught = restrictSelectionToMode(
         { objectIds, connectionIds, meterIds, signalPanelIds, frameIds, groupCommandIds, setpointPanelIds, wallIds },
         objects,

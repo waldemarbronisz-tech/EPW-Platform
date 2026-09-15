@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { applyScadaCssVariables } from './theme/ScadaTheme'
 import { useStore } from './store'
 import type { CardEntry, LocationEntry } from './project/DeviceSchema'
+import { loadProjectFromStudio, markSavedByStudio, projectDataForStudio } from './project/StudioBridge'
 
 // Must run before the first paint, so the interface CSS (which reads these
 // as var(--scada-*)) never has a chance to render with stale fallback
@@ -145,12 +146,20 @@ type DeviceRegistryImportBridge = {
   locations: LocationEntry[],
 ): void => {
   const state = useStore.getState();
-  const existingCardIds = new Set(state.cards.map((c) => c.id));
+  // A card id can legitimately repeat across kinds - one physical
+  // module (an ELA card with both DI and AI channels, say) is more than
+  // one CardEntry, one per kind, sharing an id (see the (id, kind)
+  // duplicate guard in studio/shell/project_panels.py's CardsPanel,
+  // which is what this whole registry mirrors). Deduping on id alone
+  // would treat "already have an ELA1 row" as "already have ELA1
+  // entirely" and silently drop its sibling kind on import.
+  const existingCardKeys = new Set(state.cards.map((c) => `${c.id} ${c.channelKind}`));
   const existingLocationCodes = new Set(state.locations.map((l) => l.code));
   for (const card of cards) {
-    if (!existingCardIds.has(card.id)) {
+    const key = `${card.id} ${card.channelKind}`;
+    if (!existingCardKeys.has(key)) {
       state.addCard(card);
-      existingCardIds.add(card.id);
+      existingCardKeys.add(key);
     }
   }
   for (const location of locations) {
@@ -160,6 +169,20 @@ type DeviceRegistryImportBridge = {
     }
   }
 };
+
+// Task "Studio osadza ekrany i logikę w projekt.epw": the whole document
+// in and out, so Studio's own Save/Open carry the screens inside
+// projekt.epw - see project/StudioBridge.ts. synoptic_panel.py's
+// query_project_data()/load_project_data()/mark_saved() are the callers.
+type StudioProjectBridge = {
+  __synopticProjectData?: () => string | null;
+  __synopticLoadProjectData?: (text: string | null, name: string) => boolean;
+  __synopticMarkSaved?: (name: string) => void;
+};
+const studioProjectBridge = window as unknown as StudioProjectBridge;
+studioProjectBridge.__synopticProjectData = projectDataForStudio;
+studioProjectBridge.__synopticLoadProjectData = loadProjectFromStudio;
+studioProjectBridge.__synopticMarkSaved = markSavedByStudio;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

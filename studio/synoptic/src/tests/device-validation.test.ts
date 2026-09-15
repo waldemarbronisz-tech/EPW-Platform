@@ -158,6 +158,50 @@ describe('Channel address validation (validateChannelAddress / parseChannelAddre
   it('parseChannelAddress returns null for an incomplete address', () => {
     expect(parseChannelAddress('ELA1.DI')).toBeNull();
   });
+
+  describe('a card id shared across kinds (user report: "karta ELA1 ma DI oraz AI")', () => {
+    // One physical module, two CardEntry rows sharing an id - deliberately
+    // ORDERED WITH THE "WRONG" ROW FIRST, so a naive `cards.find(c =>
+    // c.id === parsed.card)` (the actual bug: it ignored kind and just
+    // grabbed whichever same-id row came first) would misreport an
+    // entirely valid address as a kind mismatch.
+    const mixedCards: CardEntry[] = [
+      { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 32 },
+      { id: 'ELA1', model: 'ELA01', channelKind: 'AI', channelCount: 8 }
+    ];
+
+    it('accepts a valid address against its own kind row even when a different-kind row of the same id sorts first', () => {
+      expect(validateChannelAddress('ELA1.AI.3', mixedCards)).toEqual([]);
+      expect(validateChannelAddress('ELA1.DI.12', mixedCards)).toEqual([]);
+    });
+
+    it('range-checks against the matching kind row\'s own channelCount, not the other row\'s', () => {
+      expect(validateChannelAddress('ELA1.AI.8', mixedCards)).toEqual([]);       // AI row has 8
+      expect(validateChannelAddress('ELA1.AI.9', mixedCards).some(i => i.code === 'CHANNEL_ADDRESS_OUT_OF_RANGE')).toBe(true);
+      expect(validateChannelAddress('ELA1.DI.32', mixedCards)).toEqual([]);      // DI row has 32
+      expect(validateChannelAddress('ELA1.DI.9', mixedCards)).toEqual([]);       // still well within DI's own 32
+    });
+
+    it('rejects a kind the id has no row for, distinctly from an unknown id', () => {
+      const issues = validateChannelAddress('ELA1.DO.1', mixedCards);
+      expect(issues.some(i => i.code === 'CHANNEL_ADDRESS_KIND_MISMATCH')).toBe(true);
+      expect(issues.some(i => i.code === 'CHANNEL_ADDRESS_UNKNOWN_CARD')).toBe(false);
+    });
+
+    it('two rows with the same id AND the same kind is still rejected', () => {
+      const genuinelyDuplicated: CardEntry[] = [
+        { id: 'ELA1', model: 'ELA01', channelKind: 'DI', channelCount: 32 },
+        { id: 'ELA1', model: 'ELA01-rev2', channelKind: 'DI', channelCount: 16 }
+      ];
+      const result = validateDeviceRegistry({ locations: [], cards: genuinelyDuplicated, devices: [] });
+      expect(result.issues.some(i => i.code === 'CARD_DUPLICATE_ID')).toBe(true);
+    });
+
+    it('two rows with the same id but DIFFERENT kinds is not a duplicate', () => {
+      const result = validateDeviceRegistry({ locations: [], cards: mixedCards, devices: [] });
+      expect(result.issues.some(i => i.code === 'CARD_DUPLICATE_ID')).toBe(false);
+    });
+  });
 });
 
 describe('Mode-dependent field validation (validateDeviceFields)', () => {

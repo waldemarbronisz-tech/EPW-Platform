@@ -81,7 +81,7 @@ export interface CommandRequest {
   deviceLabel: string;
   /** The physical output, e.g. 'ELA1.DO.12'. Null when the chain does not reach one. */
   output: string | null;
-  style: 'MAINTAINED' | 'PULSE';
+  style: 'MAINTAINED' | 'PULSE' | 'PULSE_TOGGLE';
   pulseMs: number | null;
   feedback: 'NONE' | 'SINGLE' | 'DUAL' | null;
   /** The device's own supervision timeout, in ms. How long the controller would wait for the contact before calling it a failure. */
@@ -180,7 +180,7 @@ function buildSymbolRequest(objects: SynopticObject[], devices: Device[], target
     unbound: null,
     output: command.doClose,
     style: command.style ?? 'MAINTAINED',
-    pulseMs: command.style === 'PULSE' ? (command.pulseMs ?? null) : null,
+    pulseMs: command.style !== 'MAINTAINED' ? (command.pulseMs ?? null) : null,
     feedback,
     confirmTimeoutMs: device.supervision?.confirmTimeoutMs ?? DEFAULT_CONFIRM_TIMEOUT_MS,
     assumed: feedback === 'NONE',
@@ -229,7 +229,7 @@ export function buildCommandRequest(
     deviceId: null as string | null,
     deviceLabel: '-',
     output: null as string | null,
-    style: 'MAINTAINED' as 'MAINTAINED' | 'PULSE',
+    style: 'MAINTAINED' as CommandRequest['style'],
     pulseMs: null as number | null,
     feedback: null as CommandRequest['feedback'],
     confirmTimeoutMs: DEFAULT_CONFIRM_TIMEOUT_MS,
@@ -273,7 +273,7 @@ export function buildCommandRequest(
     deviceLabel: labelFor(device),
     output: command?.doClose ?? null,
     style: command?.style ?? 'MAINTAINED',
-    pulseMs: command?.style === 'PULSE' ? (command.pulseMs ?? null) : null,
+    pulseMs: command && command.style !== 'MAINTAINED' ? (command.pulseMs ?? null) : null,
     feedback,
     confirmTimeoutMs: device.supervision?.confirmTimeoutMs ?? DEFAULT_CONFIRM_TIMEOUT_MS,
     assumed: feedback === 'NONE',
@@ -360,6 +360,9 @@ export function describeConfirmation(request: CommandRequest): string {
 /** How the output will be driven. A PULSE command and a MAINTAINED one behave differently enough that the window must say which. */
 export function describeOutput(request: CommandRequest): string {
   if (!request.output) return 'no output';
+  if (request.style === 'PULSE_TOGGLE') {
+    return `${request.output} - pulse ${request.pulseMs ?? '?'} ms on a single-coil impulse relay (toggles)`;
+  }
   if (request.style === 'PULSE') {
     return `${request.output} - pulse ${request.pulseMs ?? '?'} ms`;
   }

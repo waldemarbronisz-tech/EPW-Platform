@@ -37,12 +37,17 @@ export const createDeviceRegistrySlice: StateCreator<AppState, [], [], DeviceReg
   })),
 
   addCard: (entry) => set((state) => ({ cards: [...state.cards, entry], isDirty: true })),
-  updateCard: (id, entry) => set((state) => ({
-    cards: state.cards.map(c => c.id === id ? entry : c),
+  // A CardEntry is identified by (id, channelKind), not id alone - one
+  // physical module with several kinds is several entries sharing an id
+  // (Studio's Card.channel_kinds flattened, see DeviceValidation.ts's
+  // validateDeviceRegistry). Keyed on id alone, editing or deleting one
+  // of them used to overwrite/remove ALL of its siblings at once.
+  updateCard: (id, kind, entry) => set((state) => ({
+    cards: state.cards.map(c => (c.id === id && c.channelKind === kind) ? entry : c),
     isDirty: true
   })),
-  deleteCard: (id) => set((state) => ({
-    cards: state.cards.filter(c => c.id !== id),
+  deleteCard: (id, kind) => set((state) => ({
+    cards: state.cards.filter(c => !(c.id === id && c.channelKind === kind)),
     isDirty: true
   })),
 

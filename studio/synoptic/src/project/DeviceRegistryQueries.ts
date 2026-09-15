@@ -9,7 +9,7 @@
 // itself has no reason to expose (it produces a flat issue list, not a
 // queryable index).
 
-import type { Device } from './DeviceSchema';
+import type { ChannelKind, Device } from './DeviceSchema';
 import { parseChannelAddress } from './DeviceValidation';
 import { getDeviceChannelAddressFields } from './DeviceFieldMap';
 
@@ -26,12 +26,15 @@ export interface ChannelUsage {
 }
 
 /** Every (device, field, address) triple whose address resolves to a channel on `cardId` - what "channel already occupied" and "card still in use" both reduce to. */
-export function getChannelUsagesForCard(devices: Device[], cardId: string): ChannelUsage[] {
+export function getChannelUsagesForCard(devices: Device[], cardId: string, kind?: ChannelKind): ChannelUsage[] {
+  // `kind`, when given, narrows to that one CardEntry's own channels -
+  // a card id can have several entries, one per kind, and deleting the
+  // AI entry must not be blocked by a device wired to the DI one.
   const usages: ChannelUsage[] = [];
   for (const device of devices) {
     for (const { field, addr } of getDeviceChannelAddressFields(device)) {
       const parsed = parseChannelAddress(addr);
-      if (parsed && parsed.card === cardId) {
+      if (parsed && parsed.card === cardId && (kind === undefined || parsed.kind === kind)) {
         usages.push({ deviceId: device.id, field, addr });
       }
     }
