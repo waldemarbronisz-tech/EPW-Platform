@@ -243,6 +243,16 @@ def load_epwsyn_file(path: str) -> EpwsynLoadResult:
         # file exists but isn't parseable JSON at all".
         return _fail(path, f"Not a valid JSON file: {e}")
 
+    return load_epwsyn_data(data, path)
+
+
+def load_epwsyn_data(data, path: str = "projekt.epw#screens") -> EpwsynLoadResult:
+    """The same validation as load_epwsyn_file(), from an already-parsed
+    document - task "Studio osadza ekrany i logikę w projekt.epw": the
+    screens live INSIDE projekt.epw (Project.screens, the EPW_SYNOPTIC
+    document verbatim - SPEC: "czytnik napisany w epwsyn_loader.py
+    działa bez zmian, zmienia się tylko to, skąd bierze dane"). `path`
+    only labels the result."""
     if not isinstance(data, dict):
         return _fail(path, "File does not contain a JSON object.")
 

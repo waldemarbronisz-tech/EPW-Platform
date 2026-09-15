@@ -61,6 +61,83 @@ class Apparatus:
     command: list = field(default_factory=list)
     behavior: str = ""  # SWITCHED | SIGNAL | MEASURED | MODULATED | SELECTOR
     kind: str = ""      # free-text label, no functional meaning (SPEC_PROJEKT_EPW.md)
+    # Task "wyłącznik jednocewkowy bistabilny" - HOW the command outputs
+    # drive the apparatus (shared/project_format.py's Device.command_style):
+    #   MAINTAINED   level: energized = ON (one coil), or one coil per
+    #                direction held energized (two coils)
+    #   PULSE        a pulse_ms pulse per direction, one coil each
+    #   PULSE_TOGGLE a single-coil impulse relay (R15/3P-class): EVERY
+    #                pulse toggles, whichever output (or a local push-
+    #                button) delivered it - so an output is pulsed only
+    #                when the feedback says the apparatus is NOT already
+    #                in the requested state. Feedback is mandatory.
+    command_style: str = "MAINTAINED"
+    pulse_ms: int = 0
+
+
+COMMAND_STYLES = ("MAINTAINED", "PULSE", "PULSE_TOGGLE")
+
+
+def apparatus_command_definitions(apparatuses) -> dict:
+    """CommandManager.load_definitions() entries - `<id>.CLOSE` and
+    `<id>.OPEN` - for every SWITCHED apparatus that has a command output,
+    derived from its command_style (see Apparatus above). `feedback[0]`
+    is the CLOSED indication (Studio's Device.feedback keeps the closed
+    contact first - SPEC_PROJEKT_EPW.md "Aparaty"); `command[0]` is the
+    CLOSE output and `command[1]`, when present, the OPEN one.
+
+    Before this, an apparatus had NO command definitions of its own at
+    all - only the per-DO `ELA1.DO.3.CLOSE`-style defaults existed, which
+    write a level and never release it, so a pulsed coil could not be
+    driven correctly from the project. Returns {} for an apparatus that
+    can't be commanded honestly (no command output; PULSE_TOGGLE without
+    feedback - pulsing blind would flip it the wrong way half the time),
+    logged, never guessed."""
+    definitions = {}
+    for apparatus in apparatuses:
+        if apparatus.behavior != "SWITCHED" or not apparatus.command:
+            continue
+        style = apparatus.command_style if apparatus.command_style in COMMAND_STYLES else "MAINTAINED"
+        close_out = apparatus.command[0]
+        open_out = apparatus.command[1] if len(apparatus.command) > 1 else None
+        closed_fb = apparatus.feedback[0] if apparatus.feedback else None
+        pulse = int(apparatus.pulse_ms or 0) if style != "MAINTAINED" else None
+        if style != "MAINTAINED" and not pulse:
+            log.warning(f"Apparatus {apparatus.id}: {style} without pulse_ms - not commandable")
+            continue
+        if style == "PULSE_TOGGLE" and not closed_fb:
+            log.warning(f"Apparatus {apparatus.id}: PULSE_TOGGLE without feedback - not commandable")
+            continue
+
+        def _definition(output_tag, output_value, feedback_value, reset_tag=None):
+            entry = {"driver_id": "SIM_DRIVER", "output_tag": output_tag, "output_value": output_value,
+                     "timeout_ms": 1500}
+            if closed_fb:
+                entry["feedback_tag"] = closed_fb
+                entry["feedback_value"] = feedback_value
+            if pulse:
+                entry["pulse_ms"] = pulse
+            if style == "PULSE_TOGGLE":
+                entry["skip_when_feedback_matches"] = True
+            if reset_tag:
+                entry["also_reset_tag"] = reset_tag
+            return entry
+
+        if style == "MAINTAINED":
+            if open_out:
+                definitions[f"{apparatus.id}.CLOSE"] = _definition(close_out, True, True, reset_tag=open_out)
+                definitions[f"{apparatus.id}.OPEN"] = _definition(open_out, True, False, reset_tag=close_out)
+            else:
+                definitions[f"{apparatus.id}.CLOSE"] = _definition(close_out, True, True)
+                definitions[f"{apparatus.id}.OPEN"] = _definition(close_out, False, False)
+        elif style == "PULSE":
+            definitions[f"{apparatus.id}.CLOSE"] = _definition(close_out, True, True)
+            if open_out:
+                definitions[f"{apparatus.id}.OPEN"] = _definition(open_out, True, False)
+        else:  # PULSE_TOGGLE - one coil behind one or two outputs
+            definitions[f"{apparatus.id}.CLOSE"] = _definition(close_out, True, True)
+            definitions[f"{apparatus.id}.OPEN"] = _definition(open_out or close_out, True, False)
+    return definitions
 
 
 class ApparatusRegistry:
@@ -130,7 +207,8 @@ def apparatuses_from_records(records):
     get_apparatuses()) -> Apparatus objects."""
     return [
         Apparatus(id=r["id"], feedback=list(r.get("feedback", [])), command=list(r.get("command", [])),
-                  behavior=r.get("behavior", ""), kind=r.get("kind", ""))
+                  behavior=r.get("behavior", ""), kind=r.get("kind", ""),
+                  command_style=r.get("command_style") or "MAINTAINED", pulse_ms=int(r.get("pulse_ms") or 0))
         for r in records
     ]
 

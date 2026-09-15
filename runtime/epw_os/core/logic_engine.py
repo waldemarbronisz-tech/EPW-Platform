@@ -30,17 +30,27 @@ class LogicEngine:
         try:
             with open(filepath, 'r') as f:
                 data = json.load(f)
-                if data.get("format") != "EPW_RUNTIME_LOGIC":
-                    log.error("Invalid logic runtime schema")
-                    return False
-                self._project = data
-                return True
+                return self.load_program_data(data)
         except FileNotFoundError:
             log.warning(f"Logic runtime artifact {filepath} not found.")
             return False
         except Exception as e:
             log.error(f"Failed to load logic runtime: {e}")
             return False
+
+    def load_program_data(self, data) -> bool:
+        """The compiled EPW_RUNTIME_LOGIC document itself - task "Studio
+        osadza ekrany i logikę w projekt.epw": runtime takes the logic
+        from projekt.epw's own `logic_runtime` section (Studio embeds the
+        compiled program on every save), the .epwlogic.runtime.json path
+        in controller.local.json stays as the fallback for an older
+        project. Same acceptance rule as load_program()."""
+        self._configured = True
+        if not isinstance(data, dict) or data.get("format") != "EPW_RUNTIME_LOGIC":
+            log.error("Invalid logic runtime schema")
+            return False
+        self._project = data
+        return True
 
     def validate_command(self, device_tag: str, command: str) -> Tuple[bool, List[str]]:
         # Bug 2 fix: distinguish "no logic project configured at all"

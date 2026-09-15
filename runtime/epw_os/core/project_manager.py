@@ -279,6 +279,15 @@ class ProjectManager:
     def get_logic_file(self):
         return self.config.get("logic_project")
 
+    # Task "Studio osadza ekrany i logikę w projekt.epw" - the project's
+    # own embedded documents (shared/project_format.py's Project.screens /
+    # logic_runtime), {} when the project predates that task or has none.
+    def get_embedded_screens(self) -> dict:
+        return dict(getattr(self.project, "screens", None) or {}) if self.project is not None else {}
+
+    def get_embedded_logic_runtime(self) -> dict:
+        return dict(getattr(self.project, "logic_runtime", None) or {}) if self.project is not None else {}
+
     def get_language(self) -> str:
         return self.config.get("language", DEFAULT_LANGUAGE)
 
