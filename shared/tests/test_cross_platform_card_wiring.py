@@ -66,7 +66,7 @@ from studio.shell.project_panels import sync_points_for_card
 
 def _studio_addresses(card_id: str, kind: str, channels: int) -> set:
     project = new_studio_project(name="cross-platform-test")
-    card = Card(id=card_id, model="ELA01", kind=kind, channels=channels)
+    card = Card(id=card_id, model="ELA01", channel_kinds={kind: channels})
     sync_points_for_card(project, card)
     return {p.address for p in project.points}
 

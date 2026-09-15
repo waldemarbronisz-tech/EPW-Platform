@@ -85,7 +85,8 @@
       "export_points": "Export Point List...",
       "exit": "Exit",
       "compare_saved": "Compare with Saved File...",
-      "compare_files": "Compare Two Projects..."
+      "compare_files": "Compare Two Projects...",
+      "device_wizard": "Device Wizard..."
     },
     "edit": {
       "undo": "Undo",
@@ -150,7 +151,15 @@
     "save_as": "Save As",
     "undo": "Undo",
     "redo": "Redo",
-    "help": "Help"
+    "help": "Help",
+    "logic_new": "New logic diagram",
+    "logic_open": "Open logic diagram...",
+    "logic_save": "Save logic diagram",
+    "logic_save_as": "Save logic diagram as...",
+    "synoptic_new": "New screen",
+    "synoptic_open": "Open screen...",
+    "synoptic_save": "Save screen",
+    "synoptic_save_as": "Save screen as..."
   },
   "canvas": {
     "distribute_h": "Distribute Horizontally",
@@ -221,7 +230,11 @@
     "open_dialog_title": "Open Project",
     "open_failed_title": "Could Not Open Project",
     "save_dialog_title": "Save Project",
-    "save_failed_title": "Could Not Save Project"
+    "save_failed_title": "Could Not Save Project",
+    "logic_not_compiled": "Logic saved as source only - it does not compile, so the controller keeps the previously compiled logic.",
+    "screens_unavailable_title": "Screens not saved",
+    "screens_unavailable_text": "The screen editor could not provide its document (its own validation refused, or it did not answer). Save the project with the PREVIOUSLY saved screens anyway?",
+    "logic_load_failed_title": "Could not open the project's logic"
   },
   "cards": {
     "col_id": "Id",
@@ -262,7 +275,10 @@
     "modbus_parity_e": "Even",
     "modbus_parity_o": "Odd",
     "modbus_host": "Gateway Address (IP):",
-    "modbus_tcp_port": "TCP Port:"
+    "modbus_tcp_port": "TCP Port:",
+    "col_channel_kinds": "Channels (kind and count)",
+    "channels_suffix": " ch.",
+    "kind_tooltip": "Tick if this card has {kind} channels, then enter how many."
   },
   "points": {
     "filter_card": "Card:",
@@ -298,7 +314,13 @@
     "dialog_feedback": "Feedback - {id}",
     "dialog_command": "Command - {id}",
     "duplicate_id_title": "Duplicate Id",
-    "duplicate_id_text": "A device with id \"{id}\" already exists. Enter a unique id."
+    "duplicate_id_text": "A device with id \"{id}\" already exists. Enter a unique id.",
+    "col_command_style": "Command style",
+    "col_pulse_ms": "Pulse",
+    "style_maintained": "MAINTAINED (level)",
+    "style_pulse": "PULSE (pulse per direction)",
+    "style_pulse_toggle": "PULSE_TOGGLE (single-coil impulse relay)",
+    "style_tooltip": "MAINTAINED - energized = ON (one coil), or one coil per direction held energized (two outputs).\nPULSE - a pulse per direction, separate coils; ON only when there is one output.\nPULSE_TOGGLE - ONE impulse-relay coil (R15/3P-class) behind one or two outputs: every pulse toggles, so the runtime pulses only when the feedback (first feedback point = CLOSED contact) says the device is not already in the requested state. Feedback is mandatory."
   },
   "zones": {
     "col_id": "Id",
@@ -441,7 +463,10 @@
     "msg_line_missing_point": "Supervised line \"{line}\" points to point {address}, which is not in the point registry.",
     "msg_process_missing_point": "Process protection \"{protection}\" points to point {address}, which is not in the point registry.",
     "msg_process_not_ai_point": "Process protection \"{protection}\" points to point {address}, which is not an analog input (AI).",
-    "msg_module_has_orphan_data": "Module \"{module}\" has data saved in the project but is not in the device composition - its branch is hidden, the data was not deleted."
+    "msg_module_has_orphan_data": "Module \"{module}\" has data saved in the project but is not in the device composition - its branch is hidden, the data was not deleted.",
+    "msg_device_pulse_missing_ms": "Apparatus \"{device}\": command style {style} needs a pulse time greater than 0 ms.",
+    "msg_device_toggle_needs_feedback": "Apparatus \"{device}\": PULSE_TOGGLE (single-coil impulse relay) needs a feedback point - every pulse toggles, so the current state must be known.",
+    "msg_device_toggle_too_many_outputs": "Apparatus \"{device}\": PULSE_TOGGLE takes one or two command outputs, this one has {n}."
   },
   "export": {
     "dialog_title": "Export Point List",
@@ -475,5 +500,42 @@
     "record_not_object": "Entry {field} is not an object - skipped.",
     "unknown_field": "Unknown field {field} - ignored.",
     "duplicate_id": "{field} repeats the identifier '{value}' - only the first occurrence is kept."
+  },
+  "wizard": {
+    "title": "Device Wizard",
+    "intro_title": "What this wizard does",
+    "intro_text": "It walks you through the configuration in the order the project needs it:\n\n1. Project information - name and author.\n2. Device composition - which modules this controller has.\n3. Locations - the places (cabinets, rooms) the addresses will refer to.\n4. I/O cards - the physical modules with their channel kinds and counts.\n\nCards give birth to points: every channel you declare here appears in the Point Registry automatically. Describing those points, wiring apparatus to them, drawing screens and building the logic all happen afterwards, in their own branches of the tree - the last page tells you where.",
+    "info_title": "1. Project information",
+    "info_subtitle": "The name is what the controller reports as its project; the author is for the record.",
+    "info_name": "Project name:",
+    "info_author": "Author:",
+    "info_description": "Description:",
+    "info_name_required": "Enter a project name to continue.",
+    "modules_title": "2. Device composition",
+    "modules_subtitle": "Tick the modules this controller actually has. A module outside the composition does not exist in the project - its branch is not shown at all. Modules already in the project stay ticked; remove one from the Device Composition branch, not here.",
+    "locations_title": "3. Locations",
+    "locations_subtitle": "Each location is a short code (letters A-Z and digits only, e.g. KOT for the boiler room) plus a description. A card sits in one location; every point on it inherits that location unless you override it later in the Point Registry.",
+    "locations_add": "Add location",
+    "locations_remove": "Remove selected",
+    "locations_invalid": "Location \"{code}\": code must consist only of letters A-Z and digits.",
+    "locations_duplicate": "Location code \"{code}\" repeats - each code must be unique.",
+    "cards_title": "4. I/O cards",
+    "cards_subtitle": "One row per physical module: an id (the first part of every address, e.g. ELA1 -> ELA1.DI.1), the model, which channel kinds it has and how many of each, its Modbus unit address and the location it sits in. A card with both DI and AI is ONE row with both ticked.",
+    "cards_add": "Add card",
+    "cards_remove": "Remove selected",
+    "cards_invalid_id": "Card \"{id}\": id must not be empty and must not contain a dot or a space.",
+    "cards_duplicate_id": "Card id \"{id}\" repeats - each id must be unique.",
+    "cards_no_kind": "Card \"{id}\" has no channel kind ticked - tick at least one, with its channel count.",
+    "cards_duplicate_modbus": "Modbus address {unit_id} is used by more than one card.",
+    "summary_title": "5. Summary and next steps",
+    "summary_subtitle": "Nothing is written until you press Finish.",
+    "summary_counts": "Project \"{name}\": {modules} module(s), {locations} location(s), {cards} card(s), {points} point(s) will be created.",
+    "summary_next_heading": "After Finish, continue in the tree:",
+    "next_points": "Point Registry - describe each channel (what is wired to it, technical note, location override).",
+    "next_devices": "Apparatus Registry - add the apparatus and assign its points.",
+    "next_alarm": "Intrusion Alarm / Protection - only if those modules are in the composition.",
+    "next_screens": "Synoptic Diagram - draw the screens and bind symbols to the points.",
+    "next_logic": "Logic - build the control logic on the same addresses.",
+    "next_save": "Save the project (top toolbar) - the wizard does not save the file itself."
   }
 }

@@ -232,7 +232,8 @@ export const createSimulationSlice: StateCreator<AppState, [], [], SimulationSli
         return;
       }
 
-      const pulse = request.style === 'PULSE' ? ` pulse ${request.pulseMs ?? '?'} ms` : '';
+      const pulse = request.style === 'PULSE' ? ` pulse ${request.pulseMs ?? '?'} ms`
+        : request.style === 'PULSE_TOGGLE' ? ` pulse ${request.pulseMs ?? '?'} ms (single-coil impulse relay, toggles)` : '';
       log('INFO',
         `${commandVerb(request)} ${request.circuit || request.objectLabel} -> ${request.output ?? 'no output'}${pulse}` +
         ` (${request.deviceLabel}).`);

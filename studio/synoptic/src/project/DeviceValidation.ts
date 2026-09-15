@@ -143,14 +143,23 @@ export function validateChannelAddress(addr: ChannelAddress, cards: CardEntry[])
     return issues;
   }
 
-  const card = cards.find(c => c.id === parsed.card);
+  // A card id can have more than one row, one per channelKind (an ELA
+  // card with both DI and AI channels, say - see the (id, kind)
+  // duplicate guard in studio/shell/project_panels.py's CardsPanel).
+  // Matching by id alone here would silently grab whichever same-id row
+  // happens to come first in `cards` regardless of `parsed.kind` - a
+  // perfectly valid "ELA1.AI.3" would then get compared against ELA1's
+  // DI row and misreported as a kind mismatch. The card this address
+  // actually names is the one row matching id AND kind together.
+  const card = cards.find(c => c.id === parsed.card && c.channelKind === parsed.kind);
   if (!card) {
-    issues.push({ severity: 'ERROR', code: 'CHANNEL_ADDRESS_UNKNOWN_CARD', message: `Channel address '${addr}' references unknown card '${parsed.card}'` });
+    const idExists = cards.some(c => c.id === parsed.card);
+    if (idExists) {
+      issues.push({ severity: 'ERROR', code: 'CHANNEL_ADDRESS_KIND_MISMATCH', message: `Channel address '${addr}' has kind '${parsed.kind}' but card '${parsed.card}' has no ${parsed.kind} row` });
+    } else {
+      issues.push({ severity: 'ERROR', code: 'CHANNEL_ADDRESS_UNKNOWN_CARD', message: `Channel address '${addr}' references unknown card '${parsed.card}'` });
+    }
     return issues;
-  }
-
-  if (card.channelKind !== parsed.kind) {
-    issues.push({ severity: 'ERROR', code: 'CHANNEL_ADDRESS_KIND_MISMATCH', message: `Channel address '${addr}' has kind '${parsed.kind}' but card '${card.id}' is '${card.channelKind}'` });
   }
 
   if (parsed.channel < 1 || parsed.channel > card.channelCount) {
@@ -219,9 +228,15 @@ export function validateDeviceFields(device: Device): ValidationIssue[] {
         issues.push({ severity: 'ERROR', code: 'SWITCHED_OUTPUT1_FORBIDDEN_DOOPEN', message: `Device '${id}': command.doOpen is not allowed when command.outputCount is 1`, deviceId: id });
       }
 
-      if (command.style === 'PULSE') {
+      if (command.style === 'PULSE' || command.style === 'PULSE_TOGGLE') {
         if (typeof command.pulseMs !== 'number' || !(command.pulseMs > 0)) {
-          issues.push({ severity: 'ERROR', code: 'SWITCHED_PULSE_MISSING_PULSEMS', message: `Device '${id}': command.style PULSE requires command.pulseMs greater than zero`, deviceId: id });
+          issues.push({ severity: 'ERROR', code: 'SWITCHED_PULSE_MISSING_PULSEMS', message: `Device '${id}': command.style ${command.style} requires command.pulseMs greater than zero`, deviceId: id });
+        }
+        // A single-coil impulse relay toggles on every pulse - without
+        // feedback the runtime cannot know whether a CLOSE would close
+        // it or open it, so blind operation is refused outright.
+        if (command.style === 'PULSE_TOGGLE' && feedback.mode === 'NONE') {
+          issues.push({ severity: 'ERROR', code: 'SWITCHED_TOGGLE_NEEDS_FEEDBACK', message: `Device '${id}': command.style PULSE_TOGGLE (single-coil impulse relay) requires feedback.mode SINGLE or DUAL - every pulse toggles, so the current state must be known`, deviceId: id });
         }
       } else if (command.style === 'MAINTAINED') {
         if (command.pulseMs !== undefined) {
@@ -420,8 +435,8 @@ function validateDeviceShape(raw: unknown, index: number, issues: ValidationIssu
         if (command.outputCount !== 1 && command.outputCount !== 2) {
           problems.push('command.outputCount must be 1 or 2');
         }
-        if (!['MAINTAINED', 'PULSE'].includes(command.style as string)) {
-          problems.push("command.style must be one of 'MAINTAINED','PULSE'");
+        if (!['MAINTAINED', 'PULSE', 'PULSE_TOGGLE'].includes(command.style as string)) {
+          problems.push("command.style must be one of 'MAINTAINED','PULSE','PULSE_TOGGLE'");
         }
       }
       if (isPlainObject(raw.safeState)) {
@@ -593,15 +608,23 @@ export function validateDeviceRegistry(registry: unknown): ValidationResult {
     }
   }
 
-  const seenCardIds = new Set<string>();
+  // A card id may legitimately repeat across channelKind - one physical
+  // module (an ELA card with both DI and AI channels, say) is more than
+  // one CardEntry, one per kind, sharing an id - see the (id, kind)
+  // duplicate guard in studio/shell/project_panels.py's CardsPanel,
+  // which is what this whole registry mirrors. Only the same id AND the
+  // same kind twice is a real conflict (two rows claiming to BE the
+  // same channel group).
+  const seenCardKeys = new Set<string>();
   for (const card of cards) {
     if (!/^[A-Z0-9]+$/.test(card.id)) {
       issues.push({ severity: 'ERROR', code: 'CARD_INVALID_ID', message: `Card id '${card.id}' must contain only A-Z and 0-9` });
     }
-    if (seenCardIds.has(card.id)) {
-      issues.push({ severity: 'ERROR', code: 'CARD_DUPLICATE_ID', message: `Duplicate card id '${card.id}'` });
+    const cardKey = `${card.id} ${card.channelKind}`;
+    if (seenCardKeys.has(cardKey)) {
+      issues.push({ severity: 'ERROR', code: 'CARD_DUPLICATE_ID', message: `Duplicate card id '${card.id}' and kind '${card.channelKind}'` });
     }
-    seenCardIds.add(card.id);
+    seenCardKeys.add(cardKey);
     if (!(card.channelCount > 0)) {
       issues.push({ severity: 'ERROR', code: 'CARD_INVALID_CHANNEL_COUNT', message: `Card '${card.id}' channelCount must be greater than zero` });
     }

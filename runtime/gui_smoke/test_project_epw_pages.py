@@ -25,7 +25,7 @@ def _project(tmp_path, modules=("protection_settings", "analog_inputs"), stages=
     from epw_os.core.project_manager import ProjectManager
     project = pf.new_project("Pages")
     project.modules = list(modules)
-    project.cards = [pf.Card(id="DI1", model="ELA01", kind="DI", channels=2, location="KOT")]
+    project.cards = [pf.Card(id="DI1", model="ELA01", channel_kinds={"DI": 2}, location="KOT")]
     project.points = [pf.Point(address="DI1.DI.1", description="Door contact", technical_note="X1:1"),
                       pf.Point(address="DI1.DI.2", location="MH")]
     project.electrical_protection_stages = [pf.ElectricalProtectionStage(**stage) for stage in stages]

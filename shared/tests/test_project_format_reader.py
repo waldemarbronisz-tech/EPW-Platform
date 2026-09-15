@@ -56,8 +56,8 @@ def test_studio_and_runtime_share_one_implementation_and_runtime_reads_what_stud
     project = studio_format.new_project("Kotłownia", author="W. B.")
     project.modules = ["intrusion", "analog_inputs"]
     project.locations = [studio_format.Location(code="KOT", description="Kotłownia")]
-    di = studio_format.Card(id="DI1", model="ELA01", kind="DI", channels=4, location="KOT")
-    do = studio_format.Card(id="DO1", model="ADA01", kind="DO", channels=2)
+    di = studio_format.Card(id="DI1", model="ELA01", channel_kinds={"DI": 4}, location="KOT")
+    do = studio_format.Card(id="DO1", model="ADA01", channel_kinds={"DO": 2})
     for card in (di, do):
         project.cards.append(card)
         sync_points_for_card(project, card)
@@ -105,7 +105,7 @@ def test_a_newer_schema_version_is_refused_naming_both_versions(tmp_path):
     ({"format": "EPW_PROJECT_FILE", "project": {"name": "x"}}, "schema_version"),
     ({"format": "EPW_PROJECT_FILE", "schema_version": 1}, "project"),
     (_minimal(project={"author": "nobody"}), "project.name"),
-    (_minimal(cards=[{"id": "DI1", "model": "ELA01", "kind": "DI"}]), "cards[0].channels"),
+    (_minimal(cards=[{"id": "DI1"}]), "cards[0].model"),
     (_minimal(points=[{"address": "DI1.DI.1"}, {"description": "no address"}]), "points[1].address"),
     (_minimal(devices=[{"id": "Q1"}]), "devices[0].behavior"),
     (_minimal(intrusion={"lines": [{"id": "L1", "name": "Door"}]}), "intrusion.lines[0].zone_id"),
@@ -153,16 +153,16 @@ def test_unknown_fields_and_repeated_ids_are_warnings_not_crashes(tmp_path):
     data = _minimal(
         cards=[{"id": "DI1", "model": "ELA01", "kind": "DI", "channels": 8, "colour": "red"},
                {"id": "DI1", "model": "ELA01", "kind": "DI", "channels": 16}],
-        screens=[],
+        gadgets=[],
     )
     result = shared_format.read_project(_write_raw(tmp_path / "extra.epw", data))
     assert result.ok, result.error
     assert _keys(result.warnings) == [
         ("unknown_field", "cards[0].colour"),
         ("duplicate_id", "cards[1].id"),
-        ("unknown_field", "screens"),
+        ("unknown_field", "gadgets"),
     ]
-    assert [(c.id, c.channels) for c in result.project.cards] == [("DI1", 8)]
+    assert [(c.id, c.channel_kinds) for c in result.project.cards] == [("DI1", {"DI": 8})]
 
 
 def _truncated_gzip() -> bytes:

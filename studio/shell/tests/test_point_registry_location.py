@@ -29,7 +29,7 @@ def test_a_fresh_points_combo_shows_the_inherited_card_location(tmp_path):
     _app()
     win = _window(tmp_path)
     win._project.locations.append(Location(code="KOT", description="Kotlownia"))
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     win._project.cards.append(card)
     sync_points_for_card(win._project, card)
 
@@ -45,7 +45,7 @@ def test_picking_a_code_sets_an_explicit_override(tmp_path):
     win = _window(tmp_path)
     win._project.locations.append(Location(code="KOT", description="Kotlownia"))
     win._project.locations.append(Location(code="PIWNICA", description="Piwnica"))
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     win._project.cards.append(card)
     sync_points_for_card(win._project, card)
 
@@ -61,7 +61,7 @@ def test_picking_inherit_again_clears_the_override(tmp_path):
     _app()
     win = _window(tmp_path)
     win._project.locations.append(Location(code="KOT", description="Kotlownia"))
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=1, location="KOT")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1}, location="KOT")
     win._project.cards.append(card)
     sync_points_for_card(win._project, card)
     win._project.points[0].location = "KOT"  # an explicit value, same text as the card's own
@@ -79,7 +79,7 @@ def test_set_location_for_selected_applies_to_every_selected_row(tmp_path, monke
     _app()
     win = _window(tmp_path)
     win._project.locations.append(Location(code="KOT", description="Kotlownia"))
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=3, location="")
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 3}, location="")
     win._project.cards.append(card)
     sync_points_for_card(win._project, card)
 

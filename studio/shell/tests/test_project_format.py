@@ -74,7 +74,7 @@ def test_round_trip_preserves_metadata(tmp_path):
 def test_round_trip_preserves_structural_collections(tmp_path):
     p = new_project("Test")
     p.modules = ["ELA01", "ADA01"]
-    p.cards = [Card(id="DI1", model="ELA01", kind="DI", channels=32)]
+    p.cards = [Card(id="DI1", model="ELA01", channel_kinds={"DI": 32})]
     p.locations = [Location(code="KOT", description="Kotłownia")]
     p.points = [
         Point(address="DI1.DI.1", description="Czujka", location="KOT"),
@@ -97,7 +97,7 @@ def test_round_trip_preserves_structural_collections(tmp_path):
 
     loaded = load_project(path)
     assert loaded.modules == ["ELA01", "ADA01"]
-    assert loaded.cards == [Card(id="DI1", model="ELA01", kind="DI", channels=32)]
+    assert loaded.cards == [Card(id="DI1", model="ELA01", channel_kinds={"DI": 32})]
     assert loaded.locations == [Location(code="KOT", description="Kotłownia")]
     assert len(loaded.points) == 2
     assert loaded.points[1].signal_type == "4-20mA"
@@ -333,13 +333,13 @@ def test_protection_section_present_with_only_electrical_configured():
 # driver to mirror field-for-field), a standard Modbus unit id / bus config.
 
 def test_card_modbus_unit_id_defaults_to_none():
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=8)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 8})
     assert card.modbus_unit_id is None
 
 
 def test_card_modbus_unit_id_round_trip(tmp_path):
     p = new_project("Test")
-    p.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=8, modbus_unit_id=3))
+    p.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 8}, modbus_unit_id=3))
     path = tmp_path / "projekt.epw"
     save_project(p, path)
     loaded = load_project(path)

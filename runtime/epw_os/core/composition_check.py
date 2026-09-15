@@ -4,20 +4,18 @@
 do sygnałów modułu, którego nie ma w składzie. Rozjazd = jasny komunikat
 przy starcie").
 
-WHAT THIS CHECK READS - stated plainly, because it has to move later.
-projekt.epw does not carry screens or logic yet: Studio keeps them in their
-own .epwlogic / .epwsyn files (separate task "Studio osadza ekrany, logikę
-i settings_hash w projekt.epw", shared/docs/PROJEKT_EPW_ZADANIA.md). So the
-check reads the two files runtime itself works with today, both named in
-controller.local.json:
+WHAT THIS CHECK READS. Task "Studio osadza ekrany i logikę w
+projekt.epw": the project's own embedded sections come first -
 
-  logic_project     the compiled logic (EPW_RUNTIME_LOGIC JSON) that
-                    LogicEngine.load_program() loads at every start;
-  synoptic_project  a .epwsyn screen file.
+  logic_runtime  the compiled logic (EPW_RUNTIME_LOGIC) Studio embeds on
+                 every save, the same document LogicEngine executes;
+  screens        the EPW_SYNOPTIC document (identical to a .epwsyn file).
 
-When screens and logic are embedded in projekt.epw, _sources() is the one
-place to change: read the project's `screens` and `logic` sections instead
-of these two paths. The signal rules below stay as they are.
+For a project saved before that task (no embedded sections) the check
+falls back to the two files named in controller.local.json - the compiled
+.epwlogic.runtime.json (`logic_project`) and a .epwsyn (`synoptic_project`).
+_sources() is the one place that decides; the signal rules below stay as
+they are whichever source they read.
 
 WHICH SIGNALS BELONG TO WHICH MODULE - only the tags a module creates
 itself, so a match is certain, never a guess:
@@ -56,8 +54,19 @@ class CompositionIssue:
     signals: list = field(default_factory=list)
 
 
-def _sources(logic_file, synoptic_file):
-    return [("logic", logic_file), ("screen", synoptic_file)]
+def _sources(logic_file, synoptic_file, logic_data=None, screens_data=None):
+    """[(kind, path-or-label, data-or-None)] - an embedded document wins
+    over the file of the same kind; a kind with neither is skipped."""
+    result = []
+    if logic_data:
+        result.append(("logic", "projekt.epw#logic_runtime", logic_data))
+    elif logic_file:
+        result.append(("logic", logic_file, None))
+    if screens_data:
+        result.append(("screen", "projekt.epw#screens", screens_data))
+    elif synoptic_file:
+        result.append(("screen", synoptic_file, None))
+    return result
 
 
 def _read_json(path):
@@ -80,12 +89,12 @@ def _collect_strings(node, out: set):
             _collect_strings(value, out)
 
 
-def find_signals_outside_composition(enabled_features: dict, logic_file=None, synoptic_file=None) -> list:
+def find_signals_outside_composition(enabled_features: dict, logic_file=None, synoptic_file=None,
+                                     logic_data=None, screens_data=None) -> list:
     issues = []
-    for source_kind, path in _sources(logic_file, synoptic_file):
-        if not path:
-            continue
-        data = _read_json(path)
+    for source_kind, path, data in _sources(logic_file, synoptic_file, logic_data, screens_data):
+        if data is None:
+            data = _read_json(path)
         if data is None:
             continue
         strings = set()

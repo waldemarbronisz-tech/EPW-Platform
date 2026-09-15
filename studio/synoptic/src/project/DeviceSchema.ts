@@ -58,10 +58,15 @@ export interface SwitchedDevice extends DeviceCommon {
   };
   command: {
     outputCount: 1 | 2;
-    style: 'MAINTAINED' | 'PULSE';
+    // PULSE_TOGGLE: one impulse-relay coil (R15/3P-class) behind one or
+    // two outputs - EVERY pulse toggles, whichever output (or a local
+    // push-button) delivered it, so the runtime pulses only when the
+    // feedback says the apparatus is not already in the requested
+    // state. feedback.mode NONE is therefore not allowed with it.
+    style: 'MAINTAINED' | 'PULSE' | 'PULSE_TOGGLE';
     doClose: ChannelAddress;   // always required
     doOpen?: ChannelAddress;   // required for outputCount 2, forbidden for 1
-    pulseMs?: number;          // required for PULSE, forbidden for MAINTAINED
+    pulseMs?: number;          // required for PULSE/PULSE_TOGGLE, forbidden for MAINTAINED
   };
   supervision: {
     confirmTimeoutMs: number;

@@ -1250,15 +1250,52 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to open project:\n{str(e)}")
                 return
-            self.scene.clear()
-            self.project = new_proj
-            self.engine.project = self.project
-            self.current_file = path
-            self.is_dirty = False
-            self.update_title()
-            self._reset_macro_nav()  # feat/macro-blocks: see _new_project()
-            self._refresh_project_dependent_panels()
-            self._reconstruct_scene()
+            self._install_project(new_proj, path)
+
+    def _install_project(self, new_proj, path):
+        """The one sequence that makes `new_proj` THE open project -
+        shared by _open_project_headless() (a .epwlogic file) and
+        load_project_data() (the document embedded in Studio's own
+        projekt.epw), so the two can never drift."""
+        self.scene.clear()
+        self.project = new_proj
+        self.engine.project = self.project
+        self.current_file = path
+        self.is_dirty = False
+        self.update_title()
+        self._reset_macro_nav()  # feat/macro-blocks: see _new_project()
+        self._refresh_project_dependent_panels()
+        self._reconstruct_scene()
+
+    def load_project_data(self, data: dict):
+        """Task "Studio osadza ekrany i logikę w projekt.epw": opens the
+        EPW_LOGIC document Studio keeps INSIDE projekt.epw (Project.logic)
+        - or a fresh empty project when it is empty. Raises whatever
+        Project.deserialize() raises (an unknown block type, a newer
+        schema) - Studio shows that, it must never be swallowed into an
+        empty canvas. No file path: the project file is Studio's."""
+        from logic_studio.core.project import Project
+        self.stop_simulation()
+        new_proj = Project.deserialize(data) if data else Project()
+        self._install_project(new_proj, None)
+
+    def export_runtime_data(self):
+        """The compiled EPW_RUNTIME_LOGIC document (what runtime's
+        LogicEngine executes) for the current project, or None when it
+        does not compile - the same Compiler/Exporter pair
+        _export_runtime() writes to a .epwlogic.runtime.json file, minus
+        the file dialog and the output-panel logging, so Studio's own
+        Save can embed it in projekt.epw (Project.logic_runtime)."""
+        from logic_studio.compiler.core import Compiler
+        from logic_studio.compiler.exporter import Exporter
+        comp = Compiler(self.project)
+        res = comp.compile()
+        if not res or "program" not in res:
+            return None
+        program = res["program"]
+        if not getattr(program, "execution_order", None):
+            return None
+        return Exporter(self.project, program.execution_order).export()
 
     def _open_project(self):
         if not self.check_dirty_prompt():

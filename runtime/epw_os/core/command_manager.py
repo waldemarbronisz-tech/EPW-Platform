@@ -95,8 +95,37 @@ class CommandManager:
                 pulse_ms=v.get("pulse_ms"),
                 feedback_tag=v.get("feedback_tag"),
                 feedback_value=v.get("feedback_value"),
-                timeout_ms=v.get("timeout_ms", 1500)
+                timeout_ms=v.get("timeout_ms", 1500),
+                skip_when_feedback_matches=bool(v.get("skip_when_feedback_matches", False)),
+                also_reset_tag=v.get("also_reset_tag"),
             )
+
+    def _feedback_already_satisfied(self, definition) -> bool:
+        """Task "wyłącznik jednocewkowy bistabilny": a single-coil impulse
+        relay toggles on EVERY pulse, so a CLOSE on an already-closed
+        apparatus must not pulse at all. Only consulted when the
+        definition asks for it (skip_when_feedback_matches); a missing or
+        non-GOOD feedback tag never counts as "already there" - the pulse
+        is then sent and the normal feedback/timeout path judges it."""
+        if not definition.skip_when_feedback_matches or not definition.feedback_tag:
+            return False
+        tag = self.tag_manager.get_tag(definition.feedback_tag)
+        if tag is None or getattr(tag, "quality", None) not in (None, "GOOD", getattr(tag, "quality", None)):
+            return False
+        quality = getattr(tag, "quality", "GOOD")
+        if str(getattr(quality, "value", quality)) != "GOOD":
+            return False
+        return tag.value == definition.feedback_value
+
+    def _release_pulse(self, definition):
+        """The second half of a PULSE-style output: `pulse_ms` after the
+        coil was energized, de-energize it again through the very same
+        driver boundary (route_command - Training Mode's cut applies to
+        the release exactly as it did to the pulse). Before this, pulse_ms
+        was carried in the definition but never acted on - every "pulsed"
+        output stayed energized forever."""
+        if self.driver_manager is not None:
+            self.driver_manager.route_command(definition.driver_id, definition.output_tag, False)
 
     def _on_tag_changed(self, tag_name, value, quality):
         if quality != "GOOD":
@@ -173,7 +202,21 @@ class CommandManager:
             
         record.state = CommandState.VALIDATED
         self.event_bus.emit("command_status", cmd_id, CommandState.VALIDATED, "Command validated")
-        
+
+        # Task "wyłącznik jednocewkowy bistabilny": after every safety/
+        # logic check above (a blocked command stays blocked), before
+        # anything reaches a driver - an impulse relay already in the
+        # requested state must NOT be pulsed, see _feedback_already_
+        # satisfied(). Resolved as SUCCESS: the requested state IS the
+        # actual state, which is all a command ever promises.
+        if self._feedback_already_satisfied(definition):
+            record.state = CommandState.SUCCESS
+            record.completed_at = time.time()
+            record.reason = "Already in requested state - impulse relay not pulsed"
+            self.event_bus.emit("command_status", cmd_id, CommandState.SUCCESS, record.reason)
+            self.event_bus.emit("command_executed", target, action, user)
+            return record
+
         # 4. Dispatch
         if self.driver_manager:
             # Task: presentation-mode scenarios "normal operation, manual
@@ -203,7 +246,18 @@ class CommandManager:
                 pending_armed = True
                 self._sync_pending_command_tag()
 
+            if definition.also_reset_tag:
+                # Two maintained coils: release the opposite one first,
+                # so both are never energized at once.
+                self.driver_manager.route_command(definition.driver_id, definition.also_reset_tag, False)
             success = self.driver_manager.route_command(definition.driver_id, definition.output_tag, definition.output_value)
+            if success and definition.pulse_ms:
+                # A PULSE-style output: energize now, release after
+                # pulse_ms - see _release_pulse().
+                import threading
+                release = threading.Timer(definition.pulse_ms / 1000.0, lambda: self._release_pulse(definition))
+                release.daemon = True
+                release.start()
 
             if success:
                 record.dispatched_at = time.time()

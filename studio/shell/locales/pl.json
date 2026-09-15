@@ -85,7 +85,8 @@
       "export_points": "Eksportuj listę punktów...",
       "exit": "Zamknij",
       "compare_saved": "Porównaj z zapisanym plikiem...",
-      "compare_files": "Porównaj dwa projekty..."
+      "compare_files": "Porównaj dwa projekty...",
+      "device_wizard": "Kreator urządzenia..."
     },
     "edit": {
       "undo": "Cofnij",
@@ -150,7 +151,15 @@
     "save_as": "Zapisz jako",
     "undo": "Cofnij",
     "redo": "Ponów",
-    "help": "Pomoc"
+    "help": "Pomoc",
+    "logic_new": "Nowy schemat logiki",
+    "logic_open": "Otwórz schemat logiki...",
+    "logic_save": "Zapisz schemat logiki",
+    "logic_save_as": "Zapisz schemat logiki jako...",
+    "synoptic_new": "Nowy ekran",
+    "synoptic_open": "Otwórz ekran...",
+    "synoptic_save": "Zapisz ekran",
+    "synoptic_save_as": "Zapisz ekran jako..."
   },
   "canvas": {
     "distribute_h": "Rozłóż poziomo",
@@ -221,7 +230,11 @@
     "open_dialog_title": "Otwórz projekt",
     "open_failed_title": "Nie udało się otworzyć projektu",
     "save_dialog_title": "Zapisz projekt",
-    "save_failed_title": "Nie udało się zapisać projektu"
+    "save_failed_title": "Nie udało się zapisać projektu",
+    "logic_not_compiled": "Logika zapisana tylko jako źródło - nie kompiluje się, więc sterownik zachowa poprzednio skompilowaną logikę.",
+    "screens_unavailable_title": "Ekrany nie zapisane",
+    "screens_unavailable_text": "Edytor ekranów nie oddał swojego dokumentu (odmówiła jego walidacja albo nie odpowiedział). Zapisać projekt z POPRZEDNIO zapisanymi ekranami?",
+    "logic_load_failed_title": "Nie udało się otworzyć logiki projektu"
   },
   "cards": {
     "col_id": "Id",
@@ -262,7 +275,10 @@
     "modbus_parity_e": "Parzysta",
     "modbus_parity_o": "Nieparzysta",
     "modbus_host": "Adres bramki (IP):",
-    "modbus_tcp_port": "Port TCP:"
+    "modbus_tcp_port": "Port TCP:",
+    "col_channel_kinds": "Kanały (rodzaj i liczba)",
+    "channels_suffix": " kan.",
+    "kind_tooltip": "Zaznacz, jeśli karta ma kanały {kind}, i podaj ich liczbę."
   },
   "points": {
     "filter_card": "Karta:",
@@ -298,7 +314,13 @@
     "dialog_feedback": "Odczyt (feedback) — {id}",
     "dialog_command": "Sterowanie (command) — {id}",
     "duplicate_id_title": "Zduplikowane id",
-    "duplicate_id_text": "Aparat o id \"{id}\" już istnieje. Wpisz unikalne id."
+    "duplicate_id_text": "Aparat o id \"{id}\" już istnieje. Wpisz unikalne id.",
+    "col_command_style": "Styl sterowania",
+    "col_pulse_ms": "Impuls",
+    "style_maintained": "MAINTAINED (poziom)",
+    "style_pulse": "PULSE (impuls na kierunek)",
+    "style_pulse_toggle": "PULSE_TOGGLE (przekaźnik impulsowy jednocewkowy)",
+    "style_tooltip": "MAINTAINED - zasilone = ZAŁĄCZONE (jedna cewka), albo jedna cewka na kierunek trzymana pod napięciem (dwa wyjścia).\nPULSE - impuls na kierunek, osobne cewki; przy jednym wyjściu tylko ZAŁĄCZ.\nPULSE_TOGGLE - JEDNA cewka przekaźnika impulsowego (klasa R15/3P) za jednym lub dwoma wyjściami: każdy impuls przełącza, więc runtime podaje impuls tylko wtedy, gdy sprzężenie (pierwszy punkt odczytu = styk ZAŁĄCZONY) mówi, że aparat nie jest już w żądanym stanie. Sprzężenie jest obowiązkowe."
   },
   "zones": {
     "col_id": "Id",
@@ -441,7 +463,10 @@
     "msg_line_missing_point": "Linia dozorowa \"{line}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
     "msg_process_missing_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, którego nie ma w rejestrze punktów.",
     "msg_process_not_ai_point": "Zabezpieczenie procesowe \"{protection}\" wskazuje punkt {address}, który nie jest wejściem analogowym (AI).",
-    "msg_module_has_orphan_data": "Moduł \"{module}\" ma zapisane dane w projekcie, ale nie jest w składzie urządzenia — jego gałąź jest ukryta, dane nie zostały skasowane."
+    "msg_module_has_orphan_data": "Moduł \"{module}\" ma zapisane dane w projekcie, ale nie jest w składzie urządzenia — jego gałąź jest ukryta, dane nie zostały skasowane.",
+    "msg_device_pulse_missing_ms": "Aparat \"{device}\": styl sterowania {style} wymaga czasu impulsu większego niż 0 ms.",
+    "msg_device_toggle_needs_feedback": "Aparat \"{device}\": PULSE_TOGGLE (przekaźnik impulsowy jednocewkowy) wymaga punktu odczytu - każdy impuls przełącza, więc trzeba znać stan bieżący.",
+    "msg_device_toggle_too_many_outputs": "Aparat \"{device}\": PULSE_TOGGLE przyjmuje jedno lub dwa wyjścia sterowania, ten ma {n}."
   },
   "export": {
     "dialog_title": "Eksportuj listę punktów",
@@ -475,5 +500,42 @@
     "record_not_object": "Wpis {field} nie jest obiektem - pominięty.",
     "unknown_field": "Nieznane pole {field} - zignorowane.",
     "duplicate_id": "{field} powtarza identyfikator '{value}' - zachowano tylko pierwsze wystąpienie."
+  },
+  "wizard": {
+    "title": "Kreator urządzenia",
+    "intro_title": "Co robi ten kreator",
+    "intro_text": "Prowadzi przez konfigurację w kolejności, jakiej wymaga projekt:\n\n1. Informacje o projekcie - nazwa i autor.\n2. Skład urządzenia - jakie moduły ma ten sterownik.\n3. Lokalizacje - miejsca (szafki, pomieszczenia), do których będą odnosić się adresy.\n4. Karty I/O - fizyczne moduły z rodzajami i liczbą kanałów.\n\nKarty rodzą punkty: każdy zadeklarowany tu kanał pojawi się automatycznie w Rejestrze punktów. Opisanie tych punktów, podpięcie aparatów, rysowanie ekranów i budowa logiki odbywają się potem, w ich własnych gałęziach drzewa - ostatnia strona mówi gdzie.",
+    "info_title": "1. Informacje o projekcie",
+    "info_subtitle": "Nazwa to to, co sterownik zgłasza jako swój projekt; autor - do dokumentacji.",
+    "info_name": "Nazwa projektu:",
+    "info_author": "Autor:",
+    "info_description": "Opis:",
+    "info_name_required": "Wpisz nazwę projektu, żeby przejść dalej.",
+    "modules_title": "2. Skład urządzenia",
+    "modules_subtitle": "Zaznacz moduły, które ten sterownik naprawdę ma. Moduł spoza składu nie istnieje w projekcie - jego gałąź w ogóle się nie pokazuje. Moduły już obecne w projekcie pozostają zaznaczone; usuwa się je w gałęzi Skład urządzenia, nie tutaj.",
+    "locations_title": "3. Lokalizacje",
+    "locations_subtitle": "Lokalizacja to krótki kod (tylko litery A-Z i cyfry, np. KOT dla kotłowni) plus opis. Karta stoi w jednej lokalizacji; każdy jej punkt dziedziczy tę lokalizację, chyba że nadpiszesz ją później w Rejestrze punktów.",
+    "locations_add": "Dodaj lokalizację",
+    "locations_remove": "Usuń zaznaczoną",
+    "locations_invalid": "Lokalizacja \"{code}\": kod musi składać się wyłącznie z liter A-Z i cyfr.",
+    "locations_duplicate": "Kod lokalizacji \"{code}\" się powtarza - każdy kod musi być unikalny.",
+    "cards_title": "4. Karty I/O",
+    "cards_subtitle": "Jeden wiersz na fizyczny moduł: id (pierwszy człon każdego adresu, np. ELA1 -> ELA1.DI.1), model, jakie rodzaje kanałów ma i ile każdego, adres jednostki Modbus oraz lokalizacja, w której stoi. Karta mająca DI i AI to JEDEN wiersz z oboma zaznaczonymi.",
+    "cards_add": "Dodaj kartę",
+    "cards_remove": "Usuń zaznaczoną",
+    "cards_invalid_id": "Karta \"{id}\": id nie może być puste ani zawierać kropki lub spacji.",
+    "cards_duplicate_id": "Id karty \"{id}\" się powtarza - każde id musi być unikalne.",
+    "cards_no_kind": "Karta \"{id}\" nie ma zaznaczonego żadnego rodzaju kanałów - zaznacz co najmniej jeden i podaj liczbę.",
+    "cards_duplicate_modbus": "Adres Modbus {unit_id} jest użyty przez więcej niż jedną kartę.",
+    "summary_title": "5. Podsumowanie i dalsze kroki",
+    "summary_subtitle": "Nic nie zostanie zapisane, dopóki nie naciśniesz Zakończ.",
+    "summary_counts": "Projekt \"{name}\": powstanie {modules} moduł(ów), {locations} lokalizacja(e), {cards} kart(a/y), {points} punkt(ów).",
+    "summary_next_heading": "Po Zakończ kontynuuj w drzewie:",
+    "next_points": "Rejestr punktów - opisz każdy kanał (co jest do niego podpięte, notatka techniczna, nadpisanie lokalizacji).",
+    "next_devices": "Rejestr aparatów - dodaj aparaty i przypisz im punkty.",
+    "next_alarm": "Alarmówka / Zabezpieczenia - tylko jeśli te moduły są w składzie.",
+    "next_screens": "Schemat synoptyczny - narysuj ekrany i powiąż symbole z punktami.",
+    "next_logic": "Logika - zbuduj logikę sterowania na tych samych adresach.",
+    "next_save": "Zapisz projekt (górny pasek) - kreator sam nie zapisuje pliku."
   }
 }

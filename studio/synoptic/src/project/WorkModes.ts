@@ -6,9 +6,18 @@
 // anything: drawing a room round a boiler house picked up the valve under
 // the cursor.
 //
-// A mode decides what a click can reach. Everything else stays on screen
-// at full strength - you draw a room AROUND the devices, so you have to
-// see them - it just does not take clicks, marquee selection or Ctrl+A.
+// A mode decides which TOOLS are offered (and which options bar shows).
+// It used to also decide what a click could reach - only the mode's own
+// kinds took clicks, marquee selection or Ctrl+A. User report ("złe
+// przemieszczanie, przemieszcza tylko to w jakim trybie jest [...] chcę
+// żeby bez względu na tryb edycja była możliwa cały czas"): a busbar
+// could not be moved while in Symbols mode, a breaker not while in
+// Connections mode. Editing - select, move, delete - is mode-
+// independent now; isKindActive()/restrictSelectionToMode() below keep
+// their signatures for the callers but never exclude anything. What
+// still protects "drawing a room round a boiler house" from picking up
+// the valve under the cursor is the ARMED TOOL (isDrawingWall/Room/
+// Frame/Connection), not the mode.
 //
 // Pure: no store, no Konva. Canvas and the store ask this file.
 
@@ -65,12 +74,17 @@ const MODE_KINDS: Record<WorkMode, ElementKind[]> = {
   ANNOTATIONS: ['annotation'],
 };
 
-/** Whether elements of `kind` take clicks and selection in `mode`. */
-export function isKindActive(mode: WorkMode, kind: ElementKind): boolean {
+/** Whether elements of `kind` are the ones `mode` offers TOOLS for (the mode's own kinds). Never gates clicks - see the header. */
+export function isKindOfMode(mode: WorkMode, kind: ElementKind): boolean {
   return MODE_KINDS[mode].includes(kind);
 }
 
-/** The mode in which elements of `kind` can be edited. */
+/** Whether elements of `kind` take clicks and selection in `mode` - always: editing is mode-independent (see the header). */
+export function isKindActive(_mode: WorkMode, _kind: ElementKind): boolean {
+  return true;
+}
+
+/** The mode whose tools draw elements of `kind`. */
 export function modeForKind(kind: ElementKind): WorkMode {
   return WORK_MODES.find(mode => MODE_KINDS[mode].includes(kind)) ?? DEFAULT_WORK_MODE;
 }
@@ -93,26 +107,21 @@ export interface SelectionIds {
   wallIds: string[];
 }
 
-/** `selection` with everything the mode cannot reach dropped - what a marquee, Ctrl+A or a mode switch may leave selected. */
+/** What a marquee, Ctrl+A or a mode switch may leave selected: everything - editing is mode-independent (see the header). Kept as the one place that rule lives, so a future change is one line. */
 export function restrictSelectionToMode(
   selection: SelectionIds,
-  objects: { id: string; type: string }[],
-  mode: WorkMode
+  _objects: { id: string; type: string }[],
+  _mode: WorkMode
 ): SelectionIds {
-  const typeOf = new Map(objects.map(o => [o.id, o.type]));
-  const keep = (kind: ElementKind, ids: string[]) => (isKindActive(mode, kind) ? ids : []);
   return {
-    objectIds: selection.objectIds.filter(id => {
-      const type = typeOf.get(id);
-      return type !== undefined && isKindActive(mode, objectKind(type));
-    }),
-    connectionIds: keep('connection', selection.connectionIds),
-    meterIds: keep('meter', selection.meterIds),
-    signalPanelIds: keep('signalPanel', selection.signalPanelIds),
-    frameIds: keep('frame', selection.frameIds),
-    groupCommandIds: keep('groupCommand', selection.groupCommandIds),
-    setpointPanelIds: keep('setpointPanel', selection.setpointPanelIds),
-    wallIds: keep('wall', selection.wallIds),
+    objectIds: [...selection.objectIds],
+    connectionIds: [...selection.connectionIds],
+    meterIds: [...selection.meterIds],
+    signalPanelIds: [...selection.signalPanelIds],
+    frameIds: [...selection.frameIds],
+    groupCommandIds: [...selection.groupCommandIds],
+    setpointPanelIds: [...selection.setpointPanelIds],
+    wallIds: [...selection.wallIds],
   };
 }
 

@@ -36,10 +36,14 @@ class DeviceModel:
     rule for the project.settings-based (non-bridged) path - every ELA
     module in a standalone project still shares one channel count, same
     as before. A bridged project has NO such limit: each external card
-    carries its own `channels`, exactly matching Studio's own per-card
-    Card.channels (get_ela_device_channels()/get_ada_device_channels()
-    below are what both get_ela_addresses() and device_explorer.py's own
-    tree build from, so the two can never disagree)."""
+    carries its own `channels`, exactly matching Studio's own per-(card,
+    kind) Card.channel_kinds[kind] - a single Studio Card with several
+    kinds (task follow-up: "karta ELA1 ma DI oraz AI") flattens to one
+    external_cards entry per kind, same id, so this dict is still always
+    {"id", "kind", "channels"} with one kind each, never a nested shape
+    (get_ela_device_channels()/get_ada_device_channels() below are what
+    both get_ela_addresses() and device_explorer.py's own tree build
+    from, so the two can never disagree)."""
 
     ELA_CHANNELS = 32
     ADA_CHANNELS = 32

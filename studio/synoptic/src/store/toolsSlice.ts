@@ -4,7 +4,7 @@ import type { SynopticConnection } from './types';
 import type { AppState } from './appState';
 import { WALL_DEFAULT_THICKNESS, WALL_DEFAULT_HEIGHT, clampWallThickness, clampWallHeight } from '../elements/WallElement';
 import { DEFAULT_WALL_MATERIAL } from '../theme/Materials';
-import { DEFAULT_WORK_MODE, restrictSelectionToMode, TOOL_MODE } from '../project/WorkModes';
+import { DEFAULT_WORK_MODE, TOOL_MODE } from '../project/WorkModes';
 
 // The canvas viewport and the currently-armed drawing tool (wire/frame/
 // building) and its options - all UI/interaction state, none of it ever
@@ -53,36 +53,19 @@ export const createToolsSlice: StateCreator<AppState, [], [], ToolsSlice> = (set
   wireRoutingMode: 'AVOID' as 'STRAIGHT' | 'AVOID',
 
   // feat/synoptic-modes: arming a tool switches to the work mode it
-  // belongs to, so what it draws can be selected straight afterwards.
-  setWorkMode: (mode) => set((state) => {
-    const kept = restrictSelectionToMode({
-      objectIds: state.selectedIds,
-      connectionIds: state.selectedConnectionIds,
-      meterIds: state.selectedMeterIds,
-      signalPanelIds: state.selectedSignalPanelIds,
-      frameIds: state.selectedFrameIds,
-      groupCommandIds: state.selectedGroupCommandIds,
-      setpointPanelIds: state.selectedSetpointPanelIds,
-      wallIds: state.selectedWallIds,
-    }, state.objects, mode);
-    return {
-      workMode: mode,
-      // A tool of another mode is put down: it could only draw things
-      // this mode cannot select.
-      isDrawingConnection: mode === TOOL_MODE.wire ? state.isDrawingConnection : false,
-      isDrawingWall: mode === TOOL_MODE.wall ? state.isDrawingWall : false,
-      isDrawingRoom: mode === TOOL_MODE.room ? state.isDrawingRoom : false,
-      isDrawingFrame: mode === TOOL_MODE.frame ? state.isDrawingFrame : false,
-      selectedIds: kept.objectIds,
-      selectedConnectionIds: kept.connectionIds,
-      selectedMeterIds: kept.meterIds,
-      selectedSignalPanelIds: kept.signalPanelIds,
-      selectedFrameIds: kept.frameIds,
-      selectedGroupCommandIds: kept.groupCommandIds,
-      selectedSetpointPanelIds: kept.setpointPanelIds,
-      selectedWallIds: kept.wallIds,
-    };
-  }),
+  // belongs to. The selection is left alone - editing is mode-
+  // independent (WorkModes.ts header, user report "bez względu na tryb
+  // edycja była możliwa cały czas"); switching modes used to drop
+  // everything the new mode "could not reach".
+  setWorkMode: (mode) => set((state) => ({
+    workMode: mode,
+    // A tool of another mode is put down: its tool button is no longer
+    // on the toolbar, so a still-armed tool would be invisible.
+    isDrawingConnection: mode === TOOL_MODE.wire ? state.isDrawingConnection : false,
+    isDrawingWall: mode === TOOL_MODE.wall ? state.isDrawingWall : false,
+    isDrawingRoom: mode === TOOL_MODE.room ? state.isDrawingRoom : false,
+    isDrawingFrame: mode === TOOL_MODE.frame ? state.isDrawingFrame : false,
+  })),
 
   setDrawingMode: (active) => {
     if (active) get().setWorkMode(TOOL_MODE.wire);

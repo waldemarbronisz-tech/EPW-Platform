@@ -1,16 +1,20 @@
 /** @vitest-environment jsdom */
 // feat/synoptic-modes: work modes - SYMBOLS, ROOMS, CONNECTIONS, ANNOTATIONS.
 //
-// The point of a mode is what a click CAN'T reach: drawing a room must not
-// pick up the valve under the cursor, a marquee round a room must not take
-// its luminaires. These tests check that content - which kinds each mode
-// reaches, what a selection keeps, what Ctrl+A takes, what arming a tool
-// does - not merely that the functions exist.
+// A mode picks the TOOLS on offer (and which options bar shows). It used
+// to also decide what a click could reach; user report ("złe
+// przemieszczanie, przemieszcza tylko to w jakim trybie jest [...] bez
+// względu na tryb edycja była możliwa cały czas") turned that off:
+// selecting, marquee, Ctrl+A and moving work on everything in every
+// mode. These tests check that content - which kinds each mode offers
+// tools for, that nothing is ever excluded from a selection, what Ctrl+A
+// takes, what arming a tool does - not merely that the functions exist.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import {
-  isKindActive, modeFromShortcut, objectKind, restrictSelectionToMode, WORK_MODES, WORK_MODE_SHORTCUTS, workModeTitle,
+  isKindActive, isKindOfMode, modeFromShortcut, objectKind, restrictSelectionToMode, WORK_MODES, WORK_MODE_SHORTCUTS,
+  workModeTitle,
 } from '../project/WorkModes';
 import { editorShortcut } from '../utils/EditorShortcuts';
 import { useStore } from '../store';
@@ -57,17 +61,25 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('what each mode can reach', () => {
-  it('splits the four modes into disjoint kinds: symbols and panels / walls and frames / wires / text', () => {
-    expect(isKindActive('SYMBOLS', 'symbol')).toBe(true);
-    expect(isKindActive('SYMBOLS', 'meter')).toBe(true);
-    expect(isKindActive('SYMBOLS', 'wall')).toBe(false);
-    expect(isKindActive('ROOMS', 'wall')).toBe(true);
-    expect(isKindActive('ROOMS', 'frame')).toBe(true);
-    expect(isKindActive('ROOMS', 'symbol')).toBe(false);
-    expect(isKindActive('CONNECTIONS', 'connection')).toBe(true);
-    expect(isKindActive('CONNECTIONS', 'symbol')).toBe(false);
-    expect(isKindActive('ANNOTATIONS', 'annotation')).toBe(true);
-    expect(isKindActive('ANNOTATIONS', 'symbol')).toBe(false);
+  it('splits the four modes into disjoint TOOL kinds: symbols and panels / walls and frames / wires / text', () => {
+    expect(isKindOfMode('SYMBOLS', 'symbol')).toBe(true);
+    expect(isKindOfMode('SYMBOLS', 'meter')).toBe(true);
+    expect(isKindOfMode('SYMBOLS', 'wall')).toBe(false);
+    expect(isKindOfMode('ROOMS', 'wall')).toBe(true);
+    expect(isKindOfMode('ROOMS', 'frame')).toBe(true);
+    expect(isKindOfMode('ROOMS', 'symbol')).toBe(false);
+    expect(isKindOfMode('CONNECTIONS', 'connection')).toBe(true);
+    expect(isKindOfMode('CONNECTIONS', 'symbol')).toBe(false);
+    expect(isKindOfMode('ANNOTATIONS', 'annotation')).toBe(true);
+    expect(isKindOfMode('ANNOTATIONS', 'symbol')).toBe(false);
+  });
+
+  it('user report "bez względu na tryb edycja była możliwa cały czas": every kind takes clicks in every mode', () => {
+    for (const mode of WORK_MODES) {
+      for (const kind of ['symbol', 'annotation', 'wall', 'frame', 'connection', 'meter', 'signalPanel', 'groupCommand', 'setpointPanel'] as const) {
+        expect(isKindActive(mode, kind)).toBe(true);
+      }
+    }
   });
 
   it('treats text boxes, labels and plain shapes as annotations and everything else as symbols', () => {
@@ -78,13 +90,10 @@ describe('what each mode can reach', () => {
     expect(objectKind('building.door')).toBe('symbol');
   });
 
-  it('a ROOMS marquee keeps the walls and the frame and drops the valve, the label, the wire and the meter', () => {
-    expect(restrictSelectionToMode(selection, objects, 'ROOMS')).toEqual({
-      objectIds: [], connectionIds: [], meterIds: [], signalPanelIds: [], frameIds: ['frame'],
-      groupCommandIds: [], setpointPanelIds: [], wallIds: ['w1', 'w2'],
-    });
-    expect(restrictSelectionToMode(selection, objects, 'SYMBOLS').objectIds).toEqual(['valve']);
-    expect(restrictSelectionToMode(selection, objects, 'ANNOTATIONS').objectIds).toEqual(['label']);
+  it('a marquee keeps everything it caught - walls, frame, valve, label, wire and meter - in every mode', () => {
+    for (const mode of WORK_MODES) {
+      expect(restrictSelectionToMode(selection, objects, mode)).toEqual(selection);
+    }
   });
 });
 
@@ -109,13 +118,13 @@ describe('keyboard', () => {
 });
 
 describe('the store', () => {
-  it('switching to ROOMS puts the wire tool down and keeps only the walls of the selection', () => {
+  it('switching to ROOMS puts the wire tool down and leaves the whole selection alone', () => {
     useStore.setState({ isDrawingConnection: true, selectedIds: ['valve'], selectedWallIds: ['w1'] });
     useStore.getState().setWorkMode('ROOMS');
     const s = useStore.getState();
     expect(s.workMode).toBe('ROOMS');
     expect(s.isDrawingConnection).toBe(false);
-    expect(s.selectedIds).toEqual([]);
+    expect(s.selectedIds).toEqual(['valve']);
     expect(s.selectedWallIds).toEqual(['w1']);
   });
 
@@ -129,20 +138,16 @@ describe('the store', () => {
     expect(useStore.getState().workMode).toBe('ROOMS');
   });
 
-  it('Ctrl+A takes only what the mode reaches', () => {
-    useStore.getState().setWorkMode('ROOMS');
-    useStore.getState().selectAll();
-    let s = useStore.getState();
-    expect(s.selectedWallIds).toEqual(['w1', 'w2']);
-    expect(s.selectedFrameIds).toEqual(['frame']);
-    expect(s.selectedIds).toEqual([]);
-    expect(s.selectedConnectionIds).toEqual([]);
-
-    useStore.getState().setWorkMode('SYMBOLS');
-    useStore.getState().selectAll();
-    s = useStore.getState();
-    expect(s.selectedIds).toEqual(['valve']);
-    expect(s.selectedWallIds).toEqual([]);
+  it('Ctrl+A takes everything on the screen, whatever the mode', () => {
+    for (const mode of ['ROOMS', 'SYMBOLS'] as const) {
+      useStore.getState().setWorkMode(mode);
+      useStore.getState().selectAll();
+      const s = useStore.getState();
+      expect(s.selectedWallIds).toEqual(['w1', 'w2']);
+      expect(s.selectedFrameIds).toEqual(['frame']);
+      expect(s.selectedIds.sort()).toEqual(['label', 'valve']);
+      expect(s.selectedConnectionIds).toEqual(['wire']);
+    }
   });
 });
 

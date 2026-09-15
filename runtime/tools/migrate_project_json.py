@@ -144,13 +144,13 @@ def migrate(source, target, state_file=None, settings_file=None, analog_card="AI
         channels = max(channel for channel, _ in assignments)
         card = next((c for c in project.cards if c.id == analog_card), None)
         if card is None:
-            card = pf.Card(id=analog_card, model="", kind="AI", channels=channels)
+            card = pf.Card(id=analog_card, model="", channel_kinds={"AI": channels})
             project.cards.append(card)
-        elif card.kind != "AI":
+        elif set(card.channel_kinds) != {"AI"}:
             raise MigrationError(tr("migration.card_not_ai", "Card {card} already exists and is not an AI card.",
                                     card=analog_card))
         else:
-            card.channels = max(card.channels, channels)
+            card.channel_kinds["AI"] = max(card.channel_kinds["AI"], channels)
         existing = {p.address for p in project.points}
         for channel, record in assignments:
             address = f"{analog_card}.AI.{channel}"
@@ -160,7 +160,7 @@ def migrate(source, target, state_file=None, settings_file=None, analog_card="AI
             project.points.append(_analog_point(address, record))
             existing.add(address)
             report["points_added"].append((str(record.get("tag", "")), address))
-        for channel in range(1, card.channels + 1):
+        for channel in range(1, card.channel_kinds["AI"] + 1):
             address = f"{analog_card}.AI.{channel}"
             if address not in existing:
                 project.points.append(pf.Point(address=address))

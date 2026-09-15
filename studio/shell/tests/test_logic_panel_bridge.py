@@ -32,7 +32,7 @@ def test_studio_card_becomes_a_logic_studio_device(tmp_path):
     panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
     from logic_studio.core.device_model import DeviceModel
     studio_project = new_project("Test")
-    studio_project.cards.append(Card(id="KARTA1", model="ELA01", kind="DI", channels=4))
+    studio_project.cards.append(Card(id="KARTA1", model="ELA01", channel_kinds={"DI": 4}))
 
     panel.sync_cards_from_studio(studio_project)
 
@@ -45,11 +45,11 @@ def test_a_card_added_later_appears_after_the_next_sync(tmp_path):
     panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
     from logic_studio.core.device_model import DeviceModel
     studio_project = new_project("Test")
-    studio_project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=2))
+    studio_project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}))
     panel.sync_cards_from_studio(studio_project)
     assert len(DeviceModel.get_ela_addresses(panel.main_window().project)) == 2
 
-    studio_project.cards.append(Card(id="ELA2", model="ELA01", kind="DI", channels=2))
+    studio_project.cards.append(Card(id="ELA2", model="ELA01", channel_kinds={"DI": 2}))
     panel.sync_cards_from_studio(studio_project)
 
     addrs = DeviceModel.get_ela_addresses(panel.main_window().project)
@@ -63,7 +63,7 @@ def test_a_removed_card_disappears_from_the_address_list(tmp_path):
     panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
     from logic_studio.core.device_model import DeviceModel
     studio_project = new_project("Test")
-    card = Card(id="ELA1", model="ELA01", kind="DI", channels=2)
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2})
     studio_project.cards.append(card)
     panel.sync_cards_from_studio(studio_project)
     assert DeviceModel.get_ela_addresses(panel.main_window().project) == ["ELA1.DI.1", "ELA1.DI.2"]
@@ -93,13 +93,34 @@ def test_cards_with_different_channel_counts_are_not_flattened(tmp_path):
     panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
     from logic_studio.core.device_model import DeviceModel
     studio_project = new_project("Test")
-    studio_project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=8))
-    studio_project.cards.append(Card(id="ELA2", model="ELA01", kind="DI", channels=16))
+    studio_project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 8}))
+    studio_project.cards.append(Card(id="ELA2", model="ELA01", channel_kinds={"DI": 16}))
     panel.sync_cards_from_studio(studio_project)
 
     project = panel.main_window().project
     pairs = dict(DeviceModel.get_ela_device_channels(project))
     assert pairs == {"ELA1": 8, "ELA2": 16}
+
+
+def test_a_card_with_more_than_one_kind_reaches_both_families(tmp_path):
+    """User report: "karta ELA1 ma DI oraz AI" - one Studio Card with
+    two kinds must flatten to a DI entry AND an AI entry in
+    external_cards, both under the same id, not just whichever kind
+    happens to be checked first."""
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+    studio_project = new_project("Test")
+    studio_project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 8, "AI": 4}))
+    panel.sync_cards_from_studio(studio_project)
+
+    project = panel.main_window().project
+    assert DeviceModel.get_ela_addresses(project) == [f"ELA1.DI.{n}" for n in range(1, 9)]
+    # AI has no Logic Studio module-list equivalent (device_model.py's
+    # own docstring) - it must not have silently swallowed the DI
+    # entry either, so this is really proving the flat-map covers DI,
+    # not that AI is expected to show up here too.
+    assert dict(DeviceModel.get_ela_device_channels(project)) == {"ELA1": 8}
 
 
 def test_resyncing_with_no_change_does_not_rebuild_panels(tmp_path):
@@ -109,7 +130,7 @@ def test_resyncing_with_no_change_does_not_rebuild_panels(tmp_path):
     _app()
     panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
     studio_project = new_project("Test")
-    studio_project.cards.append(Card(id="ELA1", model="ELA01", kind="DI", channels=2))
+    studio_project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 2}))
     panel.sync_cards_from_studio(studio_project)
 
     calls = []
@@ -121,6 +142,6 @@ def test_resyncing_with_no_change_does_not_rebuild_panels(tmp_path):
     panel.sync_cards_from_studio(studio_project)  # still nothing card-related changed
     assert calls == []
 
-    studio_project.cards.append(Card(id="ELA2", model="ELA01", kind="DI", channels=2))
+    studio_project.cards.append(Card(id="ELA2", model="ELA01", channel_kinds={"DI": 2}))
     panel.sync_cards_from_studio(studio_project)  # a real card change
     assert calls == [1]

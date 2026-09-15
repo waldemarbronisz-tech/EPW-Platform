@@ -93,7 +93,9 @@ describe('Selection across kinds (Shift+click, Ctrl+A, Escape)', () => {
 
   // feat/synoptic-modes: Ctrl+A takes what the work mode reaches -
   // symbols and meters in SYMBOLS, the wires in CONNECTIONS.
-  it('selectAll selects every object and meter in SYMBOLS mode, and the connections in CONNECTIONS mode', () => {
+  it('selectAll selects every object, meter and connection - in SYMBOLS mode and in CONNECTIONS mode alike', () => {
+    // User report ("bez względu na tryb edycja była możliwa cały czas"):
+    // the work mode picks tools, never what Ctrl+A reaches.
     useStore.setState({ workMode: 'SYMBOLS' });
     useStore.setState({
       objects: [makeObj('A', 0, 0), makeObj('B', 100, 100)],
@@ -102,17 +104,13 @@ describe('Selection across kinds (Shift+click, Ctrl+A, Escape)', () => {
     });
     useStore.getState().addMeter({ x: 0, y: 0, width: 200, fontSize: 12, rows: [] });
 
-    useStore.getState().selectAll();
-
-    expect(useStore.getState().selectedIds.sort()).toEqual(['A', 'B']);
-    expect(useStore.getState().selectedConnectionIds).toEqual([]);
-    expect(useStore.getState().selectedMeterIds.length).toBe(1);
-
-    useStore.getState().setWorkMode('CONNECTIONS');
-    useStore.getState().selectAll();
-    expect(useStore.getState().selectedConnectionIds).toEqual(['W1']);
-    expect(useStore.getState().selectedIds).toEqual([]);
-    expect(useStore.getState().selectedMeterIds).toEqual([]);
+    for (const mode of ['SYMBOLS', 'CONNECTIONS'] as const) {
+      useStore.getState().setWorkMode(mode);
+      useStore.getState().selectAll();
+      expect(useStore.getState().selectedIds.sort()).toEqual(['A', 'B']);
+      expect(useStore.getState().selectedConnectionIds).toEqual(['W1']);
+      expect(useStore.getState().selectedMeterIds.length).toBe(1);
+    }
     useStore.setState({ workMode: 'SYMBOLS' });
   });
 

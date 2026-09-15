@@ -111,14 +111,24 @@ def build_project_view(project) -> dict:
         },
         "modules": list(project.modules),
         "enabled_features": {feature: feature in project.modules for feature in TOGGLABLE_FEATURES},
-        "devices": [{"id": c.id, "kind": c.kind, "model": c.model, "channels": c.channels} for c in project.cards],
+        # A Card can now have more than one channel kind (task follow-up,
+        # user report: "karta ELA1 ma DI oraz AI") - TagManager.configure()
+        # (the sole consumer of this list) still expects the flat, one-
+        # kind-per-entry shape it always has, so one Card flattens to one
+        # entry per kind here rather than TagManager needing to change.
+        "devices": [
+            {"id": c.id, "kind": kind, "model": c.model, "channels": channels}
+            for c in project.cards
+            for kind, channels in c.channel_kinds.items()
+        ],
         "point_registry": registry,
         "tag_descriptions": {p["address"]: p["description"] for p in registry if p["description"]},
         "output_descriptions": {p["address"]: p["description"] for p in registry
                                 if p["description"] and p["kind"] == "DO"},
         "analog_points": [_analog_record(p) for p in project.points if point_kind(p.address) == "AI"],
         "apparatuses": [{"id": d.id, "behavior": d.behavior, "kind": d.kind,
-                         "feedback": list(d.feedback), "command": list(d.command)} for d in project.devices],
+                         "feedback": list(d.feedback), "command": list(d.command),
+                         "command_style": d.command_style, "pulse_ms": d.pulse_ms} for d in project.devices],
         "intrusion_zones": [asdict(z) for z in project.zones],
         "intrusion_lines": [asdict(l) for l in project.lines],
         "intrusion_power_supervision": _power_supervision_view(project.power_supervision),

@@ -134,8 +134,8 @@ class LogicPanel(QWidget):
 
     def sync_cards_from_studio(self, studio_project) -> None:
         """Task "jedno źródło listy kart": mirrors Studio's real Card list
-        (studio/shell/project_format.py's Card - id/kind/channels) into
-        the embedded Logic Studio project's `external_cards`, which
+        (studio/shell/project_format.py's Card - id/model/channel_kinds)
+        into the embedded Logic Studio project's `external_cards`, which
         logic_studio.core.device_model.DeviceModel then treats as the
         ONLY source for get_ela_devices()/get_ada_devices()/get_ela_
         addresses()/etc. - see that module's own docstring. Call after
@@ -150,9 +150,16 @@ class LogicPanel(QWidget):
         computed card list is DIFFERENT from what was already set, not on
         every unrelated project edit (point renamed, metadata changed,
         ...) that leaves project.cards itself untouched."""
+        # A Studio Card can now have more than one channel kind (task
+        # follow-up, user report: "karta ELA1 ma DI oraz AI") - flattened
+        # to one {"id","kind","channels"} entry per kind here, since
+        # DeviceModel's own get_ela_device_channels()/get_ada_device_
+        # channels() (and the "ELA"/"ADA" split beneath them) already
+        # expect exactly that flat, one-kind-per-entry shape.
         new_cards = [
-            {"id": c.id, "kind": c.kind, "channels": c.channels}
+            {"id": c.id, "kind": kind, "channels": channels}
             for c in studio_project.cards
+            for kind, channels in c.channel_kinds.items()
         ]
         project = self._main_window.project
         if project.external_cards == new_cards:
@@ -175,3 +182,32 @@ class LogicPanel(QWidget):
         self._main_window.scene.update()
         self._main_window.set_dirty()
         _save_canvas_background(hex_color)
+
+    # -- the whole document in and out (task "Studio osadza ekrany i
+    # logikę w projekt.epw") ---------------------------------------------
+    # User report: "podejrzewam że to samo jest z logiką - dalej to
+    # traktowane jest jako osobne programy". The logic lives INSIDE
+    # projekt.epw now (shared/project_format.py's Project.logic /
+    # logic_runtime); Studio's own Save/Open go through these.
+
+    def document(self) -> dict:
+        """The EPW_LOGIC document (blocks, wires, settings) as saved."""
+        return self._main_window.project.serialize()
+
+    def runtime_document(self):
+        """The compiled EPW_RUNTIME_LOGIC document, or None when the
+        project does not compile - Studio keeps the previous compiled
+        document in that case and says so."""
+        return self._main_window.export_runtime_data()
+
+    def load_document(self, data: dict) -> None:
+        """Opens `data` (the project's `logic` section; {} = fresh
+        project). Raises what Project.deserialize() raises."""
+        self._main_window.load_project_data(data)
+
+    def is_dirty(self) -> bool:
+        return bool(self._main_window.is_dirty)
+
+    def mark_saved(self) -> None:
+        self._main_window.is_dirty = False
+        self._main_window.update_title()

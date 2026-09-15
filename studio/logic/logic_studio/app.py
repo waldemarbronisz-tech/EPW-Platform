@@ -12,6 +12,17 @@ def apply_classic_style(app: QApplication) -> None:
     through LogicStudioApp, which just calls this on itself; behavior
     there is unchanged, verified by running this app's own test suite
     after the extraction."""
+    # Idempotent: applied once per QApplication. Re-applying re-polishes
+    # every live widget in the process (app.setPalette/setStyleSheet walk
+    # the whole widget tree) - in Studio, where a second LogicPanel can be
+    # constructed while other windows and their embedded editors still
+    # exist (offscreen test runs do exactly that), that walk hit widgets
+    # mid-teardown and crashed with an access violation. The style never
+    # changes after the first call, so the second one has nothing to do.
+    if app.property("epw_classic_style_applied"):
+        return
+    app.setProperty("epw_classic_style_applied", True)
+
     # Force a classic Windows 98 / NT style
     app.setStyle("windows")
 

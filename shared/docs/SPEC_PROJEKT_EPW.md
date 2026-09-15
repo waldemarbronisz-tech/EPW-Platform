@@ -91,11 +91,13 @@ karty ma być od razu widocznym błędem (nie cichym skasowaniem bloku)
 wszędzie, gdzie ktoś do niej się odwoływał.
 
 ```
-cards      id (nadane przez użytkownika), model, rodzaj kanałów, liczba kanałów, lokalizacja
+cards      id (nadane przez użytkownika), model, kanały (rodzaj -> liczba kanałów), lokalizacja
 locations  kod (prefiks), opis
 ```
 
-Przykład karty: `id: "DI1", model: "ELA01", kind: "DI", channels: 32, location: "KOT"`
+Przykład karty (jeden rodzaj — najczęstszy przypadek): `id: "DI1", model: "ELA01", channel_kinds: {"DI": 32}, location: "KOT"`
+Przykład karty (moduł mieszany — np. ELA z wejściami cyfrowymi i analogowymi na jednej fizycznej karcie): `id: "ELA1", model: "ELA01", channel_kinds: {"DI": 8, "AI": 4}, location: "KOT"`
+— jedna karta to jeden fizyczny moduł: jedno id, jeden adres Modbus, jedna lokalizacja, niezależnie od tego, ile rodzajów kanałów ma na pokładzie.
 Przykład lokalizacji: `code: "KOT", description: "Kotłownia"`
 
 **Karty rodzą punkty.** Dodajesz kartę o 32 kanałach — powstaje 32 pustych
@@ -156,11 +158,30 @@ devices  (dokładnie jak dziś w .epwsyn — pole devices)
   id            "KOT_KMG1"
   behavior      SWITCHED | SIGNAL | MEASURED | MODULATED | SELECTOR
   kind          etykieta bez znaczenia funkcjonalnego
-  feedback      które punkty czyta
-  command       które punkty steruje
+  feedback      które punkty czyta (pierwszy = styk ZAŁĄCZONY)
+  command       które punkty steruje (pierwszy = ZAŁĄCZ, drugi = WYŁĄCZ)
+  commandStyle  MAINTAINED | PULSE | PULSE_TOGGLE   (tylko SWITCHED)
+  pulseMs       czas impulsu [ms] dla PULSE / PULSE_TOGGLE
   supervision   czasy nadzoru
   safeState     onStartup, onLinkLoss
 ```
+
+**Styl sterowania mówi, JAK wyjścia napędzają aparat** — bo to samo
+"jedno DO" może być cewką trzymaną pod napięciem albo impulsem:
+
+- `MAINTAINED` — poziom: zasilone = ZAŁĄCZONE (jedna cewka), albo jedna
+  cewka na kierunek trzymana pod napięciem (dwa wyjścia; runtime zwalnia
+  przeciwną cewkę przed zasileniem żądanej).
+- `PULSE` — impuls `pulseMs` na kierunek, osobne cewki; przy jednym
+  wyjściu sterowany jest tylko ZAŁĄCZ.
+- `PULSE_TOGGLE` — **przekaźnik impulsowy jednocewkowy** (klasa R15/3P):
+  jedna cewka za jednym lub dwoma wyjściami (typowo DO "na załącz" i DO
+  "na wyłącz" plus lokalne przyciski, wszystkie na tę samą cewkę). Każdy
+  impuls przełącza, obojętnie skąd przyszedł — dlatego runtime podaje
+  impuls **tylko gdy `feedback[0]` mówi, że aparat nie jest już w
+  żądanym stanie**; inaczej przełączyłby go w drugą stronę. Sprzężenie
+  zwrotne jest obowiązkowe, Studio ("Sprawdź projekt") i Synoptic
+  odrzucają `PULSE_TOGGLE` bez niego.
 
 **Aparat zużywa punkty.** Punkt zajęty przez jeden aparat nie może być
 przypisany do drugiego — Studio ma to wykryć przy przypisaniu, nie przy
@@ -222,10 +243,22 @@ ekranu, do zaimportowania cudzego. Nie jest źródłem prawdy dla projektu.
 ### Logika — osadzona w projekcie
 
 ```
-logic  skompilowana logika (jak w .epwlogic.runtime.json)
+logic          źródło logiki (EPW_LOGIC — bloki i przewody, edytowalne w Logic Studio)
+logic_runtime  skompilowana logika (EPW_RUNTIME_LOGIC, jak w .epwlogic.runtime.json) — to wykonuje runtime
 ```
 
 Tak samo jak ekrany — w środku pliku, nie obok.
+
+**Zrealizowane 2026-09-15** (zgłoszenie: „tworząc synoptykę w projekcie i
+zapisując projekt na głównym pasku, synoptyka nie zapisuje się [...] dalej
+to traktowane jest jako osobne programy"). Zapisz na górnym pasku Studio
+zbiera dokumenty obu edytorów do `screens` / `logic` / `logic_runtime`
+(`logic_runtime` odświeżane przy każdym zapisie, gdy logika się
+kompiluje); Otwórz/Nowy oddają je edytorom; niezapisana praca w edytorze
+liczy się jako niezapisana praca projektu. Runtime bierze `logic_runtime`
+i `screens` z projektu; ścieżki `.epwlogic.runtime.json` / `.epwsyn` w
+`controller.local.json` zostają wyłącznie jako zapas dla projektu
+zapisanego wcześniej. `.epwsyn` / `.epwlogic` to nadal formaty wymiany.
 
 ### Alarmówka *(tylko gdy moduł jest w składzie)*
 

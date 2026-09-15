@@ -5,7 +5,7 @@
     "ROOMS": "Rooms",
     "CONNECTIONS": "Connections",
     "ANNOTATIONS": "Annotations",
-    "switch_title": "{name} mode ({shortcut}) - only {what} can be selected; everything else stays visible",
+    "switch_title": "{name} mode ({shortcut}) - tools for {what}; everything can still be selected and moved in any mode",
     "what": {
       "SYMBOLS": "symbols, meters and panels",
       "ROOMS": "walls, rooms and frames",

@@ -482,6 +482,18 @@ class EPWCore:
                                             technical_note=point.get("technical_note", ""))
 
         commands = self.project_manager.config.get("commands", {})
+        # Task "wyłącznik jednocewkowy bistabilny": every SWITCHED
+        # apparatus the project defines gets its own `<id>.CLOSE`/
+        # `<id>.OPEN` definitions, built from its command_style
+        # (apparatus.apparatus_command_definitions()) - on top of, never
+        # instead of, the per-DO defaults below, which stay the raw
+        # per-channel commands they always were.
+        from epw_os.core.apparatus import apparatus_command_definitions
+        apparatus_commands = apparatus_command_definitions(
+            [self.apparatus_registry.get(i) for i in self.apparatus_registry.list_ids()]
+        )
+        if apparatus_commands:
+            self.command_manager.load_definitions(apparatus_commands)
         if commands:
             self.command_manager.load_definitions(commands)
         else:
@@ -514,15 +526,25 @@ class EPWCore:
                 }
             self.command_manager.load_definitions(default_commands)
 
+        # Task "Studio osadza ekrany i logikę w projekt.epw": the compiled
+        # logic comes out of projekt.epw itself (Studio embeds it on every
+        # save); the .epwlogic.runtime.json path in controller.local.json
+        # is only the fallback for a project saved before that task.
+        embedded_logic = self.project_manager.get_embedded_logic_runtime()
         logic_file = self.project_manager.get_logic_file()
-        if logic_file:
-            if not self.logic_engine.load_program(logic_file):
-                self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
-            else:
-                self.logic_engine.is_running = True
-                self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
+        if embedded_logic:
+            loaded = self.logic_engine.load_program_data(embedded_logic)
+        elif logic_file:
+            loaded = self.logic_engine.load_program(logic_file)
         else:
+            loaded = None
+        if loaded is None:
             self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.DEGRADED)
+        elif not loaded:
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
+        else:
+            self.logic_engine.is_running = True
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
 
         # Composition vs. logic and screens (task "runtime czyta
         # projekt.epw", 3.3) - see composition_check.py for exactly which
@@ -656,7 +678,9 @@ class EPWCore:
         from epw_os.core.composition_check import find_signals_outside_composition
         pm = self.project_manager
         for issue in find_signals_outside_composition(self.enabled_features, logic_file=pm.get_logic_file(),
-                                                        synoptic_file=pm.get_synoptic_file()):
+                                                        synoptic_file=pm.get_synoptic_file(),
+                                                        logic_data=pm.get_embedded_logic_runtime(),
+                                                        screens_data=pm.get_embedded_screens()):
             shown = ", ".join(issue.signals[:10]) + (" ..." if len(issue.signals) > 10 else "")
             self._startup_issue(
                 f"COMPOSITION_{issue.module.upper()}_{issue.source_kind.upper()}",

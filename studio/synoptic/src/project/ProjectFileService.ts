@@ -1,10 +1,17 @@
 import { ProjectManager } from './ProjectManager';
 import { useStore } from '../store';
 
+// Every window.showOpenFilePicker/showSaveFilePicker check below also
+// requires !window.__EPW_STUDIO_EMBED__ - see that flag's own doc
+// comment in src/types/file-system-access.d.ts for why (short version:
+// those two APIs hang forever, un-resolved and un-rejected, inside
+// Studio's embedded QWebEngineView, so the Access-API branch must be
+// treated as unavailable there even though it type- and truthy-checks
+// as present).
 export class ProjectFileService {
   static async openFile() {
     try {
-      if (window.showOpenFilePicker) {
+      if (!window.__EPW_STUDIO_EMBED__ && window.showOpenFilePicker) {
         const [fileHandle] = await window.showOpenFilePicker({
           types: [{
             description: 'EPW Synoptic Files',
@@ -45,7 +52,7 @@ export class ProjectFileService {
     const data = ProjectManager.getProjectData();
     if (!data) return; // Validation aborted save
 
-    if (state.fileHandle && window.showSaveFilePicker) {
+    if (state.fileHandle && !window.__EPW_STUDIO_EMBED__ && window.showSaveFilePicker) {
       try {
         const writable = await state.fileHandle.createWritable();
         await writable.write(data);
@@ -67,7 +74,7 @@ export class ProjectFileService {
     if (!data) return; // Validation aborted save
     const suggestedName = state.fileName || `${state.projectName}.epwsyn`;
 
-    if (window.showSaveFilePicker) {
+    if (!window.__EPW_STUDIO_EMBED__ && window.showSaveFilePicker) {
       try {
         const fileHandle = await window.showSaveFilePicker({
           suggestedName,

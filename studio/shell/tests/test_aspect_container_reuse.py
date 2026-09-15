@@ -87,7 +87,7 @@ def test_revisiting_logika_is_fast_once_the_panel_is_cached(tmp_path):
     _app()
     win = _window(tmp_path)
     for i in range(1, 3):
-        card = Card(id=f"ELA{i}", model="ELA01", kind="DI", channels=32)
+        card = Card(id=f"ELA{i}", model="ELA01", channel_kinds={"DI": 32})
         win._project.cards.append(card)
         sync_points_for_card(win._project, card)
     win.show()

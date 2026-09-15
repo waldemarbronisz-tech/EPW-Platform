@@ -47,8 +47,9 @@ def _studio_project(directory: Path, modules=ALL_MODULES, with_zone=True, name="
     project = new_project(name, author="Test")
     project.modules = list(modules)
     project.locations = [Location("KOT", "Kotłownia"), Location("MH", "Maszynownia")]
-    for card in (Card("DI1", "ELA01", "DI", 8, location="KOT"), Card("DO1", "ADA01", "DO", 4, location="KOT"),
-                 Card("AI1", "EPM01", "AI", 2, location="MH")):
+    for card in (Card("DI1", "ELA01", channel_kinds={"DI": 8}, location="KOT"),
+                 Card("DO1", "ADA01", channel_kinds={"DO": 4}, location="KOT"),
+                 Card("AI1", "EPM01", channel_kinds={"AI": 2}, location="MH")):
         project.cards.append(card)
         sync_points_for_card(project, card)
     points = {p.address: p for p in project.points}
@@ -124,6 +125,30 @@ def test_full_cycle_studio_project_runtime_tags_match_the_point_registry(tmp_pat
 
     boiler = next(p for p in core.project_manager.get_analog_points() if p["tag"] == "AI1.AI.1")
     assert (boiler["signal_type"], boiler["raw_min"], boiler["eng_max"], boiler["unit"]) == ("4-20mA", 4.0, 120.0, "°C")
+    assert core.startup_issues == []
+
+
+def test_a_card_with_more_than_one_kind_produces_tags_for_each(tmp_path, start_core):
+    """User report: "karta ELA1 ma DI oraz AI" - one physical module,
+    one Card row, several kinds (Card's own docstring). build_project_
+    view()'s "devices" list (the only thing TagManager.configure() ever
+    reads) must flatten it to one entry per kind, same id - proven here
+    through the real runtime start-up path, not just the dict it
+    builds."""
+    from studio.shell.project_format import Card, Location, new_project, save_project
+    from studio.shell.project_panels import sync_points_for_card
+
+    project = new_project("Mixed card", author="Test")
+    project.locations = [Location("KOT", "Kotlownia")]
+    card = Card(id="ELA1", model="ELA01", channel_kinds={"DI": 4, "AI": 2}, location="KOT")
+    project.cards.append(card)
+    sync_points_for_card(project, card)
+    path = tmp_path / "projekt.epw"
+    save_project(project, path)
+
+    core = start_core(path)
+
+    assert _names(core, "DI") == [f"ELA1.DI.{n}" for n in range(1, 5)]
     assert core.startup_issues == []
 
 
@@ -411,7 +436,7 @@ def test_migration_into_a_studio_project_moves_16_analog_points_and_the_counters
     source = _legacy_project(tmp_path)
     original = source.read_bytes()
     target = pf.new_project("Studio site")
-    target.cards = [pf.Card(id="DI1", model="ELA01", kind="DI", channels=32)]
+    target.cards = [pf.Card(id="DI1", model="ELA01", channel_kinds={"DI": 32})]
     target.points = [pf.Point(address=f"DI1.DI.{n}") for n in range(1, 33)]
     pf.save_project(target, tmp_path / "projekt.epw")
 

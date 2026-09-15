@@ -5,7 +5,7 @@
     "ROOMS": "Pomieszczenia",
     "CONNECTIONS": "Połączenia",
     "ANNOTATIONS": "Opisy",
-    "switch_title": "Tryb {name} ({shortcut}) - zaznaczyć można tylko {what}; reszta pozostaje widoczna",
+    "switch_title": "Tryb {name} ({shortcut}) - narzędzia do: {what}; zaznaczać i przesuwać można wszystko w każdym trybie",
     "what": {
       "SYMBOLS": "symbole, mierniki i panele",
       "ROOMS": "ściany, pomieszczenia i ramki",
