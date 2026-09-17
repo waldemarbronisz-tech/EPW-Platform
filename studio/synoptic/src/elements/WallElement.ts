@@ -60,6 +60,11 @@ export interface WallElement {
   // walls and travels with them (save, undo, copy). Optional.
   roomName?: string;
   roomLocation?: string;
+  // ZADANIA p. 6 (2026-09-17): the room now has a record of its own
+  // (elements/RoomElement.ts) and every wall of it points there. The
+  // two fields above are only still read to migrate a file saved
+  // before the record existed (project/Rooms.ts migrateLegacyRooms()).
+  roomId?: string;
 }
 
 // A wall thinner than this stops reading as a wall at normal zoom; one

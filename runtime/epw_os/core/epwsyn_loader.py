@@ -189,7 +189,8 @@ class SynopticProject:
     meters: list
     signal_panels: list
     frames: list
-    walls: list               # raw dicts: {id, from, to, thickness, roomName?...}
+    walls: list               # raw dicts: {id, from, to, thickness, roomId?, material?...}
+    rooms: list               # raw dicts: {id, name, location} - the record a wall's roomId points at
     group_commands: list
     setpoint_panels: list
     devices: DeviceRegistry
@@ -373,6 +374,7 @@ def load_epwsyn_data(data, path: str = "projekt.epw#screens") -> EpwsynLoadResul
             "height": canvas_height,
             "background": canvas.get("background", DEFAULT_CANVAS_BACKGROUND),
             "gridSize": canvas.get("gridSize"),
+            "floorMaterial": canvas.get("floorMaterial"),   # the screen's floor (rooms), None = the editor's default
         },
         kind=kind,
         help_language=data.get("helpLanguage"),
@@ -384,6 +386,7 @@ def load_epwsyn_data(data, path: str = "projekt.epw#screens") -> EpwsynLoadResul
         signal_panels=_as_list(data, "signalPanels", warnings),
         frames=_as_list(data, "frames", warnings),
         walls=_as_list(data, "walls", warnings),
+        rooms=_as_list(data, "rooms", warnings),
         group_commands=_as_list(data, "groupCommands", warnings),
         setpoint_panels=_as_list(data, "setpointPanels", warnings),
         devices=registry,

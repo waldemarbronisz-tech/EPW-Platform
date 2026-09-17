@@ -17,7 +17,10 @@ editor's own algorithm): a net fed by a SOURCE boundary point or by the
 OUT terminal of a closed apparatus is live, in the medium's live colour;
 junction dots are drawn where three branches meet; a water symbol on a
 live net draws its live variant; a rotating symbol turns at its
-directive's rate. Walls are still bands without the editor's shading.
+directive's rate. Rooms: a closed loop of walls gets a floor in the
+screen's floor material with the editor's contact shadow along the
+walls, walls are bands in their own material (lit top, shaded side),
+and a room record's name and location are written on the floor.
 """
 import time
 
@@ -32,6 +35,7 @@ from epw_os.gui.synoptic.net_resolver import (connection_states, junction_points
                                                terminal_net_states)
 from epw_os.gui.synoptic.painter import (PrimitivePainter, animation_rotation, blink_state, mark_dash_march,
                                          parse_color)
+from epw_os.gui.synoptic.rooms import closed_rooms, floor_color, room_labels, shade, wall_band, wall_tones
 from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value,
                                               present_object)
 
@@ -65,7 +69,6 @@ DIODE_RADIUS_LARGE = 7
 DIODE_ON, DIODE_OFF, DIODE_ALARM, DIODE_QUALITY = "#00E838", "#3C4048", "#FF2020", "#FFD000"
 LABEL_MAX_WIDTH = 220
 LABEL_MIN_FONT_SIZE = 8
-WALL_FILL = "#A8A8A8"
 
 
 def wire_color(medium, live: bool) -> str:
@@ -271,6 +274,7 @@ class SynopticScreenWidget(QWidget):
 
         objects = self._ordered_objects()
         self._resolve_nets(objects, project.connections)
+        self._draw_floors(painter, project)
         for obj in objects:
             if self._is_surface(obj):
                 self._draw_object(painter, obj, phase)
@@ -278,6 +282,7 @@ class SynopticScreenWidget(QWidget):
             self._draw_frame(painter, frame)
         for wall in project.walls:
             self._draw_wall(painter, wall)
+        self._draw_room_labels(painter, project)
         for conn in project.connections:
             self._draw_connection(painter, conn)
         for obj in objects:
@@ -488,23 +493,72 @@ class SynopticScreenWidget(QWidget):
         painter.drawPath(path)
         painter.restore()
 
+    def _draw_floors(self, painter: QPainter, project):
+        """RoomFloorLayer.tsx: the floor of every closed wall loop in the
+        screen's floor material, outlined a shade darker, with a wide,
+        faint black stroke along the walls as the contact shadow."""
+        material = floor_color((project.canvas or {}).get("floorMaterial"))
+        for polygon in closed_rooms(project.walls):
+            path = QPainterPath(QPointF(*polygon[0]))
+            for x, y in polygon[1:]:
+                path.lineTo(x, y)
+            path.closeSubpath()
+            painter.save()
+            painter.setBrush(QBrush(QColor(material)))
+            outline = QPen(QColor(shade(material, 0.75)))
+            outline.setWidthF(1.0)
+            painter.setPen(outline)
+            painter.drawPath(path)
+            shadow = QPen(QColor(0, 0, 0))
+            shadow.setWidthF(14.0)
+            painter.setPen(shadow)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setOpacity(0.13)
+            painter.drawPath(path)
+            painter.restore()
+
     def _draw_wall(self, painter: QPainter, wall: dict):
-        start, end = wall.get("from") or {}, wall.get("to") or {}
-        thickness = float(wall.get("thickness") or 12)
-        a = QPointF(float(start.get("x", 0)), float(start.get("y", 0)))
-        b = QPointF(float(end.get("x", 0)), float(end.get("y", 0)))
+        """A wall as a band in its material: the lit top face, a shaded
+        strip along one long side (the editor's side face, flattened),
+        black edges."""
+        corners = wall_band(wall)
+        tones = wall_tones(wall.get("material"))
+        band = QPainterPath(QPointF(*corners[0]))
+        for x, y in corners[1:]:
+            band.lineTo(x, y)
+        band.closeSubpath()
         painter.save()
         edge = QPen(QColor(COLOR_OUTLINE))
-        edge.setWidthF(thickness + 2)
-        edge.setCapStyle(Qt.PenCapStyle.SquareCap)
+        edge.setWidthF(1.5)
+        edge.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
         painter.setPen(edge)
-        painter.drawLine(a, b)
-        fill = QPen(QColor(WALL_FILL))
-        fill.setWidthF(max(1.0, thickness - 2))
-        fill.setCapStyle(Qt.PenCapStyle.SquareCap)
-        painter.setPen(fill)
-        painter.drawLine(a, b)
+        painter.setBrush(QBrush(QColor(tones["top"])))
+        painter.drawPath(band)
+        # The side strip: the lower third of the band, along the far long edge.
+        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = corners
+        side = QPainterPath(QPointF(x1 + (x4 - x1) * 0.66, y1 + (y4 - y1) * 0.66))
+        side.lineTo(x2 + (x3 - x2) * 0.66, y2 + (y3 - y2) * 0.66)
+        side.lineTo(x3, y3)
+        side.lineTo(x4, y4)
+        side.closeSubpath()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(tones["side"])))
+        painter.drawPath(side)
         painter.restore()
+
+    def _draw_room_labels(self, painter: QPainter, project):
+        """Canvas.tsx: "name - location" on the floor, bold title size."""
+        font = QFont(FONT_UI)
+        font.setPixelSize(FONT_SIZE_TITLE)
+        font.setBold(True)
+        for label in room_labels(project.walls, project.rooms):
+            text = " - ".join(part for part in (label["name"], label["location"]) if part)
+            painter.save()
+            painter.setFont(font)
+            painter.setPen(QPen(QColor(COLOR_OUTLINE)))
+            painter.drawText(QRectF(label["x"] - 160, label["y"] - 9, 320, FONT_SIZE_TITLE * 1.4),
+                             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop, text)
+            painter.restore()
 
     def _draw_frame(self, painter: QPainter, frame: dict):
         x, y = float(frame.get("x") or 0), float(frame.get("y") or 0)

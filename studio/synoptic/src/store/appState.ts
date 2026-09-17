@@ -20,6 +20,7 @@ import type { HelpLanguage } from '../i18n/HelpLanguage';
 import type { WorkspaceLayout } from '../project/WorkspaceLayout';
 import type { CommandRequest } from '../project/CommandRequest';
 import type { SimulationEvent } from './simulationSlice';
+import type { RoomElement } from '../elements/RoomElement';
 
 export interface AppState {
   projectMetadata: {
@@ -57,6 +58,8 @@ export interface AppState {
   // segment. Its own array, like the frame, for the same reason: it
   // is not a symbol (see elements/WallElement.ts).
   walls: WallElement[];
+  // ZADANIA p. 6: the room records the walls point at (elements/RoomElement.ts).
+  rooms: RoomElement[];
   // feat/room-plan: which device switches each circuit - the link
   // between the plan and the controller (project/CircuitBindings.ts).
   // Project-level, not per fixture: a circuit has one device, and a
@@ -293,6 +296,9 @@ export interface AppState {
   // is also four chances to end up with a room that does not close and
   // therefore gets no floor.
   addRoomWalls: (rect: { x: number; y: number; width: number; height: number }) => void;
+  updateRoom: (id: string, updates: Partial<RoomElement>) => void;
+  /** The record for these walls - created and stamped on the whole wall chain when missing. Returns its id. */
+  assignRoomToWalls: (wallIds: string[]) => string;
   // feat/cad-marquee: resize the whole selection - a room selected with
   // a crossing marquee, above all. Geometry scales, objects move; see
   // project/GroupScale.ts. Writes no history entry of its own, so a drag

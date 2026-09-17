@@ -43,13 +43,15 @@ const NumberField: React.FC<{ name: string; label: string; value: number; onComm
 
 export const RoomInspector: React.FC<{ wallIds: string[] }> = ({ wallIds }) => {
   const walls = useStore(s => s.walls);
+  const rooms = useStore(s => s.rooms);
   const locations = useStore(s => s.locations);
-  const summary = roomSummary(walls, wallIds);
+  const summary = roomSummary(walls, wallIds, rooms);
   const box = summary.box;
 
-  const setField = (key: 'roomName' | 'roomLocation', value: string) => {
+  const setField = (key: 'name' | 'location', value: string) => {
     const s = useStore.getState();
-    s.updateWalls(wallIds.map(id => ({ id, updates: { [key]: value } })));
+    const roomId = s.assignRoomToWalls(wallIds);
+    s.updateRoom(roomId, { [key]: value });
   };
 
   const moveTo = (x: number, y: number) => {
@@ -82,7 +84,7 @@ export const RoomInspector: React.FC<{ wallIds: string[] }> = ({ wallIds }) => {
               name="roomName"
               value={summary.name ?? ''}
               placeholder={summary.name === null ? tr('room.mixed') : ''}
-              onChange={e => setField('roomName', e.target.value)}
+              onChange={e => setField('name', e.target.value)}
               onBlur={() => useStore.getState().saveHistory()}
             />
           </div>
@@ -91,7 +93,7 @@ export const RoomInspector: React.FC<{ wallIds: string[] }> = ({ wallIds }) => {
             <select
               name="roomLocation"
               value={summary.location ?? ''}
-              onChange={e => { setField('roomLocation', e.target.value); useStore.getState().saveHistory(); }}
+              onChange={e => { setField('location', e.target.value); useStore.getState().saveHistory(); }}
             >
               <option value="">{tr('room.no_location')}</option>
               {!locationKnown && summary.location && <option value={summary.location}>{summary.location}</option>}
