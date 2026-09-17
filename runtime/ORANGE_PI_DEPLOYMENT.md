@@ -71,7 +71,19 @@ source venv/bin/activate
 
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# Tylko gdy karty I/O mają być obsługiwane po Modbus RTU (port szeregowy) -
+# sterownik Modbus w runtime importuje pyserial opcjonalnie; Modbus TCP
+# i symulator nie potrzebują niczego więcej. Włączenie sterownika:
+# sekcja "io_driver" w controller.local.json (patrz SPEC_PROJEKT_EPW.md,
+# "Sterownik Modbus w runtime").
+pip install pyserial
 ```
+
+Runtime czyta też katalog `shared/` repozytorium (format projektu,
+adresowanie, `shared/symbols/geometry.json` — biblioteka symboli do
+rysowania ekranu z projektu), więc na sterowniku musi być całe
+repozytorium, nie sam katalog `runtime/`.
 
 Sprawdzenie, czy wszystko się zainstalowało poprawnie (bez trybu kiosku,
 tylko test uruchomienia rdzenia):

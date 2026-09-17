@@ -62,6 +62,7 @@
     "bus_diagnostics": "DIAGNOSTYKA MAGISTRALI",
     "intrusion": "SYSTEM ALARMOWY",
     "main_diagram": "SCHEMAT GŁÓWNY",
+    "synoptic": "SYNOPTYKA",
     "group_control": "STEROWANIE",
     "group_measurements": "POMIARY",
     "group_events": "ZDARZENIA",
@@ -426,6 +427,14 @@
       "apparatus_not_configured_short": "NIEPRZYPISANY",
       "apparatus_not_configured_title": "Aparat nieprzypisany",
       "apparatus_not_configured": "Ten symbol nie ma przypisanego aparatu. Ekran nie ma przypisanych aparatów - skonfiguruj rejestr aparatów w projekcie."
+    },
+    "synoptic": {
+      "no_screens": "Ten projekt nie ma ekranu. Narysuj go w Studio (Schemat synoptyczny) i zapisz projekt.",
+      "screen_refused": "Nie udało się odczytać ekranu osadzonego w projekcie: {reason}",
+      "geometry_missing": "Brak pliku biblioteki symboli - symbole rysowane są jako proste ramki: {reason}",
+      "screen_warnings": "Ekran wczytano z ostrzeżeniami ({count}) - szczegóły są w logu.",
+      "state_unknown_title": "Stan nieznany",
+      "state_unknown": "Stan aparatu {device} nie jest znany (brak potwierdzenia), więc nie można wybrać kierunku polecenia."
     },
     "system_topology": {
       "info_title": "INFORMACJE O URZĄDZENIU",
@@ -984,7 +993,9 @@
     "state_missing": "Brak pliku stanu {path}: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
     "state_damaged": "Plik stanu {path} jest uszkodzony: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
     "composition_logic": "Plik logiki {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z logiki.",
-    "composition_screen": "Plik ekranu {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z ekranu."
+    "composition_screen": "Plik ekranu {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z ekranu.",
+    "modbus_bus_unavailable": "Nie można otworzyć magistrali Modbus na tym sterowniku: {reason}",
+    "modbus_no_unit_id": "Karta {card} nie ma w projekcie adresu Modbus (unit id) - nie jest odpytywana. Ustaw go w Studio (Karty I/O)."
   },
   "migration": {
     "source_unreadable": "Nie można odczytać {path}: {detail}",

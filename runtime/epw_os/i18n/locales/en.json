@@ -62,6 +62,7 @@
     "bus_diagnostics": "BUS DIAGNOSTICS",
     "intrusion": "INTRUSION ALARM",
     "main_diagram": "MAIN DIAGRAM",
+    "synoptic": "SYNOPTIC",
     "group_control": "CONTROL",
     "group_measurements": "MEASUREMENTS",
     "group_events": "EVENTS",
@@ -426,6 +427,14 @@
       "apparatus_not_configured_short": "UNASSIGNED",
       "apparatus_not_configured_title": "Apparatus Not Assigned",
       "apparatus_not_configured": "This symbol has no apparatus assigned. The screen has no apparatuses assigned - configure the apparatus registry in the project."
+    },
+    "synoptic": {
+      "no_screens": "This project has no screen. Draw one in Studio (Synoptic Diagram) and save the project.",
+      "screen_refused": "The screen embedded in the project could not be read: {reason}",
+      "geometry_missing": "The symbol library file is missing, so symbols are drawn as plain boxes: {reason}",
+      "screen_warnings": "The screen loaded with {count} warning(s) - the details are in the log.",
+      "state_unknown_title": "State unknown",
+      "state_unknown": "The state of {device} is not known (no feedback yet), so the command direction cannot be chosen."
     },
     "system_topology": {
       "info_title": "DEVICE INFORMATION",
@@ -984,7 +993,9 @@
     "state_missing": "The runtime state file {path} does not exist: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
     "state_damaged": "The runtime state file {path} is damaged: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
     "composition_logic": "The logic file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the logic.",
-    "composition_screen": "The screen file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the screen."
+    "composition_screen": "The screen file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the screen.",
+    "modbus_bus_unavailable": "The Modbus bus cannot be opened on this controller: {reason}",
+    "modbus_no_unit_id": "Card {card} has no Modbus unit id in the project - it is not polled. Set it in Studio (I/O cards)."
   },
   "migration": {
     "source_unreadable": "Cannot read {path}: {detail}",

@@ -78,7 +78,7 @@ class Apparatus:
 COMMAND_STYLES = ("MAINTAINED", "PULSE", "PULSE_TOGGLE")
 
 
-def apparatus_command_definitions(apparatuses) -> dict:
+def apparatus_command_definitions(apparatuses, driver_for_tag=None) -> dict:
     """CommandManager.load_definitions() entries - `<id>.CLOSE` and
     `<id>.OPEN` - for every SWITCHED apparatus that has a command output,
     derived from its command_style (see Apparatus above). `feedback[0]`
@@ -94,6 +94,10 @@ def apparatus_command_definitions(apparatuses) -> dict:
     feedback - pulsing blind would flip it the wrong way half the time),
     logged, never guessed."""
     definitions = {}
+    # Which driver an output tag's card is on (EPWCore._driver_id_for_tag:
+    # the Modbus driver for cards with a unit id when that driver is the
+    # controller's I/O driver, the simulator otherwise).
+    driver_for_tag = driver_for_tag or (lambda tag: "SIM_DRIVER")
     for apparatus in apparatuses:
         if apparatus.behavior != "SWITCHED" or not apparatus.command:
             continue
@@ -110,8 +114,8 @@ def apparatus_command_definitions(apparatuses) -> dict:
             continue
 
         def _definition(output_tag, output_value, feedback_value, reset_tag=None):
-            entry = {"driver_id": "SIM_DRIVER", "output_tag": output_tag, "output_value": output_value,
-                     "timeout_ms": 1500}
+            entry = {"driver_id": driver_for_tag(output_tag), "output_tag": output_tag,
+                     "output_value": output_value, "timeout_ms": 1500}
             if closed_fb:
                 entry["feedback_tag"] = closed_fb
                 entry["feedback_value"] = feedback_value
@@ -216,12 +220,13 @@ def apparatuses_from_records(records):
 # Main View (page_entry_gate.py) is a FIXED drawing of an entry gate: main
 # incomer Q1, generator contactor KMG, feeders KM1/KM2 and the voltage
 # monitoring relay KVG1. Which real apparatus fills each symbol is decided
-# by its designation - the part of the apparatus id after the location
-# prefix (SPEC_PROJEKT_EPW.md: "KOT_KMG1 i MH_KMG1 to dwa różne aparaty"),
-# or the whole id when it has no prefix. projekt.epw has no field binding a
-# drawn symbol to an apparatus (that arrives with screens embedded in the
-# project, where every screen object carries its own deviceId), so this is
-# a naming rule, stated here and in the task report rather than guessed.
+# by the screens embedded in projekt.epw (bind_roles_from_screens(): every
+# screen object carries its own deviceId, and the screens' device registry
+# gives that device its designation "-KM1"), and - for a project saved
+# without screens, or for a symbol no screen object binds - by the naming
+# rule below: the designation is the part of the apparatus id after the
+# location prefix (SPEC_PROJEKT_EPW.md: "KOT_KMG1 i MH_KMG1 to dwa różne
+# aparaty"), or the whole id when it has no prefix.
 MAIN_VIEW_ROLE_DESIGNATIONS = {
     "main_view.q1": "Q1",
     "main_view.kmg": "KMG",
@@ -249,4 +254,67 @@ def bind_roles_by_designation(registry, role_designations):
         if len(matches) > 1:
             log.warning(f"Main View symbol {designation} left unconfigured: several apparatuses match "
                         f"({', '.join(matches)}).")
+    return outcome
+
+
+def _designation_key(designation) -> str:
+    """"-KM1", " km1 " and "KM1" are the same designation: Synoptic writes
+    the IEC 81346 minus in front, projekt.epw's apparatus ids do not."""
+    return str(designation or "").strip().lstrip("-").upper()
+
+
+def bind_roles_from_screens(registry, screens, role_designations):
+    """Binds the Main View roles from the screens embedded in projekt.epw
+    (Project.screens - the EPW_SYNOPTIC document): a screen object whose
+    deviceId points at a device whose designation is the role's (Q1, KM1,
+    ...) binds that role to the apparatus with that deviceId. The screens
+    are what the engineer drew, so they win over the naming rule; a role no
+    screen object mentions falls back to bind_roles_by_designation(), and
+    two different apparatuses drawn for one designation leave the role
+    unbound ("not configured"), exactly like the naming rule does.
+
+    `screens` may be {} / None (project saved before screens were embedded)
+    - then this is bind_roles_by_designation() for every role. Returns
+    {role: id or None}."""
+    doc = screens if isinstance(screens, dict) else {}
+    objects = doc.get("objects") if isinstance(doc.get("objects"), list) else []
+    devices = doc.get("devices") if isinstance(doc.get("devices"), list) else []
+    designation_of = {d["id"]: _designation_key(d.get("designation"))
+                      for d in devices if isinstance(d, dict) and d.get("id")}
+    role_of = {_designation_key(designation): role for role, designation in role_designations.items()}
+
+    drawn = {role: [] for role in role_designations}
+    for obj in objects:
+        device_id = obj.get("deviceId") if isinstance(obj, dict) else None
+        if not device_id:
+            continue
+        designation = designation_of.get(device_id)
+        if designation is None:
+            # The object references a device the screens' own registry does
+            # not list (loader warns about it) - the id's own suffix is all
+            # there is to go by.
+            designation = _designation_key(str(device_id).rsplit("_", 1)[-1])
+        role = role_of.get(designation)
+        if role is not None and device_id not in drawn[role]:
+            drawn[role].append(device_id)
+
+    outcome = {}
+    by_naming_rule = {}
+    for role, designation in role_designations.items():
+        known = [i for i in drawn[role] if registry.get(i) is not None]
+        if len(known) == 1:
+            registry.set_role_binding(role, known[0])
+            outcome[role] = known[0]
+        elif len(known) > 1:
+            registry.set_role_binding(role, None)
+            outcome[role] = None
+            log.warning(f"Main View symbol {designation} left unconfigured: the screens draw several "
+                        f"apparatuses for it ({', '.join(known)}).")
+        else:
+            for unknown in drawn[role]:
+                log.warning(f"Main View symbol {designation}: screen object binds '{unknown}', which is not in "
+                            f"the project's apparatus register - naming rule used instead.")
+            by_naming_rule[role] = designation
+    if by_naming_rule:
+        outcome.update(bind_roles_by_designation(registry, by_naming_rule))
     return outcome

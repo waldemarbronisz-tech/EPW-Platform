@@ -68,6 +68,10 @@ its own.
 NAV_STRUCTURE = [
     ("main_view_group", "nav.main_view", True, [
         ("main_view", "nav.main_diagram", None),
+        # Punkt 2 / luka 5: the screen Studio embedded in projekt.epw,
+        # rendered live (gui/synoptic/page_synoptic.py). Always listed -
+        # the page itself says when the project has no screen.
+        ("synoptic", "nav.synoptic", None),
     ]),
     ("control_group", "nav.group_control", False, [
         ("digital_inputs", "nav.digital_inputs", None),

@@ -409,6 +409,15 @@ class MainWindow(QMainWindow):
                                               apparatus_registry=self.apparatus_registry)
         _add_page("main_view", self.page_entry_gate)
 
+        # Punkt 2 / luka 5: the embedded screen, live. Same slot family as
+        # Main View (nav_model.NAV_STRUCTURE's main_view_group).
+        from epw_os.gui.synoptic.page_synoptic import PageSynoptic
+        self.page_synoptic = PageSynoptic(self.tag_manager, project_manager=self.project_manager,
+                                          apparatus_registry=self.apparatus_registry,
+                                          access_manager=self.access_manager,
+                                          command_manager=self.command_manager)
+        _add_page("synoptic", self.page_synoptic)
+
         # ALWAYS ON.
         self.page_di = PageDigitalInputs(self.tag_manager, self.access_manager,
                                           switching_counters=self.switching_counters, service_notes=self.service_notes,

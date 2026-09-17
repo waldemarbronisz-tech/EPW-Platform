@@ -796,6 +796,42 @@ class ProjectManager:
         card's)."""
         return [dict(p) for p in self.config.get("point_registry", [])]
 
+    def get_modbus_bus(self) -> dict:
+        """projekt.epw's `modbus_bus` section (transport, port, baud_rate,
+        parity, data_bits, stop_bits, host, tcp_port) - project data,
+        authored in Studio."""
+        bus = self.config.get("modbus_bus")
+        return dict(bus) if isinstance(bus, dict) else {}
+
+    def get_io_driver_config(self) -> dict:
+        """controller.local.json's "io_driver" section - WHICH I/O driver
+        this controller runs (a controller-local choice, like the REST
+        port: the same projekt.epw runs on the bench against the
+        simulator and on site against the real bus):
+            {"driver": "SIM" | "MODBUS", "poll_interval_ms": 250,
+             "timeout_s": 1.0, "retries": 1, "ai_signed": false,
+             "read_back_outputs": true}
+        An absent section is the simulator, exactly as before this
+        setting existed."""
+        io = self.config.get("io_driver")
+        io = io if isinstance(io, dict) else {}
+        driver = str(io.get("driver", "SIM") or "SIM").upper()
+
+        def _num(key, default, cast):
+            try:
+                return cast(io.get(key, default))
+            except (TypeError, ValueError):
+                return default
+
+        return {
+            "driver": driver if driver in ("SIM", "MODBUS") else "SIM",
+            "poll_interval_ms": _num("poll_interval_ms", 250, int),
+            "timeout_s": _num("timeout_s", 1.0, float),
+            "retries": _num("retries", 1, int),
+            "ai_signed": bool(io.get("ai_signed", False)),
+            "read_back_outputs": bool(io.get("read_back_outputs", True)),
+        }
+
     def get_apparatuses(self) -> list:
         """[{id, behavior, kind, feedback, command}] from the project's
         apparatus register ("devices" in projekt.epw)."""

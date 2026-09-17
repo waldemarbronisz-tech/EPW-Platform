@@ -1304,13 +1304,16 @@ class StudioMainWindow(QMainWindow):
         Synoptic already has that Studio doesn't (spawning points for a
         newly-pulled card, same as adding one by hand), then pushes
         Studio's own list out so Synoptic picks up anything added there
-        instead."""
+        instead. Apparatuses go the same way (punkt 2 / luka 7: the
+        two apparatus registries are one list - see project_panels.py's
+        device_to_synoptic_dict()/device_from_synoptic_dict())."""
         if self._synoptic_panel is None:
             return
 
         def _after_pull(registry):
             from studio.shell.project_panels import (
                 cards_from_synoptic_dicts, card_to_synoptic_dicts,
+                device_from_synoptic_dict, device_to_synoptic_dict,
                 location_from_synoptic_dict, location_to_synoptic_dict,
                 sync_points_for_card,
             )
@@ -1354,6 +1357,15 @@ class StudioMainWindow(QMainWindow):
                     project.locations.append(location)
                     existing_codes.add(location.code)
                     changed = True
+                existing_device_ids = {d.id for d in project.devices}
+                for device_data in registry.get("devices", []):
+                    if not isinstance(device_data, dict) or not device_data.get("id"):
+                        continue
+                    if device_data["id"] in existing_device_ids:
+                        continue
+                    project.devices.append(device_from_synoptic_dict(device_data))
+                    existing_device_ids.add(device_data["id"])
+                    changed = True
             if changed:
                 project.touch()
                 self._on_project_changed()
@@ -1361,9 +1373,12 @@ class StudioMainWindow(QMainWindow):
                     self._cards_panel.refresh()
                 if self._point_registry_panel is not None:
                     self._point_registry_panel.refresh()
+                if self._devices_panel is not None:
+                    self._devices_panel.refresh()
             cards_out = [d for c in self._project.cards for d in card_to_synoptic_dicts(c)]
             locations_out = [location_to_synoptic_dict(l) for l in self._project.locations]
-            self._synoptic_panel.push_device_registry(cards_out, locations_out)
+            devices_out = [device_to_synoptic_dict(d) for d in self._project.devices if d.id]
+            self._synoptic_panel.push_device_registry(cards_out, locations_out, devices_out)
 
         self._synoptic_panel.query_device_registry(_after_pull)
 

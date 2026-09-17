@@ -98,6 +98,24 @@ locations  kod (prefiks), opis
 Przykład karty (jeden rodzaj — najczęstszy przypadek): `id: "DI1", model: "ELA01", channel_kinds: {"DI": 32}, location: "KOT"`
 Przykład karty (moduł mieszany — np. ELA z wejściami cyfrowymi i analogowymi na jednej fizycznej karcie): `id: "ELA1", model: "ELA01", channel_kinds: {"DI": 8, "AI": 4}, location: "KOT"`
 — jedna karta to jeden fizyczny moduł: jedno id, jeden adres Modbus, jedna lokalizacja, niezależnie od tego, ile rodzajów kanałów ma na pokładzie.
+
+**Sterownik Modbus w runtime (zrealizowane 2026-09-15).** `modbus_bus`
+z projektu (RTU: port, prędkość, parzystość; TCP: host, port) i
+`modbus_unit_id` kart obsługuje `runtime/epw_os/drivers/modbus_driver.py`
+— czysta biblioteka standardowa (FC2 dla DI, FC1/FC5 dla DO, FC4 dla AI —
+surowa wartość rejestru, przeliczana jak dotąd przez `analog_scaling`,
+FC6 dla AO; kanał n = adres n-1). KTÓRY sterownik I/O pracuje, to
+ustawienie sterownika, nie projektu — `controller.local.json`:
+
+```
+"io_driver": {"driver": "MODBUS", "poll_interval_ms": 250, "timeout_s": 1.0,
+              "retries": 1, "ai_signed": false, "read_back_outputs": true}
+```
+
+Bez tej sekcji działa symulator, dokładnie jak dotąd. Karta bez
+`modbus_unit_id` nie jest odpytywana i dostaje problem startowy; magistrala
+RTU wymaga pakietu `pyserial` (import opcjonalny — bez niego sterownik
+startuje i zgłasza problem startowy, TCP działa bez niczego).
 Przykład lokalizacji: `code: "KOT", description: "Kotłownia"`
 
 **Karty rodzą punkty.** Dodajesz kartę o 32 kanałach — powstaje 32 pustych
@@ -259,6 +277,34 @@ liczy się jako niezapisana praca projektu. Runtime bierze `logic_runtime`
 i `screens` z projektu; ścieżki `.epwlogic.runtime.json` / `.epwsyn` w
 `controller.local.json` zostają wyłącznie jako zapas dla projektu
 zapisanego wcześniej. `.epwsyn` / `.epwlogic` to nadal formaty wymiany.
+
+**Runtime rysuje osadzony ekran (zrealizowane 2026-09-15, etap pierwszy).**
+Strona *Widok główny → Synoptyka* rysuje `screens` na żywo:
+`runtime/epw_os/gui/synoptic/`. Symbole pochodzą z pliku
+`shared/symbols/geometry.json` — całej biblioteki Edytora Synoptyki
+wyeksportowanej jako prymitywy rysunkowe (`studio/synoptic/tools/geometry_export`,
+`npm install && npm run export` po każdej zmianie biblioteki; test runtime
+porównuje plik z rejestrem symboli). Stan symbolu bierze się z aparatu
+(`deviceId` → `devices` → `feedback[0]`), wartości z tagów; kliknięcie
+aparatu SWITCHED wysyła `<id>.CLOSE` / `<id>.OPEN` tą samą drogą co
+schemat jednokreskowy. Jeszcze nie na żywo: kolor przewodów według sieci
+(NetResolver edytora nie jest przeniesiony — przewód ma stan z pliku),
+animacja obrotu, cieniowanie ścian.
+
+**Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
+KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z
+`deviceId`, którego aparat w `screens.devices` ma oznaczenie roli,
+wskazuje aparat; reguła nazewnicza zostaje tylko dla ról, których ekran nie
+rysuje.
+
+**Rejestr aparatów: Studio ↔ Synoptic — jedna lista.** Aparat w Studio
+(płaski: `feedback`/`command`/`commandStyle`) i aparat w Synoptic
+(`DeviceSchema.ts`: `diClosed`/`doClose`/...) opisują to samo;
+`project_panels.device_to_synoptic_dict()` / `device_from_synoptic_dict()`
+tłumaczą, a synchronizacja przy otwarciu edytora jest — jak dla kart i
+lokalizacji — tylko dodająca (nic nie nadpisuje, nic nie usuwa). Aparat
+wypchnięty ze Studio dostaje oznaczenie z id (`KOT_KM1` → `-KM1`) i nazwę
+równą id; Synoptic zachowuje własne bogatsze pola aparatów, które już ma.
 
 ### Alarmówka *(tylko gdy moduł jest w składzie)*
 

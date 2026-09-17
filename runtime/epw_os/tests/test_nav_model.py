@@ -35,16 +35,15 @@ def test_default_config_shows_every_page():
     assert page_ids == set(all_page_ids())
 
 
-def test_main_view_group_stays_a_group_even_with_one_page():
+def test_main_view_group_holds_the_main_diagram_and_the_embedded_screen():
     """Task's own explicit exception (see nav_model.py's module
-    docstring) - Main View is deliberately prepared for multiple
-    synoptic screens, so it stays a real group with a [+]/[-] toggle
-    even though it only has one page today."""
+    docstring) - Main View is deliberately a real group with a [+]/[-]
+    toggle, prepared for several synoptic screens. Punkt 2 / luka 5
+    filled the second slot: the screen embedded in projekt.epw."""
     tree = build_nav_tree(DEFAULT_ENABLED_FEATURES)
     main_view_node = next(n for n in tree if n.id == "main_view_group")
     assert main_view_node.kind == "group"
-    assert len(main_view_node.children) == 1
-    assert main_view_node.children[0].page_id == "main_view"
+    assert [c.page_id for c in main_view_node.children] == ["main_view", "synoptic"]
 
 
 def test_intrusion_and_protection_groups_default_to_3_and_2_page_groups():
@@ -156,7 +155,7 @@ def test_always_on_pages_are_never_dropped_by_any_config():
             page_ids.add(node.page_id)
         else:
             page_ids.update(c.page_id for c in node.children)
-    assert page_ids == {"main_view", "digital_inputs", "control_outputs", "events", "alarms", "audit_log"}
+    assert page_ids == {"main_view", "synoptic", "digital_inputs", "control_outputs", "events", "alarms", "audit_log"}
 
 
 def test_engineer_mode_requires_protection_settings():
@@ -204,9 +203,9 @@ def test_nav_structure_matches_the_task_s_own_17_pages():
     the DOWOD-required confirmation that nothing else was added/removed
     besides the page-split task's own 3 new pages (intrusion_history,
     intrusion_config, protection_process)."""
-    assert len(all_page_ids()) == 17
+    assert len(all_page_ids()) == 18
     assert set(all_page_ids()) == {
-        "main_view", "digital_inputs", "analog_inputs", "control_outputs",
+        "main_view", "synoptic", "digital_inputs", "analog_inputs", "control_outputs",
         "intrusion_overview", "intrusion_history", "intrusion_config",
         "power_quality", "trends", "events", "alarms", "audit_log",
         "system_topology", "bus_diagnostics", "engineer_mode",
