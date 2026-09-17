@@ -313,6 +313,15 @@ class SynopticScreenWidget(QWidget):
             log.debug(f"Net resolution skipped: {exc}")
             self._net_states, self._terminal_states, self._junctions = {}, {}, []
 
+    def resolve_now(self):
+        """Resolves presentations, nets and junctions without a paint -
+        for callers (tests, a status query) that need connection_state()
+        / object_on_live_net() before the widget has ever been painted
+        (a child widget that is not shown yet has no size to paint)."""
+        if self._document is None:
+            return
+        self._resolve_nets(self._ordered_objects(), self._document.project.connections)
+
     def connection_state(self, connection_id) -> str:
         return self._net_states.get(connection_id, "INACTIVE")
 

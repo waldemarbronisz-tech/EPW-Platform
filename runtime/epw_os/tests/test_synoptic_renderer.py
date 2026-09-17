@@ -497,7 +497,7 @@ def test_widget_colours_wires_by_net_and_draws_junctions(app):
     from epw_os.gui.synoptic import net_resolver as nr
     [bp_terminal] = nr.world_terminals([source], widget._geometry_result.geometry)
     assert (bp_terminal.x, bp_terminal.y) == (144.0, 48.0)     # the fixture's FEED starts on it
-    widget.grab()                                              # one paint: nets resolved
+    widget.resolve_now()                                       # what a paint does first
     assert widget.connection_state("FEED") == "ACTIVE"
     assert widget.connection_state("LOAD") == "ACTIVE"        # Q1 is closed: its OUT feeds the load
     assert widget.connection_state("TAP") == "ACTIVE"         # taps the load wire mid-segment

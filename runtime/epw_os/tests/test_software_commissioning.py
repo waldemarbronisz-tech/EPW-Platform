@@ -157,7 +157,7 @@ def test_the_screen_follows_the_bus_a_click_drives_a_coil_and_studio_sends_the_p
     assert state("q1") == "OPEN"
     bus.set_input(1, 1, True)
     assert _wait(lambda: state("q1") == "CLOSED")
-    page.screen.grab()
+    page.screen.resolve_now()
     assert page.screen.connection_state("w") == "ACTIVE"          # the wire from Q1's OUT terminal is live
 
     # --- a click on the closed breaker sends OPEN: coil 1 goes False, the mirrored input follows ---
