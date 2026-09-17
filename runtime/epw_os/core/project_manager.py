@@ -347,6 +347,23 @@ class ProjectManager:
     def set_switching_counters(self, data: dict):
         self.config["switching_counters"] = dict(data)
 
+    def get_counter_warning_thresholds(self) -> dict:
+        """{DI tag: warning_threshold or None} from the project - the
+        setting the counter records are seeded with (ZADANIA p. 6)."""
+        return {r.get("tag"): r.get("warning_threshold")
+                for r in self.config.get("switching_counter_settings", []) if isinstance(r, dict) and r.get("tag")}
+
+    def set_counter_warning_threshold(self, tag_name: str, threshold) -> bool:
+        """A panel change of the threshold - into the project view, so the
+        next save writes it back to projekt.epw as a setting (revision +1,
+        "panel"). False when the tag is not a DI point of the project (the
+        counter still keeps it in runtime state, as before)."""
+        for record in self.config.get("switching_counter_settings", []):
+            if isinstance(record, dict) and record.get("tag") == tag_name:
+                record["warning_threshold"] = int(threshold) if threshold is not None else None
+                return True
+        return False
+
     def get_service_notes(self) -> dict:
         """Persisted per-device service history (Task: historia
         serwisowa przypisana do aparatu), keyed by tag name - same

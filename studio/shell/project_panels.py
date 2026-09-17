@@ -1304,6 +1304,7 @@ class PointRegistryPanel(QWidget):
     _COLS = [
         "address", "description", "location", "technical_note",
         "signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals",
+        "warning_threshold",   # DI only: the switching counter's warning threshold (a setting)
         "device",
     ]
 
@@ -1454,6 +1455,12 @@ class PointRegistryPanel(QWidget):
                 item.setBackground(_GREY_READONLY_BG)
             self.table.setItem(row, 4 + col_offset, item)
 
+        threshold_item = QTableWidgetItem(_fmt(point.warning_threshold) if card_kind == "DI" else "")
+        if card_kind != "DI":
+            threshold_item.setFlags(threshold_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            threshold_item.setBackground(_GREY_READONLY_BG)
+        self.table.setItem(row, 11, threshold_item)
+
         # "Aparat" - read-only, computed from every device's feedback/
         # command lists (point_owner_map()) - SPEC's own "Aparat zużywa
         # punkty": this is the first place that occupancy becomes
@@ -1463,7 +1470,7 @@ class PointRegistryPanel(QWidget):
         device_item.setBackground(_GREY_READONLY_BG)
         if owner_id:
             device_item.setToolTip(owner_id)
-        self.table.setItem(row, 11, device_item)
+        self.table.setItem(row, 12, device_item)
 
     def set_location_for_selected(self):
         """User report 3.4: "zaznaczenie wielu wierszy -> ustawienie
@@ -1580,6 +1587,8 @@ class PointRegistryPanel(QWidget):
             point.unit = text or None
         elif col == 10:
             point.decimals = _parse_int(text)
+        elif col == 11:
+            point.warning_threshold = _parse_int(text)
         project.touch()
         self._studio_window._on_project_changed()
 

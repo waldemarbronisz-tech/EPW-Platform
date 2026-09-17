@@ -298,7 +298,8 @@
     "location_inherit": "(dziedziczone: {value})",
     "location_blank": "(brak)",
     "set_location_for_selected": "Ustaw lokalizację zaznaczonym...",
-    "set_location_dialog_title": "Lokalizacja dla zaznaczonych punktów"
+    "set_location_dialog_title": "Lokalizacja dla zaznaczonych punktów",
+    "col_warning_threshold": "Próg ostrz. licznika"
   },
   "devices": {
     "col_id": "Id",

@@ -48,7 +48,11 @@ def test_hash_changes_only_when_a_setting_changes():
     a, b = _project(), _project()
     assert pf.settings_hash(a) == pf.settings_hash(b)
     b.metadata.description = "structure/metadata is not a setting"
-    b.points.append(pf.Point(address="DI1.DI.3"))
+    b.points.append(pf.Point(address="DI1.DO.3"))       # a DO point carries no setting
+    assert pf.settings_hash(a) == pf.settings_hash(b)
+    b.points.append(pf.Point(address="DI1.DI.3"))       # a DI point adds a counter-threshold slot
+    assert pf.settings_hash(a) != pf.settings_hash(b)
+    a.points.append(pf.Point(address="DI1.DI.3"))
     assert pf.settings_hash(a) == pf.settings_hash(b)
     b.electrical_protection_stages[0].setting = 40.0
     assert pf.settings_hash(a) != pf.settings_hash(b)
@@ -91,3 +95,15 @@ def test_setting_fields_agree_with_runtimes_own_split():
     assert pf.SETTING_FIELDS["electrical_protection_stages"] == project_epw.ELECTRICAL_SETTINGS
     assert pf.SETTING_FIELDS["analog_points"] == project_epw.ANALOG_SETTINGS
     assert pf.SETTING_FIELDS["power_supervision"] == project_epw.POWER_SUPERVISION_KEYS
+
+
+def test_a_di_points_counter_warning_threshold_is_a_setting():
+    project = _project()
+    project.points[0].warning_threshold = 5000          # DI1.DI.1
+    snap = pf.settings_snapshot(project)
+    assert snap["switching_counters/DI1.DI.1/warning_threshold"] == 5000
+    assert snap["switching_counters/DI1.DI.2/warning_threshold"] is None
+    assert "switching_counters/DI1.AI.1/warning_threshold" not in snap
+    before = pf.settings_hash(project)
+    project.points[0].warning_threshold = 6000
+    assert pf.settings_hash(project) != before

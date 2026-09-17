@@ -113,7 +113,12 @@ na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
 ## 6. Dług i luki znalezione przy tym zadaniu
 
 - **Pokój (room) nie ma własnego rekordu.** Nazwa i lokalizacja pomieszczenia siedzą na ścianach (`WallElement.roomName` / `roomLocation` w Synoptic).
-- **Próg ostrzegawczy licznika łączeń** (`warning_threshold`) to według SPEC nastawa, ale format nie ma dla niego pola. Zostaje w `runtime_state.json` przy rekordzie licznika, jak dotąd.
+- **Próg ostrzegawczy licznika łączeń** — ZROBIONE 2026-09-17: pole
+  `Point.warning_threshold` (punkt DI) w formacie, kolumna w rejestrze punktów
+  Studio, część `settings_hash`; runtime zasila nim rekord licznika (projekt
+  wygrywa ze stanem), zmiana z panelu wraca do `projekt.epw` jak każda nastawa
+  (`switching_counter_settings` w widoku projektu). Same liczniki nadal tylko
+  w `runtime_state.json`.
 - **Ustawienia sterownika spoza formatu** trafiły do `controller.local.json`:
   - język interfejsu;
   - REST (host, port);

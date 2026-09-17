@@ -367,7 +367,7 @@ suma kontrolna, rozjazd = alarm. Tylko o poziom wyżej.
 **Zrealizowane 2026-09-17.** `settings_hash` liczy `project_format.settings_hash()`
 (SHA-256 z `settings_snapshot()` — same nastawy: opóźnienia stref, parametry
 linii, progi zabezpieczeń procesowych, nastawy stopni elektrycznych, skalowanie
-punktów AI, nadzór zasilania; lista pól `SETTING_FIELDS` jest ta sama, którą
+punktów AI, próg ostrzegawczy licznika łączeń punktu DI, nadzór zasilania; lista pól `SETTING_FIELDS` jest ta sama, którą
 runtime stosuje do rozdziału nastawa/struktura) i trafia do nagłówka pliku przy
 każdym zapisie. Runtime podaje go w `GET /api/v1/project`, a same wartości w
 `GET /api/v1/project/settings`. Studio (*Sterownik → Wyślij do urządzenia*):
