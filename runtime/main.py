@@ -6,6 +6,12 @@ from epw_os.core.epw_core import EPWCore
 from epw_os.core.logging import log
 from epw_os.core.tag_manager import TagQuality
 
+# The exit code that means "start me again" - systemd's Restart=on-failure
+# (see ORANGE_PI_DEPLOYMENT.md) restarts the service on it; a plain shell
+# start simply ends and the operator starts EPW OS again.
+RESTART_EXIT_CODE = 3
+
+
 def run_backend(core: EPWCore):
     log.info("Starting FastAPI backend...")
     from epw_os.backend.api import app as fastapi_app
@@ -128,6 +134,7 @@ def main():
                 # gets the same "wrap only what crosses a thread
                 # boundary" treatment as time_sync_status_changed above.
                 mqtt_status_changed = Signal(str)
+                restart_requested = Signal(str)
 
             bridge = QtEventBridge()
             
@@ -428,6 +435,15 @@ def main():
 
             current_window[0].show()
             log.info("EPW OS GUI Running.")
+
+            # Task "wysyłanie projektu na sterownik": a restart request (REST
+            # install) ends the event loop from the Qt thread; the process then
+            # exits with RESTART_EXIT_CODE (see the end of main()).
+            def on_restart_requested(reason):
+                bridge.restart_requested.emit(str(reason))
+            core.event_bus.subscribe("restart_requested", on_restart_requested)
+            bridge.restart_requested.connect(lambda _reason: app.quit())
+
             exit_code = app.exec()
             # Defense in depth: closeEvent() already calls this on a normal
             # window close, but app.exec() can also return via app.quit()
@@ -443,14 +459,17 @@ def main():
         except Exception as e:
             log.warning(f"Could not start GUI: {e}. Running Headless.")
             exit_code = 0
-            while core.is_running:
+            while core.is_running and not core.restart_requested:
                 time.sleep(1.0)
     else:
-        while core.is_running:
+        while core.is_running and not core.restart_requested:
             time.sleep(1.0)
         exit_code = 0
         
     core.shutdown()
+    if core.restart_requested:
+        log.warning(f"Exiting with code {RESTART_EXIT_CODE} for a restart: {core.restart_requested}")
+        exit_code = RESTART_EXIT_CODE
     sys.exit(exit_code)
 
 if __name__ == "__main__":

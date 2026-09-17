@@ -145,6 +145,7 @@ class EPWCore:
         
         self.sim_driver = SimulatorDriver(self.event_bus)
         self.driver_manager.register_driver("SIM_DRIVER", self.sim_driver)
+        self.restart_requested = None   # set by request_restart(); main.py exits with RESTART_EXIT_CODE
         # Punkt 2 / luka 6: the real bus. Built in startup() only when
         # controller.local.json says io_driver.driver = "MODBUS" (see
         # _configure_io_driver()); until then the simulator is the I/O
@@ -702,6 +703,15 @@ class EPWCore:
         pm = self.project_manager
         if not pm.is_epw_project():
             return
+        rolled_back = getattr(pm, "rolled_back", None)
+        if rolled_back:
+            self._startup_issue("PROJECT_ROLLED_BACK", "startup.project_rolled_back",
+                                {"path": rolled_back["path"], "rejected": rolled_back["rejected"],
+                                 "reason": rolled_back["reason"]},
+                                f"The project installed at {rolled_back['path']} was refused at this start "
+                                f"({rolled_back['reason']}); the previous project was put back from "
+                                f"{rolled_back['backup']} and the refused file is kept as "
+                                f"{rolled_back['rejected']}.", priority=4)
         if pm.load_error is not None:
             error = pm.load_error
             if error["key"] == "startup.project_missing":
@@ -1048,6 +1058,20 @@ class EPWCore:
                 f"Feature '{feature}' {'enabled' if enabled else 'disabled'}", success=True,
             )
         return {"success": True, "reason": ""}
+
+    # --- restart (task "wysyłanie projektu na sterownik przez REST") -------
+
+    def request_restart(self, reason: str, actor: str = "SYSTEM"):
+        """Asks the process to end with RESTART_EXIT_CODE so the service
+        manager (systemd, Restart=on-failure) starts it again on the
+        freshly installed project - main.py listens for the
+        "restart_requested" event and closes the GUI/headless loop.
+        Nothing here swaps the project under a running controller."""
+        self.restart_requested = reason
+        if self.audit_logger is not None:
+            self.audit_logger.record("RESTART_REQUESTED", actor, reason, success=True)
+        log.warning(f"Restart requested: {reason}")
+        self.event_bus.emit("restart_requested", reason)
 
     def shutdown(self):
         """

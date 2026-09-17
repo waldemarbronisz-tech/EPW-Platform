@@ -80,6 +80,10 @@ pip install -r requirements.txt
 pip install pyserial
 ```
 
+Sprawdzenie karty na magistrali (bez uruchamiania EPW OS): 
+`python tools/modbus_probe.py --rtu /dev/ttyUSB0 --baud 9600 --unit 1 --di 16 --ai 4`
+pokazuje surowe bity i rejestry, które karta odpowiada pod podanym unit id.
+
 Runtime czyta też katalog `shared/` repozytorium (format projektu,
 adresowanie, `shared/symbols/geometry.json` — biblioteka symboli do
 rysowania ekranu z projektu), więc na sterowniku musi być całe
@@ -149,6 +153,10 @@ Environment=DISPLAY=:0
 ExecStart=/home/orangepi/EPW-OS/venv/bin/python /home/orangepi/EPW-OS/main.py --kiosk
 Restart=on-failure
 RestartSec=5
+# Restart=on-failure obsługuje też zamierzony restart: po wgraniu projektu
+# ze Studio (POST /api/v1/project/install) EPW OS kończy proces kodem 3,
+# a systemd uruchamia go z nowym projektem. Bez systemd (uruchomienie
+# z konsoli) proces po prostu kończy się kodem 3 - uruchom go ponownie.
 
 [Install]
 WantedBy=graphical.target

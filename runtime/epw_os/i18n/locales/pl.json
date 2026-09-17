@@ -995,7 +995,8 @@
     "composition_logic": "Plik logiki {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z logiki.",
     "composition_screen": "Plik ekranu {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z ekranu.",
     "modbus_bus_unavailable": "Nie można otworzyć magistrali Modbus na tym sterowniku: {reason}",
-    "modbus_no_unit_id": "Karta {card} nie ma w projekcie adresu Modbus (unit id) - nie jest odpytywana. Ustaw go w Studio (Karty I/O)."
+    "modbus_no_unit_id": "Karta {card} nie ma w projekcie adresu Modbus (unit id) - nie jest odpytywana. Ustaw go w Studio (Karty I/O).",
+    "project_rolled_back": "Projekt wgrany do {path} został odrzucony przy tym starcie ({reason}). Przywrócono poprzedni projekt, a odrzucony plik zostawiono jako {rejected}."
   },
   "migration": {
     "source_unreadable": "Nie można odczytać {path}: {detail}",

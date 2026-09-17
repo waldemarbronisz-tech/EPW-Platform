@@ -69,7 +69,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDialogButtonBox,
+    QDialogButtonBox, QFileDialog,
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
@@ -99,8 +99,10 @@ from studio.shell.project_format import (
     effective_location,
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
     LineInputMode, LineParametrization, LineType, Location, NORMAL_STATE_NC, NORMAL_STATE_NO,
-    Point, PowerSupervision, ProcessProtection, Zone, default_value_windows,
+    Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
+    load_project, settings_diff, settings_hash, settings_snapshot,
 )
+from pathlib import Path
 
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
 _ANALOG_KINDS = {"AI", "AO"}
@@ -2848,16 +2850,18 @@ class ControllerPanel(QWidget):
     backend/api.py and this panel calls them for real (stdlib
     urllib.request only - GRANICE: no new dependency for one HTTP GET).
 
-    "Wyślij do urządzenia"/"Zgraj z urządzenia" (task's own two options)
-    are honestly INCOMPLETE: verified empirically - that same api.py has
-    ZERO endpoints for a project config upload/download or a revision
-    check (the exact mechanism SPEC_PROJEKT_EPW.md's own "Wersjonowanie"
-    section describes: "przed wgraniem projektu [...] odczytać revision
-    z urządzenia [...] rozjazd = ZATRZYMAĆ SIĘ"). Clicking either button
-    explains exactly what's missing on the runtime side - GRANICE
-    forbids touching runtime/ from here to invent one, and a button that
-    silently pretends to sync is the exact facade this whole session
-    avoids."""
+    "Wyślij do urządzenia" / "Zgraj z urządzenia" (task "wysyłanie
+    projektu na sterownik przez REST", PROJEKT_EPW_ZADANIA p. 5) work
+    against runtime's own project endpoints: GET /api/v1/project (the
+    header with `revision` and `settings_hash`), GET /api/v1/project/
+    settings (the controller's settings, for the diff), GET /api/v1/
+    project/file (download, Engineer token) and POST /api/v1/project/
+    install?expected_revision=N (upload, Engineer token; the controller
+    refuses with 409 when its revision moved in between, and restarts
+    itself on the new project). SPEC "Wersjonowanie" is applied here:
+    before sending, the controller's settings_hash is compared with the
+    saved project's; when they differ, the operator sees every setting
+    that differs ("tu 25 A, tam 40 A") and decides - overwrite, or stop."""
 
     _SETTINGS_HOST = "controller/host"
     _SETTINGS_TOKEN = "controller/token"
@@ -2927,15 +2931,20 @@ class ControllerPanel(QWidget):
         settings.setValue(self._SETTINGS_HOST, self.host_edit.text().strip())
         settings.setValue(self._SETTINGS_TOKEN, self.token_edit.text())
 
-    def _request(self, path: str, timeout: float = 4.0):
-        """One GET against the configured host, stdlib only. Returns
-        (True, parsed_json) or (False, error_message) - never raises,
-        same "a connectivity problem is data, not a crash" stance every
-        other network-adjacent feature in this codebase already takes."""
+    def _request(self, path: str, timeout: float = 4.0, method: str = "GET", data=None, raw: bool = False,
+                 content_type: str = None):
+        """One request against the configured host, stdlib only. Returns
+        (True, parsed_json) - or (True, bytes) with raw=True - or
+        (False, error_message); never raises, same "a connectivity
+        problem is data, not a crash" stance every other network-adjacent
+        feature in this codebase already takes. An HTTP error's JSON
+        `detail` (runtime's own 409/400 bodies) is kept in
+        `self.last_error_detail` for the caller's message."""
         import json as _json
         import urllib.error
         import urllib.request
 
+        self.last_error_detail = None
         host = self.host_edit.text().strip().rstrip("/")
         if not host:
             return False, tr("controller.error_no_host")
@@ -2944,12 +2953,21 @@ class ControllerPanel(QWidget):
         token = self.token_edit.text().strip()
         if token:
             headers["Authorization"] = f"Bearer {token}"
-        request = urllib.request.Request(url, headers=headers)
+        if content_type:
+            headers["Content-Type"] = content_type
+        request = urllib.request.Request(url, headers=headers, data=data, method=method)
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                body = response.read().decode("utf-8")
-            return True, _json.loads(body) if body else {}
+                body = response.read()
+            if raw:
+                return True, body
+            text = body.decode("utf-8")
+            return True, _json.loads(text) if text else {}
         except urllib.error.HTTPError as e:
+            try:
+                self.last_error_detail = _json.loads(e.read().decode("utf-8")).get("detail")
+            except Exception:  # noqa: BLE001 - a body that is not JSON is simply no detail
+                self.last_error_detail = None
             return False, tr("controller.error_http", code=e.code, reason=e.reason)
         except urllib.error.URLError as e:
             return False, tr("controller.error_connection", reason=str(e.reason))
@@ -2979,11 +2997,129 @@ class ControllerPanel(QWidget):
             self.preview_table.setItem(row, 1, QTableWidgetItem(str(tag.get("value", ""))))
             self.preview_table.setItem(row, 2, QTableWidgetItem(str(tag.get("quality", ""))))
 
+    # -- Wyślij do urządzenia ------------------------------------------------------
+
     def _send_to_device(self):
-        QMessageBox.information(self, tr("controller.send_to_device"), tr("controller.not_implemented_send"))
+        """The file on disk is what goes to the controller - so the project
+        is saved first (with the editors' documents inside), then the
+        controller's header is read and compared, then the bytes are
+        posted with the controller's revision as the guard."""
+        win = self._studio_window
+        path = getattr(win, "_project_path", None)
+        editors_dirty = getattr(win, "_editors_dirty", lambda: False)()
+        if path is None or win._project.is_dirty or editors_dirty:
+            answer = QMessageBox.question(self, tr("controller.send_to_device"), tr("controller.send_needs_save"),
+                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                          QMessageBox.StandardButton.Yes)
+            if answer != QMessageBox.StandardButton.Yes or not win._save_project():
+                return
+            path = win._project_path
+        try:
+            local = load_project(path)
+            payload = Path(path).read_bytes()
+        except (ProjectFormatError, OSError) as exc:
+            QMessageBox.warning(self, tr("controller.send_to_device"), str(exc))
+            return
+
+        ok, header = self._request("/api/v1/project")
+        if not ok:
+            QMessageBox.warning(self, tr("controller.send_to_device"), tr("controller.send_failed", reason=header))
+            return
+        controller_revision = header.get("revision")
+        if header.get("loaded") and header.get("settings_hash") and header["settings_hash"] != settings_hash(local):
+            ok, remote = self._request("/api/v1/project/settings")
+            remote_settings = remote.get("settings", {}) if ok and isinstance(remote, dict) else {}
+            diff = settings_diff(settings_snapshot(local), remote_settings)
+            if not self._confirm_overwrite(header, local, diff):
+                return
+
+        query = f"?expected_revision={int(controller_revision)}" if isinstance(controller_revision, int) else ""
+        ok, result = self._request("/api/v1/project/install" + query, method="POST", data=payload,
+                                   content_type="application/gzip", timeout=30.0)
+        if not ok:
+            detail = self.last_error_detail
+            if isinstance(detail, dict) and detail.get("error") == "revision_mismatch":
+                controller = detail.get("controller") or {}
+                message = tr("controller.send_conflict_moved", revision=controller.get("revision"),
+                             modified_by=controller.get("modified_by"))
+            elif isinstance(detail, dict) and detail.get("error") == "project_refused":
+                reason = detail.get("reason") or {}
+                message = tr("controller.send_refused", reason=reason.get("text") or str(reason))
+            else:
+                message = tr("controller.send_failed", reason=result)
+            QMessageBox.warning(self, tr("controller.send_to_device"), message)
+            return
+        key = "controller.send_done" if result.get("restart_scheduled") else "controller.send_done_no_restart"
+        self.status_label.setText(tr("controller.status_sent", revision=result.get("revision")))
+        QMessageBox.information(self, tr("controller.send_to_device"), tr(key, revision=result.get("revision")))
+
+    def _confirm_overwrite(self, header: dict, local, diff: list) -> bool:
+        """SPEC "Wersjonowanie": the controller's settings are not the
+        project's - show every difference and let the operator decide.
+        Returns True to send anyway."""
+        dialog = SettingsDiffDialog(header, local, diff, self)
+        return dialog.exec() == QDialog.DialogCode.Accepted
+
+    # -- Zgraj z urządzenia -----------------------------------------------------------
 
     def _receive_from_device(self):
-        QMessageBox.information(self, tr("controller.receive_from_device"), tr("controller.not_implemented_receive"))
+        """GET /api/v1/project/file (Engineer token) -> a file the operator
+        names -> opened as the project, exactly like File > Open."""
+        win = self._studio_window
+        if not win._confirm_discard_project():
+            return
+        ok, payload = self._request("/api/v1/project/file", raw=True, timeout=30.0)
+        if not ok:
+            QMessageBox.warning(self, tr("controller.receive_from_device"), tr("controller.receive_failed", reason=payload))
+            return
+        start_dir = win.settings.value("project/last_dir", "")
+        suggested = str(Path(start_dir) / "projekt.epw") if start_dir else "projekt.epw"
+        path, _filter = QFileDialog.getSaveFileName(self, tr("controller.receive_save_title"), suggested,
+                                                    "EPW Project (*.epw)")
+        if not path:
+            return
+        if not path.lower().endswith(".epw"):
+            path += ".epw"
+        try:
+            Path(path).write_bytes(payload)
+        except OSError as exc:
+            QMessageBox.warning(self, tr("controller.receive_from_device"), str(exc))
+            return
+        win._load_project_from_path(path)
+        self.status_label.setText(tr("controller.status_received", revision=win._project.revision))
+
+
+class SettingsDiffDialog(QDialog):
+    """What differs between the project about to be sent and the
+    controller's own settings (SPEC "Wersjonowanie": "pokazać, co się
+    rozjechało (tu 25 A, tam 40 A), zamiast nadpisać")."""
+
+    def __init__(self, header: dict, local, diff: list, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("controller.send_conflict_title"))
+        self.resize(720, 420)
+        layout = QVBoxLayout(self)
+        intro = QLabel(tr("controller.send_conflict_text", controller_revision=header.get("revision"),
+                          modified_by=header.get("modified_by") or "?", local_revision=local.revision,
+                          count=len(diff)))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+        self.table = QTableWidget(len(diff), 3)
+        self.table.setHorizontalHeaderLabels([tr("controller.diff_col_setting"), tr("controller.diff_col_studio"),
+                                              tr("controller.diff_col_controller")])
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 0, 360)
+        for row, (path, mine, theirs) in enumerate(diff):
+            self.table.setItem(row, 0, QTableWidgetItem(path))
+            self.table.setItem(row, 1, QTableWidgetItem("" if mine is None else str(mine)))
+            self.table.setItem(row, 2, QTableWidgetItem("" if theirs is None else str(theirs)))
+        layout.addWidget(self.table, 1)
+        buttons = QDialogButtonBox()
+        send = buttons.addButton(tr("controller.send_anyway"), QDialogButtonBox.ButtonRole.AcceptRole)
+        cancel = buttons.addButton(tr("controller.cancel"), QDialogButtonBox.ButtonRole.RejectRole)
+        send.clicked.connect(self.accept)
+        cancel.clicked.connect(self.reject)
+        layout.addWidget(buttons)
 
 
 class HelpPanel(QWidget):

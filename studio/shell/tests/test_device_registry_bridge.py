@@ -25,13 +25,16 @@ def _window(tmp_path):
 
 
 def _close(win):
-    """A window left alive keeps polling its (fake) panels on a timer
-    during later tests - detach the fake, schedule deletion, flush the
-    event loop. (Not close(): a dirty project's close asks a modal
-    question, which blocks forever offscreen.)"""
+    """A window left alive keeps polling its panels on timers during later
+    tests - stop them and detach the fake panel. No deleteLater(): the
+    other window-building tests leave their windows alive too, and a
+    window deleted under a running suite surfaces as "already deleted"
+    QActions in whatever test pumps the event loop next."""
+    from PySide6.QtCore import QTimer
+    for timer in win.findChildren(QTimer):
+        timer.stop()
     win._synoptic_panel = None
-    win.deleteLater()
-    _app().processEvents()
+    win.hide()
 
 
 class _FakeSynopticPanel:
