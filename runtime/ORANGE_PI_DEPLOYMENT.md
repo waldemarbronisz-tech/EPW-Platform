@@ -84,6 +84,16 @@ Sprawdzenie karty na magistrali (bez uruchamiania EPW OS):
 `python tools/modbus_probe.py --rtu /dev/ttyUSB0 --baud 9600 --unit 1 --di 16 --ai 4`
 pokazuje surowe bity i rejestry, które karta odpowiada pod podanym unit id.
 
+Bez kart: `python tools/modbus_sim.py --project projekt.epw --port 1502 --mirror`
+udaje karty z projektu po Modbus TCP (w projekcie `modbus_bus`: TCP,
+127.0.0.1:1502; w `controller.local.json` `"io_driver": {"driver": "MODBUS"}`),
+a z konsoli symulatora zmienia się wejścia (`di 1 3 on`, `ai 1 2 1234`);
+`--mirror` zamyka wejście n po zapisie cewki n, jak potwierdzenie z obiektu.
+
+Zmienne środowiskowe do stanowiska testowego (nigdy nie ruszają plików
+sterownika): `EPW_PROJECT_FILE` (inny `projekt.epw`), `EPW_ACCESS_FILE`
+(inny plik PIN-ów), `EPW_API_TOKENS_FILE` (inny plik tokenów REST).
+
 Runtime czyta też katalog `shared/` repozytorium (format projektu,
 adresowanie, `shared/symbols/geometry.json` — biblioteka symboli do
 rysowania ekranu z projektu), więc na sterowniku musi być całe

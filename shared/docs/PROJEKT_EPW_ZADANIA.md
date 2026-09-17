@@ -157,6 +157,14 @@ na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
   - 64 rekordy liczników łączeń, w tym 5 niezerowych, są pod płaskimi nazwami `DI1..DI64` sprzed adresacji kartowej;
   - projekt nie ma karty DI, więc nie zostały przeniesione;
   - po dodaniu karty w Studio: `migrate_project_json.py --flat-di-card <id karty>` (stary plik nadal jest).
+- **Sprawdzenie softwarowe bez sprzętu (2026-09-17):** `runtime/tools/modbus_sim.py`
+  udaje karty projektu po Modbus TCP (wejścia z konsoli, `--mirror` = potwierdzenie
+  z cewki); symulowana instalacja (`simulation/simulated_plant.py`) odpowiada na
+  aparaty projektu w trybie symulatora (MAINTAINED, PULSE, PULSE_TOGGLE);
+  `test_software_commissioning.py` przechodzi całą pętlę: magistrala → strona
+  Synoptyka → kliknięcie → cewka → potwierdzenie → wysyłka projektu ze Studio
+  przez prawdziwy REST → żądanie restartu. Na sprzęcie zostaje tylko potwierdzenie
+  mapowania (`modbus_probe.py`).
 - **Zabezpieczenia elektryczne w runtime** nie mają trwałości poza projektem.
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
   - Test weryfikacji zabezpieczeń dostaje id aparatu z listy aparatów projektu mających wyjście i punkt zwrotny.

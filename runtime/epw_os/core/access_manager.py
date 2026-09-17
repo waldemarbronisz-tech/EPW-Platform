@@ -54,7 +54,8 @@ class AccessManager:
 
     def __init__(self, event_bus, config_path: str = None):
         self.event_bus = event_bus
-        self.config_path = config_path or self.DEFAULT_CONFIG_PATH
+        # EPW_ACCESS_FILE: a bench/second-site override (see EPW_PROJECT_FILE).
+        self.config_path = config_path or os.environ.get("EPW_ACCESS_FILE") or self.DEFAULT_CONFIG_PATH
         self.level = AccessLevel.USER
         self._pin_hashes = {}
         self._failed_attempts = {}  # level -> consecutive failure count
