@@ -78,8 +78,13 @@ Moduł spoza składu w ogóle nie jest tworzony: nie ma obiektu, wątków ani ta
 
 > **Stan 2026-09-15:** sekcje `screens` / `logic` / `logic_runtime` — ZROBIONE
 > (zapis/odczyt w Studio, runtime czyta je z projektu, `composition_check._sources()`
-> przepięte, ścieżki plików tylko jako zapas). Pozostają: `settings_hash` oraz
-> Main View po `deviceId`.
+> przepięte, ścieżki plików tylko jako zapas). Main View po `deviceId` — ZROBIONE
+> (`apparatus.bind_roles_from_screens()`). Renderer ekranów w runtime — ZROBIONE,
+> etap pierwszy (strona *Synoptyka*, `shared/symbols/geometry.json`; patrz SPEC
+> „Runtime rysuje osadzony ekran"). Sterownik Modbus w runtime — ZROBIONE
+> (`drivers/modbus_driver.py`, ustawienie `io_driver` w `controller.local.json`).
+> Rejestr aparatów Studio ↔ Synoptic — ZROBIONE (most dodający, jak karty).
+> Pozostaje: `settings_hash`.
 
 **Warunek wstępny renderera ekranów i pełnego wersjonowania nastaw.**
 
@@ -113,10 +118,26 @@ Dziś REST daje tylko odczyt (`GET /api/v1/project`). Wysyłanie pliku to osobne
   - ścieżki `.epwsyn` / `.epwlogic`.
 
   Do rozstrzygnięcia, które z nich należą do projektu.
-- **Main View — wiązanie symboli po oznaczeniu.**
-  - Q1, KMG, KM1, KM2, KVG1 dostają aparat, którego id to oznaczenie albo `<LOKALIZACJA>_<oznaczenie>`.
-  - Dwa pasujące aparaty zostawiają symbol „nie skonfigurowany".
-  - Reguła w `apparatus.MAIN_VIEW_ROLE_DESIGNATIONS`; do zastąpienia przez `deviceId` z ekranów (p. 4).
+- **Main View — wiązanie symboli.** ZROBIONE 2026-09-15: najpierw `deviceId`
+  z obiektów osadzonego ekranu (`apparatus.bind_roles_from_screens()`), reguła
+  nazewnicza (`MAIN_VIEW_ROLE_DESIGNATIONS`) tylko dla symboli, których ekran nie
+  rysuje. Dwa różne aparaty narysowane dla jednego oznaczenia nadal zostawiają
+  symbol „nie skonfigurowany".
+- **Renderer ekranów — co jeszcze nie jest na żywo** (etap pierwszy, 2026-09-15):
+  - kolor przewodów według sieci: `NetResolver.ts` (328 linii, graf po całym
+    schemacie) nie jest przeniesiony — przewód rysuje się w stanie z pliku;
+  - animacja obrotu (wentylator): eksport niesie pozę bazową, nie wie, która
+    część się obraca; mruganie i „marsz" kreski działają;
+  - ściany rysowane jako pasy bez cieniowania edytora, pokoje bez podłogi;
+  - `clipFunc` (2 symbole zbiorników) nie jest eksportowany — zbiornik rysuje
+    się bez przycięcia poziomu;
+  - eksport trzeba powtórzyć po zmianie biblioteki symboli
+    (`studio/synoptic/tools/geometry_export`), test runtime to wykrywa.
+- **Sterownik Modbus — założenia do potwierdzenia na sprzęcie:** mapowanie
+  kanał n → adres n-1, DI przez FC2, odczyt zwrotny DO przez FC1 (wyłączany
+  `read_back_outputs`), AI jako 16-bit bez znaku (`ai_signed`). Bez pomiaru na
+  prawdziwych modułach ELA/ADA/EPM to jest standard Modbus, nie potwierdzone
+  zachowanie tych kart.
 - **Migracja obecnego `project.json`:**
   - 16 punktów analogowych trafiło na kartę `AI1` z **pustym modelem**, bo moduł jest nieznany — do uzupełnienia w Studio;
   - 64 rekordy liczników łączeń, w tym 5 niezerowych, są pod płaskimi nazwami `DI1..DI64` sprzed adresacji kartowej;

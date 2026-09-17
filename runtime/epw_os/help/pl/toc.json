@@ -50,6 +50,7 @@
       "title": "Main View",
       "topics": [
         {"id": "mv_synoptic", "title": "Schemat synoptyczny"},
+        {"id": "mv_embedded_screen", "title": "Ekran osadzony w projekcie (Synoptyka)"},
         {"id": "mv_control", "title": "Sterowanie aparatami i wymagane uprawnienia"},
         {"id": "mv_device_status", "title": "Panel statusu urządzeń"},
         {"id": "mv_measurements", "title": "Panel pomiarów"}

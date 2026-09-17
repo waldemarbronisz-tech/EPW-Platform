@@ -50,6 +50,7 @@
       "title": "Main View",
       "topics": [
         {"id": "mv_synoptic", "title": "The One-Line Diagram"},
+        {"id": "mv_embedded_screen", "title": "The Embedded Screen (Synoptic)"},
         {"id": "mv_control", "title": "Controlling Devices and Required Permissions"},
         {"id": "mv_device_status", "title": "Device Status Panel"},
         {"id": "mv_measurements", "title": "The Measurement Panel"}

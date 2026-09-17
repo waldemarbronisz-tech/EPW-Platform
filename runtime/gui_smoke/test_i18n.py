@@ -98,6 +98,13 @@ def test_polish_translation_reaches_every_page_and_dialog():
         p = PageSystemTopology(PageMockTagManager()); pl_pages.append(p)
         assert _header_text(p) == "TOPOLOGIA SYSTEMU", _header_text(p)
 
+        from epw_os.gui.synoptic.page_synoptic import PageSynoptic
+        p = PageSynoptic(PageMockTagManager(), project_manager=None, access_manager=PageMockAccessManager())
+        pl_pages.append(p)
+        assert _header_text(p) == "SYNOPTYKA", _header_text(p)
+        assert "ekranu" in p.status_label.text()  # no project -> says so, in Polish
+        p.shutdown()
+
         p = PageEngineerMode(PageMockTagManager(), PageMockProtectionManager(), PageMockAccessManager())
         pl_pages.append(p)
         assert _header_text(p) == "WERYFIKACJA ZABEZPIECZEŃ", _header_text(p)
@@ -186,7 +193,7 @@ def test_polish_translation_reaches_every_page_and_dialog():
         ppd = ProjectPropertiesDialog(MockProjectManager(), MockTagManager(), PageMockAccessManager(), None)
         assert ppd.windowTitle() == "Właściwości projektu", ppd.windowTitle()
 
-        assert len(pl_pages) == 17, \
+        assert len(pl_pages) == 18, \
             "the exact page/dialog count this sweep exercises - preserved from the original " \
             "test_gui_smoke.py so a future accidental deletion here is caught"
     finally:

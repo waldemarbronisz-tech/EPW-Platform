@@ -189,6 +189,7 @@ class SynopticProject:
     meters: list
     signal_panels: list
     frames: list
+    walls: list               # raw dicts: {id, from, to, thickness, roomName?...}
     group_commands: list
     setpoint_panels: list
     devices: DeviceRegistry
@@ -382,6 +383,7 @@ def load_epwsyn_data(data, path: str = "projekt.epw#screens") -> EpwsynLoadResul
         meters=_as_list(data, "meters", warnings),
         signal_panels=_as_list(data, "signalPanels", warnings),
         frames=_as_list(data, "frames", warnings),
+        walls=_as_list(data, "walls", warnings),
         group_commands=_as_list(data, "groupCommands", warnings),
         setpoint_panels=_as_list(data, "setpointPanels", warnings),
         devices=registry,

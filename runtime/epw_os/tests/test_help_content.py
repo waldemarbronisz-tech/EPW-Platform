@@ -180,6 +180,7 @@ def test_index_has_a_substantial_number_of_terms(pl_store):
 # page nobody actually documented.
 _PAGE_ID_TO_HELP_TOPIC = {
     "main_view": "mv_synoptic",
+    "synoptic": "mv_embedded_screen",
     "digital_inputs": "dio_purpose",
     "analog_inputs": "ap_what",
     "control_outputs": "dio_purpose",

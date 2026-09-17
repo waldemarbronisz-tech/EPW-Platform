@@ -1,0 +1,13 @@
+{
+  "name": "epw-synoptic-geometry-export",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Exports every symbol of the Synoptic Editor's library as plain drawing primitives (shared/symbols/geometry.json) for the EPW-OS runtime renderer. Own package.json on purpose: the editor itself does not depend on esbuild, and the runtime must never need Node.",
+  "scripts": {
+    "export": "node export.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

@@ -213,7 +213,7 @@ def test_settings_popups_construct(make_window):
 
 def test_nav_pages_keyed_by_stable_page_id(make_window):
     window = _window(make_window)
-    expected_nav = {"main_view", "power_quality", "digital_inputs", "analog_inputs",
+    expected_nav = {"main_view", "synoptic", "power_quality", "digital_inputs", "analog_inputs",
                      "control_outputs", "protection_electrical", "protection_process", "events", "alarms",
                      "system_topology", "audit_log", "trends", "bus_diagnostics",
                      "intrusion_overview", "intrusion_history", "intrusion_config", "engineer_mode"}
