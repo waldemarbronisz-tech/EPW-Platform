@@ -390,6 +390,12 @@ class EPWCore:
         self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
         bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
                                 MAIN_VIEW_ROLE_DESIGNATIONS)
+        # The simulated plant answers the project's own apparatuses (an
+        # output written by the simulator driver closes/opens the CLOSED
+        # contact a moment later), so the command loop and the screens
+        # work end to end without hardware - see simulated_plant.py.
+        from epw_os.simulation.simulated_plant import plant_mappings_from_apparatuses
+        self.simulated_plant.add_mappings(plant_mappings_from_apparatuses(self.project_manager.get_apparatuses()))
 
         # Feature configuration (Task: "okno konfiguracji, w ktorym
         # wlacza i wylacza sie poszczegolne funkcje sterownika") - read

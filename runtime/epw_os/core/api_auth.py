@@ -60,7 +60,9 @@ class ApiAuth:
     _LEVELS = ("Operator", "Engineer")
 
     def __init__(self, config_path: str = None):
-        self.config_path = config_path or self.DEFAULT_CONFIG_PATH
+        # EPW_API_TOKENS_FILE: a bench/second-site override, like
+        # EPW_PROJECT_FILE for the project (never touches the real file).
+        self.config_path = config_path or os.environ.get("EPW_API_TOKENS_FILE") or self.DEFAULT_CONFIG_PATH
         self._token_hashes = {}
         self._load_or_create_config()
 
