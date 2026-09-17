@@ -45,7 +45,7 @@ PROJECT_KEYS = (
     "format", "schema_version", "project_id", "metadata", "modules", "enabled_features",
     "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points",
     "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_power_supervision",
-    "process_protections", "electrical_protection_stages", "modbus_bus",
+    "process_protections", "electrical_protection_stages", "modbus_bus", "switching_counter_settings",
 )
 
 # --- what the panel may change (Nastawa) ----------------------------------
@@ -58,6 +58,7 @@ PROCESS_SETTINGS = ("upper_threshold", "lower_threshold", "hysteresis", "delay_s
 PROCESS_STRUCTURE = ("name", "analog_tag")
 ELECTRICAL_SETTINGS = ("enabled", "setting", "hysteresis", "delay_ms", "action")
 ANALOG_SETTINGS = ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals")
+COUNTER_SETTINGS = ("warning_threshold",)   # per DI point - the switching counter's warning threshold
 ANALOG_STRUCTURE = ("description", "technical_note")
 POWER_SUPERVISION_KEYS = ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state")
 
@@ -130,6 +131,11 @@ def build_project_view(project) -> dict:
         "output_descriptions": {p["address"]: p["description"] for p in registry
                                 if p["description"] and p["kind"] == "DO"},
         "analog_points": [_analog_record(p) for p in project.points if point_kind(p.address) == "AI"],
+        # The switching counter's warning threshold per DI point - a setting
+        # (SwitchingCounterManager seeds its records from it and writes a
+        # panel change back through set_counter_warning_threshold()).
+        "switching_counter_settings": [{"tag": p.address, "warning_threshold": p.warning_threshold}
+                                       for p in project.points if point_kind(p.address) == "DI"],
         "apparatuses": [{"id": d.id, "behavior": d.behavior, "kind": d.kind,
                          "feedback": list(d.feedback), "command": list(d.command),
                          "command_style": d.command_style, "pulse_ms": d.pulse_ms} for d in project.devices],
@@ -235,6 +241,9 @@ def diff_settings(project, config: dict) -> SettingsDiff:
                   allow_new=True)
     _diff_records("analog_points", config.get("analog_points", baseline["analog_points"]),
                   baseline["analog_points"], lambda r: r.get("tag"), ANALOG_SETTINGS, ANALOG_STRUCTURE, diff)
+    _diff_records("switching_counter_settings",
+                  config.get("switching_counter_settings", baseline["switching_counter_settings"]),
+                  baseline["switching_counter_settings"], lambda r: r.get("tag"), COUNTER_SETTINGS, (), diff)
 
     power = config.get("intrusion_power_supervision", baseline["intrusion_power_supervision"])
     normalized = {k: power.get(k) for k in POWER_SUPERVISION_KEYS} if isinstance(power, dict) and power else {}
@@ -281,6 +290,6 @@ def apply_changes(project, changes) -> None:
             stages[change.record_id] = stage
         target = {
             "intrusion_zones": zones, "intrusion_lines": lines, "process_protections": processes,
-            "analog_points": points, "electrical_protection_stages": stages,
+            "analog_points": points, "switching_counter_settings": points, "electrical_protection_stages": stages,
         }[change.section][change.record_id]
         setattr(target, change.field, _coerce_to_field(target, change.field, change.new))

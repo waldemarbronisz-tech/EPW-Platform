@@ -298,7 +298,8 @@
     "location_inherit": "(inherited: {value})",
     "location_blank": "(none)",
     "set_location_for_selected": "Set Location for Selected...",
-    "set_location_dialog_title": "Location for the Selected Points"
+    "set_location_dialog_title": "Location for the Selected Points",
+    "col_warning_threshold": "Counter warning at"
   },
   "devices": {
     "col_id": "Id",

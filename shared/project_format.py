@@ -241,6 +241,11 @@ class Point:
     eng_max: Optional[float] = None
     unit: Optional[str] = None
     decimals: Optional[int] = None
+    # ZADANIA p. 6 (2026-09-17): the switching counter's warning threshold
+    # is a SETTING (SPEC "Nastawa"), so it lives on the DI point it counts
+    # for - None = no warning. The panel may change it (written back like
+    # every other setting); the counts themselves stay runtime state.
+    warning_threshold: Optional[int] = None
 
 
 def effective_location(point: Point, card) -> str:
@@ -1059,6 +1064,7 @@ SETTING_FIELDS = {
     "process_protections": ("upper_threshold", "lower_threshold", "hysteresis", "delay_seconds", "enabled"),
     "electrical_protection_stages": ("enabled", "setting", "hysteresis", "delay_ms", "action"),
     "analog_points": ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals"),
+    "switching_counters": ("warning_threshold",),
     "power_supervision": ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state"),
 }
 
@@ -1093,8 +1099,11 @@ def settings_snapshot(project: Project) -> dict:
     for stage in project.electrical_protection_stages:
         record("electrical_protection_stages", f"{stage.function_id} / {stage.stage_name}", stage)
     for point in project.points:
-        if point.address.split(".")[1:2] == ["AI"]:
+        kind = point.address.split(".")[1:2]
+        if kind == ["AI"]:
             record("analog_points", point.address, point)
+        elif kind == ["DI"]:
+            record("switching_counters", point.address, point)
     supervision = project.power_supervision
     if getattr(supervision, "mains_tag", None) is not None or getattr(supervision, "battery_tag", None) is not None:
         record("power_supervision", "system", supervision)

@@ -138,6 +138,17 @@ class SwitchingCounterManager:
             # later mismatch against the tag's real post-restart value
             # is reconciled.
             self._last_known_state[tag_name] = record["closed_since"] is not None
+        # The warning threshold is a project SETTING (Point.warning_threshold,
+        # ZADANIA p. 6): the project's value wins over whatever the state
+        # file remembered; a DI point without one keeps the state's value
+        # (a project saved before the field existed).
+        thresholds = getattr(self.project_manager, "get_counter_warning_thresholds", lambda: {})()
+        for tag_name, threshold in thresholds.items():
+            if threshold is None:
+                continue
+            record = self._counters.setdefault(tag_name, new_record())
+            record["warning_threshold"] = int(threshold)
+            self._last_known_state.setdefault(tag_name, record["closed_since"] is not None)
 
     def flush_to_project(self):
         """Copies the current snapshot into project_manager's config and
@@ -268,11 +279,18 @@ class SwitchingCounterManager:
         return record["closes"] >= record["warning_threshold"]
 
     def set_warning_threshold(self, tag_name: str, threshold):
-        """`threshold` of None clears it (task: "opcjonalny")."""
+        """`threshold` of None clears it (task: "opcjonalny"). A setting
+        (ZADANIA p. 6): also goes into the project view and is saved at
+        once, so projekt.epw carries it (revision +1, "panel") - the
+        counts themselves still only ever reach the state file."""
         with self._lock:
             record = self._counters.setdefault(tag_name, new_record())
             record["warning_threshold"] = int(threshold) if threshold is not None else None
             self._dirty = True
+        setter = getattr(self.project_manager, "set_counter_warning_threshold", None)
+        if callable(setter):
+            setter(tag_name, threshold)
+        self.flush_to_project()
 
     def restore_record(self, tag_name: str, record: dict):
         """Presentation Mode's own restore-on-stop path (Task: scenariusz
