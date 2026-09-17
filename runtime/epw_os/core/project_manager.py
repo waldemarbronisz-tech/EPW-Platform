@@ -26,6 +26,7 @@ LEGACY_PROJECT_FILE = os.path.join(_RUNTIME_ROOT, "project.json")
 # service notes, the .epwsyn/.epwlogic paths - see _save_epw()).
 STATE_FILE_NAME = "runtime_state.json"
 SETTINGS_FILE_NAME = "controller.local.json"
+PENDING_INSTALL_SUFFIX = ".pending"   # projekt.epw.pending - written by install_project_file(), read at start
 SETTINGS_FORMAT = "EPW_CONTROLLER_SETTINGS"
 
 PROJECT_FORMAT = "EPW_OS_PROJECT"
@@ -73,6 +74,7 @@ class ProjectManager:
         self._state_file = state_file
         self._settings_file = settings_file
         self.config = {}
+        self.rolled_back = None   # set by _rollback_pending_install() at a start that refused an install
         # JSON snapshot of the last state that is known to match disk. Used
         # by is_dirty() to drive the "unsaved changes" prompt in the File
         # menu. None until the first load/save.
@@ -885,14 +887,23 @@ class ProjectManager:
         self._saved_snapshot = self._snapshot()
         return True
 
-    def install_project_file(self, source_path):
+    def install_project_file(self, source_path, actor=None):
         """Puts a projekt.epw prepared in Studio in place of this
         controller's project file - only after the shared reader accepted
         it, keeping the replaced file as projekt.epw.bak. Takes effect on the
         next start: tags, modules and pages are built from the project once,
         at startup, and swapping them under a running controller is not
         something this method pretends to do. Returns (True, None) or
-        (False, {"key", "params", "text"}) with the reader's refusal."""
+        (False, {"key", "params", "text"}) with the reader's refusal.
+
+        Task "wysyłanie projektu na sterownik przez REST": the install also
+        leaves a `projekt.epw.pending` marker next to the file. The next
+        start (_load_epw) removes it once the new file loaded; if the new
+        file is refused at that start, the marker says the previous one is
+        in `.bak` and it is put back (see _rollback_pending_install) -
+        "powrót do .bak przy nieudanym starcie". `actor` (an API level,
+        say) names who installed in the audit entry; None = whoever is
+        logged in on the panel."""
         from epw_os.core import project_format as pf
         result = pf.read_project(source_path)
         if not result.ok:
@@ -911,12 +922,46 @@ class ProjectManager:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(temporary, target)
+            with open(target + PENDING_INSTALL_SUFFIX, "w", encoding="utf-8") as f:
+                json.dump({"revision": result.project.revision, "modified_by": result.project.modified_by,
+                           "source": str(source_path)}, f)
         except OSError as e:
             return False, {"key": "project_format.unreadable", "params": {"detail": str(e)}, "text": str(e)}
         self._audit("PROJECT_FILE_INSTALLED",
                     f"{source_path} installed as {target} (revision {result.project.revision}, "
-                    f"last saved by {result.project.modified_by}) - active after restart")
+                    f"last saved by {result.project.modified_by}) - active after restart",
+                    actor=actor)
         return True, None
+
+    def project_file_bytes(self):
+        """The project file exactly as it is on disk (GET
+        /api/v1/project/file - "Zgraj z urządzenia"), or None."""
+        if not self.is_epw_project() or not os.path.exists(self.project_file):
+            return None
+        with open(self.project_file, "rb") as f:
+            return f.read()
+
+    def _rollback_pending_install(self, path, refusal):
+        """Called by _load_epw when `path` was refused: if a pending-install
+        marker and a .bak exist, the previous project comes back and the
+        refused file is kept as `.rejected` for inspection. Returns True
+        when a rollback happened (the caller then reads `path` again)."""
+        marker = str(path) + PENDING_INSTALL_SUFFIX
+        backup = str(path) + ".bak"
+        if not os.path.exists(marker) or not os.path.exists(backup):
+            return False
+        try:
+            os.replace(str(path), str(path) + ".rejected")
+            shutil.copy2(backup, str(path))
+            os.remove(marker)
+        except OSError as e:
+            log.error(f"Rollback of {path} to {backup} failed: {e}")
+            return False
+        self.rolled_back = {"path": str(path), "backup": backup, "rejected": str(path) + ".rejected",
+                            "reason": refusal}
+        log.error(f"Installed project {path} was refused ({refusal}) - the previous file was put back from "
+                  f"{backup}; the refused one is kept as {self.rolled_back['rejected']}.")
+        return True
 
     # --- projekt.epw: header, audit ---------------------------------------
 
@@ -927,8 +972,11 @@ class ProjectManager:
         self._audit_logger = audit_logger
         self._actor_provider = actor_provider
 
-    def _audit(self, event_type: str, detail: str, success: bool = True):
+    def _audit(self, event_type: str, detail: str, success: bool = True, actor=None):
         if self._audit_logger is None:
+            return
+        if actor:
+            self._audit_logger.record(event_type, actor, detail, success=success)
             return
         actor = "SYSTEM"
         if self._actor_provider is not None:
@@ -965,6 +1013,8 @@ class ProjectManager:
                 "modified_at": project.metadata.modified_at,
                 "revision": project.revision,
                 "modified_by": project.modified_by,
+                # SPEC "Wersjonowanie" - what Studio compares before sending.
+                "settings_hash": pf.settings_hash(project),
                 "modules": list(project.modules),
                 "counts": {
                     "cards": len(project.cards), "points": len(project.points), "devices": len(project.devices),
@@ -1014,16 +1064,25 @@ class ProjectManager:
                     if key not in ("format", "schema_version") and key not in PROJECT_KEYS and key not in STATE_KEYS}
 
         self.load_warnings = []
+        self.rolled_back = None
         if not os.path.exists(path):
             self.project = None
             self.load_error = {"key": "startup.project_missing", "params": {"path": str(path)},
                                "text": f"No project file at {path}."}
         else:
             result = pf.read_project(path)
+            if not result.ok and self._rollback_pending_install(path, str(result.error)):
+                result = pf.read_project(path)
             if result.ok:
                 self.project = result.project
                 self.load_error = None
                 self.load_warnings = list(result.warnings)
+                marker = str(path) + PENDING_INSTALL_SUFFIX
+                if os.path.exists(marker):
+                    try:
+                        os.remove(marker)   # the installed project started - nothing to roll back any more
+                    except OSError:
+                        pass
             else:
                 self.project = None
                 self.load_error = {"key": "project_format." + result.error.key, "params": dict(result.error.params),

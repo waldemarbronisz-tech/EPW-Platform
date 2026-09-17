@@ -111,7 +111,7 @@ def test_round_trip_preserves_structural_collections(tmp_path):
 def test_empty_collections_are_omitted_from_the_file(tmp_path):
     """Module docstring's own rule, ported from the old spec's "katalogi
     nieużywane [...] mogą nie istnieć": a bare project writes only
-    format/schema_version/project/revision/modified_by - not five empty
+    format/schema_version/project/revision/modified_by/settings_hash - not empty
     arrays pretending to be real content."""
     p = new_project("Bare")
     path = tmp_path / "projekt.epw"
@@ -120,7 +120,7 @@ def test_empty_collections_are_omitted_from_the_file(tmp_path):
     with gzip.open(path, "rb") as f:
         data = json.loads(f.read().decode("utf-8"))
 
-    assert set(data.keys()) == {"format", "schema_version", "project", "revision", "modified_by"}
+    assert set(data.keys()) == {"format", "schema_version", "project", "revision", "modified_by", "settings_hash"}
 
 
 def test_file_is_gzip_compressed_utf8_json(tmp_path):

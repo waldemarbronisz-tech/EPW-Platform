@@ -995,7 +995,8 @@
     "composition_logic": "The logic file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the logic.",
     "composition_screen": "The screen file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the screen.",
     "modbus_bus_unavailable": "The Modbus bus cannot be opened on this controller: {reason}",
-    "modbus_no_unit_id": "Card {card} has no Modbus unit id in the project - it is not polled. Set it in Studio (I/O cards)."
+    "modbus_no_unit_id": "Card {card} has no Modbus unit id in the project - it is not polled. Set it in Studio (I/O cards).",
+    "project_rolled_back": "The project installed at {path} was refused at this start ({reason}). The previous project was put back and the refused file is kept as {rejected}."
   },
   "migration": {
     "source_unreadable": "Cannot read {path}: {detail}",

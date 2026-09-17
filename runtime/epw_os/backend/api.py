@@ -44,9 +44,12 @@ uwierzytelnienia").
 """
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, Header, Response
 from pydantic import BaseModel
 import logging
+import os
+import tempfile
+import threading
 
 from epw_os.core.access_manager import AccessLevel
 
@@ -86,20 +89,31 @@ def _require_operator(core=Depends(get_core), authorization: Optional[str] = Hea
     "nieudane proby uwierzytelnienia trafiaja do dziennika
     audytowego"), with the level actually resolved (or None) as the
     recorded actor - never a client-supplied name."""
+    return _resolve_or_reject(core, authorization, AccessLevel.OPERATOR, "POST /api/v1/commands")
+
+
+def _require_engineer(core=Depends(get_core), authorization: Optional[str] = Header(None)) -> str:
+    """Engineer gate for the project endpoints (task "wysyłanie projektu
+    na sterownik przez REST": "tokenu na poziomie Engineer") - the same
+    rule the panel's own File > Open (install) applies."""
+    return _resolve_or_reject(core, authorization, AccessLevel.ENGINEER, "project install/download")
+
+
+def _resolve_or_reject(core, authorization, required_level, what: str) -> str:
     token = None
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
     level = core.api_auth.resolve_level(token)
-    if not core.api_auth.has_access(level, AccessLevel.OPERATOR):
+    if not core.api_auth.has_access(level, required_level):
         actor = f"API:{level}" if level else "API (no/invalid token)"
         if core.audit_logger is not None:
             core.audit_logger.record(
                 "API_AUTH_FAILED", actor,
-                "POST /api/v1/commands requires Operator level or higher", success=False,
+                f"{what} requires {required_level} level or higher", success=False,
             )
         raise HTTPException(
             status_code=401,
-            detail="Valid Operator (or higher) API token required (Authorization: Bearer <token>)",
+            detail=f"Valid {required_level} (or higher) API token required (Authorization: Bearer <token>)",
         )
     return level
 
@@ -231,3 +245,93 @@ def issue_command(cmd: CommandRequest, core=Depends(get_core), level: str = Depe
         "requested_at": record.requested_at,
         "actor": actor,
     }
+
+
+# --- the project file itself (task "wysyłanie projektu na sterownik przez REST") ----
+
+@app.get("/api/v1/project/settings")
+def get_project_settings(core=Depends(get_core)):
+    """The controller's settings as {path: value} plus the header's
+    revision/settings_hash - what Studio diffs against its own project
+    before sending, to show "tu 25 A, tam 40 A" instead of overwriting
+    (SPEC "Wersjonowanie"). Read-only, unauthenticated: every value here
+    is on a panel page a User-level viewer already sees."""
+    pm = core.project_manager
+    project = getattr(pm, "project", None)
+    header = pm.get_project_header()
+    if project is None:
+        return {"loaded": False, "revision": header.get("revision"), "settings_hash": None, "settings": {},
+                "load_error": header.get("load_error")}
+    from epw_os.core import project_format as pf
+    return {"loaded": True, "revision": project.revision, "modified_by": project.modified_by,
+            "settings_hash": pf.settings_hash(project), "settings": pf.settings_snapshot(project)}
+
+
+@app.get("/api/v1/project/file")
+def download_project_file(core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """projekt.epw exactly as it is on the controller ("Zgraj z
+    urządzenia" - with the settings changed on the panel inside)."""
+    payload = core.project_manager.project_file_bytes()
+    if payload is None:
+        raise HTTPException(status_code=404, detail="This controller has no projekt.epw.")
+    if core.audit_logger is not None:
+        core.audit_logger.record("API_PROJECT_DOWNLOADED", f"API:{level}", core.project_manager.project_file,
+                                 success=True)
+    return Response(content=payload, media_type="application/gzip",
+                    headers={"Content-Disposition": 'attachment; filename="projekt.epw"'})
+
+
+@app.post("/api/v1/project/install")
+async def install_project(request: Request, expected_revision: Optional[int] = None, restart: bool = True,
+                          core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Installs the projekt.epw in the request body as this controller's
+    project (ProjectManager.install_project_file: checked by the shared
+    reader first, previous file kept as .bak, rolled back at the next
+    start if the new one is refused there) and, unless ?restart=false,
+    asks the process to restart a moment after answering.
+
+    `expected_revision` is the revision Studio read from GET
+    /api/v1/project before deciding to send: when the controller's
+    revision differs by then (the panel saved a setting in between), the
+    install is refused with 409 and the current header, so Studio looks
+    again instead of overwriting blind (SPEC "Wersjonowanie": "rozjazd =
+    ZATRZYMAĆ SIĘ")."""
+    actor = f"API:{level}"
+    pm = core.project_manager
+    header = pm.get_project_header()
+    current = header.get("revision")
+    if expected_revision is not None and current is not None and current != expected_revision:
+        if core.audit_logger is not None:
+            core.audit_logger.record("API_PROJECT_INSTALL_REFUSED", actor,
+                                     f"expected revision {expected_revision}, controller has {current}", success=False)
+        raise HTTPException(status_code=409, detail={"error": "revision_mismatch", "expected_revision": expected_revision,
+                                                     "controller": header})
+    payload = await request.body()
+    if not payload:
+        raise HTTPException(status_code=400, detail={"error": "empty_body"})
+    target_dir = os.path.dirname(os.path.abspath(pm.project_file)) or "."
+    fd, temporary = tempfile.mkstemp(prefix="upload.", suffix=".epw", dir=target_dir)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(payload)
+        ok, error = pm.install_project_file(temporary, actor=actor)
+    finally:
+        try:
+            os.remove(temporary)
+        except OSError:
+            pass
+    if not ok:
+        if core.audit_logger is not None:
+            core.audit_logger.record("API_PROJECT_INSTALL_REFUSED", actor, error["text"], success=False)
+        raise HTTPException(status_code=400, detail={"error": "project_refused", "reason": error})
+    from epw_os.core import project_format as pf
+    installed = pf.read_project(pm.project_file)
+    revision = installed.project.revision if installed.ok else None
+    settings_hash = pf.settings_hash(installed.project) if installed.ok else None
+    if restart:
+        # Answer first, then go down: the request must complete before
+        # the process exits.
+        threading.Timer(1.5, core.request_restart,
+                        args=(f"project installed via REST (revision {revision})", actor)).start()
+    return {"installed": True, "path": pm.project_file, "revision": revision, "settings_hash": settings_hash,
+            "previous_revision": current, "restart_scheduled": bool(restart), "actor": actor}

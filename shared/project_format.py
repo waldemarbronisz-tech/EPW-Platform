@@ -511,6 +511,9 @@ def _to_json_dict(project: Project) -> dict:
         "project": asdict(project.metadata),
         "revision": project.revision,
         "modified_by": project.modified_by,
+        # SPEC "Wersjonowanie": "settings_hash - suma kontrolna samych
+        # nastaw" - recomputed at every save from settings_snapshot().
+        "settings_hash": settings_hash(project),
     }
     # Every structural collection is OMITTED when empty (module
     # docstring: "czytnik ma to znieść bez błędu", applied to JSON keys)
@@ -857,7 +860,7 @@ def _records(data: dict, key: str, where: str, cls, warnings: list, id_field=Non
 
 
 _TOP_LEVEL_KEYS = {
-    "format", "schema_version", "project", "revision", "modified_by", "modules", "cards",
+    "format", "schema_version", "project", "revision", "modified_by", "settings_hash", "modules", "cards",
     "locations", "points", "devices", "intrusion", "protection", "modbus_bus",
     "screens", "logic", "logic_runtime",
 }
@@ -1038,3 +1041,77 @@ def load_project(path) -> Project:
     if not result.ok:
         raise result.error
     return result.project
+
+
+# --- settings: what the panel may change (SPEC "Nastawa") ------------------------
+#
+# The same field lists runtime/epw_os/core/project_epw.py uses to tell a
+# setting from structure (a test keeps the two in step). settings_snapshot()
+# flattens exactly those values into {path: value}; settings_hash() is the
+# header's "suma kontrolna samych nastaw"; settings_diff() is what Studio
+# shows before overwriting a controller whose file moved on without it
+# (SPEC "Wersjonowanie": "pokazać, co się rozjechało (tu 25 A, tam 40 A)").
+
+SETTING_FIELDS = {
+    "zones": ("exit_delay_seconds", "entry_delay_seconds"),
+    "lines": ("min_violation_seconds", "multiplicity_count", "multiplicity_window_seconds",
+              "lockout_after_count", "alarm_hold_seconds", "silence_threshold_seconds", "value_windows"),
+    "process_protections": ("upper_threshold", "lower_threshold", "hysteresis", "delay_seconds", "enabled"),
+    "electrical_protection_stages": ("enabled", "setting", "hysteresis", "delay_ms", "action"),
+    "analog_points": ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals"),
+    "power_supervision": ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state"),
+}
+
+
+def _setting_value(value):
+    """JSON-safe copy; None stays None so "not set" and "set to 0" differ."""
+    if isinstance(value, (list, tuple)):
+        return [_setting_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _setting_value(v) for k, v in value.items()}
+    return value
+
+
+def settings_snapshot(project: Project) -> dict:
+    """{"<section>/<record id>/<field>": value} for every setting of the
+    project, in a stable order. Records are keyed by their own identity
+    (zone/line/protection id, "function / stage" for an electrical stage,
+    the point address for an analog point), so two files of the same
+    installation line up field by field."""
+    out = {}
+
+    def record(section, key, obj):
+        for name in SETTING_FIELDS[section]:
+            out[f"{section}/{key}/{name}"] = _setting_value(getattr(obj, name, None))
+
+    for zone in project.zones:
+        record("zones", zone.id, zone)
+    for line in project.lines:
+        record("lines", line.id, line)
+    for protection in project.process_protections:
+        record("process_protections", protection.id, protection)
+    for stage in project.electrical_protection_stages:
+        record("electrical_protection_stages", f"{stage.function_id} / {stage.stage_name}", stage)
+    for point in project.points:
+        if point.address.split(".")[1:2] == ["AI"]:
+            record("analog_points", point.address, point)
+    supervision = project.power_supervision
+    if getattr(supervision, "mains_tag", None) is not None or getattr(supervision, "battery_tag", None) is not None:
+        record("power_supervision", "system", supervision)
+    return dict(sorted(out.items()))
+
+
+def settings_hash(project: Project) -> str:
+    """SHA-256 (hex) of the canonical JSON of settings_snapshot()."""
+    import hashlib
+    canonical = json.dumps(settings_snapshot(project), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def settings_diff(mine: dict, theirs: dict) -> list:
+    """[(path, my value, their value)] for every setting the two
+    snapshots disagree on - a setting only one side has counts too
+    (the other side reports None). Sorted by path."""
+    paths = sorted(set(mine) | set(theirs))
+    return [(path, mine.get(path), theirs.get(path)) for path in paths
+            if mine.get(path) != theirs.get(path) or (path in mine) != (path in theirs)]

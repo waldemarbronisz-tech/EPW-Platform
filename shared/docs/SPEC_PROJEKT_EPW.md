@@ -115,7 +115,10 @@ ustawienie sterownika, nie projektu — `controller.local.json`:
 Bez tej sekcji działa symulator, dokładnie jak dotąd. Karta bez
 `modbus_unit_id` nie jest odpytywana i dostaje problem startowy; magistrala
 RTU wymaga pakietu `pyserial` (import opcjonalny — bez niego sterownik
-startuje i zgłasza problem startowy, TCP działa bez niczego).
+startuje i zgłasza problem startowy, TCP działa bez niczego). Do sprawdzenia
+mapowania na prawdziwej karcie służy `runtime/tools/modbus_probe.py` (ta sama
+biblioteka co sterownik: odczyt DI/DO/AI po unit id, zapis cewki/rejestru,
+pętla odczytów).
 Przykład lokalizacji: `code: "KOT", description: "Kotłownia"`
 
 **Karty rodzą punkty.** Dodajesz kartę o 32 kanałach — powstaje 32 pustych
@@ -358,6 +361,24 @@ i pokazać, co się rozjechało (tu 25 A, tam 40 A), zamiast nadpisać.
 
 To ten sam mechanizm, który zaprojektowałeś dla ADA01 — numer wersji,
 suma kontrolna, rozjazd = alarm. Tylko o poziom wyżej.
+
+**Zrealizowane 2026-09-17.** `settings_hash` liczy `project_format.settings_hash()`
+(SHA-256 z `settings_snapshot()` — same nastawy: opóźnienia stref, parametry
+linii, progi zabezpieczeń procesowych, nastawy stopni elektrycznych, skalowanie
+punktów AI, nadzór zasilania; lista pól `SETTING_FIELDS` jest ta sama, którą
+runtime stosuje do rozdziału nastawa/struktura) i trafia do nagłówka pliku przy
+każdym zapisie. Runtime podaje go w `GET /api/v1/project`, a same wartości w
+`GET /api/v1/project/settings`. Studio (*Sterownik → Wyślij do urządzenia*):
+zapisuje projekt, czyta nagłówek sterownika, przy innym `settings_hash` pokazuje
+tabelę rozjazdów (nastawa, Studio, sterownik) i pyta, czy nadpisać; wysyła plik
+`POST /api/v1/project/install?expected_revision=N` (token Engineer) — sterownik
+odmawia (409), gdy jego rewizja zmieniła się w międzyczasie, instaluje plik
+(poprzedni jako `.bak`, znacznik `projekt.epw.pending`) i po odpowiedzi kończy
+proces kodem 3, a `systemd` (`Restart=on-failure`) uruchamia go z nowym
+projektem. Jeśli nowy plik zostanie odrzucony przy tym starcie, wraca `.bak`,
+odrzucony plik zostaje jako `.rejected`, a panel zgłasza problem startowy.
+*Zgraj z urządzenia* pobiera `GET /api/v1/project/file` (token Engineer) i
+otwiera go jak *Plik → Otwórz*.
 
 ---
 

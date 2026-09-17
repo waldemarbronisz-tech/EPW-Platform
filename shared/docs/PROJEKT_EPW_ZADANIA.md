@@ -84,7 +84,7 @@ Moduł spoza składu w ogóle nie jest tworzony: nie ma obiektu, wątków ani ta
 > „Runtime rysuje osadzony ekran"). Sterownik Modbus w runtime — ZROBIONE
 > (`drivers/modbus_driver.py`, ustawienie `io_driver` w `controller.local.json`).
 > Rejestr aparatów Studio ↔ Synoptic — ZROBIONE (most dodający, jak karty).
-> Pozostaje: `settings_hash`.
+> `settings_hash` — ZROBIONE 2026-09-17 (p. 5).
 
 **Warunek wstępny renderera ekranów i pełnego wersjonowania nastaw.**
 
@@ -94,13 +94,19 @@ Zakres:
 - Main View: symbole biorą aparat z `deviceId` obiektów ekranu zamiast reguły nazewniczej z p. 6;
 - `settings_hash` liczony z nastaw; Studio porównuje go przed wysłaniem projektu (SPEC, „Wersjonowanie").
 
-## 5. ZADANIE DO ZGŁOSZENIA: wysyłanie projektu na sterownik przez REST
+## 5. Wysyłanie projektu na sterownik przez REST — ZROBIONE 2026-09-17
 
-Dziś REST daje tylko odczyt (`GET /api/v1/project`). Wysyłanie pliku to osobne zadanie, bo wymaga:
-- tokenu na poziomie Engineer;
-- porównania `revision`/`settings_hash` z odmową przy nowszej wersji na sterowniku;
-- pokazania rozjazdu nastaw;
-- kontrolowanego restartu runtime i powrotu do `.bak` przy nieudanym starcie.
+- token Engineer: `GET /api/v1/project/file`, `POST /api/v1/project/install`;
+- `settings_hash` w nagłówku (`project_format.settings_hash()`), porównanie w Studio
+  przed wysłaniem, odmowa 409 przy zmianie rewizji na sterowniku w międzyczasie;
+- rozjazd nastaw: `GET /api/v1/project/settings` + tabela w Studio
+  (`SettingsDiffDialog`);
+- restart: `EPWCore.request_restart()` → wyjście kodem 3 → `systemd Restart=on-failure`;
+  powrót do `.bak` przy odrzuconym starcie (`projekt.epw.pending`, problem startowy
+  `PROJECT_ROLLED_BACK`).
+
+Szczegóły: SPEC, „Wersjonowanie". Nie ma jeszcze: podglądu nastaw sterownika
+na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
 
 ---
 
@@ -137,7 +143,8 @@ Dziś REST daje tylko odczyt (`GET /api/v1/project`). Wysyłanie pliku to osobne
   kanał n → adres n-1, DI przez FC2, odczyt zwrotny DO przez FC1 (wyłączany
   `read_back_outputs`), AI jako 16-bit bez znaku (`ai_signed`). Bez pomiaru na
   prawdziwych modułach ELA/ADA/EPM to jest standard Modbus, nie potwierdzone
-  zachowanie tych kart.
+  zachowanie tych kart. Narzędzie do tego pomiaru: `runtime/tools/modbus_probe.py`
+  (2026-09-17), np. `python tools/modbus_probe.py --rtu COM3 --unit 1 --di 16 --ai 4`.
 - **Migracja obecnego `project.json`:**
   - 16 punktów analogowych trafiło na kartę `AI1` z **pustym modelem**, bo moduł jest nieznany — do uzupełnienia w Studio;
   - 64 rekordy liczników łączeń, w tym 5 niezerowych, są pod płaskimi nazwami `DI1..DI64` sprzed adresacji kartowej;
