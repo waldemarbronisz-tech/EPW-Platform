@@ -290,9 +290,11 @@ wyeksportowanej jako prymitywy rysunkowe (`studio/synoptic/tools/geometry_export
 porównuje plik z rejestrem symboli). Stan symbolu bierze się z aparatu
 (`deviceId` → `devices` → `feedback[0]`), wartości z tagów; kliknięcie
 aparatu SWITCHED wysyła `<id>.CLOSE` / `<id>.OPEN` tą samą drogą co
-schemat jednokreskowy. Jeszcze nie na żywo: kolor przewodów według sieci
-(NetResolver edytora nie jest przeniesiony — przewód ma stan z pliku),
-animacja obrotu, cieniowanie ścian.
+schemat jednokreskowy. Od 2026-09-17 przewody mają kolor według sieci
+(port `NetResolver.ts`: sieć jest zasilana z punktu granicznego SOURCE albo
+z zacisku OUT aparatu załączonego według potwierdzenia na żywo), węzły mają
+kropki, symbole wodne rysują wariant „sieć aktywna", wentylator się obraca.
+Jeszcze nie na żywo: cieniowanie ścian.
 
 **Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
 KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z

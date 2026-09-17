@@ -129,11 +129,13 @@ na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
   nazewnicza (`MAIN_VIEW_ROLE_DESIGNATIONS`) tylko dla symboli, których ekran nie
   rysuje. Dwa różne aparaty narysowane dla jednego oznaczenia nadal zostawiają
   symbol „nie skonfigurowany".
-- **Renderer ekranów — co jeszcze nie jest na żywo** (etap pierwszy, 2026-09-15):
-  - kolor przewodów według sieci: `NetResolver.ts` (328 linii, graf po całym
-    schemacie) nie jest przeniesiony — przewód rysuje się w stanie z pliku;
-  - animacja obrotu (wentylator): eksport niesie pozę bazową, nie wie, która
-    część się obraca; mruganie i „marsz" kreski działają;
+- **Renderer ekranów — etap drugi (2026-09-17):** kolor przewodów według sieci
+  ZROBIONY (`gui/synoptic/net_resolver.py`, port `NetResolver.ts`: sieć zasilana
+  z punktu granicznego SOURCE albo z zacisku OUT aparatu, którego potwierdzenie
+  na żywo mówi „załączony"; kropki węzłów jak w edytorze; symbole wodne mają
+  wariant „sieć aktywna"); animacja obrotu ZROBIONA (eksport oznacza obracaną
+  część `$animate_rotation`, znalezioną przez drugi przebieg z przesuniętym
+  stanem). Zostaje:
   - ściany rysowane jako pasy bez cieniowania edytora, pokoje bez podłogi;
   - `clipFunc` (2 symbole zbiorników) nie jest eksportowany — zbiornik rysuje
     się bez przycięcia poziomu;
