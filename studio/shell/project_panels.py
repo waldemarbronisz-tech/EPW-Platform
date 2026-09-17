@@ -571,6 +571,116 @@ def location_from_synoptic_dict(data: dict) -> Location:
     return Location(code=data["code"], description=data.get("description", ""))
 
 
+# -- apparatuses (punkt 2 / luka 7: "unify the two apparatus registries") --
+# Studio's Device is the SPEC's flat shape (feedback[0] = the CLOSED
+# contact, command[0] = CLOSE, command[1] = OPEN, commandStyle/pulseMs);
+# Synoptic's DeviceSchema.ts is the per-behavior form (diClosed/diOpen/
+# doClose/doOpen/pulseMs...). The two say the same thing about the same
+# apparatus, so - like cards and locations above - one registry is bridged
+# ADD-ONLY into the other in both directions. Studio has no designation/
+# name/unit of its own, so a device it pushes gets the IEC-style
+# designation from its id ("KOT_KM1" -> "-KM1") and its id as the name;
+# Synoptic keeps its own richer fields for devices it already has, since
+# the bridge never overwrites.
+
+_DEFAULT_DEVICE_KIND = {"SWITCHED": "contactor", "SIGNAL": "signal", "MEASURED": "sensor",
+                        "MODULATED": "actuator", "SELECTOR": "selector"}
+
+
+def device_designation(device_id: str) -> str:
+    """"KOT_KM1" -> "-KM1", "KM1" -> "-KM1" - the designation Synoptic
+    draws next to the symbol (IEC 81346 minus + the part after the
+    location prefix), and what apparatus.bind_roles_from_screens() on
+    the runtime side reads back."""
+    suffix = device_id.split("_", 1)[1] if "_" in device_id else device_id
+    return "-" + suffix if suffix else ""
+
+
+def device_to_synoptic_dict(device: Device) -> dict:
+    feedback = [a for a in device.feedback if a]
+    command = [a for a in device.command if a]
+    out = {
+        "id": device.id,
+        "designation": device_designation(device.id),
+        "name": device.id,
+        "behavior": device.behavior,
+        "kind": device.kind or _DEFAULT_DEVICE_KIND.get(device.behavior, "generic"),
+        "publishToHa": False,
+    }
+    if device.behavior == "SWITCHED":
+        fb = {"mode": "NONE"}
+        if len(feedback) >= 2:
+            fb = {"mode": "DUAL", "diClosed": feedback[0], "diOpen": feedback[1]}
+        elif len(feedback) == 1:
+            fb = {"mode": "SINGLE", "diClosed": feedback[0]}
+        cmd = {"outputCount": 2 if len(command) >= 2 else 1,
+               "style": device.command_style if device.command_style in COMMAND_STYLES else COMMAND_STYLES[0],
+               "doClose": command[0] if command else ""}
+        if len(command) >= 2:
+            cmd["doOpen"] = command[1]
+        if cmd["style"] in _PULSED_STYLES:
+            cmd["pulseMs"] = int(device.pulse_ms or 0)
+        supervision = dict(device.supervision)
+        supervision.setdefault("confirmTimeoutMs", 1000)
+        supervision.setdefault("discrepancyAlarm", False)
+        safe_state = dict(device.safe_state)
+        safe_state.setdefault("onStartup", "NO_CHANGE")
+        safe_state.setdefault("onLinkLoss", "NO_CHANGE")
+        out.update({"feedback": fb, "command": cmd, "supervision": supervision, "safeState": safe_state,
+                    "switchCounter": False})
+    elif device.behavior == "SIGNAL":
+        out.update({"feedback": {"di": feedback[0] if feedback else "", "invert": False},
+                    "alarmState": "HIGH", "debounceMs": 50})
+    elif device.behavior == "MEASURED":
+        out.update({"input": feedback[0] if feedback else "", "unit": "", "rangeMin": 0, "rangeMax": 100,
+                    "format": "0.0", "deadband": 0})
+    elif device.behavior == "MODULATED":
+        out.update({"setpointOutput": command[0] if command else "", "unit": "", "rangeMin": 0,
+                    "rangeMax": 100, "startupValue": 0, "safeValue": 0})
+        if feedback:
+            out["feedbackInput"] = feedback[0]
+    elif device.behavior == "SELECTOR":
+        positions = [{"name": str(n), "feedback": address} for n, address in enumerate(feedback, start=1)]
+        while len(positions) < 2:
+            positions.append({"name": str(len(positions) + 1)})
+        out["positions"] = positions
+    return out
+
+
+def device_from_synoptic_dict(data: dict) -> Device:
+    """Inverse of device_to_synoptic_dict() for what Studio's Device holds;
+    designation/name/unit/ranges/alarm levels stay Synoptic's own."""
+    behavior = data.get("behavior") or DEVICE_BEHAVIORS[0]
+    feedback, command = [], []
+    supervision, safe_state = {}, {}
+    command_style, pulse_ms = COMMAND_STYLES[0], 0
+    if behavior == "SWITCHED":
+        fb = data.get("feedback") or {}
+        feedback = [a for a in (fb.get("diClosed"), fb.get("diOpen")) if a]
+        cmd = data.get("command") or {}
+        command = [a for a in (cmd.get("doClose"), cmd.get("doOpen")) if a]
+        if cmd.get("style") in COMMAND_STYLES:
+            command_style = cmd["style"]
+        try:
+            pulse_ms = int(cmd.get("pulseMs") or 0) if command_style in _PULSED_STYLES else 0
+        except (TypeError, ValueError):
+            pulse_ms = 0
+        supervision = dict(data.get("supervision") or {})
+        safe_state = dict(data.get("safeState") or {})
+    elif behavior == "SIGNAL":
+        di = (data.get("feedback") or {}).get("di")
+        feedback = [di] if di else []
+    elif behavior == "MEASURED":
+        feedback = [data["input"]] if data.get("input") else []
+    elif behavior == "MODULATED":
+        feedback = [data["feedbackInput"]] if data.get("feedbackInput") else []
+        command = [data["setpointOutput"]] if data.get("setpointOutput") else []
+    elif behavior == "SELECTOR":
+        feedback = [p.get("feedback") for p in (data.get("positions") or []) if isinstance(p, dict) and p.get("feedback")]
+    return Device(id=data["id"], behavior=behavior, kind=data.get("kind", ""), feedback=feedback, command=command,
+                  supervision=supervision, safe_state=safe_state, command_style=command_style, pulse_ms=pulse_ms)
+
+
 # -- point ownership (SPEC_PROJEKT_EPW.md "Aparat zużywa punkty") ---------
 
 def find_point_owner(project, address: str, exclude_device_id: str = None):

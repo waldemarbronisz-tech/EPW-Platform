@@ -422,9 +422,10 @@ class SynopticPanel(QWidget):
         (main.tsx's __synopticDeviceRegistry bridge) so Studio's Project
         can pick up cards/locations a user already defined inside
         Synoptic's own AddCardDialog/AddLocationDialog. `callback`
-        receives {"cards": [...], "locations": [...]} (Synoptic's own
-        field names - channelKind/channelCount, code/description) or
-        None if the page hasn't loaded / doesn't expose the bridge yet."""
+        receives {"cards": [...], "locations": [...], "devices": [...]}
+        (Synoptic's own field names - channelKind/channelCount,
+        code/description, DeviceSchema.ts's Device) or None if the page
+        hasn't loaded / doesn't expose the bridge yet."""
         if self._pages.currentIndex() != _PAGE_VIEW:
             callback(None)
             return
@@ -444,20 +445,26 @@ class SynopticPanel(QWidget):
 
         self._view.page().runJavaScript(js, _handle)
 
-    def push_device_registry(self, cards, locations):
+    def push_device_registry(self, cards, locations, devices=()):
         """The write half - ADDITIVE only (main.tsx's
-        __synopticImportCardsAndLocations bridge skips any id/code it
-        already has), never overwrites or removes an existing Synoptic
-        card/location. `cards`/`locations` are plain dicts already in
-        Synoptic's OWN field-name shape (see
-        main_window.py's _sync_device_registry_with_synoptic for the
-        Card/Location -> CardEntry/LocationEntry field mapping)."""
+        __synopticImportCardsAndLocations / __synopticImportDevices
+        bridges skip any id/code they already have), never overwrites or
+        removes an existing Synoptic card/location/device. `cards`/
+        `locations`/`devices` are plain dicts already in Synoptic's OWN
+        field-name shape (see main_window.py's
+        _sync_device_registry_with_synoptic for the Card/Location/Device
+        -> CardEntry/LocationEntry/Device field mapping)."""
         if self._pages.currentIndex() != _PAGE_VIEW:
             return
         js = (
             "typeof window.__synopticImportCardsAndLocations === 'function' "
             f"&& window.__synopticImportCardsAndLocations({json.dumps(cards)}, {json.dumps(locations)});"
         )
+        if devices:
+            js += (
+                " typeof window.__synopticImportDevices === 'function' "
+                f"&& window.__synopticImportDevices({json.dumps(list(devices))});"
+            )
         self._view.page().runJavaScript(js)
 
     # -- the whole document in and out (task "Studio osadza ekrany i

@@ -187,8 +187,17 @@ class _FakeSynopticPanel:
     def query_device_registry(self, callback):
         callback(self._registry)
 
-    def push_device_registry(self, cards, locations):
-        self.pushed = (cards, locations)
+    def push_device_registry(self, cards, locations, devices=()):
+        self.pushed = (cards, locations, list(devices))
+
+    # main_window.py's dirty-marker poll asks these on a timer for as
+    # long as the window lives - a fake that lacks them raises inside
+    # Qt's event loop and takes later tests down with it.
+    def is_page_ready(self) -> bool:
+        return False
+
+    def query_state(self, callback):
+        callback(None)
 
 
 def test_pulling_the_synoptic_registry_adds_a_missing_kind_to_an_existing_card(tmp_path):

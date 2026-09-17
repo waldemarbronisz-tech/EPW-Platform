@@ -6,8 +6,8 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { applyScadaCssVariables } from './theme/ScadaTheme'
 import { useStore } from './store'
-import type { CardEntry, LocationEntry } from './project/DeviceSchema'
-import { loadProjectFromStudio, markSavedByStudio, projectDataForStudio } from './project/StudioBridge'
+import type { CardEntry, LocationEntry, Device } from './project/DeviceSchema'
+import { loadProjectFromStudio, markSavedByStudio, projectDataForStudio, importDevicesFromStudio } from './project/StudioBridge'
 
 // Must run before the first paint, so the interface CSS (which reads these
 // as var(--scada-*)) never has a chance to render with stale fallback
@@ -131,12 +131,18 @@ type CanvasBackgroundSetter = { __synopticSetCanvasBackground?: (color: string) 
 type DeviceRegistrySnapshot = {
   cards: CardEntry[];
   locations: LocationEntry[];
+  devices: Device[];
 };
 type DeviceRegistryBridge = { __synopticDeviceRegistry?: () => DeviceRegistrySnapshot };
 (window as unknown as DeviceRegistryBridge).__synopticDeviceRegistry = (): DeviceRegistrySnapshot => {
   const s = useStore.getState();
-  return { cards: s.cards, locations: s.locations };
+  return { cards: s.cards, locations: s.locations, devices: s.devices };
 };
+
+// Punkt 2 / luka 7: Studio's apparatuses come in the same add-only way
+// (project/StudioBridge.ts's importDevicesFromStudio()).
+type DeviceImportBridge = { __synopticImportDevices?: (devices: Device[]) => string[] };
+(window as unknown as DeviceImportBridge).__synopticImportDevices = importDevicesFromStudio;
 
 type DeviceRegistryImportBridge = {
   __synopticImportCardsAndLocations?: (cards: CardEntry[], locations: LocationEntry[]) => void;

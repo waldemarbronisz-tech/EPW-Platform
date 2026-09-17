@@ -11,6 +11,7 @@
 // Pure store/ProjectManager calls, no DOM, so they are unit-testable.
 import { ProjectManager } from './ProjectManager';
 import { useStore } from '../store';
+import type { Device } from './DeviceSchema';
 
 /** The EPW_SYNOPTIC document as JSON text, or null when the editor's own validation refuses to save (the same refusal Save As shows). */
 export function projectDataForStudio(): string | null {
@@ -40,4 +41,24 @@ export function loadProjectFromStudio(text: string | null, name: string): boolea
 export function markSavedByStudio(name: string): void {
   useStore.getState().setFileName(name || null);
   useStore.getState().setDirty(false);
+}
+
+/**
+ * Punkt 2 / luka 7 ("unify the two apparatus registries"): Studio's own
+ * "Aparaty" list, pushed in as DeviceSchema.ts Devices (project_panels.py's
+ * device_to_synoptic_dict()). ADD-ONLY like cards and locations: a device
+ * this editor already has under that id keeps its own richer fields
+ * (name, designation, unit, ranges...) untouched. Returns the ids added.
+ */
+export function importDevicesFromStudio(devices: Device[]): string[] {
+  const state = useStore.getState();
+  const existing = new Set(state.devices.map((d) => d.id));
+  const added: string[] = [];
+  for (const device of devices) {
+    if (!device || typeof device.id !== 'string' || !device.id || existing.has(device.id)) continue;
+    state.addDevice(device);
+    existing.add(device.id);
+    added.push(device.id);
+  }
+  return added;
 }
