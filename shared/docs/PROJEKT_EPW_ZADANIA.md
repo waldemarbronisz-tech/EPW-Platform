@@ -121,8 +121,12 @@ przez `project_format.apply_settings_snapshot()`).
   łańcuch ścian, wklejony pokój dostaje własny, kasowanie ścian usuwa rekord,
   stary plik z `roomName`/`roomLocation` na ścianach migruje przy otwarciu).
   Runtime rysuje podłogi zamkniętych pętli ścian w materiale ekranu, ściany
-  w ich materiale (jasna górna płaszczyzna, cieniowany pas, cień kontaktowy)
+  jak edytor — pseudo-3D wytłoczenie (`gui/synoptic/walls3d.py`, port
+  `WallGeometry.ts`/`WallLayer.tsx`: pas ściany z mitrowanymi narożnikami,
+  ściany dalekie wytłoczone w górę z cieniowaniem od kierunku światła,
+  bliskie przycięte do 30 % wysokości, nakrywa, listwa, cień na podłodze)
   i etykietę „nazwa - lokalizacja" z rekordu (`gui/synoptic/rooms.py`).
+  Otwory (drzwi, okna) nie wycinają ściany — jak dotąd w edytorze.
 - **Próg ostrzegawczy licznika łączeń** — ZROBIONE 2026-09-17: pole
   `Point.warning_threshold` (punkt DI) w formacie, kolumna w rejestrze punktów
   Studio, część `settings_hash`; runtime zasila nim rekord licznika (projekt
@@ -150,10 +154,12 @@ przez `project_format.apply_settings_snapshot()`).
   na żywo mówi „załączony"; kropki węzłów jak w edytorze; symbole wodne mają
   wariant „sieć aktywna"); animacja obrotu ZROBIONA (eksport oznacza obracaną
   część `$animate_rotation`, znalezioną przez drugi przebieg z przesuniętym
-  stanem). Ściany i podłogi pokoi — ZROBIONE 2026-09-17 (patrz „Pokój" wyżej;
-  bez pseudo-3D wytłoczenia edytora, z jego cieniami i materiałami). Zostaje:
-  - `clipFunc` (2 symbole zbiorników) nie jest eksportowany — zbiornik rysuje
-    się bez przycięcia poziomu;
+  stanem). Ściany i podłogi pokoi — ZROBIONE 2026-09-17 (patrz „Pokój" wyżej),
+  od tego samego dnia z pseudo-3D wytłoczeniem edytora (`walls3d.py`).
+  `clipFunc` (2 symbole zbiorników) — ZROBIONE 2026-09-17: eksport uruchamia
+  funkcję na kontekście nagrywającym (`rect`/`arc`/`moveTo`-`lineTo`) i
+  zapisuje kształty jako `clip` węzła, painter przecina nimi obszar
+  rysowania — poziom w zbiorniku jest przycięty do jego wnętrza. Zostaje:
   - eksport trzeba powtórzyć po zmianie biblioteki symboli
     (`studio/synoptic/tools/geometry_export`), test runtime to wykrywa.
 - **Sterownik Modbus — założenia do potwierdzenia na sprzęcie:** mapowanie

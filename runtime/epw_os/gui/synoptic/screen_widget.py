@@ -19,8 +19,10 @@ junction dots are drawn where three branches meet; a water symbol on a
 live net draws its live variant; a rotating symbol turns at its
 directive's rate. Rooms: a closed loop of walls gets a floor in the
 screen's floor material with the editor's contact shadow along the
-walls, walls are bands in their own material (lit top, shaded side),
-and a room record's name and location are written on the floor.
+walls, and a room record's name and location are written on the floor. Walls
+are the editor's own extruded bands (walls3d.py: mitred outer/inner
+rings, far faces with caps, the near face cut away, lit from the
+upper left) - door and window openings are not cut yet.
 """
 import time
 
@@ -35,7 +37,8 @@ from epw_os.gui.synoptic.net_resolver import (connection_states, junction_points
                                                terminal_net_states)
 from epw_os.gui.synoptic.painter import (PrimitivePainter, animation_rotation, blink_state, mark_dash_march,
                                          parse_color)
-from epw_os.gui.synoptic.rooms import closed_rooms, floor_color, room_labels, shade, wall_band, wall_tones
+from epw_os.gui.synoptic.rooms import closed_rooms, floor_color, room_labels, shade
+from epw_os.gui.synoptic.walls3d import draw_walls
 from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value,
                                               present_object)
 
@@ -280,8 +283,7 @@ class SynopticScreenWidget(QWidget):
                 self._draw_object(painter, obj, phase)
         for frame in project.frames:
             self._draw_frame(painter, frame)
-        for wall in project.walls:
-            self._draw_wall(painter, wall)
+        draw_walls(painter, project.walls)
         self._draw_room_labels(painter, project)
         for conn in project.connections:
             self._draw_connection(painter, conn)
@@ -516,35 +518,6 @@ class SynopticScreenWidget(QWidget):
             painter.setOpacity(0.13)
             painter.drawPath(path)
             painter.restore()
-
-    def _draw_wall(self, painter: QPainter, wall: dict):
-        """A wall as a band in its material: the lit top face, a shaded
-        strip along one long side (the editor's side face, flattened),
-        black edges."""
-        corners = wall_band(wall)
-        tones = wall_tones(wall.get("material"))
-        band = QPainterPath(QPointF(*corners[0]))
-        for x, y in corners[1:]:
-            band.lineTo(x, y)
-        band.closeSubpath()
-        painter.save()
-        edge = QPen(QColor(COLOR_OUTLINE))
-        edge.setWidthF(1.5)
-        edge.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
-        painter.setPen(edge)
-        painter.setBrush(QBrush(QColor(tones["top"])))
-        painter.drawPath(band)
-        # The side strip: the lower third of the band, along the far long edge.
-        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = corners
-        side = QPainterPath(QPointF(x1 + (x4 - x1) * 0.66, y1 + (y4 - y1) * 0.66))
-        side.lineTo(x2 + (x3 - x2) * 0.66, y2 + (y3 - y2) * 0.66)
-        side.lineTo(x3, y3)
-        side.lineTo(x4, y4)
-        side.closeSubpath()
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(QColor(tones["side"])))
-        painter.drawPath(side)
-        painter.restore()
 
     def _draw_room_labels(self, painter: QPainter, project):
         """Canvas.tsx: "name - location" on the floor, bold title size."""
