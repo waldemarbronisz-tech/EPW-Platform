@@ -100,7 +100,7 @@ from studio.shell.project_format import (
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
     LineInputMode, LineParametrization, LineType, Location, NORMAL_STATE_NC, NORMAL_STATE_NO,
     Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
-    load_project, settings_diff, settings_hash, settings_snapshot,
+    apply_settings_snapshot, load_project, settings_diff, settings_hash, settings_snapshot,
 )
 from pathlib import Path
 
@@ -339,6 +339,7 @@ _EOL_STATES = ("VIOLATED", "SECURE", "FAULT_OPEN")
 _DEOL_STATES = ("SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN")
 
 _GREY_READONLY_BG = QColor("#E8E8E8")
+_DIFF_BG = QColor("#FFF1B8")   # a setting that differs between Studio and the controller
 _LOCATION_CODE_RE = re.compile(r"^[A-Z0-9]+$")
 # User report #3: "karta bez adresu jednostki nie odezwie się na
 # magistrali [...] pusty adres ma być widocznym brakiem, nie ciszą" - a
@@ -2914,6 +2915,46 @@ class ControllerPanel(QWidget):
         sync_layout.addStretch(1)
         layout.addWidget(sync_box)
 
+        # SPEC "Studio — sterownik", point 4: the controller's settings,
+        # live, next to the project's own, differences marked - and a way
+        # to take the controller's values into the project without
+        # pulling the whole file (GET /api/v1/project/settings +
+        # project_format.settings_snapshot()/apply_settings_snapshot()).
+        settings_box = QGroupBox(tr("controller.settings_heading"))
+        settings_layout = QVBoxLayout(settings_box)
+        settings_row = QHBoxLayout()
+        self.settings_button = QPushButton(tr("controller.fetch_settings"))
+        self.settings_button.clicked.connect(self._fetch_settings)
+        settings_row.addWidget(self.settings_button)
+        self.settings_live_check = QCheckBox(tr("controller.settings_live"))
+        self.settings_live_check.toggled.connect(self._toggle_live_settings)
+        settings_row.addWidget(self.settings_live_check)
+        self.settings_diff_only_check = QCheckBox(tr("controller.settings_diff_only"))
+        self.settings_diff_only_check.setChecked(True)
+        self.settings_diff_only_check.toggled.connect(lambda _checked: self._render_settings())
+        settings_row.addWidget(self.settings_diff_only_check)
+        settings_row.addStretch(1)
+        self.take_settings_button = QPushButton(tr("controller.take_settings"))
+        self.take_settings_button.clicked.connect(self._take_controller_settings)
+        self.take_settings_button.setEnabled(False)
+        settings_row.addWidget(self.take_settings_button)
+        settings_layout.addLayout(settings_row)
+        self.settings_status_label = QLabel(tr("controller.settings_status_none"))
+        self.settings_status_label.setWordWrap(True)
+        settings_layout.addWidget(self.settings_status_label)
+        self.settings_table = QTableWidget(0, 3)
+        self.settings_table.setHorizontalHeaderLabels(
+            [tr("controller.diff_col_setting"), tr("controller.diff_col_studio"), tr("controller.diff_col_controller")]
+        )
+        _prep_table(self.settings_table)
+        _make_column_resizable(self.settings_table, 0, 360)
+        settings_layout.addWidget(self.settings_table, 1)
+        layout.addWidget(settings_box, 1)
+        self._remote_settings = None          # the last GET /api/v1/project/settings body
+        self._settings_timer = QTimer(self)
+        self._settings_timer.setInterval(5000)
+        self._settings_timer.timeout.connect(self._fetch_settings)
+
         preview_box = QGroupBox(tr("controller.preview_heading"))
         preview_layout = QVBoxLayout(preview_box)
         self.preview_button = QPushButton(tr("controller.fetch_tags"))
@@ -3005,6 +3046,85 @@ class ControllerPanel(QWidget):
             self.preview_table.setItem(row, 0, QTableWidgetItem(str(tag.get("name", ""))))
             self.preview_table.setItem(row, 1, QTableWidgetItem(str(tag.get("value", ""))))
             self.preview_table.setItem(row, 2, QTableWidgetItem(str(tag.get("quality", ""))))
+
+    # -- Nastawy sterownika na żywo ------------------------------------------------
+
+    def _fetch_settings(self):
+        ok, result = self._request("/api/v1/project/settings")
+        if not ok or not isinstance(result, dict):
+            self._remote_settings = None
+            self.settings_status_label.setText(tr("controller.settings_status_failed", reason=result))
+            self._settings_timer.stop()
+            self.settings_live_check.setChecked(False)
+            self._render_settings()
+            return
+        self._remote_settings = result
+        self._render_settings()
+
+    def _toggle_live_settings(self, checked: bool):
+        if checked:
+            self._fetch_settings()
+            if self._remote_settings is not None:
+                self._settings_timer.start()
+        else:
+            self._settings_timer.stop()
+
+    def settings_rows(self) -> list:
+        """[(path, studio value, controller value, differs)] for the last
+        fetched controller settings against the project as it is now."""
+        remote = (self._remote_settings or {}).get("settings") or {}
+        local = settings_snapshot(self._studio_window._project)
+        rows = []
+        for path in sorted(set(local) | set(remote)):
+            mine, theirs = local.get(path), remote.get(path)
+            rows.append((path, mine, theirs, mine != theirs or (path in local) != (path in remote)))
+        return rows
+
+    def _render_settings(self):
+        rows = self.settings_rows() if self._remote_settings is not None else []
+        differing = [r for r in rows if r[3]]
+        shown = differing if self.settings_diff_only_check.isChecked() else rows
+        self.settings_table.setRowCount(0)
+        for path, mine, theirs, differs in shown:
+            row = self.settings_table.rowCount()
+            self.settings_table.insertRow(row)
+            cells = [QTableWidgetItem(path), QTableWidgetItem("" if mine is None else str(mine)),
+                     QTableWidgetItem("" if theirs is None else str(theirs))]
+            for col, item in enumerate(cells):
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if differs:
+                    item.setBackground(_DIFF_BG)
+                self.settings_table.setItem(row, col, item)
+        self.take_settings_button.setEnabled(bool(differing))
+        if self._remote_settings is None:
+            return
+        remote = self._remote_settings
+        local_hash = settings_hash(self._studio_window._project)
+        same = remote.get("settings_hash") == local_hash
+        self.settings_status_label.setText(tr(
+            "controller.settings_status_same" if same else "controller.settings_status_differ",
+            revision=remote.get("revision"), modified_by=remote.get("modified_by") or "?",
+            local_revision=self._studio_window._project.revision, count=len(differing)))
+
+    def _take_controller_settings(self):
+        """Writes the controller's values into the project (the operator
+        changed them on the panel; the project should say the same)."""
+        rows = [r for r in self.settings_rows() if r[3] and r[2] is not None]
+        if not rows:
+            return
+        answer = QMessageBox.question(self, tr("controller.take_settings"),
+                                      tr("controller.take_settings_confirm", count=len(rows)),
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                      QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        applied = apply_settings_snapshot(self._studio_window._project, {path: theirs for path, _m, theirs, _d in rows})
+        self._studio_window._on_project_changed()
+        refresh = getattr(self._studio_window, "_refresh_all_project_panels", None)
+        if callable(refresh):
+            refresh()
+        self._render_settings()
+        QMessageBox.information(self, tr("controller.take_settings"), tr("controller.take_settings_done", count=len(applied)))
 
     # -- Wyślij do urządzenia ------------------------------------------------------
 

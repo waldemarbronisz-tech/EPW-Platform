@@ -453,7 +453,18 @@
     "status_sent": "Sent: revision {revision}",
     "receive_failed": "The project was not received: {reason}",
     "receive_save_title": "Save the controller's project as",
-    "status_received": "Received: revision {revision}"
+    "status_received": "Received: revision {revision}",
+    "settings_heading": "Controller Settings (live)",
+    "fetch_settings": "Fetch Settings",
+    "settings_live": "Refresh every 5 s",
+    "settings_diff_only": "Differences only",
+    "take_settings": "Take controller values into project",
+    "settings_status_none": "Not fetched yet.",
+    "settings_status_failed": "Settings not fetched: {reason}",
+    "settings_status_same": "Controller revision {revision} (saved by {modified_by}), project revision {local_revision}: settings identical.",
+    "settings_status_differ": "Controller revision {revision} (saved by {modified_by}), project revision {local_revision}: {count} setting(s) differ.",
+    "take_settings_confirm": "Write {count} controller value(s) into this project? Studio's own values for those settings are replaced.",
+    "take_settings_done": "{count} setting(s) taken from the controller. Save the project to keep them."
   },
   "modules": {
     "col_name": "Name",

@@ -105,8 +105,11 @@ Zakres:
   powrót do `.bak` przy odrzuconym starcie (`projekt.epw.pending`, problem startowy
   `PROJECT_ROLLED_BACK`).
 
-Szczegóły: SPEC, „Wersjonowanie". Nie ma jeszcze: podglądu nastaw sterownika
-na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
+Szczegóły: SPEC, „Wersjonowanie". Podgląd nastaw sterownika na żywo z
+zaznaczeniem różnic — ZROBIONE 2026-09-17 (panel *Sterownik*, grupa „Nastawy
+sterownika (na żywo)": pobranie / odświeżanie co 5 s, tabela nastawa / Studio /
+sterownik z podświetleniem różnic, „Przyjmij nastawy sterownika do projektu"
+przez `project_format.apply_settings_snapshot()`).
 
 ---
 

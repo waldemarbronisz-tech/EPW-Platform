@@ -107,3 +107,28 @@ def test_a_di_points_counter_warning_threshold_is_a_setting():
     before = pf.settings_hash(project)
     project.points[0].warning_threshold = 6000
     assert pf.settings_hash(project) != before
+
+
+def test_apply_settings_snapshot_writes_known_paths_and_ignores_the_rest():
+    project = _project()
+    project.is_dirty = False
+    applied = pf.apply_settings_snapshot(project, {
+        "electrical_protection_stages/50 Instantaneous Overcurrent / Stage 1/setting": 40.0,
+        "zones/Z1/entry_delay_seconds": 45.0,
+        "analog_points/DI1.AI.1/unit": "K",
+        "switching_counters/DI1.DI.1/warning_threshold": 700,
+        "zones/NOPE/entry_delay_seconds": 1.0,          # no such zone
+        "zones/Z1/name": "structure, not a setting",     # not a setting field
+        "bogus": 1,
+    })
+    assert applied == ["analog_points/DI1.AI.1/unit", "electrical_protection_stages/50 Instantaneous Overcurrent / Stage 1/setting",
+                       "switching_counters/DI1.DI.1/warning_threshold", "zones/Z1/entry_delay_seconds"]
+    assert project.electrical_protection_stages[0].setting == 40.0
+    assert project.zones[0].entry_delay_seconds == 45.0 and project.zones[0].name == "Ground floor"
+    assert project.points[2].unit == "K" and project.points[0].warning_threshold == 700
+    assert project.is_dirty
+    snap = pf.settings_snapshot(project)
+    assert pf.settings_diff(snap, {**snap, "zones/Z1/entry_delay_seconds": 45.0}) == []
+    untouched = _project()
+    untouched.is_dirty = False
+    assert pf.apply_settings_snapshot(untouched, {"bogus": 1}) == [] and not untouched.is_dirty

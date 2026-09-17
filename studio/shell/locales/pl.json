@@ -453,7 +453,18 @@
     "status_sent": "Wysłano: rewizja {revision}",
     "receive_failed": "Projekt nie został pobrany: {reason}",
     "receive_save_title": "Zapisz projekt ze sterownika jako",
-    "status_received": "Pobrano: rewizja {revision}"
+    "status_received": "Pobrano: rewizja {revision}",
+    "settings_heading": "Nastawy sterownika (na żywo)",
+    "fetch_settings": "Pobierz nastawy",
+    "settings_live": "Odświeżaj co 5 s",
+    "settings_diff_only": "Tylko różnice",
+    "take_settings": "Przyjmij nastawy sterownika do projektu",
+    "settings_status_none": "Jeszcze nie pobrano.",
+    "settings_status_failed": "Nie pobrano nastaw: {reason}",
+    "settings_status_same": "Sterownik: rewizja {revision} (zapis: {modified_by}), projekt: rewizja {local_revision} - nastawy identyczne.",
+    "settings_status_differ": "Sterownik: rewizja {revision} (zapis: {modified_by}), projekt: rewizja {local_revision} - różnic: {count}.",
+    "take_settings_confirm": "Wpisać {count} wartości ze sterownika do tego projektu? Wartości Studio dla tych nastaw zostaną zastąpione.",
+    "take_settings_done": "Przyjęto {count} nastaw ze sterownika. Zapisz projekt, żeby je zachować."
   },
   "modules": {
     "col_name": "Nazwa",

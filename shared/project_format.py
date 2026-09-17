@@ -1124,3 +1124,37 @@ def settings_diff(mine: dict, theirs: dict) -> list:
     paths = sorted(set(mine) | set(theirs))
     return [(path, mine.get(path), theirs.get(path)) for path in paths
             if mine.get(path) != theirs.get(path) or (path in mine) != (path in theirs)]
+
+
+def apply_settings_snapshot(project: Project, values: dict) -> list:
+    """The reverse of settings_snapshot(): writes {path: value} entries
+    into the project's own records (SPEC "Studio łączy się ze sterownikiem
+    [...] podgląd nastaw na żywo": what Studio applies when the operator
+    takes the controller's values). Only paths of SETTING_FIELDS on records
+    the project has are written; anything else is ignored. Returns the
+    paths applied, sorted."""
+    zones = {z.id: z for z in project.zones}
+    lines = {l.id: l for l in project.lines}
+    processes = {p.id: p for p in project.process_protections}
+    stages = {f"{s.function_id} / {s.stage_name}": s for s in project.electrical_protection_stages}
+    points = {p.address: p for p in project.points}
+    targets = {
+        "zones": zones, "lines": lines, "process_protections": processes,
+        "electrical_protection_stages": stages, "analog_points": points, "switching_counters": points,
+        "power_supervision": {"system": project.power_supervision},
+    }
+    applied = []
+    for path, value in values.items():
+        section, _, rest = str(path).partition("/")
+        key, _, name = rest.rpartition("/")
+        fields = SETTING_FIELDS.get(section)
+        if not fields or name not in fields:
+            continue
+        record = targets.get(section, {}).get(key)
+        if record is None:
+            continue
+        setattr(record, name, _setting_value(value))
+        applied.append(path)
+    if applied:
+        project.touch()
+    return sorted(applied)
