@@ -529,6 +529,8 @@ i raport. Jeden mechanizm, dwa zastosowania.
 3. **Gdzie runtime zapisuje nastawy** — do `projekt.epw`, z numerem
    wersji i ochroną przed nadpisaniem (patrz: Wersjonowanie)
 4. **Studio łączy się ze sterownikiem** — tak, przez REST API;
-   podgląd nastaw na żywo z zaznaczeniem różnic
+   podgląd nastaw na żywo z zaznaczeniem różnic (zrealizowane 2026-09-17:
+   panel *Sterownik*, `GET /api/v1/project/settings`, różnice podświetlone,
+   wartości sterownika można przyjąć do projektu)
 5. **Wymuszanie stanów ze Studio** — dozwolone przy trzech warunkach,
    nigdy w torze zabezpieczeniowym (patrz: Studio — sterownik)
