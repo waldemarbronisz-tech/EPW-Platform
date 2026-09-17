@@ -22,7 +22,9 @@ ekranu, osadzony ekran został odrzucony albo na tym sterowniku brakuje
 pliku biblioteki symboli (`shared/symbols/geometry.json`, eksportowanego
 z Edytora Synoptyki; symbole rysowane są wtedy jako proste ramki).
 
-**Jeszcze nie na żywo:** przewody zachowują stan zapisany w pliku
-(kolorowanie sieci z edytora nie jest tu liczone), symbole obracające
-się stoją w pozie bazowej, a typ symbolu, którego obecna biblioteka
-edytora już nie ma, pokazywany jest jako purpurowa przerywana ramka.
+**Przewody** mają kolor według sieci, do której należą, jak w edytorze:
+sieć zasilana z punktu granicznego ŹRÓDŁO albo z wyjścia aparatu, którego
+potwierdzenie mówi „załączony", jest pod napięciem (czerwona dla
+elektryki, niebieska dla wody, bursztynowa dla wentylacji); reszta jest
+szara. Typ symbolu, którego obecna biblioteka edytora już nie ma,
+pokazywany jest jako purpurowa przerywana ramka.

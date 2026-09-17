@@ -20,11 +20,12 @@ own rendering in the spike comparison, shared/docs/spike):
     (with align), `height` with verticalAlign; without width the text
     is as wide as it measures.
 
-Animation: geometry carries the base pose. Two directives are applied
-here from a monotonic phase (ms): blink (the BLINK state alternates
-between the ON and OFF trees every half period) and dash_march (dashed
-strokes scroll). A rotating symbol keeps its base pose - which part
-rotates is not in the export.
+Animation: geometry carries the base pose. Three directives are applied
+from a monotonic phase (ms): blink (the BLINK state alternates between
+the ON and OFF trees every half period), dash_march (dashed strokes
+scroll) and rotate (the export marks the node the symbol's own loop
+rotates - $animate_rotation - and the caller passes the angle for the
+phase; see animation_rotation()).
 """
 import math
 
@@ -73,11 +74,16 @@ class PrimitivePainter:
     """One instance per paint pass. `fields` are the current object's
     per-instance values for templates; `phase_ms` drives animation."""
 
-    def __init__(self, painter: QPainter, fields=None, phase_ms: float = 0.0, warnings=None):
+    def __init__(self, painter: QPainter, fields=None, phase_ms: float = 0.0, warnings=None,
+                 rotation_deg: float = 0.0):
         self.painter = painter
         self.fields = fields or {}
         self.phase_ms = phase_ms
         self.warnings = warnings if warnings is not None else []
+        # Applied to every node the export marked $animate_rotation (the
+        # fan's blades): the symbol's own animation, driven by the caller
+        # from the phase and the directive's rate.
+        self.rotation_deg = rotation_deg
 
     # -- entry -----------------------------------------------------------------------
 
@@ -128,6 +134,8 @@ class PrimitivePainter:
         sx, sy = self._num(node, "scaleX", 1.0), self._num(node, "scaleY", 1.0)
         if sx != 1.0 or sy != 1.0:
             p.scale(sx, sy)
+        if node.get("$animate_rotation") and self.rotation_deg:
+            p.rotate(self.rotation_deg)
         ox, oy = self._num(node, "offsetX"), self._num(node, "offsetY")
         if ox or oy:
             p.translate(-ox, -oy)
@@ -354,3 +362,12 @@ def symbol_bounds(tree, reference_w: float, reference_h: float) -> QRectF:
 
 def deg_to_rad(deg: float) -> float:
     return math.radians(deg)
+
+
+def animation_rotation(animation, state, phase_ms: float) -> float:
+    """The extra angle for a `rotate` symbol in its trigger state at
+    `phase_ms`; 0 otherwise."""
+    if not animation or animation.get("type") != "rotate" or state != animation.get("trigger_state"):
+        return 0.0
+    rate = float(animation.get("rate_deg_per_sec") or 0.0)
+    return (phase_ms / 1000.0 * rate) % 360.0 if rate else 0.0

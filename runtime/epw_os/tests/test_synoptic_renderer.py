@@ -467,3 +467,69 @@ def test_page_sends_a_command_for_a_clicked_switched_symbol(app, monkeypatch):
     page._on_object_clicked(obj, page.screen.presentation_for(obj), None)
     assert warned and "interlock" in warned[0]
     page.shutdown()
+
+
+# --- nets on the widget (port of NetResolver.ts) --------------------------------------
+
+def test_widget_colours_wires_by_net_and_draws_junctions(app):
+    from epw_os.gui.synoptic.screen_widget import (COLOR_DE_ENERGIZED, COLOR_ENERGIZED, SynopticScreenWidget,
+                                                   wire_color)
+    registry = _registry_with(Apparatus(id="KOT_Q1", behavior="SWITCHED", feedback=["DI1.DI.1"], command=["DO1.DO.1"]))
+    tm = _live_tag_manager()                                   # DI1.DI.1 is True -> Q1 closed
+    widget = SynopticScreenWidget()
+    widget.resize(800, 600)
+    widget.set_sources(tm, registry)
+    source = {"id": "BP", "type": "scada.boundary_point", "x": 96, "y": 0, "designation": "SIEC", "category": "X",
+              "boundaryDirection": "SOURCE", "boundaryPortSide": "BOTTOM", "width": 96, "height": 51}
+    q1 = _obj("q1", "electrical.circuit_breaker", 96, 160, deviceId="KOT_Q1")   # IN (128,160) OUT (128,224)
+    doc = _screen(
+        [source, q1],
+        devices=[{"id": "KOT_Q1", "designation": "-Q1", "name": "Q1", "behavior": "SWITCHED", "kind": "b"}],
+        connections=[{"id": "FEED", "points": [{"x": 144, "y": 48}, {"x": 144, "y": 96}, {"x": 128, "y": 96},
+                                                {"x": 128, "y": 160}], "medium": "ELECTRICAL", "style": "NORMAL"},
+                     {"id": "LOAD", "points": [{"x": 128, "y": 224}, {"x": 128, "y": 400}], "medium": "ELECTRICAL",
+                      "style": "NORMAL"},
+                     {"id": "TAP", "points": [{"x": 128, "y": 300}, {"x": 300, "y": 300}], "medium": "ELECTRICAL",
+                      "style": "NORMAL"},
+                     {"id": "ALONE", "points": [{"x": 600, "y": 500}, {"x": 700, "y": 500}], "medium": "WATER",
+                      "style": "NORMAL"}])
+    widget.set_screen(doc)
+    from epw_os.gui.synoptic import net_resolver as nr
+    [bp_terminal] = nr.world_terminals([source], widget._geometry_result.geometry)
+    assert (bp_terminal.x, bp_terminal.y) == (144.0, 48.0)     # the fixture's FEED starts on it
+    widget.grab()                                              # one paint: nets resolved
+    assert widget.connection_state("FEED") == "ACTIVE"
+    assert widget.connection_state("LOAD") == "ACTIVE"        # Q1 is closed: its OUT feeds the load
+    assert widget.connection_state("TAP") == "ACTIVE"         # taps the load wire mid-segment
+    assert widget.connection_state("ALONE") == "INACTIVE"
+    assert widget.object_on_live_net(q1) is True
+    assert (128, 300) in widget._junctions                    # TAP meets LOAD: three branches
+    assert wire_color("ELECTRICAL", True) == COLOR_ENERGIZED and wire_color("ELECTRICAL", False) == COLOR_DE_ENERGIZED
+
+    # Open the breaker: the load side goes dead, the feed stays live.
+    tm.update_tag("DI1.DI.1", False)
+    widget.grab()
+    assert widget.connection_state("FEED") == "ACTIVE" and widget.connection_state("LOAD") == "INACTIVE"
+    assert widget.connection_state("TAP") == "INACTIVE"
+    widget.shutdown()
+
+
+def test_water_symbols_have_a_live_net_variant_and_the_fan_rotates(geometry):
+    from epw_os.gui.synoptic.painter import animation_rotation
+    inactive = geometry.state_tree("water.ball_valve", "OPEN")
+    active = geometry.state_tree("water.ball_valve", "OPEN", net_active=True)
+    assert inactive and active and json.dumps(inactive) != json.dumps(active)
+    assert geometry.state_tree("electrical.circuit_breaker", "CLOSED", net_active=True) == \
+        geometry.state_tree("electrical.circuit_breaker", "CLOSED")
+    fan = geometry.symbol("hvac.fan")
+    assert fan["animation"]["type"] == "rotate"
+
+    def rotating(nodes):
+        for n in nodes or []:
+            if n.get("$animate_rotation") or rotating(n.get("children")):
+                return True
+        return False
+    assert rotating(fan["states"]["RUNNING"]) and not rotating(fan["states"]["OFF"])
+    assert animation_rotation(fan["animation"], "RUNNING", 500) == 90.0 or animation_rotation(fan["animation"], "RUNNING", 500) > 0
+    assert animation_rotation(fan["animation"], "OFF", 500) == 0.0
+    assert all(t.get("side") in ("TOP", "BOTTOM", "LEFT", "RIGHT") for t in geometry.symbol("electrical.contactor")["terminals"])

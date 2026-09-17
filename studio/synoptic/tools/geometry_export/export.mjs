@@ -243,6 +243,27 @@ function resolveSymbolFile(file) {
   throw new Error(`symbol source not found for ${file}`);
 }
 
+// Walks the merged tree next to the plain and the perturbed pass: a node
+// whose `rotation` differs between the two is what the symbol animates.
+// Structure is expected identical; where it is not, nothing is marked.
+function markRotating(merged, plain, perturbed, warnings) {
+  if (!Array.isArray(plain) || !Array.isArray(perturbed) || plain.length !== perturbed.length || merged.length !== plain.length) {
+    warnings.push('rotation pass: structure differs - no rotating node marked');
+    return merged;
+  }
+  let marked = 0;
+  const walk = (m, a, b) => {
+    for (let i = 0; i < m.length; i++) {
+      const ra = a[i] && a[i].rotation, rb = b[i] && b[i].rotation;
+      if (typeof ra === 'number' && typeof rb === 'number' && ra !== rb) { m[i].$animate_rotation = true; marked++; }
+      if (m[i].children && a[i].children && b[i].children) walk(m[i].children, a[i].children, b[i].children);
+    }
+  };
+  walk(merged, plain, perturbed);
+  if (!marked) warnings.push('rotation pass: no node changed its rotation - base pose only');
+  return merged;
+}
+
 function detectAnimation(type, file) {
   if (ANIMATION_DIRECTIVES[type]) return ANIMATION_DIRECTIVES[type];
   if (!file) return null;
@@ -274,7 +295,7 @@ async function main() {
       allowed_states: def.allowedStates || [], default_state: def.defaultState || 'NORMAL',
       is_line: !!def.isLine, is_surface: !!def.isSurface, resize_redraws: !!def.resizeRedraws,
       designation_prefix: def.designationPrefix || null,
-      terminals: (def.terminals || []).map((t) => ({ id: t.id, x: t.x, y: t.y, medium: t.medium || null })),
+      terminals: (def.terminals || []).map((t) => ({ id: t.id, side: t.side, medium: t.medium || null })),
       connection_points: def.connectionPoints || [],
       component: entry ? entry.component : null,
       animation: detectAnimation(type, entry && entry.file),
@@ -290,13 +311,34 @@ async function main() {
       symbols[type] = record;
       continue;
     }
+    // A symbol with a WATER terminal draws its krociec in the colour of
+    // the net it is on (SymbolRenderer.tsx passes terminalNetState) -
+    // exported twice, all-INACTIVE and all-ACTIVE, so the runtime can
+    // pick the variant once it has resolved the nets itself.
+    const hasWaterTerminal = (def.terminals || []).some((t) => t.medium === 'WATER');
+    if (hasWaterTerminal) record.states_net_active = {};
+    const rotates = record.animation && record.animation.type === 'rotate';
     for (const state of states) {
       const warnings = [];
       try {
         const netInactive = () => 'INACTIVE';
-        const sentinelTree = normalizeNode(component({ obj: fakeObject(type, def.category, w, h, state, true), state, terminalNetState: netInactive }), warnings);
-        const defaultTree = normalizeNode(component({ obj: fakeObject(type, def.category, w, h, state, false), state, terminalNetState: netInactive }), []);
-        record.states[state] = mergeTrees(sentinelTree, defaultTree, warnings);
+        const netActive = () => 'ACTIVE';
+        const render = (withSentinels, netState) => normalizeNode(
+          component({ obj: fakeObject(type, def.category, w, h, state, withSentinels), state, terminalNetState: netState }),
+          withSentinels ? warnings : []);
+        const sentinelTree = render(true, netInactive);
+        const defaultTree = render(false, netInactive);
+        let tree = mergeTrees(sentinelTree, defaultTree, warnings);
+        if (rotates && state === record.animation.trigger_state) {
+          globalThis.__EPW_PERTURB_STATE = true;
+          let perturbed;
+          try { perturbed = render(false, netInactive); } finally { globalThis.__EPW_PERTURB_STATE = false; }
+          tree = markRotating(tree, defaultTree, perturbed, warnings);
+        }
+        record.states[state] = tree;
+        if (hasWaterTerminal) {
+          record.states_net_active[state] = mergeTrees(render(true, netActive), render(false, netActive), warnings);
+        }
       } catch (e) {
         record.states[state] = null;
         warnings.push(`export failed: ${e && e.message ? e.message : e}`);

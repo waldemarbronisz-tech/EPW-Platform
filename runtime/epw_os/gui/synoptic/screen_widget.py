@@ -12,11 +12,12 @@ its reference size scaled to the object's width/height. The canvas
 (canvas.width x canvas.height) is fitted into the widget with its aspect
 ratio kept; the same transform maps a click back to an object.
 
-Stage one of the renderer (punkt 2 / luka 5): a wire's colour comes
-from its own `state` field in the file (LIVE/DEAD) - the editor's net
-resolver (which terminal touches which wire) is not ported yet, so wires
-do not follow a breaker's live state; walls are drawn as bands without
-the editor's shading; rotating symbols keep their base pose.
+Wires are coloured by the NET they belong to (net_resolver.py, the
+editor's own algorithm): a net fed by a SOURCE boundary point or by the
+OUT terminal of a closed apparatus is live, in the medium's live colour;
+junction dots are drawn where three branches meet; a water symbol on a
+live net draws its live variant; a rotating symbol turns at its
+directive's rate. Walls are still bands without the editor's shading.
 """
 import time
 
@@ -25,8 +26,12 @@ from PySide6.QtGui import QBrush, QColor, QFont, QFontMetricsF, QPainter, QPaint
 from PySide6.QtWidgets import QWidget
 
 from epw_os.core.epwsyn_loader import load_epwsyn_data
+from epw_os.core.logging import log
 from epw_os.gui.synoptic.geometry import shared_geometry
-from epw_os.gui.synoptic.painter import PrimitivePainter, blink_state, mark_dash_march, parse_color
+from epw_os.gui.synoptic.net_resolver import (connection_states, junction_points, resolve_nets, runtime_source_rule,
+                                               terminal_net_states)
+from epw_os.gui.synoptic.painter import (PrimitivePainter, animation_rotation, blink_state, mark_dash_march,
+                                         parse_color)
 from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value,
                                               present_object)
 
@@ -116,6 +121,9 @@ class SynopticScreenWidget(QWidget):
         self._analog_units = {}
         self._geometry_result = shared_geometry()
         self._presentations = {}
+        self._net_states = {}         # connection id -> ACTIVE/INACTIVE, per paint
+        self._terminal_states = {}    # (object id, terminal id) -> ACTIVE/INACTIVE, per paint
+        self._junctions = []
         self._transform = QTransform()
         self._t0 = time.monotonic()
         self._timer = QTimer(self)
@@ -262,6 +270,7 @@ class SynopticScreenWidget(QWidget):
         phase = self._phase_ms()
 
         objects = self._ordered_objects()
+        self._resolve_nets(objects, project.connections)
         for obj in objects:
             if self._is_surface(obj):
                 self._draw_object(painter, obj, phase)
@@ -274,6 +283,8 @@ class SynopticScreenWidget(QWidget):
         for obj in objects:
             if not self._is_surface(obj):
                 self._draw_object(painter, obj, phase)
+        for x, y in self._junctions:
+            self._draw_junction(painter, x, y, phase)
         for obj in objects:
             self._draw_label(painter, obj)
         for meter in project.meters:
@@ -286,12 +297,53 @@ class SynopticScreenWidget(QWidget):
             self._draw_setpoint_panel(painter, panel)
         painter.end()
 
+    def _resolve_nets(self, objects, connections):
+        """One net resolution per paint: every object's presentation is
+        read once (the source rule needs the live state), then wires,
+        terminals and junctions are known for the rest of the pass."""
+        geometry = self._geometry_result.geometry
+        self._presentations = {obj.get("id"): self.presentation_for(obj) for obj in objects}
+        rule = runtime_source_rule(lambda obj: self._presentations.get(obj.get("id")) or self.presentation_for(obj))
+        try:
+            nets = resolve_nets(connections, objects, geometry, rule)
+            self._net_states = connection_states(nets)
+            self._terminal_states = terminal_net_states(nets)
+            self._junctions = junction_points(connections, objects, geometry)
+        except Exception as exc:  # noqa: BLE001 - a malformed wire must not blank the screen
+            log.debug(f"Net resolution skipped: {exc}")
+            self._net_states, self._terminal_states, self._junctions = {}, {}, []
+
+    def connection_state(self, connection_id) -> str:
+        return self._net_states.get(connection_id, "INACTIVE")
+
+    def object_on_live_net(self, obj: dict) -> bool:
+        obj_id = obj.get("id")
+        return any(state == "ACTIVE" for (o, _t), state in self._terminal_states.items() if o == obj_id)
+
+    def _draw_junction(self, painter: QPainter, x: float, y: float, phase: float):
+        """The editor's WireNodeSymbol (scada.wire_node) centred on the
+        node - the same dot it draws."""
+        geometry = self._geometry_result.geometry
+        tree = geometry.state_tree("scada.wire_node", geometry.default_state("scada.wire_node"))
+        if not tree:
+            painter.save()
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(QColor(COLOR_OUTLINE)))
+            painter.drawEllipse(QPointF(x, y), 6, 6)
+            painter.restore()
+            return
+        w, h = geometry.reference_size("scada.wire_node", (150.0, 150.0))
+        painter.save()
+        painter.translate(x - w / 2, y - h / 2)
+        PrimitivePainter(painter, fields={}, phase_ms=phase).draw_tree(tree)
+        painter.restore()
+
     def _draw_object(self, painter: QPainter, obj: dict, phase: float):
         if obj.get("visible") is False:
             return
         geometry = self._geometry_result.geometry
         symbol_type = obj.get("type") or ""
-        presentation = self.presentation_for(obj)
+        presentation = self._presentations.get(obj.get("id")) or self.presentation_for(obj)
         self._presentations[obj.get("id")] = presentation
         painter.save()
         painter.setTransform(self.object_transform(obj), combine=True)
@@ -303,11 +355,12 @@ class SynopticScreenWidget(QWidget):
             return
         ref_w, ref_h = geometry.reference_size(symbol_type)
         state = blink_state(rec.get("animation"), presentation.state, phase)
-        tree = geometry.state_tree(symbol_type, state)
+        tree = geometry.state_tree(symbol_type, state, net_active=self.object_on_live_net(obj))
         tree = mark_dash_march(tree, rec.get("animation"), state)
+        rotation = animation_rotation(rec.get("animation"), presentation.state, phase)
         if ref_w and ref_h and (w != ref_w or h != ref_h):
             painter.scale(w / ref_w, h / ref_h)
-        PrimitivePainter(painter, fields=presentation.fields, phase_ms=phase).draw_tree(tree)
+        PrimitivePainter(painter, fields=presentation.fields, phase_ms=phase, rotation_deg=rotation).draw_tree(tree)
         painter.restore()
 
     def _draw_generic(self, painter: QPainter, obj: dict, w: float, h: float, known: bool):
@@ -411,7 +464,7 @@ class SynopticScreenWidget(QWidget):
         points = conn.get("points") or []
         if len(points) < 2:
             return
-        live = (conn.get("state") or "DEAD") == "LIVE"
+        live = self.connection_state(conn.get("id")) == "ACTIVE"
         width = BUSBAR_HEIGHT if conn.get("style") == "BUS" else CONDUCTOR_WIDTH
         pen = QPen(QColor(wire_color(conn.get("medium"), live)))
         pen.setWidthF(width)

@@ -21,7 +21,8 @@ screen, the embedded screen was refused, or the symbol library file
 (`shared/symbols/geometry.json`, exported from the Synoptic Editor) is
 missing on this controller (symbols are then drawn as plain boxes).
 
-**Not yet drawn live:** wires keep the state saved in the file (the
-editor's net colouring is not computed here), rotating symbols keep a
-still pose, and a symbol type the current editor library no longer has
-is shown as a magenta dashed frame.
+**Wires** are coloured by the net they belong to, as in the editor: a
+net fed from a SOURCE boundary point, or from the output of an apparatus
+whose feedback says it is closed, is live (red for electrical, blue for
+water, amber for ventilation); the rest is grey. A symbol type the
+current editor library no longer has is shown as a magenta dashed frame.

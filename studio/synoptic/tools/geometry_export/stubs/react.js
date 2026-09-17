@@ -21,8 +21,14 @@ function createElement(type, props, ...children) {
   const all = flat.length ? flat : (propChildren === undefined ? [] : [propChildren].flat(Infinity).filter(Boolean));
   return { type, props: rest, children: all };
 }
+// export.mjs sets globalThis.__EPW_PERTURB_STATE for one extra pass per
+// animated symbol: every numeric state comes back shifted, and the
+// nodes whose `rotation` changed between the two passes are the ones
+// the symbol's own animation loop rotates (a fan's blades, not its
+// housing) - marked $animate_rotation in the export.
 function useState(initial) {
-  const value = typeof initial === 'function' ? initial() : initial;
+  let value = typeof initial === 'function' ? initial() : initial;
+  if (globalThis.__EPW_PERTURB_STATE && typeof value === 'number') value = value + 37;
   return [value, () => {}];
 }
 function useEffect() {}

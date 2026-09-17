@@ -55,14 +55,19 @@ class SymbolGeometry:
         rec = self.symbols.get(symbol_type)
         return list((rec or {}).get("allowed_states") or [])
 
-    def state_tree(self, symbol_type, state):
+    def state_tree(self, symbol_type, state, net_active: bool = False):
         """The primitive tree for (type, state), falling back to the
         symbol's default state, then to any exported state; None when the
-        type is unknown or generic (drawn by the renderer's own box)."""
+        type is unknown or generic (drawn by the renderer's own box).
+        `net_active` picks the variant a water symbol draws when its
+        terminals are on a live net (exported separately), when there is
+        one."""
         rec = self.symbols.get(symbol_type)
         if not rec or rec.get("generic"):
             return None
         states = rec.get("states") or {}
+        if net_active and rec.get("states_net_active"):
+            states = {**states, **{k: v for k, v in rec["states_net_active"].items() if v}}
         for candidate in (state, rec.get("default_state"), "NORMAL"):
             tree = states.get(candidate) if candidate else None
             if tree:
