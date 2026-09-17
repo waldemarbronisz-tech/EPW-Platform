@@ -145,6 +145,12 @@ class EPWCore:
         
         self.sim_driver = SimulatorDriver(self.event_bus)
         self.driver_manager.register_driver("SIM_DRIVER", self.sim_driver)
+        # Punkt 2 / luka 6: the real bus. Built in startup() only when
+        # controller.local.json says io_driver.driver = "MODBUS" (see
+        # _configure_io_driver()); until then the simulator is the I/O
+        # driver, exactly as before.
+        self.modbus_driver = None
+        self._modbus_card_ids = set()
 
         # SafetyKernel was constructed above with only tag_manager (before
         # device_manager/driver_manager/alarm_manager/audit_logger
@@ -209,6 +215,52 @@ class EPWCore:
         # already emits this event from acknowledge_alarm(), so this is
         # purely a bridge, not a new acknowledgement mechanism.
         self.event_bus.subscribe("alarm_acknowledged", self._on_alarm_acknowledged)
+
+    # --- I/O driver choice (punkt 2 / luka 6: Modbus driver) ---------------
+
+    def _configure_io_driver(self, devices):
+        """Builds and registers the Modbus driver when controller.local.json
+        says so (ProjectManager.get_io_driver_config()); the simulator
+        stays registered either way (its cabinet-status devices and
+        Sim.* tags are independent of the bus). Cards the Modbus driver
+        polls are remembered so commands and heartbeats for them route
+        there and the simulator leaves their analog tags alone."""
+        self.modbus_driver = None
+        self._modbus_card_ids = set()
+        io = self.project_manager.get_io_driver_config()
+        if io["driver"] != "MODBUS":
+            return
+        from epw_os.drivers.modbus_driver import DRIVER_ID, ModbusDriver
+        driver = ModbusDriver(self.event_bus)
+        polled = driver.configure(self.project_manager.get_modbus_bus(), devices, io)
+        self.modbus_driver = driver
+        self._modbus_card_ids = set(polled)
+        self.driver_manager.register_driver(DRIVER_ID, driver)
+        if driver.unavailable_reason:
+            self._startup_issue("MODBUS_BUS_UNAVAILABLE", "startup.modbus_bus_unavailable",
+                                {"reason": driver.unavailable_reason},
+                                f"The Modbus bus cannot be opened on this controller: {driver.unavailable_reason}",
+                                priority=3)
+        for card_id in driver.skipped_card_ids():
+            self._startup_issue(f"MODBUS_NO_UNIT_ID.{card_id}", "startup.modbus_no_unit_id", {"card": card_id},
+                                f"Card {card_id} has no Modbus unit id in the project - it is not polled.",
+                                priority=2)
+
+    def _driver_id_for_card(self, card_id, entry=None) -> str:
+        if card_id in self._modbus_card_ids:
+            from epw_os.drivers.modbus_driver import DRIVER_ID
+            return DRIVER_ID
+        return (entry or {}).get("driver", "SIM_DRIVER")
+
+    def _driver_id_for_tag(self, tag_name) -> str:
+        from epw_os.core.addressing import try_parse_address
+        parsed = try_parse_address(tag_name)
+        return self._driver_id_for_card(parsed[0]) if parsed else "SIM_DRIVER"
+
+    def _set_simulated_analog_tags(self, tag_names):
+        """The simulator produces values only for analog points on cards
+        it serves - never for a card the Modbus driver reads."""
+        self.sim_driver.set_analog_tags([t for t in tag_names if self._driver_id_for_tag(t) == "SIM_DRIVER"])
 
     def _bridge_driver_to_tag(self, tag_name, value, quality):
         from epw_os.core.tag_manager import TagQuality
@@ -328,12 +380,15 @@ class EPWCore:
         self._report_project_load()
 
         # Apparatus register (task "runtime czyta projekt.epw", 3.2) - the
-        # project's "devices", plus the Main View symbol bindings by
-        # designation (see apparatus.bind_roles_by_designation()).
+        # project's "devices", plus the Main View symbol bindings: from the
+        # screens embedded in projekt.epw (each screen object's deviceId),
+        # by designation for whatever the screens do not bind (see
+        # apparatus.bind_roles_from_screens()).
         from epw_os.core.apparatus import (MAIN_VIEW_ROLE_DESIGNATIONS, apparatuses_from_records,
-                                           bind_roles_by_designation)
+                                           bind_roles_from_screens)
         self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
-        bind_roles_by_designation(self.apparatus_registry, MAIN_VIEW_ROLE_DESIGNATIONS)
+        bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
+                                MAIN_VIEW_ROLE_DESIGNATIONS)
 
         # Feature configuration (Task: "okno konfiguracji, w ktorym
         # wlacza i wylacza sie poszczegolne funkcje sterownika") - read
@@ -378,9 +433,12 @@ class EPWCore:
         # zero DI/DO tags - see configure()'s own docstring).
         devices = self.project_manager.config.get("devices", [])
         self.tag_manager.configure(devices)
+        self._configure_io_driver(devices)
         for dev in devices:
-            self.device_manager.register_device(dev.get("id"), dev.get("driver", "SIM_DRIVER"), dev.get("timeout", 5.0))
-        sim_device_ids = [dev.get("id") for dev in devices if dev.get("driver", "SIM_DRIVER") == "SIM_DRIVER"]
+            self.device_manager.register_device(dev.get("id"), self._driver_id_for_card(dev.get("id"), dev),
+                                                dev.get("timeout", 5.0))
+        sim_device_ids = [dev.get("id") for dev in devices
+                          if self._driver_id_for_card(dev.get("id"), dev) == "SIM_DRIVER"]
 
         # Main View's cabinet-status panel and electricity-simulation
         # tags (Cabinet.*, Device.*.Status, Sim.*, Meas.*) - unconditional,
@@ -490,7 +548,8 @@ class EPWCore:
         # per-channel commands they always were.
         from epw_os.core.apparatus import apparatus_command_definitions
         apparatus_commands = apparatus_command_definitions(
-            [self.apparatus_registry.get(i) for i in self.apparatus_registry.list_ids()]
+            [self.apparatus_registry.get(i) for i in self.apparatus_registry.list_ids()],
+            driver_for_tag=self._driver_id_for_tag,
         )
         if apparatus_commands:
             self.command_manager.load_definitions(apparatus_commands)
@@ -517,11 +576,11 @@ class EPWCore:
                 if not is_address(tag.name, "DO"):
                     continue
                 default_commands[f"{tag.name}.CLOSE"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": tag.name, "output_value": True,
+                    "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": True,
                     "feedback_tag": tag.name, "feedback_value": True, "timeout_ms": 1500
                 }
                 default_commands[f"{tag.name}.OPEN"] = {
-                    "driver_id": "SIM_DRIVER", "output_tag": tag.name, "output_value": False,
+                    "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": False,
                     "feedback_tag": tag.name, "feedback_value": False, "timeout_ms": 1500
                 }
             self.command_manager.load_definitions(default_commands)
@@ -717,7 +776,7 @@ class EPWCore:
         points = self.project_manager.get_analog_points()
         points.append(dict(point))
         self.project_manager.save_project()
-        self.sim_driver.set_analog_tags([p["tag"] for p in points])
+        self._set_simulated_analog_tags([p["tag"] for p in points])
         return True
 
     def remove_analog_point(self, tag_name: str) -> bool:
@@ -733,7 +792,7 @@ class EPWCore:
         points = [p for p in self.project_manager.get_analog_points() if p["tag"] != tag_name]
         self.project_manager.set_analog_points(points)
         self.project_manager.save_project()
-        self.sim_driver.set_analog_tags([p["tag"] for p in points])
+        self._set_simulated_analog_tags([p["tag"] for p in points])
         return True
 
     def update_analog_point(self, tag_name: str, point: dict):
@@ -851,7 +910,7 @@ class EPWCore:
                 point["tag"], 0.0, TagType.REAL,
                 description=point.get("description", ""), source="HARDWARE"
             )
-        self.sim_driver.set_analog_tags([p["tag"] for p in analog_points])
+        self._set_simulated_analog_tags([p["tag"] for p in analog_points])
 
     def _unregister_analog_input_tags(self):
         # Deliberately does NOT touch project_manager's persisted points
@@ -861,7 +920,7 @@ class EPWCore:
         # list (Task: "wylaczenie nigdy nie kasuje danych").
         for point in self.project_manager.get_analog_points():
             self.tag_manager.remove_tag(point["tag"])
-        self.sim_driver.set_analog_tags([])
+        self._set_simulated_analog_tags([])
 
     # Which feature each helper pair above belongs to - the only place
     # this mapping is spelled out, so set_feature_enabled() below stays

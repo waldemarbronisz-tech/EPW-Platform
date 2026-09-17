@@ -45,7 +45,7 @@ PROJECT_KEYS = (
     "format", "schema_version", "project_id", "metadata", "modules", "enabled_features",
     "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points",
     "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_power_supervision",
-    "process_protections", "electrical_protection_stages",
+    "process_protections", "electrical_protection_stages", "modbus_bus",
 )
 
 # --- what the panel may change (Nastawa) ----------------------------------
@@ -116,11 +116,15 @@ def build_project_view(project) -> dict:
         # (the sole consumer of this list) still expects the flat, one-
         # kind-per-entry shape it always has, so one Card flattens to one
         # entry per kind here rather than TagManager needing to change.
+        # modbus_unit_id/location ride along for the Modbus driver
+        # (drivers/modbus_driver.py) - TagManager ignores them.
         "devices": [
-            {"id": c.id, "kind": kind, "model": c.model, "channels": channels}
+            {"id": c.id, "kind": kind, "model": c.model, "channels": channels,
+             "modbus_unit_id": c.modbus_unit_id, "location": c.location}
             for c in project.cards
             for kind, channels in c.channel_kinds.items()
         ],
+        "modbus_bus": asdict(project.modbus_bus),
         "point_registry": registry,
         "tag_descriptions": {p["address"]: p["description"] for p in registry if p["description"]},
         "output_descriptions": {p["address"]: p["description"] for p in registry
