@@ -30,6 +30,7 @@ import type { SetpointPanelElement } from '../elements/SetpointElement';
 import type { WallElement } from '../elements/WallElement';
 import type { SynopticConnection, SynopticObject } from '../store/types';
 import type { FloorMaterialId } from '../theme/Materials';
+import type { RoomElement } from '../elements/RoomElement';
 
 /** One screen's identity. Content lives separately - see the header. */
 export interface ScreenInfo {
@@ -45,6 +46,8 @@ export interface ScreenContent {
   signalPanels: SignalPanelElement[];
   frames: FrameElement[];
   walls: WallElement[];
+  /** ZADANIA p. 6: the room records the walls point at. Optional in a file saved before it existed. */
+  rooms?: RoomElement[];
   groupCommands: GroupCommandElement[];
   setpointPanels: SetpointPanelElement[];
   /** Per screen, because one controller's plant room and its office are not floored alike. */
@@ -59,6 +62,7 @@ export function blankScreenContent(): ScreenContent {
     signalPanels: [],
     frames: [],
     walls: [],
+    rooms: [],
     groupCommands: [],
     setpointPanels: [],
   };

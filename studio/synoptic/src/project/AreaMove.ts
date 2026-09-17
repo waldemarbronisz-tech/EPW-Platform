@@ -20,6 +20,7 @@
 // load, undo, copy and paste, exactly as the walls do.
 
 import type { WallElement, WallPoint } from '../elements/WallElement';
+import type { RoomElement } from '../elements/RoomElement';
 import { clampWallThickness, wallLength } from '../elements/WallElement';
 import { findClosedRooms } from './RoomFloors';
 import { pointInPolygon } from './Illuminance';
@@ -177,12 +178,20 @@ export interface RoomSummary {
   location: string | null;
 }
 
-function commonField(selected: WallElement[], key: 'roomName' | 'roomLocation'): string | null {
-  const values = new Set(selected.map(w => w[key] ?? ''));
+// One value when every selected wall's record agrees, null when they
+// differ ("(different)"). A wall without a record still reads its old
+// per-wall fields, so an unmigrated file shows its names before the
+// first edit turns them into a record (project/Rooms.ts).
+function commonField(selected: WallElement[], rooms: RoomElement[], key: 'name' | 'location'): string | null {
+  const values = new Set(selected.map(w => {
+    const record = w.roomId ? rooms.find(r => r.id === w.roomId) : undefined;
+    if (record) return record[key] ?? '';
+    return (key === 'name' ? w.roomName : w.roomLocation) ?? '';
+  }));
   return values.size === 1 ? [...values][0] : null;
 }
 
-export function roomSummary(walls: WallElement[], wallIds: string[]): RoomSummary {
+export function roomSummary(walls: WallElement[], wallIds: string[], roomRecords: RoomElement[] = []): RoomSummary {
   const selected = walls.filter(w => wallIds.includes(w.id));
   const rooms = findClosedRooms(selected);
   const metresPerPixel = 1 / PIXELS_PER_METRE;
@@ -193,24 +202,25 @@ export function roomSummary(walls: WallElement[], wallIds: string[]): RoomSummar
     floorAreaSquareMetres: rooms.length > 0
       ? rooms.reduce((sum, room) => sum + polygonArea(room), 0) * metresPerPixel * metresPerPixel
       : null,
-    name: commonField(selected, 'roomName'),
-    location: commonField(selected, 'roomLocation'),
+    name: commonField(selected, roomRecords, 'name'),
+    location: commonField(selected, roomRecords, 'location'),
   };
 }
 
 export interface RoomLabel { x: number; y: number; name: string; location: string }
 
 /** One label per room that has a name or a location: its name and location, at the centre of its outline. */
-export function roomLabels(walls: WallElement[]): RoomLabel[] {
+export function roomLabels(walls: WallElement[], rooms: RoomElement[] = []): RoomLabel[] {
   const seen = new Set<string>();
   const labels: RoomLabel[] = [];
   for (const wall of walls) {
     if (seen.has(wall.id)) continue;
     const group = connectedWallIds(walls, wall.id);
     group.forEach(id => seen.add(id));
-    const summary = roomSummary(walls, group);
-    const name = summary.name ?? walls.find(w => group.includes(w.id) && w.roomName)?.roomName ?? '';
-    const location = summary.location ?? walls.find(w => group.includes(w.id) && w.roomLocation)?.roomLocation ?? '';
+    const summary = roomSummary(walls, group, rooms);
+    const record = walls.filter(w => group.includes(w.id)).map(w => rooms.find(r => r.id === w.roomId)).find(Boolean);
+    const name = summary.name ?? record?.name ?? walls.find(w => group.includes(w.id) && w.roomName)?.roomName ?? '';
+    const location = summary.location ?? record?.location ?? walls.find(w => group.includes(w.id) && w.roomLocation)?.roomLocation ?? '';
     if (!summary.box || (!name && !location)) continue;
     labels.push({ x: summary.box.x + summary.box.width / 2, y: summary.box.y + summary.box.height / 2, name, location });
   }

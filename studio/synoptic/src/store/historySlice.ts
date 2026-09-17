@@ -15,7 +15,7 @@ const MAX_HISTORY = 100;
 export type HistorySlice = Pick<AppState, 'history' | 'historyIndex' | 'saveHistory' | 'undo' | 'redo'>;
 
 export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = (set, get) => ({
-  history: [{ objects: [], connections: [], meters: [], signalPanels: [], frames: [], walls: [], circuits: [], groupCommands: [], setpointPanels: [] }],
+  history: [{ objects: [], connections: [], meters: [], signalPanels: [], frames: [], walls: [], rooms: [], circuits: [], groupCommands: [], setpointPanels: [] }],
   historyIndex: 0,
 
   saveHistory: () => {
@@ -63,13 +63,14 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
       get().addMessage(`[WARNING] ${wireLabel} wire crosses ${c.obstacle.label} - route it around instead.`);
     });
 
-    const { objects, connections, meters, signalPanels, frames, walls, circuits, groupCommands, setpointPanels, history, historyIndex } = get();
+    const { objects, connections, meters, signalPanels, frames, walls, rooms, circuits, groupCommands, setpointPanels, history, historyIndex } = get();
     const objectsJson = JSON.stringify(objects);
     const connectionsJson = JSON.stringify(connections);
     const metersJson = JSON.stringify(meters);
     const signalPanelsJson = JSON.stringify(signalPanels);
     const framesJson = JSON.stringify(frames);
     const wallsJson = JSON.stringify(walls);
+    const roomsJson = JSON.stringify(rooms || []);
     const circuitsJson = JSON.stringify(circuits);
     const groupCommandsJson = JSON.stringify(groupCommands);
     const setpointPanelsJson = JSON.stringify(setpointPanels);
@@ -86,6 +87,7 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
       JSON.stringify(lastEntry.signalPanels || []) === signalPanelsJson &&
       JSON.stringify(lastEntry.frames || []) === framesJson &&
       JSON.stringify(lastEntry.walls || []) === wallsJson &&
+      JSON.stringify(lastEntry.rooms || []) === roomsJson &&
       JSON.stringify(lastEntry.circuits || []) === circuitsJson &&
       JSON.stringify(lastEntry.groupCommands || []) === groupCommandsJson &&
       JSON.stringify(lastEntry.setpointPanels || []) === setpointPanelsJson
@@ -101,6 +103,7 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
       signalPanels: JSON.parse(signalPanelsJson),
       frames: JSON.parse(framesJson),
       walls: JSON.parse(wallsJson),
+      rooms: JSON.parse(roomsJson),
       circuits: JSON.parse(circuitsJson),
       groupCommands: JSON.parse(groupCommandsJson),
       setpointPanels: JSON.parse(setpointPanelsJson)
@@ -128,6 +131,7 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
         signalPanels: JSON.parse(JSON.stringify(prevState.signalPanels || [])),
         frames: JSON.parse(JSON.stringify(prevState.frames || [])),
         walls: JSON.parse(JSON.stringify(prevState.walls || [])),
+        rooms: JSON.parse(JSON.stringify(prevState.rooms || [])),
         circuits: JSON.parse(JSON.stringify(prevState.circuits || [])),
         groupCommands: JSON.parse(JSON.stringify(prevState.groupCommands || [])),
         setpointPanels: JSON.parse(JSON.stringify(prevState.setpointPanels || [])),
@@ -157,6 +161,7 @@ export const createHistorySlice: StateCreator<AppState, [], [], HistorySlice> = 
         signalPanels: JSON.parse(JSON.stringify(nextState.signalPanels || [])),
         frames: JSON.parse(JSON.stringify(nextState.frames || [])),
         walls: JSON.parse(JSON.stringify(nextState.walls || [])),
+        rooms: JSON.parse(JSON.stringify(nextState.rooms || [])),
         circuits: JSON.parse(JSON.stringify(nextState.circuits || [])),
         groupCommands: JSON.parse(JSON.stringify(nextState.groupCommands || [])),
         setpointPanels: JSON.parse(JSON.stringify(nextState.setpointPanels || [])),

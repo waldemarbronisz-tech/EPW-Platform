@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GRID_SIZE } from '../theme/ScadaTheme';
 import { cloneSelectionWithOffset } from '../utils/CloneSelection';
 import type { AppState } from './appState';
+import { remapCopiedRooms } from '../project/Rooms';
 
 // Copy/paste/duplicate over the current selection (selectionSlice.ts) -
 // its own clipboard* arrays, deliberately separate from undo/redo history
@@ -66,9 +67,13 @@ export const createClipboardSlice: StateCreator<AppState, [], [], ClipboardSlice
     if (clipboard.length === 0 && clipboardMeters.length === 0 && clipboardSignalPanels.length === 0 && clipboardFrames.length === 0 && clipboardGroupCommands.length === 0 && clipboardSetpointPanels.length === 0 && clipboardConnections.length === 0 && clipboardWalls.length === 0) return;
 
     const cloned = cloneSelectionWithOffset(clipboard, clipboardMeters, clipboardSignalPanels, clipboardFrames, clipboardConnections, GRID_SIZE, GRID_SIZE, uuidv4, clipboardGroupCommands, clipboardSetpointPanels);
-    const newWalls = clipboardWalls.map(w => ({ ...w, ...moveWall(w, GRID_SIZE, GRID_SIZE), id: uuidv4() }));
+    const copiedWalls = clipboardWalls.map(w => ({ ...w, ...moveWall(w, GRID_SIZE, GRID_SIZE), id: uuidv4() }));
+    // ZADANIA p. 6: a pasted room is a second room - its walls get a record of their own.
+    const copiedRemap = remapCopiedRooms(get().rooms, copiedWalls, uuidv4);
+    const newWalls = copiedRemap.walls;
 
     set((state) => ({
+      rooms: copiedRemap.rooms,
       objects: [...state.objects, ...cloned.objects],
       meters: [...state.meters, ...cloned.meters],
       signalPanels: [...state.signalPanels, ...cloned.signalPanels],
@@ -106,9 +111,13 @@ export const createClipboardSlice: StateCreator<AppState, [], [], ClipboardSlice
     if (toDuplicate.length === 0 && metersToDuplicate.length === 0 && signalPanelsToDuplicate.length === 0 && framesToDuplicate.length === 0 && groupCommandsToDuplicate.length === 0 && setpointPanelsToDuplicate.length === 0 && connectionsToDuplicate.length === 0 && wallsToDuplicate.length === 0) return;
 
     const cloned = cloneSelectionWithOffset(toDuplicate, metersToDuplicate, signalPanelsToDuplicate, framesToDuplicate, connectionsToDuplicate, GRID_SIZE, GRID_SIZE, uuidv4, groupCommandsToDuplicate, setpointPanelsToDuplicate);
-    const newWalls = wallsToDuplicate.map(w => ({ ...w, ...moveWall(w, GRID_SIZE, GRID_SIZE), id: uuidv4() }));
+    const duplicatedWalls = wallsToDuplicate.map(w => ({ ...w, ...moveWall(w, GRID_SIZE, GRID_SIZE), id: uuidv4() }));
+    // ZADANIA p. 6: a pasted room is a second room - its walls get a record of their own.
+    const duplicatedRemap = remapCopiedRooms(get().rooms, duplicatedWalls, uuidv4);
+    const newWalls = duplicatedRemap.walls;
 
     set((state) => ({
+      rooms: duplicatedRemap.rooms,
       objects: [...state.objects, ...cloned.objects],
       meters: [...state.meters, ...cloned.meters],
       signalPanels: [...state.signalPanels, ...cloned.signalPanels],

@@ -10,6 +10,7 @@ import { scaleObjectPositions, scaleWalls } from '../project/GroupScale';
 import { isOpeningType, seatOpeningInWall } from '../project/WallOpenings';
 import { setBinding } from '../project/CircuitBindings';
 import { routeAround } from '../project/WireRouter';
+import { ensureRoomForWalls, pruneRooms } from '../project/Rooms';
 
 // The seven drawing-surface collections (objects/connections/meters/
 // signalPanels/frames/groupCommands/setpointPanels) and their CRUD
@@ -24,6 +25,7 @@ export type ElementsSlice = Pick<AppState,
   | 'addSignalPanel' | 'updateSignalPanel'
   | 'addFrame' | 'updateFrame'
   | 'addWall' | 'updateWall' | 'updateWalls' | 'applyWallStyleToRoom' | 'addRoomWalls' | 'toggleCircuitAt'
+  | 'rooms' | 'updateRoom' | 'assignRoomToWalls'
   | 'scaleSelection'
   | 'circuits' | 'setCircuitDevice'
   | 'addGroupCommand' | 'updateGroupCommand'
@@ -39,6 +41,7 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
   signalPanels: [],
   frames: [],
   walls: [],
+  rooms: [],
   circuits: [],
   groupCommands: [],
   setpointPanels: [],
@@ -93,6 +96,20 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
     }));
   },
 
+  updateRoom: (id, updates) => {
+    set((state) => ({
+      rooms: state.rooms.map(r => r.id === id ? { ...r, ...updates } : r),
+      isDirty: true,
+    }));
+  },
+  assignRoomToWalls: (wallIds) => {
+    const { rooms, walls } = get();
+    const result = ensureRoomForWalls(rooms, walls, wallIds, uuidv4);
+    if (result.rooms !== rooms || result.walls !== walls) {
+      set({ rooms: result.rooms, walls: result.walls, isDirty: true });
+    }
+    return result.roomId;
+  },
   setCircuitDevice: (circuit, deviceId) => {
     set((state) => ({ circuits: setBinding(state.circuits, circuit, deviceId), isDirty: true }));
     get().saveHistory();
@@ -346,6 +363,7 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
         setpointPanels: state.setpointPanels.filter(p => !setpointPanelIds.includes(p.id)),
         selectedSetpointPanelIds: state.selectedSetpointPanelIds.filter(id => !setpointPanelIds.includes(id)),
         walls: state.walls.filter(w => !wallIds.includes(w.id)),
+        rooms: pruneRooms(state.rooms, state.walls.filter(w => !wallIds.includes(w.id))),
         selectedWallIds: state.selectedWallIds.filter(id => !wallIds.includes(id))
       };
     });

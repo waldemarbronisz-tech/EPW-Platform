@@ -12,6 +12,7 @@ import type { WallElement } from '../elements/WallElement';
 import type { CircuitBinding } from '../project/CircuitBindings';
 import type { GroupCommandElement } from '../elements/GroupCommandElement';
 import type { SetpointPanelElement } from '../elements/SetpointElement';
+import type { RoomElement } from '../elements/RoomElement';
 
 // chore/remove-isometric-plan-mode: SCHEMATIC is the only screen kind
 // left - PLAN (the isometric mode) has been removed entirely (see
@@ -201,6 +202,7 @@ export interface HistorySnapshot {
   // were added long after objects/connections/meters/frames became
   // required fields here), same as groupCommands below.
   walls?: WallElement[];
+  rooms?: RoomElement[];
   // Binding a circuit to a device is an edit like any other, so undo
   // has to restore it. Optional, same convention as walls above.
   circuits?: CircuitBinding[];

@@ -105,7 +105,7 @@ export const Canvas: React.FC = () => {
   const { signalPanels, selectedSignalPanelIds, selectSignalPanels, updateSignalPanel } = useStore();
   const { frames, selectedFrameIds, selectFrames, addFrame, updateFrame, isDrawingFrame, drawingFrameVariant, frameToolContinuous, setDrawingFrameMode } = useStore();
   // feat/room-plan: walls, the wall tool, and Podglad mode.
-  const { walls, selectedWallIds, selectWalls, addWall, updateWall, addRoomWalls, isDrawingWall, isDrawingRoom, wallDrawThickness, wallDrawHeight, wallDrawMaterial, previewMode, showIlluminance } = useStore();
+  const { walls, rooms, selectedWallIds, selectWalls, addWall, updateWall, addRoomWalls, isDrawingWall, isDrawingRoom, wallDrawThickness, wallDrawHeight, wallDrawMaterial, previewMode, showIlluminance } = useStore();
   // The wall chain in progress: where the next wall starts, and
   // where the cursor currently is, for the rubber-band preview. Null
   // start = the tool is armed but no first corner has been placed.
@@ -1517,7 +1517,7 @@ export const Canvas: React.FC = () => {
           />
           </Group>
           {/* A named room shows its name - and its location - on the floor. */}
-          {roomLabels(walls).map((label, i) => (
+          {roomLabels(walls, rooms).map((label, i) => (
             <Text
               key={`room-label-${i}`}
               x={label.x - 160}

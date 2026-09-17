@@ -48,19 +48,25 @@ describe('Properties with a room selected', () => {
     const history = useStore.getState().historyIndex;
     fireEvent.change(nameBox, { target: { value: 'Kotłownia' } });
     fireEvent.blur(nameBox);
-    expect(useStore.getState().walls.every(w => w.roomName === 'Kotłownia')).toBe(true);
+    // ZADANIA p. 6: ONE record, every wall of the room points at it.
+    const rooms = useStore.getState().rooms;
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0].name).toBe('Kotłownia');
+    expect(useStore.getState().walls.every(w => w.roomId === rooms[0].id)).toBe(true);
     expect(useStore.getState().historyIndex).toBe(history + 1);
-    expect(roomLabels(useStore.getState().walls)).toEqual([{ x: 360, y: 280, name: 'Kotłownia', location: '' }]);
+    expect(roomLabels(useStore.getState().walls, useStore.getState().rooms)).toEqual([{ x: 360, y: 280, name: 'Kotłownia', location: '' }]);
 
     useStore.getState().undo();
-    expect(useStore.getState().walls.every(w => !w.roomName)).toBe(true);
+    expect(useStore.getState().rooms).toEqual([]);
+    expect(useStore.getState().walls.every(w => !w.roomId)).toBe(true);
     useStore.getState().redo();
 
     // Reopening a project starts a fresh undo history, so this comes last.
     const saved = ProjectManager.getProjectData()!;
     ProjectManager.newProject('Other');
     ProjectManager.loadProject(saved, 'plan.epwsyn');
-    expect(roomSummary(useStore.getState().walls, ids).name).toBe('Kotłownia');
+    expect(roomSummary(useStore.getState().walls, ids, useStore.getState().rooms).name).toBe('Kotłownia');
+    expect(useStore.getState().rooms.map(r => r.name)).toEqual(['Kotłownia']);
   });
 
   it('offers the project locations and stores the chosen code on the room', () => {
@@ -69,7 +75,7 @@ describe('Properties with a room selected', () => {
     const select = document.querySelector('select[name="roomLocation"]') as HTMLSelectElement;
     expect(Array.from(select.options).map(o => o.textContent)).toEqual(['(none)', 'KOT - Kotlownia', 'GAR - Garaz']);
     fireEvent.change(select, { target: { value: 'GAR' } });
-    expect(roomSummary(useStore.getState().walls, ids).location).toBe('GAR');
+    expect(roomSummary(useStore.getState().walls, ids, useStore.getState().rooms).location).toBe('GAR');
   });
 
   it('width typed there resizes the room, and X moves it together with a symbol inside', () => {

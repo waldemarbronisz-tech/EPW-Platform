@@ -13,6 +13,7 @@ import type { ScreenKind } from '../store';
 import type { HelpLanguage } from '../i18n/HelpLanguage';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
 import { COLOR_CANVAS_BACKGROUND, GRID_SIZE } from '../theme/ScadaTheme';
+import type { RoomElement } from '../elements/RoomElement';
 
 export interface EPWProjectInfo {
   name: string;
@@ -61,6 +62,7 @@ export interface EPWProjectSchema {
   // file simply has no walls (loads as an empty array). No schema
   // version bump.
   walls?: WallElement[];
+  rooms?: RoomElement[];   // ZADANIA p. 6: the room records the walls point at (optional: older files have none)
   // feat/room-plan: which device switches each circuit. Same
   // optional/additive treatment as walls above - an older file simply
   // has no bindings, which reads as "nothing wired yet".

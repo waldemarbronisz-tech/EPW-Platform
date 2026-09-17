@@ -112,7 +112,14 @@ na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
 
 ## 6. Dług i luki znalezione przy tym zadaniu
 
-- **Pokój (room) nie ma własnego rekordu.** Nazwa i lokalizacja pomieszczenia siedzą na ścianach (`WallElement.roomName` / `roomLocation` w Synoptic).
+- **Pokój (room)** — ZROBIONE 2026-09-17: rekord `rooms: [{id, name, location}]`
+  w dokumencie ekranu, każda ściana pokoju wskazuje go przez `roomId`
+  (`elements/RoomElement.ts`, reguły w `project/Rooms.ts`: jeden rekord na
+  łańcuch ścian, wklejony pokój dostaje własny, kasowanie ścian usuwa rekord,
+  stary plik z `roomName`/`roomLocation` na ścianach migruje przy otwarciu).
+  Runtime rysuje podłogi zamkniętych pętli ścian w materiale ekranu, ściany
+  w ich materiale (jasna górna płaszczyzna, cieniowany pas, cień kontaktowy)
+  i etykietę „nazwa - lokalizacja" z rekordu (`gui/synoptic/rooms.py`).
 - **Próg ostrzegawczy licznika łączeń** — ZROBIONE 2026-09-17: pole
   `Point.warning_threshold` (punkt DI) w formacie, kolumna w rejestrze punktów
   Studio, część `settings_hash`; runtime zasila nim rekord licznika (projekt
@@ -140,8 +147,8 @@ na żywo z zaznaczeniem różnic bez wysyłania (SPEC p. 4 listy końcowej).
   na żywo mówi „załączony"; kropki węzłów jak w edytorze; symbole wodne mają
   wariant „sieć aktywna"); animacja obrotu ZROBIONA (eksport oznacza obracaną
   część `$animate_rotation`, znalezioną przez drugi przebieg z przesuniętym
-  stanem). Zostaje:
-  - ściany rysowane jako pasy bez cieniowania edytora, pokoje bez podłogi;
+  stanem). Ściany i podłogi pokoi — ZROBIONE 2026-09-17 (patrz „Pokój" wyżej;
+  bez pseudo-3D wytłoczenia edytora, z jego cieniami i materiałami). Zostaje:
   - `clipFunc` (2 symbole zbiorników) nie jest eksportowany — zbiornik rysuje
     się bez przycięcia poziomu;
   - eksport trzeba powtórzyć po zmianie biblioteki symboli

@@ -6,6 +6,9 @@ import type { ScreenKind } from '../store';
 import { GRID_SIZE } from '../theme/ScadaTheme';
 import { HELP_DEFAULT_LANGUAGE } from '../i18n/HelpLanguage';
 import type { FloorMaterialId } from '../theme/Materials';
+import { migrateLegacyRooms } from './Rooms';
+import { v4 as uuidv4 } from 'uuid';
+import type { ScreenContent } from './ScreenContent';
 
 export class ProjectManager {
   // feat/isometric-engine commit 5: kind defaults to SCHEMATIC, same as
@@ -68,6 +71,7 @@ export class ProjectManager {
       signalPanels: state.signalPanels || [],
       frames: state.frames || [],
       walls: state.walls || [],
+      rooms: state.rooms || [],
       circuits: state.circuits || [],
       screens: state.screens,
       activeScreenId: state.activeScreenId,
@@ -105,19 +109,29 @@ export class ProjectManager {
     const rawKind = (project as any).kind;
     const isLegacyPlanKind = rawKind === 'PLAN';
 
+    // ZADANIA p. 6: a file saved before the room record existed carries
+    // roomName/roomLocation on its walls - turned into records here,
+    // once, for the active screen and every stored one.
+    const migrated = migrateLegacyRooms(project.walls || [], project.rooms || [], uuidv4);
+    const screenContents: Record<string, ScreenContent> = {};
+    for (const [id, content] of Object.entries(project.screenContents || {})) {
+      const m = migrateLegacyRooms(content.walls || [], content.rooms || [], uuidv4);
+      screenContents[id] = { ...content, walls: m.walls, rooms: m.rooms };
+    }
     useStore.setState({
       objects: project.objects,
       connections: project.connections || [],
       meters: project.meters || [],
       signalPanels: project.signalPanels || [],
       frames: project.frames || [],
-      walls: project.walls || [],
+      walls: migrated.walls,
+      rooms: migrated.rooms,
       circuits: project.circuits || [],
       // A file written before screens existed has none - it becomes a
       // one-screen project, which is exactly what it was.
       screens: project.screens?.length ? project.screens : [{ id: 'screen-1', name: 'Screen 1' }],
       activeScreenId: project.activeScreenId || project.screens?.[0]?.id || 'screen-1',
-      screenContents: project.screenContents || {},
+      screenContents,
       // feat/workspace: views and undo stacks belong to the session that
       // made them, never to a project opened afterwards.
       screenViews: {},
@@ -162,7 +176,8 @@ export class ProjectManager {
         meters: JSON.parse(JSON.stringify(project.meters || [])),
         signalPanels: JSON.parse(JSON.stringify(project.signalPanels || [])),
         frames: JSON.parse(JSON.stringify(project.frames || [])),
-        walls: JSON.parse(JSON.stringify(project.walls || [])),
+        walls: JSON.parse(JSON.stringify(migrated.walls)),
+        rooms: JSON.parse(JSON.stringify(migrated.rooms)),
         circuits: JSON.parse(JSON.stringify(project.circuits || [])),
         groupCommands: JSON.parse(JSON.stringify(project.groupCommands || [])),
         setpointPanels: JSON.parse(JSON.stringify(project.setpointPanels || []))
