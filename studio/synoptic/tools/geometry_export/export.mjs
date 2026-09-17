@@ -172,6 +172,40 @@ const PRIMITIVES = new Set(['Group', 'Rect', 'Circle', 'Ellipse', 'Line', 'Path'
 const DROPPED_PROPS = new Set(['key', 'ref', 'listening', 'draggable', 'name', 'id', 'perfectDrawEnabled',
   'shadowForStrokeEnabled', 'hitStrokeWidth', 'strokeHitEnabled', 'transformsEnabled']);
 
+// Runs a clipFunc against a context that only records: rect(), arc(),
+// moveTo()/lineTo()/closePath() (a polygon), beginPath(). Anything else
+// the function calls is reported; the shapes recorded so far still count.
+function recordClipFunc(fn, warnings) {
+  const shapes = [];
+  let polygon = null;
+  const flush = () => { if (polygon && polygon.length >= 3) shapes.push({ kind: 'polygon', points: polygon }); polygon = null; };
+  const ctx = new Proxy({}, {
+    get(_t, name) {
+      switch (name) {
+        case 'beginPath': return () => { flush(); };
+        case 'rect': return (x, y, w, h) => { flush(); shapes.push({ kind: 'rect', x, y, width: w, height: h }); };
+        case 'arc': return (x, y, r, start, end, anticlockwise) => {
+          flush();
+          shapes.push({ kind: 'arc', x, y, radius: r, start_rad: start, end_rad: end, anticlockwise: !!anticlockwise });
+        };
+        case 'moveTo': return (x, y) => { flush(); polygon = [[x, y]]; };
+        case 'lineTo': return (x, y) => { if (!polygon) polygon = []; polygon.push([x, y]); };
+        case 'closePath': return () => { flush(); };
+        case 'save': case 'restore': case 'clip': case 'fill': case 'stroke': return () => {};
+        default:
+          return (..._args) => { warnings.push(`clipFunc uses ctx.${String(name)} - not recorded`); };
+      }
+    },
+  });
+  try {
+    fn(ctx);
+  } catch (e) {
+    warnings.push(`clipFunc threw: ${e && e.message ? e.message : e}`);
+  }
+  flush();
+  return shapes;
+}
+
 function normalizeNode(node, warnings) {
   if (node === null || node === undefined || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap((n) => normalizeNode(n, warnings));
@@ -188,6 +222,15 @@ function normalizeNode(node, warnings) {
   const out = { primitive: type.toLowerCase() };
   for (const [key, value] of Object.entries(props)) {
     if (DROPPED_PROPS.has(key) || key.startsWith('on')) continue;
+    if (key === 'clipFunc' && typeof value === 'function') {
+      // A Konva clipFunc draws a clip path on a canvas context. It is
+      // run once here against a recording context, and what it drew
+      // (rects, arcs, polylines) is exported as the node's `clip` - the
+      // runtime intersects its clip region with those shapes.
+      const shapes = recordClipFunc(value, warnings);
+      if (shapes.length) out.clip = shapes;
+      continue;
+    }
     if (typeof value === 'function') {
       warnings.push(`<${type}> prop ${key} is a function - not exportable`);
       out.unsupported_props = [...(out.unsupported_props || []), key];

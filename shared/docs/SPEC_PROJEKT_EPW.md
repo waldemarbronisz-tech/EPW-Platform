@@ -294,8 +294,12 @@ schemat jednokreskowy. Od 2026-09-17 przewody mają kolor według sieci
 (port `NetResolver.ts`: sieć jest zasilana z punktu granicznego SOURCE albo
 z zacisku OUT aparatu załączonego według potwierdzenia na żywo), węzły mają
 kropki, symbole wodne rysują wariant „sieć aktywna", wentylator się obraca;
-pokoje mają podłogi w materiale ekranu, ściany swój materiał z cieniowaniem
-i etykietę z rekordu pokoju (`rooms`, ściany wskazują go przez `roomId`).
+pokoje mają podłogi w materiale ekranu, ściany pseudo-3D jak w edytorze
+(wytłoczenie, cieniowanie od światła, bliskie ściany przycięte, cień na
+podłodze; port `WallGeometry.ts`/`WallLayer.tsx` w `gui/synoptic/walls3d.py`)
+i etykietę z rekordu pokoju (`rooms`, ściany wskazują go przez `roomId`);
+poziom w zbiornikach jest przycięty do wnętrza zbiornika (`clipFunc` symbolu
+wyeksportowany jako `clip`).
 
 **Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
 KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z

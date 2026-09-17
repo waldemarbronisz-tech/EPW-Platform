@@ -105,6 +105,9 @@ class PrimitivePainter:
         p.save()
         try:
             self._apply_transform(node)
+            clip = node.get("clip")
+            if clip:
+                p.setClipPath(self._clip_path(clip), Qt.ClipOperation.IntersectClip)
             _DRAWERS[kind](self, node, node_opacity)
         finally:
             p.restore()
@@ -122,6 +125,39 @@ class PrimitivePainter:
             return float(value)
         except (TypeError, ValueError):
             return float(default)
+
+    @staticmethod
+    def _clip_path(shapes) -> QPainterPath:
+        """The shapes a Konva clipFunc drew (exported as `clip`) as one
+        path, in the node's own coordinates - a rect, a full or partial
+        arc around a centre, a polygon."""
+        path = QPainterPath()
+        for shape in shapes:
+            kind = shape.get("kind")
+            if kind == "rect":
+                path.addRect(QRectF(float(shape.get("x", 0)), float(shape.get("y", 0)),
+                                    float(shape.get("width", 0)), float(shape.get("height", 0))))
+            elif kind == "arc":
+                cx, cy, r = float(shape.get("x", 0)), float(shape.get("y", 0)), float(shape.get("radius", 0))
+                start, end = float(shape.get("start_rad", 0)), float(shape.get("end_rad", 2 * math.pi))
+                sweep = end - start
+                if abs(sweep) >= 2 * math.pi - 1e-9:
+                    path.addEllipse(QPointF(cx, cy), r, r)
+                else:
+                    rect = QRectF(cx - r, cy - r, 2 * r, 2 * r)
+                    sub = QPainterPath(QPointF(cx, cy))
+                    sub.arcTo(rect, -math.degrees(start), -math.degrees(sweep))   # canvas angles run clockwise
+                    sub.closeSubpath()
+                    path.addPath(sub)
+            elif kind == "polygon":
+                pts = shape.get("points") or []
+                if len(pts) >= 3:
+                    sub = QPainterPath(QPointF(float(pts[0][0]), float(pts[0][1])))
+                    for x, y in pts[1:]:
+                        sub.lineTo(float(x), float(y))
+                    sub.closeSubpath()
+                    path.addPath(sub)
+        return path
 
     def _apply_transform(self, node):
         p = self.painter

@@ -1,7 +1,7 @@
 {
  "format": "EPW_SYMBOL_GEOMETRY",
  "schema_version": 1,
- "generated_at": "2026-09-17T08:43:05.680Z",
+ "generated_at": "2026-09-17T13:17:36.600Z",
  "generated_by": "studio/synoptic/tools/geometry_export/export.mjs",
  "symbol_count": 98,
  "symbols": {
@@ -19639,8 +19639,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -19813,8 +19821,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -19987,8 +20003,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -20118,11 +20142,7 @@
      }
     ]
    },
-   "warnings": [
-    "ON: <Group> prop clipFunc is a function - not exportable",
-    "OFF: <Group> prop clipFunc is a function - not exportable",
-    "NORMAL: <Group> prop clipFunc is a function - not exportable"
-   ],
+   "warnings": [],
    "states_net_active": {
     "ON": [
      {
@@ -20168,8 +20188,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -20342,8 +20370,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -20516,8 +20552,16 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "arc",
+          "x": 80,
+          "y": 64,
+          "radius": 33,
+          "start_rad": 0,
+          "end_rad": 6.283185307179586,
+          "anticlockwise": false
+         }
         ],
         "children": [
          {
@@ -26129,8 +26173,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -26462,8 +26512,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -26795,8 +26851,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -27128,8 +27190,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -27415,12 +27483,7 @@
      }
     ]
    },
-   "warnings": [
-    "LOW: <Group> prop clipFunc is a function - not exportable",
-    "MEDIUM: <Group> prop clipFunc is a function - not exportable",
-    "HIGH: <Group> prop clipFunc is a function - not exportable",
-    "NORMAL: <Group> prop clipFunc is a function - not exportable"
-   ],
+   "warnings": [],
    "states_net_active": {
     "LOW": [
      {
@@ -27469,8 +27532,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -27802,8 +27871,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -28135,8 +28210,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
@@ -28468,8 +28549,14 @@
        },
        {
         "primitive": "group",
-        "unsupported_props": [
-         "clipFunc"
+        "clip": [
+         {
+          "kind": "rect",
+          "x": 28,
+          "y": 22,
+          "width": 72,
+          "height": 52
+         }
         ],
         "children": [
          {
