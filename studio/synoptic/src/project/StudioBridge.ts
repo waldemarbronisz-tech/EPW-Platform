@@ -37,6 +37,15 @@ export function loadProjectFromStudio(text: string | null, name: string): boolea
   return ok;
 }
 
+/**
+ * feat/live-view: the controller's tag values ({tag: value}) while
+ * Studio's "Na żywo" is on, null when it goes off - device-bound symbols
+ * draw their live state (store/liveSlice.ts). Never touches the document.
+ */
+export function setLiveValuesFromStudio(values: Record<string, unknown> | null): void {
+  useStore.getState().setLiveValues(values && typeof values === 'object' ? values : null);
+}
+
 /** Studio just wrote projekt.epw with this editor's document inside - nothing here is unsaved any more. */
 export function markSavedByStudio(name: string): void {
   useStore.getState().setFileName(name || null);

@@ -39,8 +39,13 @@ class MainWindow(QMainWindow):
                  process_protection_manager=None,
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
-                 startup_issues=None):
+                 startup_issues=None, force_manager=None, forces_changed_signal=None):
         super().__init__()
+        # SPEC "Wymuszanie stanów" condition 2 ("widoczne po obu stronach,
+        # także na panelu przy szafce"): the status bar shows every force
+        # Studio holds, and an Engineer can drop them all from there.
+        self.force_manager = force_manager
+        self._forces_changed_signal = forces_changed_signal
         self.tag_manager = tag_manager
         # Task "migracja adresacji" - see epw_os/core/apparatus.py's own
         # module docstring. None (today's real value from main.py) means
@@ -1089,6 +1094,7 @@ class MainWindow(QMainWindow):
         self._refresh_api_warning_indicator()
         self._refresh_db_size_warning_indicator()
         self._refresh_intrusion_indicator()
+        self._refresh_forces_indicator()
 
     def _on_keyboard_toggled(self, checked: bool):
         """Settings > On-Screen Keyboard - takes effect immediately (the
@@ -1273,6 +1279,46 @@ class MainWindow(QMainWindow):
                 self.page_intrusion_overview.refresh_live()
             self._refresh_intrusion_indicator()
             self._refresh_nav_attention_intrusion()
+
+    def _refresh_forces_indicator(self, *_):
+        """"WYMUSZENIA: n" in the alarm colour while Studio holds any force
+        - permanent-widget/hidden-when-none shape like the other
+        indicators; the tooltip lists the tags, the context menu drops
+        them all (Engineer)."""
+        label = getattr(self, "lbl_sb_forces", None)
+        if label is None:
+            return
+        if self._forces_changed_signal is not None and not getattr(self, "_forces_signal_connected", False):
+            self._forces_changed_signal.connect(self._refresh_forces_indicator)
+            self._forces_signal_connected = True
+        forces = self.force_manager.snapshot() if self.force_manager is not None else []
+        if not forces:
+            label.setVisible(False)
+            return
+        theme_colors = self.theme_manager.current_colors()
+        label.setText(f" {tr('statusbar.forces_active', count=len(forces))} ")
+        label.setStyleSheet(
+            f"color: {theme_colors['window_bg']}; background-color: {theme_colors['state_alarm']}; "
+            f"font-weight: bold; padding: 1px 6px;"
+        )
+        listed = ", ".join(f"{f['tag']} = {f['value']!r}" for f in forces[:12])
+        if len(forces) > 12:
+            listed += ", ..."
+        label.setToolTip(tr("statusbar.tooltip_forces", tags=listed))
+        label.setVisible(True)
+
+    def _forces_indicator_menu(self, pos):
+        if self.force_manager is None or not self.force_manager.snapshot():
+            return
+        menu = QMenu(self)
+        release = menu.addAction(tr("statusbar.release_all_forces"))
+        if menu.exec(self.lbl_sb_forces.mapToGlobal(pos)) is not release:
+            return
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Release forces")
+            return
+        self.force_manager.release_all(actor="Engineer (panel)", reason="released at the panel")
+        self._refresh_forces_indicator()
 
     def _refresh_intrusion_indicator(self, *_):
         """Task: "Stan uzbrojenia MA BYC WIDOCZNY z kazdej strony
@@ -1982,6 +2028,10 @@ class MainWindow(QMainWindow):
         # shape as Training Mode's own indicator above, but a distinct
         # widget/color per state (armed/counting down/alarm) - see
         # _refresh_intrusion_indicator().
+        self.lbl_sb_forces = QLabel()
+        self.lbl_sb_forces.setVisible(False)
+        self.lbl_sb_forces.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lbl_sb_forces.customContextMenuRequested.connect(self._forces_indicator_menu)
         self.lbl_sb_intrusion = QLabel()
         self.lbl_sb_intrusion.setVisible(False)
         if self._presentation_started_signal is not None:
@@ -2005,10 +2055,12 @@ class MainWindow(QMainWindow):
         self.statusbar.addPermanentWidget(self.lbl_sb_db_warning)
         self.statusbar.addPermanentWidget(self.lbl_sb_presentation)
         self.statusbar.addPermanentWidget(self.lbl_sb_training)
+        self.statusbar.addPermanentWidget(self.lbl_sb_forces)
         self.statusbar.addPermanentWidget(self.lbl_sb_intrusion)
         self.statusbar.addPermanentWidget(self.btn_sb_mode)
         self._refresh_training_mode_indicator()
         self._refresh_intrusion_indicator()
+        self._refresh_forces_indicator()
         self._refresh_nav_attention_intrusion()
         # Seeded from whatever's already true right now, not just future
         # signals - same "don't rely solely on a future signal" pattern

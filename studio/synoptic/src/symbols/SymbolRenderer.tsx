@@ -179,7 +179,11 @@ export const GenericSymbol: React.FC<SymbolProps> = ({ obj }) => {
 };
 
 export const SymbolRenderer: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
-  const state = obj.editor?.preview_state || 'NORMAL';
+  // feat/live-view: while Studio pushes the controller's values, a
+  // device-bound symbol shows its LIVE state; the document's preview
+  // state is untouched underneath (store/liveSlice.ts).
+  const liveState = useStore(s => s.liveStates[obj.id]);
+  const state = liveState ?? (obj.editor?.preview_state || 'NORMAL');
 
   // feat/wire-routing-around-obstacles commit 5, point (a): "uzyj TEJ
   // SAMEJ funkcji, ktora wyznacza stan sieci dla przewodow" -

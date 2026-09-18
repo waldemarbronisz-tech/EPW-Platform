@@ -16,6 +16,7 @@ import React from 'react';
 import { Circle, Group, Line } from 'react-konva';
 import type { WallElement } from '../elements/WallElement';
 import type { SynopticObject } from '../store';
+import { useStore } from '../store';
 import { findClosedRooms, roomToPoints } from '../project/RoomFloors';
 import { getFloorMaterial, getMaterialTile, shade } from '../theme/Materials';
 import type { FloorMaterialId } from '../theme/Materials';
@@ -44,6 +45,8 @@ const ROOM_SHADOW_WIDTH = 14;
 const ROOM_SHADOW_OPACITY = 0.13;
 
 export const RoomFloorLayer: React.FC<RoomFloorLayerProps> = ({ walls, objects, floorMaterial }) => {
+  // feat/live-view: a luminaire lit on the controller lights the floor too.
+  const liveStates = useStore(s => s.liveStates);
   const rooms = findClosedRooms(walls);
   if (rooms.length === 0) return null;
 
@@ -63,7 +66,7 @@ export const RoomFloorLayer: React.FC<RoomFloorLayerProps> = ({ walls, objects, 
   // exactly why the four newer fittings lit up but left the floor
   // dark.)
   const litLuminaires = objects.filter(
-    o => o.type.startsWith('building.luminaire') && o.editor?.preview_state === 'ON'
+    o => o.type.startsWith('building.luminaire') && (liveStates[o.id] ?? o.editor?.preview_state) === 'ON'
   );
 
   return (

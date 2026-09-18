@@ -81,6 +81,7 @@ class TagManager:
     def __init__(self, event_bus):
         self.event_bus = event_bus
         self._tags: Dict[str, Tag] = {}
+        self._forced = set()   # tag names pinned by ForceManager
         self._lock = threading.RLock()
         self.mode = "SIMULATION MODE" # LIVE MODE or SIMULATION MODE
         # Bug fix (Task: "System.Mode nie jest zarejestrowany"): set_mode()
@@ -213,11 +214,36 @@ class TagManager:
     def publish_system(self, name, value):
         return self._apply_update(name, value, TagQuality.GOOD, source="SYSTEM")
 
+    # --- forcing (core/force_manager.py) ------------------------------------------------
+    # A forced tag keeps its forced value whatever a driver, the logic
+    # runtime or the system publish - publish_forced() is the one door
+    # that still writes it, and ForceManager is the only caller.
+
+    def set_forced(self, name: str, forced: bool):
+        with self._lock:
+            if forced:
+                self._forced.add(name)
+            else:
+                self._forced.discard(name)
+
+    def is_forced(self, name: str) -> bool:
+        with self._lock:
+            return name in self._forced
+
+    def forced_tags(self) -> list:
+        with self._lock:
+            return sorted(self._forced)
+
+    def publish_forced(self, name, value):
+        return self._apply_update(name, value, TagQuality.GOOD, source="FORCE")
+
     def update_tag(self, name: str, value: Any, quality: TagQuality = TagQuality.GOOD):
         return self._apply_update(name, value, quality, source="SYSTEM")
 
     def _apply_update(self, name: str, value: Any, quality: TagQuality, source: str):
         with self._lock:
+            if name in self._forced and source != "FORCE":
+                return False          # pinned by a force - the real value waits until it is released
             if name in self._tags:
                 tag = self._tags[name]
 
