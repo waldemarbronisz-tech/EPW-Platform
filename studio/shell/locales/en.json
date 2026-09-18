@@ -90,7 +90,13 @@
       "exit": "Exit",
       "compare_saved": "Compare with Saved File...",
       "compare_files": "Compare Two Projects...",
-      "device_wizard": "Device Wizard..."
+      "device_wizard": "Device Wizard...",
+      "new_site": "New Object...",
+      "open_site": "Open Object...",
+      "save_site": "Save Object (all controllers)",
+      "add_device": "Add Controller to Object...",
+      "add_existing_device": "Add Existing Project to Object...",
+      "remove_device": "Remove Controller from Object"
     },
     "edit": {
       "undo": "Undo",
@@ -629,5 +635,30 @@
     "col_date": "Date",
     "col_author": "Level",
     "col_text": "Entry"
+  },
+  "site": {
+    "devices_header": "DEVICE LIST",
+    "device_header": "CONTROLLER: {name}",
+    "unsaved_object": "Object (unsaved)",
+    "default_name": "Object",
+    "new_title": "New Object",
+    "name_prompt": "Object name:",
+    "save_title": "Save Object",
+    "save_dialog_title": "Save Object As",
+    "open_dialog_title": "Open Object",
+    "open_failed_title": "Could not open the object",
+    "empty_text": "The object has no project that could be opened.",
+    "add_device_title": "Add Controller",
+    "add_existing_title": "Add Existing Project",
+    "device_name_prompt": "Controller (device) name:",
+    "default_device_name": "Controller 1",
+    "save_project_first": "Save the current project first - an object lists its controllers as project files.",
+    "already_in_object": "This project is already in the object.",
+    "remove_title": "Remove Controller from Object",
+    "remove_confirm": "Remove {name} from the object? The project file stays on disk.",
+    "remove_last_text": "An object needs at least one controller.",
+    "discard_device_text": "{name} has unsaved changes. Remove it from the object anyway (the changes are lost)?",
+    "device_unsaved_text": "{name} has no file yet - save it first.",
+    "switch_failed": "Could not switch controller: the editor did not hand over its document."
   }
 }

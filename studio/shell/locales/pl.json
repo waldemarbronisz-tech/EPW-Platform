@@ -90,7 +90,13 @@
       "exit": "Zamknij",
       "compare_saved": "Porównaj z zapisanym plikiem...",
       "compare_files": "Porównaj dwa projekty...",
-      "device_wizard": "Kreator urządzenia..."
+      "device_wizard": "Kreator urządzenia...",
+      "new_site": "Nowy obiekt...",
+      "open_site": "Otwórz obiekt...",
+      "save_site": "Zapisz obiekt (wszystkie sterowniki)",
+      "add_device": "Dodaj sterownik do obiektu...",
+      "add_existing_device": "Dodaj istniejący projekt do obiektu...",
+      "remove_device": "Usuń sterownik z obiektu"
     },
     "edit": {
       "undo": "Cofnij",
@@ -629,5 +635,30 @@
     "col_date": "Data",
     "col_author": "Poziom",
     "col_text": "Wpis"
+  },
+  "site": {
+    "devices_header": "LISTA URZĄDZEŃ",
+    "device_header": "STEROWNIK: {name}",
+    "unsaved_object": "Obiekt (niezapisany)",
+    "default_name": "Obiekt",
+    "new_title": "Nowy obiekt",
+    "name_prompt": "Nazwa obiektu:",
+    "save_title": "Zapisz obiekt",
+    "save_dialog_title": "Zapisz obiekt jako",
+    "open_dialog_title": "Otwórz obiekt",
+    "open_failed_title": "Nie udało się otworzyć obiektu",
+    "empty_text": "Obiekt nie ma żadnego projektu, który dało się otworzyć.",
+    "add_device_title": "Dodaj sterownik",
+    "add_existing_title": "Dodaj istniejący projekt",
+    "device_name_prompt": "Nazwa sterownika (urządzenia):",
+    "default_device_name": "Sterownik 1",
+    "save_project_first": "Najpierw zapisz bieżący projekt - obiekt zapamiętuje sterowniki jako pliki projektów.",
+    "already_in_object": "Ten projekt już jest w obiekcie.",
+    "remove_title": "Usuń sterownik z obiektu",
+    "remove_confirm": "Usunąć {name} z obiektu? Plik projektu zostaje na dysku.",
+    "remove_last_text": "Obiekt musi mieć przynajmniej jeden sterownik.",
+    "discard_device_text": "{name} ma niezapisane zmiany. Usunąć z obiektu mimo to (zmiany przepadną)?",
+    "device_unsaved_text": "{name} nie ma jeszcze pliku - zapisz go najpierw.",
+    "switch_failed": "Nie udało się przełączyć sterownika: edytor nie oddał dokumentu."
   }
 }
