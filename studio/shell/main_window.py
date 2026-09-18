@@ -130,6 +130,15 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_HELP: "breadcrumb.help",
 }
 
+# Which tree branches can carry the "edited, not saved yet" mark (user,
+# 2026-09-18: "dział, w którym coś edytowałem, zmienia kolor na czerwony
+# z *, kolor zdejmuje dopiero zapisanie projektu"): every project aspect
+# except Help. The two editors mark themselves from their own dirty
+# flags; the panels are marked at the branch that was ACTIVE when the
+# edit was reported through _on_project_changed().
+_MARKABLE_ASPECTS = frozenset(_BREADCRUMB_KEYS) - {_TREE_ITEM_HELP, _TREE_ITEM_SCREENS, _TREE_ITEM_LOGIC}
+_EDITED_MARK_COLOR = "#C00000"
+
 # Task point 5.3 - "Mapowanie gałąź drzewa -> temat pomocy." Tree keys
 # (left column) are this file's own _TREE_ITEM_* constants; help-topic
 # keys (right column) are generate_help.py's TOPICS keys (see that
@@ -373,6 +382,7 @@ class StudioMainWindow(QMainWindow):
         self._synoptic_panel = None
         self._logic_panel = None
         self._synoptic_dirty = False  # last isDirty read off the Synoptic state bridge
+        self._edited_aspects = set()  # tree keys edited since the last save - drawn red with " *"
         self._logic_dirty_seen = False
         self._project_info_panel = None
         self._modules_panel = None
@@ -590,7 +600,12 @@ class StudioMainWindow(QMainWindow):
             return item
 
         root = QTreeWidgetItem([tr("tree.root")])
-        root.setFlags(root.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+        # The root carries the PROJECT'S NAME (user, 2026-09-18: "w drzewie
+        # gdzie jest nazwa PROJECT podpisujemy np. EntryGate lub MainHouse,
+        # sami możemy edytować nazwy") - editable in place by double-click,
+        # the same metadata.name Informacje o projekcie edits.
+        root.setFlags((root.flags() & ~Qt.ItemFlag.ItemIsSelectable) | Qt.ItemFlag.ItemIsEditable)
+        self._item_root = root
         f = root.font(0)
         f.setBold(True)
         root.setFont(0, f)
@@ -661,6 +676,8 @@ class StudioMainWindow(QMainWindow):
 
         tree.expandAll()
         tree.currentItemChanged.connect(self._on_tree_selection_changed)
+        tree.itemDoubleClicked.connect(self._on_tree_item_double_clicked)
+        tree.itemChanged.connect(self._on_tree_item_changed)
         return tree
 
     def _build_shared_toolbar(self):
@@ -834,7 +851,7 @@ class StudioMainWindow(QMainWindow):
             logic_dirty = self._logic_panel.is_dirty()
             if logic_dirty != self._logic_dirty_seen:
                 self._logic_dirty_seen = logic_dirty
-                self._on_project_changed()
+                self._on_project_changed(aspect_edit=False)
         if self._active == _TREE_ITEM_LOGIC and self._logic_panel is not None:
             mw = self._logic_panel.main_window()
             self._set_shared_toolbar_enabled(len(mw.project.undo_stack) > 0, len(mw.project.redo_stack) > 0)
@@ -901,7 +918,7 @@ class StudioMainWindow(QMainWindow):
         dirty = bool(state.get("isDirty")) if state else False
         if dirty != self._synoptic_dirty:
             self._synoptic_dirty = dirty
-            self._on_project_changed()
+            self._on_project_changed(aspect_edit=False)
 
     def _apply_synoptic_toolbar_state(self, state):
         # Guards against a reply arriving after the user has already
@@ -1139,6 +1156,7 @@ class StudioMainWindow(QMainWindow):
         self._tree_header.setText(tr("tree.root"))
         for item, key in self._tree_label_refs:
             item.setText(0, tr(key))
+        self._refresh_tree_marks()
 
         old_toolbar = self._shared_toolbar
         self.removeToolBar(old_toolbar)
@@ -1623,17 +1641,23 @@ class StudioMainWindow(QMainWindow):
     # module docstring for why.
     # ------------------------------------------------------------------
 
-    def _on_project_changed(self):
+    def _on_project_changed(self, aspect_edit: bool = True):
         """Called by project_panels.py after every edit (card added,
         point named, metadata changed, ...) - the one place that keeps
         the status bar and the info panel's own read-outs (path,
         revision) honest. Does NOT refresh the Cards/Point Registry
         panels themselves on every keystroke - each _open_* above
         already refreshes on entry, which is the only time stale data
-        would actually be visible."""
+        would actually be visible.
+
+        `aspect_edit`: True (the panels' calls) means "the active branch
+        is where this edit happened" and marks it in the tree; the
+        internal callers that only relay a state change (an editor's
+        dirty flag flipping, a project just opened) pass False."""
         name = self._project.metadata.name or tr("project_info.default_name")
         marker = "*" if (self._project.is_dirty or self._editors_dirty()) else ""
         self._status_project.setText(f"{name}{marker}")
+        self._note_aspect_edit(aspect_edit)
         if self._project_info_panel is not None:
             self._project_info_panel.refresh()
         self._refresh_module_visibility()
@@ -1645,6 +1669,82 @@ class StudioMainWindow(QMainWindow):
         # heavy panels on every unrelated edit).
         if self._logic_panel is not None:
             self._logic_panel.sync_cards_from_studio(self._project)
+        self._refresh_tree_marks()
+
+    def _note_aspect_edit(self, aspect_edit: bool):
+        """Keeps _edited_aspects honest: a save (nothing dirty any more)
+        clears every mark; a panel edit marks the branch it was made
+        in. A dirty editor alone marks nothing here - the editors are
+        marked from their own flags in _refresh_tree_marks()."""
+        if not (self._project.is_dirty or self._editors_dirty()):
+            self._edited_aspects.clear()
+            return
+        if aspect_edit and self._project.is_dirty and self._active in _MARKABLE_ASPECTS:
+            self._edited_aspects.add(self._active)
+
+    def edited_aspects(self) -> set:
+        """The tree keys currently drawn as edited (read by tests)."""
+        marks = set(self._edited_aspects)
+        if self._synoptic_dirty:
+            marks.add(_TREE_ITEM_SCREENS)
+        if self._logic_panel is not None and self._logic_panel.is_dirty():
+            marks.add(_TREE_ITEM_LOGIC)
+        return marks
+
+    def root_label(self) -> str:
+        """The project's name, or the generic PROJEKT while it has none."""
+        return self._project.metadata.name.strip() or tr("tree.root")
+
+    def _on_tree_item_double_clicked(self, item, _column):
+        if item is getattr(self, "_item_root", None):
+            self._tree_updating = True
+            try:
+                item.setText(0, self._project.metadata.name)     # edit the bare name, not " *"
+            finally:
+                self._tree_updating = False
+            self.tree.editItem(item, 0)
+
+    def _on_tree_item_changed(self, item, _column):
+        """The root edited in place -> metadata.name (an edit of
+        Informacje o projekcie, marked there)."""
+        if getattr(self, "_tree_updating", False) or item is not getattr(self, "_item_root", None):
+            return
+        name = item.text(0).strip()
+        if name == self._project.metadata.name:
+            self._refresh_tree_marks()
+            return
+        self._project.metadata.name = name
+        self._project.touch()
+        self._edited_aspects.add(_TREE_ITEM_INFO)
+        self._on_project_changed(aspect_edit=False)
+        self._refresh_all_project_panels()
+
+    def _refresh_tree_marks(self):
+        """Every active leaf: its plain label, or the label + " *" in red
+        while it has unsaved edits; the root: the project's name. Re-run
+        after every project change, a language switch and a
+        module-visibility rebuild (those reset the texts)."""
+        marks = self.edited_aspects()
+        self._tree_updating = True
+        try:
+            self._apply_tree_marks(marks)
+        finally:
+            self._tree_updating = False
+
+    def _apply_tree_marks(self, marks):
+        root = getattr(self, "_item_root", None)
+        if root is not None:
+            root.setText(0, self.root_label())
+        for item, key in self._tree_label_refs:
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if not data or data[0] != "active":
+                continue
+            if data[1] in marks:
+                item.setText(0, f"{tr(key)} *")
+                item.setForeground(0, QColor(_EDITED_MARK_COLOR))
+            else:
+                item.setText(0, tr(key))
+                item.setData(0, Qt.ItemDataRole.ForegroundRole, None)
 
     def _refresh_module_visibility(self):
         """Task "fix/project-format-integrity" point 2.3 - "Moduł spoza
@@ -1750,7 +1850,8 @@ class StudioMainWindow(QMainWindow):
         self._project = new_project(tr("project_info.default_name"))
         self._project_path = None
         self._push_editor_documents()
-        self._on_project_changed()
+        self._edited_aspects.clear()          # a new project starts dirty, but nothing was edited yet
+        self._on_project_changed(aspect_edit=False)
         self._refresh_all_project_panels()
 
     def _open_project(self):
@@ -1785,7 +1886,8 @@ class StudioMainWindow(QMainWindow):
         self.settings.setValue("project/last_dir", str(Path(path).parent))
         self._remember_recent_project(path)
         self._push_editor_documents()
-        self._on_project_changed()
+        self._edited_aspects.clear()
+        self._on_project_changed(aspect_edit=False)
         self._refresh_all_project_panels()
 
     def _open_recent_project(self, path: str):
