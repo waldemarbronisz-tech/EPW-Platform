@@ -309,6 +309,10 @@ export interface AppState {
   // a crossing marquee, above all. Geometry scales, objects move; see
   // project/GroupScale.ts. Writes no history entry of its own, so a drag
   // can call it on every frame and record ONE entry when it ends.
+  /** The walls/objects at the start of a handle drag; scaleSelection maps from these (see elementsSlice). */
+  scaleOrigin: { walls: WallElement[]; objects: SynopticObject[] } | null;
+  beginScaleSelection: () => void;
+  endScaleSelection: () => void;
   scaleSelection: (
     before: { x: number; y: number; width: number; height: number },
     after: { x: number; y: number; width: number; height: number },

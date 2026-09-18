@@ -1414,7 +1414,11 @@ export const Canvas: React.FC = () => {
   // ONE history entry for the whole drag, written when it ends - not on
   // every frame, or a single resize would bury sixty identical entries.
   const handleGroupResizeCommit = () => {
+    useStore.getState().endScaleSelection();
     useStore.getState().saveHistory();
+  };
+  const handleGroupResizeStart = () => {
+    useStore.getState().beginScaleSelection();
   };
 
   return (
@@ -1983,6 +1987,7 @@ export const Canvas: React.FC = () => {
               bounds={resizeBounds}
               zoom={canvasState.zoom}
               snapStep={shouldSnapToGrid(isAltKeyDown()) ? gridSize : 0}
+              onStart={handleGroupResizeStart}
               onResize={handleGroupResize}
               onCommit={handleGroupResizeCommit}
             />

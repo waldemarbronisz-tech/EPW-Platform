@@ -43,6 +43,8 @@ export interface GroupResizeHandlesProps {
   zoom: number;
   /** Grid step to snap the dragged edge to, or 0 for no snapping. */
   snapStep: number;
+  /** Called once when a handle is pressed - where the store snapshots what is about to be scaled. */
+  onStart?: () => void;
   /** Called on every frame of the drag, with the box as it was when the drag STARTED and the box now. */
   onResize: (before: ScaleBox, after: ScaleBox) => void;
   /** Called once when the drag ends - where the single history entry is written. */
@@ -53,7 +55,7 @@ export interface GroupResizeHandlesProps {
 const HANDLE_SCREEN_SIZE = 9;
 
 export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
-  bounds, zoom, snapStep, onResize, onCommit,
+  bounds, zoom, snapStep, onStart, onResize, onCommit,
 }) => {
   // The box as it was when this drag began. Every frame maps from THAT
   // box, not from the previous frame's: mapping from the previous frame
@@ -62,8 +64,8 @@ export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
   const beforeRef = useRef<ScaleBox | null>(null);
   // The latest callbacks, so the window listeners registered at press
   // time never call a stale render's closures.
-  const callbacksRef = useRef({ onResize, onCommit, snapStep });
-  callbacksRef.current = { onResize, onCommit, snapStep };
+  const callbacksRef = useRef({ onStart, onResize, onCommit, snapStep });
+  callbacksRef.current = { onStart, onResize, onCommit, snapStep };
 
   const size = HANDLE_SCREEN_SIZE / Math.max(0.05, zoom);
   const half = size / 2;
@@ -117,6 +119,7 @@ export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
               if (!stage) return;
               const before = { ...bounds };
               beforeRef.current = before;
+              callbacksRef.current.onStart?.();
               const container = stage.container();
               container.style.cursor = anchorCursor(anchor);
               const startRect = container.getBoundingClientRect();
