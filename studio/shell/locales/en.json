@@ -37,7 +37,8 @@
     "help": "Help",
     "mqtt": "MQTT Integration",
     "service_notes": "Service Notes",
-    "object_links": "Object Links"
+    "object_links": "Object Links",
+    "protection_tests": "Protection Tests"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -56,7 +57,8 @@
     "help": "Help",
     "mqtt": "Project → Configuration → MQTT Integration",
     "service_notes": "Project → Configuration → Service Notes",
-    "object_links": "Project → Configuration → Object Links"
+    "object_links": "Project → Configuration → Object Links",
+    "protection_tests": "Project → Controller → Protection Tests"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -703,5 +705,44 @@
     "invalid_same": "Pick a source point and a different controller as the target.",
     "invalid_link_tag": "The tag must look like Link.<Id>.In<name>.",
     "duplicate_link_tag": "Tag {tag} is already used on that controller."
+  },
+  "protection_tests": {
+    "intro": "The internal Omicron: the controller forces a state, measures the response time and keeps a report. A process protection - its analog point forced past the threshold, the trip timed against the configured delay, then back in band and the reset timed; an apparatus - a command down the same path as from the panel (interlocks and safety checks apply), the feedback timed, then restored. Engineer token, every test audited, reports stay on the controller. The protection path (ADA01) is not covered by this test.",
+    "refresh": "Refresh",
+    "run": "Run Test",
+    "export_csv": "Save Reports as CSV",
+    "status_idle": "Refresh to fetch the list from the controller.",
+    "status_ready": "Testable: {count}. Reports on the controller: {reports}.",
+    "status_running": "Test running: {subject}…",
+    "fetch_failed": "No reading from the controller ({reason}).",
+    "unavailable": "This controller has no protection tests (older EPW-OS).",
+    "select_row": "Select a protection or an apparatus in the list.",
+    "start_failed": "Test {subject} did not start: {reason}",
+    "finished": "Test {subject}: {result} - {reason}",
+    "no_reports": "There are no reports to save.",
+    "export_failed": "Could not write the file: {reason}",
+    "csv_saved": "Reports saved to {path}.",
+    "candidates_heading": "What can be tested",
+    "reports_heading": "Reports (double-click: test steps)",
+    "col_kind": "Kind",
+    "col_id": "Id",
+    "col_name": "Name",
+    "col_details": "Settings",
+    "col_state": "State",
+    "rep_col_started": "Started",
+    "rep_col_kind": "Kind",
+    "rep_col_subject": "Subject",
+    "rep_col_result": "Result",
+    "rep_col_configured": "Settings",
+    "rep_col_measured": "Measured",
+    "rep_col_reason": "Reason",
+    "kind_process": "Process protection",
+    "kind_apparatus": "Apparatus",
+    "details_process": "{tag}: upper {upper}, lower {lower}, delay {delay} s",
+    "details_apparatus": "feedback {feedback}; outputs {command} ({style})",
+    "state_ready": "ready",
+    "state_disabled": "disabled",
+    "state_exceeded": "tripped - clear it first",
+    "steps_title": "Steps of test {subject}"
   }
 }

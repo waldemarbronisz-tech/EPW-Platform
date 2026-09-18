@@ -44,7 +44,8 @@ from studio.shell.menus import (
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
     build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
     build_mqtt_toolbar, build_object_links_toolbar, build_point_registry_toolbar, build_process_protection_toolbar,
-    build_project_info_toolbar, build_service_notes_toolbar, build_synoptic_context_toolbar, build_zones_toolbar,
+    build_project_info_toolbar, build_protection_tests_toolbar, build_service_notes_toolbar,
+    build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.controller_link import ControllerLink, LiveMonitor
@@ -109,6 +110,9 @@ _TREE_ITEM_PROCESS_PROTECTION = "protection_process"
 # task explicitly asked for a full help department, same active-leaf
 # navigation pattern as everything else rather than a plain dialog).
 _TREE_ITEM_CONTROLLER = "controller_connection"
+# SPEC "Wymuszanie stanów - Powiązanie": the internal Omicron, run by the
+# controller (core/protection_test.py) and followed here.
+_TREE_ITEM_PROTECTION_TESTS = "protection_tests"
 # 2026-09-18: two more project aspects - the MQTT integration (a setting
 # of the project, no longer controller-local) and the service notes the
 # panel writes (read here).
@@ -131,6 +135,7 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_ELECTRICAL_PROTECTION: "breadcrumb.protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
+    _TREE_ITEM_PROTECTION_TESTS: "breadcrumb.protection_tests",
     _TREE_ITEM_MQTT: "breadcrumb.mqtt",
     _TREE_ITEM_SERVICE_NOTES: "breadcrumb.service_notes",
     _TREE_ITEM_OBJECT_LINKS: "breadcrumb.object_links",
@@ -143,7 +148,8 @@ _BREADCRUMB_KEYS = {
 # except Help. The two editors mark themselves from their own dirty
 # flags; the panels are marked at the branch that was ACTIVE when the
 # edit was reported through _on_project_changed().
-_MARKABLE_ASPECTS = frozenset(_BREADCRUMB_KEYS) - {_TREE_ITEM_HELP, _TREE_ITEM_SCREENS, _TREE_ITEM_LOGIC}
+_MARKABLE_ASPECTS = frozenset(_BREADCRUMB_KEYS) - {
+    _TREE_ITEM_HELP, _TREE_ITEM_SCREENS, _TREE_ITEM_LOGIC, _TREE_ITEM_PROTECTION_TESTS}
 _EDITED_MARK_COLOR = "#C00000"
 
 # Task point 5.3 - "Mapowanie gałąź drzewa -> temat pomocy." Tree keys
@@ -169,6 +175,7 @@ _HELP_TOPIC_BY_TREE_KEY = {
     _TREE_ITEM_ELECTRICAL_PROTECTION: "protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "protection_process",
     _TREE_ITEM_CONTROLLER: "controller",
+    _TREE_ITEM_PROTECTION_TESTS: "protection_tests",
     _TREE_ITEM_MQTT: "mqtt",
     _TREE_ITEM_SERVICE_NOTES: "service_notes",
     _TREE_ITEM_OBJECT_LINKS: "object_links",
@@ -440,6 +447,7 @@ class StudioMainWindow(QMainWindow):
         self._mqtt_panel = None
         self._service_notes_panel = None
         self._object_links_panel = None
+        self._protection_tests_panel = None
         self._help_panel = None
         self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
@@ -748,6 +756,9 @@ class StudioMainWindow(QMainWindow):
         controller = add_group(root, "tree.group_controller")
         self._item_controller = add_active_leaf(
             controller, _TREE_ITEM_CONTROLLER, "tree.controller_connection", icon_controller
+        )
+        self._item_protection_tests = add_active_leaf(
+            controller, _TREE_ITEM_PROTECTION_TESTS, "tree.protection_tests", icon_process
         )
 
         self._item_help = add_active_leaf(root, _TREE_ITEM_HELP, "tree.help", icon_help)
@@ -1308,6 +1319,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_service_notes()
             elif key == _TREE_ITEM_OBJECT_LINKS:
                 self._open_object_links()
+            elif key == _TREE_ITEM_PROTECTION_TESTS:
+                self._open_protection_tests()
             elif key == _TREE_ITEM_HELP:
                 self._open_help()
         elif kind == "inactive":
@@ -1718,6 +1731,20 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_OBJECT_LINKS
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_protection_tests(self):
+        if self._protection_tests_panel is None:
+            from studio.shell.project_panels import ProtectionTestsPanel
+            self._protection_tests_panel = ProtectionTestsPanel(self)
+        self._protection_tests_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_PROTECTION_TESTS, self._protection_tests_panel, build_protection_tests_toolbar,
+            self._protection_tests_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_PROTECTION_TESTS
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
@@ -2477,6 +2504,8 @@ class StudioMainWindow(QMainWindow):
             self._service_notes_panel.refresh()
         if self._object_links_panel is not None:
             self._object_links_panel.refresh()
+        if self._protection_tests_panel is not None:
+            self._protection_tests_panel.clear()
         if self._controller_panel is not None:
             self._controller_panel.reload_connection()
 

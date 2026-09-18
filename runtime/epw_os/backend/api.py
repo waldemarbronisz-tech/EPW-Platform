@@ -63,6 +63,11 @@ class ForceRequest(BaseModel):
     value: object
 
 
+class ProtectionTestRequest(BaseModel):
+    kind: str        # "process" | "apparatus"
+    id: str          # the process protection's id, or the apparatus id
+
+
 class CommandRequest(BaseModel):
     device_tag: str
     command: str
@@ -346,6 +351,48 @@ def release_all_forces(core=Depends(get_core), level: str = Depends(_require_eng
         raise HTTPException(status_code=404, detail="Forcing is not available on this controller.")
     count = manager.release_all(actor=f"API:{level}", reason="released from Studio")
     return {"released": count, **_forces_body(manager)}
+
+
+# --- protection tests (SPEC "Wymuszanie stanów - Powiązanie": the internal Omicron) --------
+
+@app.get("/api/v1/protection-tests")
+def list_protection_tests(core=Depends(get_core)):
+    """Every report kept on the controller, the test in progress and what
+    can be tested (process protections, commandable apparatuses)."""
+    runner = getattr(core, "protection_tests", None)
+    if runner is None:
+        return {"available": False, "reports": [], "running": None, "candidates": {"process": [], "apparatus": []}}
+    return {"available": True, "reports": runner.list_reports(), "running": runner.running(),
+            "candidates": runner.candidates()}
+
+
+@app.post("/api/v1/protection-tests")
+def start_protection_test(body: ProtectionTestRequest, core=Depends(get_core),
+                          level: str = Depends(_require_engineer)):
+    """Starts one test (Engineer token). Answers at once with the report
+    as RUNNING (poll GET /api/v1/protection-tests/<id>) or BLOCKED."""
+    runner = getattr(core, "protection_tests", None)
+    if runner is None:
+        raise HTTPException(status_code=404, detail="Protection tests are not available on this controller.")
+    actor = f"API:{level}"
+    if body.kind == "process":
+        report = runner.start_process_test(body.id, actor=actor)
+    elif body.kind == "apparatus":
+        report = runner.start_apparatus_test(body.id, actor=actor)
+    else:
+        raise HTTPException(status_code=400, detail={"error": "unknown_kind", "kind": body.kind})
+    if report["result"] == "BLOCKED":
+        raise HTTPException(status_code=409, detail={"error": "test_blocked", "reason": report["reason"], "report": report})
+    return report
+
+
+@app.get("/api/v1/protection-tests/{test_id}")
+def get_protection_test(test_id: str, core=Depends(get_core)):
+    runner = getattr(core, "protection_tests", None)
+    report = runner.get(test_id) if runner is not None else None
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"No protection test {test_id}.")
+    return report
 
 
 @app.get("/api/v1/controller/settings")

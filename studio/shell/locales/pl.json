@@ -37,7 +37,8 @@
     "help": "Pomoc",
     "mqtt": "Integracja MQTT",
     "service_notes": "Notatki serwisowe",
-    "object_links": "Powiązania obiektu"
+    "object_links": "Powiązania obiektu",
+    "protection_tests": "Test zabezpieczeń"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -56,7 +57,8 @@
     "help": "Pomoc",
     "mqtt": "Projekt → Konfiguracja → Integracja MQTT",
     "service_notes": "Projekt → Konfiguracja → Notatki serwisowe",
-    "object_links": "Projekt → Konfiguracja → Powiązania obiektu"
+    "object_links": "Projekt → Konfiguracja → Powiązania obiektu",
+    "protection_tests": "Projekt → Sterownik → Test zabezpieczeń"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -703,5 +705,44 @@
     "invalid_same": "Wybierz punkt źródła i inny sterownik jako cel.",
     "invalid_link_tag": "Tag musi mieć postać Link.<Id>.In<nazwa>.",
     "duplicate_link_tag": "Tag {tag} jest już użyty u tego sterownika."
+  },
+  "protection_tests": {
+    "intro": "Wewnętrzny Omicron: sterownik sam wymusza stan, mierzy czas reakcji i zapisuje raport. Zabezpieczenie procesowe - punkt analogowy wymuszony ponad próg, czas do zadziałania porównany z nastawioną zwłoką, potem powrót w pasmo i czas skasowania; aparat - komenda tą samą drogą co z panelu (blokady i zabezpieczenia działają), czas sprzężenia, potem powrót. Token Engineer, każdy test w dzienniku audytowym, raporty zostają na sterowniku. Tor zabezpieczeniowy (ADA01) nie podlega temu testowi.",
+    "refresh": "Odśwież",
+    "run": "Uruchom test",
+    "export_csv": "Zapisz raporty CSV",
+    "status_idle": "Odśwież, żeby pobrać listę ze sterownika.",
+    "status_ready": "Do przetestowania: {count}. Raportów na sterowniku: {reports}.",
+    "status_running": "Trwa test: {subject}…",
+    "fetch_failed": "Brak odczytu ze sterownika ({reason}).",
+    "unavailable": "Ten sterownik nie obsługuje testów zabezpieczeń (starsza wersja EPW-OS).",
+    "select_row": "Zaznacz zabezpieczenie lub aparat na liście.",
+    "start_failed": "Test {subject} nie ruszył: {reason}",
+    "finished": "Test {subject}: {result} - {reason}",
+    "no_reports": "Nie ma raportów do zapisania.",
+    "export_failed": "Nie udało się zapisać pliku: {reason}",
+    "csv_saved": "Raporty zapisane do {path}.",
+    "candidates_heading": "Co można przetestować",
+    "reports_heading": "Raporty (dwuklik: kroki testu)",
+    "col_kind": "Rodzaj",
+    "col_id": "Id",
+    "col_name": "Nazwa",
+    "col_details": "Nastawy",
+    "col_state": "Stan",
+    "rep_col_started": "Start",
+    "rep_col_kind": "Rodzaj",
+    "rep_col_subject": "Obiekt testu",
+    "rep_col_result": "Wynik",
+    "rep_col_configured": "Nastawy",
+    "rep_col_measured": "Pomiar",
+    "rep_col_reason": "Uzasadnienie",
+    "kind_process": "Zabezpieczenie procesowe",
+    "kind_apparatus": "Aparat",
+    "details_process": "{tag}: górny {upper}, dolny {lower}, zwłoka {delay} s",
+    "details_apparatus": "sprzężenie {feedback}; wyjścia {command} ({style})",
+    "state_ready": "gotowe",
+    "state_disabled": "wyłączone",
+    "state_exceeded": "zadziałane - najpierw skasuj",
+    "steps_title": "Kroki testu {subject}"
   }
 }

@@ -464,6 +464,14 @@ def build_controller_toolbar(toolbar, _panel, _studio_window):
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
 
+def build_protection_tests_toolbar(toolbar, panel, _studio_window):
+    """The panel's own buttons do the work; the toolbar repeats the two
+    that matter while a table has the focus."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("protection_tests.run"), panel.run_selected_test, icon_name="sim_start")
+    _add(toolbar, tr("protection_tests.export_csv"), panel.export_csv, icon_name="export")
+
+
 def build_mqtt_toolbar(toolbar, panel, _studio_window):
     """The two tables' add/remove (incoming mappings, per-tag
     deadbands) - the same shape as every other list panel's toolbar."""
