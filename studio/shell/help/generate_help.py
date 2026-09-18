@@ -614,6 +614,60 @@ Controller-local Settings.
 )
 
 topic(
+    "object_links", "Powiązania obiektu", "Object Links",
+    """
+# Powiązania obiektu
+
+Obiekt składa się z kilku sterowników, a jeden czasem potrzebuje stanu
+z drugiego: brama wjazdowa ma wiedzieć, że dom jest uzbrojony, kotłownia
+— że garaż zgłasza zalanie. Powiązanie to para: **punkt źródła** na
+jednym sterowniku i **tag `Link.<Id>.In<n>`** na drugim.
+
+Mechanizm to MQTT, który oba sterowniki i tak mają: źródło publikuje
+swoje tagi pod `<prefiks>/tag/<ścieżka>/state`, a cel ma w Integracji
+MQTT mapowanie przychodzące, które taki temat zamienia w lokalny tag
+`Link.*`. Studio wpisuje te mapowania samo (w Integracji MQTT są szare,
+z opisem skąd pochodzą; ręcznych mapowań nie dotyka), włącza MQTT i
+nadaje prefiks tematów tam, gdzie ich nie było. Broker jest wspólny —
+adres wpisujesz w Integracji MQTT każdego sterownika.
+
+Tag `Link.*` u celu jest **informacją, nigdy komendą**: logika może go
+czytać, ekran może pokazać symbol związany z nim, ale nic przez niego
+nie steruje drugim sterownikiem. Gdy źródło milknie dłużej niż
+„ważność", tag u celu dostaje jakość STALE.
+
+Powiązania należą do pliku obiektu; „Zapisz obiekt" zapisuje je razem
+z projektami, w których Studio zmieniło Integrację MQTT. Usunięcie
+sterownika z obiektu usuwa jego powiązania w obie strony.
+""",
+    """
+# Object Links
+
+An object is several controllers, and one sometimes needs a state from
+another: the entry gate wants to know the house is armed, the boiler
+room that the garage reports a flood. A link is a pair: a **source
+point** on one controller and a **`Link.<Id>.In<n>` tag** on another.
+
+The mechanism is the MQTT both controllers have anyway: the source
+publishes its tags at `<prefix>/tag/<path>/state`, the target has an
+incoming mapping in MQTT Integration that turns that topic into a
+local `Link.*` tag. Studio writes those mappings itself (grey in MQTT
+Integration, with their origin; manual mappings are never touched),
+enables MQTT and sets a topic prefix where there was none. The broker
+is shared — its address goes into each controller's MQTT Integration.
+
+The `Link.*` tag on the target is **information, never a command**:
+logic may read it, a screen may show a symbol bound to it, but nothing
+controls the other controller through it. When the source falls silent
+for longer than "stale after", the tag on the target goes STALE.
+
+Links belong to the object file; "Save Object" saves them together with
+the projects whose MQTT Integration Studio changed. Removing a
+controller from the object removes its links both ways.
+""",
+)
+
+topic(
     "service_notes", "Notatki serwisowe", "Service Notes",
     """
 # Notatki serwisowe

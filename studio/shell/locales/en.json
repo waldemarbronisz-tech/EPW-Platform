@@ -36,7 +36,8 @@
     "controller_connection": "Connection and Live View",
     "help": "Help",
     "mqtt": "MQTT Integration",
-    "service_notes": "Service Notes"
+    "service_notes": "Service Notes",
+    "object_links": "Object Links"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -54,7 +55,8 @@
     "controller_connection": "Project → Controller → Connection and Live View",
     "help": "Help",
     "mqtt": "Project → Configuration → MQTT Integration",
-    "service_notes": "Project → Configuration → Service Notes"
+    "service_notes": "Project → Configuration → Service Notes",
+    "object_links": "Project → Configuration → Object Links"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -639,7 +641,9 @@
     "deadbands_heading": "Per-tag deadbands",
     "col_deadband": "Deadband",
     "add_deadband": "Add Tag",
-    "remove_deadband": "Remove Tag"
+    "remove_deadband": "Remove Tag",
+    "object_link_tooltip": "An object link from controller {source} - edit it under 'Object Links'.",
+    "object_link_remove_there": "This is an object link - remove it under 'Object Links'."
   },
   "service_notes": {
     "intro": "The devices' service logbook, written on the controller's panel (Operator or higher). Entries are never edited or deleted - read-only here. New entries arrive with \"Receive from Device\" or \"Take Controller Values\".",
@@ -682,5 +686,22 @@
     "force_mode_title": "Force Mode",
     "force_mode_text": "Forcing overrides input and output states on the controller. Rules: Engineer token only, every force is audited and shown on the cabinet panel; all forces are released when the mode is turned off, when the link to Studio is lost (no heartbeat) and on a controller restart. The protection path is never forced. Enable force mode?",
     "release_failed": "Could not release the forces: {reason}"
+  },
+  "object_links": {
+    "intro": "One controller's value available on another as a Link.<Id>.In<n> tag - over MQTT: the source publishes its tags, the target subscribes in MQTT Integration (Studio writes the incoming mappings here and never touches manual ones). The Link.* tag works in the target's logic and screens; it is never a command.",
+    "needs_object": "Links need a saved object with at least two controllers (File → Add Controller to Object).",
+    "count": "Links: {count}.",
+    "applied": "Written into the projects: {details}. Save the object to keep it.",
+    "col_source": "Source",
+    "col_tag": "Source point",
+    "col_target": "Target",
+    "col_link_tag": "Link.* tag on the target",
+    "col_type": "Type",
+    "col_stale": "Stale after",
+    "add": "Add Link",
+    "remove": "Remove Link",
+    "invalid_same": "Pick a source point and a different controller as the target.",
+    "invalid_link_tag": "The tag must look like Link.<Id>.In<name>.",
+    "duplicate_link_tag": "Tag {tag} is already used on that controller."
   }
 }

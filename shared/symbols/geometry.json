@@ -1,7 +1,7 @@
 {
  "format": "EPW_SYMBOL_GEOMETRY",
  "schema_version": 1,
- "generated_at": "2026-09-17T13:17:36.600Z",
+ "generated_at": "2026-09-18T12:14:09.078Z",
  "generated_by": "studio/synoptic/tools/geometry_export/export.mjs",
  "symbol_count": 98,
  "symbols": {
@@ -406,7 +406,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.disconnect_switch": {
    "label": "Disconnect Switch",
@@ -712,7 +713,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.contactor": {
    "label": "Contactor",
@@ -1038,7 +1040,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.transformer": {
    "label": "Transformer",
@@ -1177,7 +1180,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.relay": {
    "label": "Relay",
@@ -1550,7 +1554,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.fuse": {
    "label": "Fuse",
@@ -1715,7 +1720,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.busbar": {
    "label": "Busbar",
@@ -1870,7 +1876,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.indicator_lamp": {
    "label": "Indicator Lamp",
@@ -2006,7 +2013,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.generator": {
    "label": "Generator",
@@ -2190,7 +2198,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.grid_source": {
    "label": "Grid Source",
@@ -2386,7 +2395,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.motor": {
    "label": "Motor",
@@ -2576,7 +2586,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.generic_load": {
    "label": "Generic Load",
@@ -2760,7 +2771,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.terminal": {
    "label": "Terminal",
@@ -2863,7 +2875,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.rcd": {
    "label": "RCD / RCCB",
@@ -3296,7 +3309,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.spd": {
    "label": "SPD",
@@ -3470,7 +3484,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.cable_tray": {
    "label": "Cable Tray",
@@ -3544,7 +3559,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.earth": {
    "label": "Earth",
@@ -3702,7 +3718,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "electrical.selector_switch": {
    "label": "Selector Switch",
@@ -4173,7 +4190,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.lamp_post_double": {
    "label": "Lamp Post (Double)",
@@ -4676,7 +4694,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.lamp_post_single": {
    "label": "Lamp Post (Single)",
@@ -5069,7 +5088,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.halogen": {
    "label": "Halogen",
@@ -5423,7 +5443,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.garden_light": {
    "label": "Garden Light Post",
@@ -5837,7 +5858,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.cable_junction": {
    "label": "Cable Junction",
@@ -6885,7 +6907,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.alarm_beacon": {
    "label": "Alarm Beacon",
@@ -7140,7 +7163,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.alarm_horn": {
    "label": "Alarm Horn",
@@ -7486,7 +7510,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "water.valve": {
    "label": "Valve",
@@ -8608,7 +8633,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "water.pump": {
    "label": "Pump",
@@ -9509,6 +9535,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "OFF": [
      {
@@ -11165,6 +11192,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "NORMAL": [
      {
@@ -13038,7 +13066,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "water.ball_valve": {
    "label": "Ball Valve",
@@ -14172,6 +14201,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "CLOSED": [
      {
@@ -16395,6 +16425,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "CLOSED": [
      {
@@ -18278,6 +18309,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "CLOSED": [
      {
@@ -19317,6 +19349,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "NORMAL": [
      {
@@ -20143,6 +20176,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -21921,6 +21955,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -23913,6 +23948,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -25400,6 +25436,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -27484,6 +27521,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "LOW": [
      {
@@ -29993,6 +30031,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "A": [
      {
@@ -32737,6 +32776,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "A": [
      {
@@ -35019,6 +35059,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -36446,6 +36487,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -37920,6 +37962,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -39295,6 +39338,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -40618,6 +40662,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -42064,6 +42109,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -43375,6 +43421,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -44770,6 +44817,7 @@
     ]
    },
    "warnings": [],
+   "notes": [],
    "states_net_active": {
     "ON": [
      {
@@ -45932,7 +45980,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "hvac.heater": {
    "label": "Heater",
@@ -46221,7 +46270,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.plc": {
    "label": "PLC",
@@ -46512,7 +46562,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.remote_io": {
    "label": "Remote IO",
@@ -46807,7 +46858,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.ela_inputs": {
    "label": "ELA Inputs",
@@ -46948,7 +47000,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.ada_outputs": {
    "label": "ADA Outputs",
@@ -47089,7 +47142,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.epw_core": {
    "label": "EPW CORE",
@@ -47435,7 +47489,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.epm": {
    "label": "EPM",
@@ -47685,7 +47740,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "automation.psu_24v": {
    "label": "24V PSU",
@@ -48016,7 +48072,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "instrumentation.temperature_sensor": {
    "label": "Temp Sensor",
@@ -48220,7 +48277,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "instrumentation.pressure_sensor": {
    "label": "Pressure Sensor",
@@ -48310,7 +48368,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "instrumentation.level_sensor": {
    "label": "Level Sensor",
@@ -48400,7 +48459,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "instrumentation.humidity_sensor": {
    "label": "Humidity Sensor",
@@ -48490,7 +48550,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "instrumentation.leak_sensor": {
    "label": "Leak Sensor",
@@ -48632,7 +48693,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.rain_sensor": {
    "label": "Rain Sensor",
@@ -48939,7 +49001,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "measurements.generic_display": {
    "label": "Value Display",
@@ -49101,7 +49164,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "measurements.voltage_display": {
    "label": "Voltage",
@@ -49263,7 +49327,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "measurements.current_display": {
    "label": "Current",
@@ -49425,7 +49490,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "measurements.temperature_display": {
    "label": "Temperature",
@@ -49587,7 +49653,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "graphics.rectangle": {
    "label": "Rectangle",
@@ -49606,6 +49673,7 @@
    "animation": null,
    "states": {},
    "warnings": [],
+   "notes": [],
    "generic": true
   },
   "graphics.circle": {
@@ -49625,6 +49693,7 @@
    "animation": null,
    "states": {},
    "warnings": [],
+   "notes": [],
    "generic": true
   },
   "graphics.text": {
@@ -49644,6 +49713,7 @@
    "animation": null,
    "states": {},
    "warnings": [],
+   "notes": [],
    "generic": true
   },
   "scada.load_switch": {
@@ -50042,7 +50112,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.busbar": {
    "label": "Busbar (SCADA)",
@@ -50115,7 +50186,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.wire_node": {
    "label": "Wire Node",
@@ -50143,7 +50215,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.label_frame": {
    "label": "Label Frame",
@@ -50249,7 +50322,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.text_box": {
    "label": "Text box",
@@ -50327,7 +50401,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.motor": {
    "label": "Motor (SCADA)",
@@ -50578,7 +50653,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.pilot_lamp": {
    "label": "Pilot Lamp",
@@ -50726,7 +50802,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.socket": {
    "label": "Socket (SCADA)",
@@ -50912,7 +50989,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.indicator_diode": {
    "label": "Indicator Diode",
@@ -51019,7 +51097,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "scada.meter": {
    "label": "Meter (SCADA)",
@@ -51084,8 +51163,9 @@
      }
     ]
    },
-   "warnings": [
-    "NORMAL: root/group[0]: structure differs between sentinel and default pass (3 vs 1 nodes)"
+   "warnings": [],
+   "notes": [
+    "root/group[0]: structure differs between sentinel and default pass (3 vs 1 nodes)"
    ]
   },
   "scada.boundary_point": {
@@ -51171,7 +51251,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.house": {
    "label": "House",
@@ -52090,7 +52171,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.warehouse": {
    "label": "Warehouse",
@@ -52877,7 +52959,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.sliding_gate": {
    "label": "Sliding Gate",
@@ -53857,7 +53940,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.grass": {
    "label": "Grass",
@@ -57131,7 +57215,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "site.concrete_road": {
    "label": "Concrete Road",
@@ -57333,7 +57418,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.luminaire": {
    "label": "Ceiling luminaire",
@@ -57570,7 +57656,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.luminaire_pendant": {
    "label": "Pendant luminaire",
@@ -57807,7 +57894,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.luminaire_wall": {
    "label": "Wall light",
@@ -57959,7 +58047,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.luminaire_fluorescent": {
    "label": "Fluorescent luminaire",
@@ -58111,7 +58200,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.luminaire_halogen": {
    "label": "Halogen spot",
@@ -58216,7 +58306,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.socket_outlet": {
    "label": "Socket outlet",
@@ -58358,7 +58449,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.door": {
    "label": "Door",
@@ -58428,7 +58520,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.window": {
    "label": "Window",
@@ -58508,7 +58601,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.gate": {
    "label": "Entrance gate (motorised)",
@@ -59165,7 +59259,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.table": {
    "label": "Table",
@@ -59226,7 +59321,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.chair": {
    "label": "Chair",
@@ -59278,7 +59374,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   },
   "building.shelf": {
    "label": "Shelving",
@@ -59360,7 +59457,8 @@
      }
     ]
    },
-   "warnings": []
+   "warnings": [],
+   "notes": []
   }
  }
 }

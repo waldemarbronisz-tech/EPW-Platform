@@ -598,6 +598,25 @@ raport z pomiarem czasu — osobny krok.
 
 ---
 
+## Obiekt — wiele sterowników (2026-09-18)
+
+Obiekt (dom, zakład) to kilka sterowników. W Studio: plik
+`obiekt.epwsite` z nazwą i listą projektów (ścieżki względne), każdy
+sterownik pozostaje własnym `projekt.epw` — wysyłka, rewizje i
+`settings_hash` bez zmian. Lista urządzeń nad drzewem, jeden aktywny.
+
+**Powiązania obiektu** — punkt sterownika A dostępny u sterownika B
+jako tag `Link.<Id>.In<n>`, mechanizmem MQTT, który oba mają: A
+publikuje `<prefiks>/tag/<ścieżka>/state`, B ma w `mqtt.link_in`
+mapowanie przychodzące (wpisane przez Studio, oznaczone `object_link`;
+ręcznych Studio nie dotyka). Tag `Link.*` jest informacją, nigdy komendą
+— nic przez niego nie steruje drugim sterownikiem; po ciszy dłuższej niż
+„ważność" dostaje jakość STALE. Powiązania należą do pliku obiektu.
+Nie ma adresowania między projektami na ekranach — ekran celu wiąże
+symbol z tagiem `Link.*` jak z każdym innym.
+
+---
+
 ## Rozstrzygnięte 2026-09-10
 
 1. **Stan uzbrojenia po zaniku zasilania** — wraca do stanu sprzed

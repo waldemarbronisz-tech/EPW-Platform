@@ -43,13 +43,13 @@ from studio.shell.menus import (
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
     build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
-    build_mqtt_toolbar, build_point_registry_toolbar, build_process_protection_toolbar,
+    build_mqtt_toolbar, build_object_links_toolbar, build_point_registry_toolbar, build_process_protection_toolbar,
     build_project_info_toolbar, build_service_notes_toolbar, build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.controller_link import ControllerLink, LiveMonitor
-from studio.shell.site_format import (SITE_SUFFIX, SiteFormatError, load_site, new_site, relative_project_path,
-                                      resolve_project_path, save_site)
+from studio.shell.site_format import (SITE_SUFFIX, SiteFormatError, apply_object_links, drop_links_of, load_site,
+                                      new_site, relative_project_path, resolve_project_path, save_site)
 from studio.shell.style import STUDIO_CHROME_QSS
 
 _TREE_ITEM_SCREENS = "screens"
@@ -114,6 +114,7 @@ _TREE_ITEM_CONTROLLER = "controller_connection"
 # panel writes (read here).
 _TREE_ITEM_MQTT = "mqtt"
 _TREE_ITEM_SERVICE_NOTES = "service_notes"
+_TREE_ITEM_OBJECT_LINKS = "object_links"
 _TREE_ITEM_HELP = "help"
 
 _BREADCRUMB_KEYS = {
@@ -132,6 +133,7 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
     _TREE_ITEM_MQTT: "breadcrumb.mqtt",
     _TREE_ITEM_SERVICE_NOTES: "breadcrumb.service_notes",
+    _TREE_ITEM_OBJECT_LINKS: "breadcrumb.object_links",
     _TREE_ITEM_HELP: "breadcrumb.help",
 }
 
@@ -169,6 +171,7 @@ _HELP_TOPIC_BY_TREE_KEY = {
     _TREE_ITEM_CONTROLLER: "controller",
     _TREE_ITEM_MQTT: "mqtt",
     _TREE_ITEM_SERVICE_NOTES: "service_notes",
+    _TREE_ITEM_OBJECT_LINKS: "object_links",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -436,6 +439,7 @@ class StudioMainWindow(QMainWindow):
         self._controller_panel = None
         self._mqtt_panel = None
         self._service_notes_panel = None
+        self._object_links_panel = None
         self._help_panel = None
         self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
@@ -714,6 +718,10 @@ class StudioMainWindow(QMainWindow):
         self._item_mqtt = add_active_leaf(config, _TREE_ITEM_MQTT, "tree.mqtt", icons.icon("draw_wire"))
         self._item_service_notes = add_active_leaf(
             config, _TREE_ITEM_SERVICE_NOTES, "tree.service_notes", icons.icon("project_registers")
+        )
+        # The object's links between its controllers (site_format.apply_object_links).
+        self._item_object_links = add_active_leaf(
+            config, _TREE_ITEM_OBJECT_LINKS, "tree.object_links", icons.icon("add_group_command")
         )
 
         # Task "fix/project-format-integrity" point 2.3 - these two
@@ -1298,6 +1306,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_mqtt()
             elif key == _TREE_ITEM_SERVICE_NOTES:
                 self._open_service_notes()
+            elif key == _TREE_ITEM_OBJECT_LINKS:
+                self._open_object_links()
             elif key == _TREE_ITEM_HELP:
                 self._open_help()
         elif kind == "inactive":
@@ -1696,6 +1706,68 @@ class StudioMainWindow(QMainWindow):
         self._active = _TREE_ITEM_SERVICE_NOTES
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
+
+    def _open_object_links(self):
+        if self._object_links_panel is None:
+            from studio.shell.project_panels import ObjectLinksPanel
+            self._object_links_panel = ObjectLinksPanel(self)
+        else:
+            self._object_links_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_OBJECT_LINKS, self._object_links_panel, build_object_links_toolbar, self._object_links_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_OBJECT_LINKS
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    # -- object links (site_format.apply_object_links) ------------------------------------
+
+    def _slot_rel(self, index: int):
+        if not self._site_path:
+            return None
+        path = self._project_path if index == self._active_slot else self._slots[index].path
+        return relative_project_path(self._site_path, path) if path else None
+
+    def active_device_rel(self):
+        return self._slot_rel(self._active_slot) if 0 <= self._active_slot < len(self._slots) else None
+
+    def object_devices(self) -> list:
+        """[(rel path, name)] for every controller of the object that has a file."""
+        out = []
+        for index in range(len(self._slots)):
+            rel = self._slot_rel(index)
+            if rel:
+                out.append((rel, self._slot_name(index)))
+        return out
+
+    def project_for_rel(self, rel):
+        for index in range(len(self._slots)):
+            if self._slot_rel(index) == rel:
+                return self._project if index == self._active_slot else self._slots[index].project
+        return None
+
+    def apply_object_links(self) -> dict:
+        """Writes the object's links into every project (the target's
+        mqtt.link_in, the source's MQTT prefix); a project that changed is
+        dirty and its MQTT branch marked. Returns {rel: [changes]}."""
+        if self._site is None or not self._site_path:
+            return {}
+        projects = {rel: self.project_for_rel(rel) for rel, _name in self.object_devices()}
+        changed = apply_object_links(self._site, {rel: p for rel, p in projects.items() if p is not None})
+        for rel in changed:
+            for index in range(len(self._slots)):
+                if self._slot_rel(index) != rel:
+                    continue
+                if index == self._active_slot:
+                    self._edited_aspects.add(_TREE_ITEM_MQTT)
+                else:
+                    self._slots[index].edited_aspects.add(_TREE_ITEM_MQTT)
+        if changed:
+            self._on_project_changed(aspect_edit=False)
+            if self._mqtt_panel is not None:
+                self._mqtt_panel.refresh()
+        return changed
 
     def _open_help(self):
         if self._help_panel is None:
@@ -2096,6 +2168,7 @@ class StudioMainWindow(QMainWindow):
         if self._site is not None and removed_path and self._site_path:
             rel = relative_project_path(self._site_path, removed_path)
             self._site.projects = [rel_path for rel_path in self._site.projects if rel_path != rel]
+            drop_links_of(self._site, rel)          # its links go with it, both ways
             try:
                 save_site(self._site, self._site_path)
             except OSError as exc:
@@ -2103,6 +2176,7 @@ class StudioMainWindow(QMainWindow):
         self._active_slot = -1
         self._edited_aspects = set()
         self._enter_slot(max(0, index - 1))
+        self.apply_object_links()
 
     def _save_all_projects(self) -> bool:
         """Every device with unsaved edits; the active one through
@@ -2401,6 +2475,8 @@ class StudioMainWindow(QMainWindow):
             self._mqtt_panel.refresh()
         if self._service_notes_panel is not None:
             self._service_notes_panel.refresh()
+        if self._object_links_panel is not None:
+            self._object_links_panel.refresh()
         if self._controller_panel is not None:
             self._controller_panel.reload_connection()
 
