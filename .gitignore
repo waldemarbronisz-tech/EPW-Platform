@@ -77,3 +77,6 @@ runtime/runtime_state.json
 runtime/runtime_state.json.corrupt
 runtime/controller.local.json
 *.epw.bak
+
+# one-off migration backups of the live project file (2026-09-18)
+runtime/projekt.epw.bak-*

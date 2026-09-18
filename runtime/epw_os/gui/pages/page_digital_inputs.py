@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
                              QLabel, QFrame, QMessageBox, QDialog, QCheckBox, QSpinBox, QDialogButtonBox,
                              QPushButton)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor
 from epw_os.gui.widgets.synoptic_objects import Lamp
 from epw_os.gui.widgets.service_notes_widget import ServiceNotesDialog
@@ -239,6 +239,15 @@ class PageDigitalInputs(QWidget):
         layout.addWidget(self.table, stretch=1)
         self.tag_manager.tag_changed.connect(self.on_tag_changed)
         self.table.itemChanged.connect(self.on_item_edited)
+        # A counter can change without any tag transition - a reset from
+        # Studio (POST /api/v1/counters/<tag>/reset) - and the closed time
+        # of a device that is closed right now keeps growing; a slow
+        # periodic refresh keeps the rows honest while the page is shown.
+        self._counter_refresh_timer = QTimer(self)
+        self._counter_refresh_timer.setInterval(2000)
+        self._counter_refresh_timer.timeout.connect(self._refresh_visible_counter_rows)
+        if self.switching_counters is not None:
+            self._counter_refresh_timer.start()
         self.access_manager.level_changed.connect(self._refresh_edit_permissions)
         self._refresh_edit_permissions()
 
@@ -438,6 +447,12 @@ class PageDigitalInputs(QWidget):
         audit_logger = getattr(self.window(), "audit_logger", None)
         if audit_logger is not None:
             audit_logger.record(event_type, "Engineer", detail, success=True)
+
+    def _refresh_visible_counter_rows(self):
+        if self.switching_counters is None or not self.isVisible():
+            return
+        for tag_name in list(self._row_by_tag):
+            self._refresh_counter_row(tag_name)
 
     def _refresh_counter_row(self, tag_name):
         """(Re)renders one row's Closes/Opens/Closed Time cells from the

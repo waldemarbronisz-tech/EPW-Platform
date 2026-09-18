@@ -133,16 +133,29 @@ przez `project_format.apply_settings_snapshot()`).
   wygrywa ze stanem), zmiana z panelu wraca do `projekt.epw` jak każda nastawa
   (`switching_counter_settings` w widoku projektu). Same liczniki nadal tylko
   w `runtime_state.json`.
-- **Ustawienia sterownika spoza formatu** trafiły do `controller.local.json`:
-  - język interfejsu;
-  - REST (host, port);
-  - MQTT;
-  - retencje historiana, dziennika i historii alarmów;
-  - ostrzeżenie o rozmiarze bazy;
-  - notatki serwisowe;
-  - ścieżki `.epwsyn` / `.epwlogic`.
+- **Ustawienia sterownika spoza formatu** — ROZSTRZYGNIĘTE 2026-09-18.
+  Do projektu (jako nastawy: panel może zmienić z wpisem do dziennika,
+  rewizja +1 „panel", Studio widzi różnicę i może przyjąć):
+  - **MQTT** (`mqtt`, `project_format.MqttConfig`; bez hasła — to zostaje
+    w lokalnym pliku sterownika), panel Studio „Integracja MQTT";
+  - **notatki serwisowe** (`service_notes`, per aparat, dziennik
+    nieusuwalny; każdy wpis na panelu trafia do `projekt.epw`), panel
+    Studio „Notatki serwisowe" (tylko do odczytu).
 
-  Do rozstrzygnięcia, które z nich należą do projektu.
+  Zostają lokalne w `controller.local.json` (opisują egzemplarz
+  sterownika, nie instalację): język interfejsu, REST (host, port),
+  retencje historiana, dziennika i historii alarmów, ostrzeżenie o
+  rozmiarze bazy, sterownik I/O, ścieżki `.epwsyn` / `.epwlogic`. Studio
+  czyta je tylko do odczytu przez `GET /api/v1/controller/settings`
+  (panel Sterownik → „Ustawienia lokalne sterownika") — nic na sterowniku
+  nie jest niewidoczne ze Studio.
+- **Zerowanie liczników łączeń ze Studio** — ZROBIONE 2026-09-18:
+  `GET /api/v1/counters` (stan wszystkich liczników) i
+  `POST /api/v1/counters/<tag>/reset` (token Engineer, ta sama ścieżka co
+  menu Engineer na panelu, wpis `COUNTER_RESET` w dzienniku); panel
+  Sterownik ma grupę „Liczniki łączeń" z „Zeruj wybrany" / „Zeruj
+  wszystkie". Strona DI odświeża liczniki co 2 s, więc zerowanie z zewnątrz
+  jest widoczne od razu.
 - **Main View — wiązanie symboli.** ZROBIONE 2026-09-15: najpierw `deviceId`
   z obiektów osadzonego ekranu (`apparatus.bind_roles_from_screens()`), reguła
   nazewnicza (`MAIN_VIEW_ROLE_DESIGNATIONS`) tylko dla symboli, których ekran nie
@@ -168,11 +181,16 @@ przez `project_format.apply_settings_snapshot()`).
   prawdziwych modułach ELA/ADA/EPM to jest standard Modbus, nie potwierdzone
   zachowanie tych kart. Narzędzie do tego pomiaru: `runtime/tools/modbus_probe.py`
   (2026-09-17), np. `python tools/modbus_probe.py --rtu COM3 --unit 1 --di 16 --ai 4`.
-- **Migracja obecnego `project.json`:**
-  - 16 punktów analogowych trafiło na kartę `AI1` z **pustym modelem**, bo moduł jest nieznany — do uzupełnienia w Studio;
-  - 64 rekordy liczników łączeń, w tym 5 niezerowych, są pod płaskimi nazwami `DI1..DI64` sprzed adresacji kartowej;
-  - projekt nie ma karty DI, więc nie zostały przeniesione;
-  - po dodaniu karty w Studio: `migrate_project_json.py --flat-di-card <id karty>` (stary plik nadal jest).
+- **Migracja obecnego `project.json`** — ZAMKNIĘTE 2026-09-18: `runtime/projekt.epw`
+  dostał skład opisany przez użytkownika — `ELA1` (model ELA, STM32,
+  16 DI + 8 AI, Modbus unit 1) i `ADA1` (model ADA, STM32, 16 DO + 8 AO,
+  Modbus unit 2), lokalizacja `ROZ`; karta-zastępnik `AI1` z 16 pustymi
+  punktami usunięta (nic się do niej nie odwoływało). Stare liczniki
+  `DI1..DI64` (5 niezerowych, ślady testów z 1 września) nie zostały
+  przeniesione — liczniki zaczynają od zera. Kopia poprzedniego pliku:
+  `runtime/projekt.epw.bak-2026-09-18`. `migrate_project_json.py` kieruje
+  odtąd `mqtt` i `service_notes` ze starego pliku do projektu, nie do
+  `controller.local.json`.
 - **Sprawdzenie softwarowe bez sprzętu (2026-09-17):** `runtime/tools/modbus_sim.py`
   udaje karty projektu po Modbus TCP (wejścia z konsoli, `--mirror` = potwierdzenie
   z cewki); symulowana instalacja (`simulation/simulated_plant.py`) odpowiada na

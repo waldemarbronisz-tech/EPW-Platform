@@ -34,7 +34,9 @@
     "protection_electrical": "Zabezpieczenia elektryczne",
     "protection_process": "Zabezpieczenia procesowe",
     "controller_connection": "Połączenie i podgląd",
-    "help": "Pomoc"
+    "help": "Pomoc",
+    "mqtt": "Integracja MQTT",
+    "service_notes": "Notatki serwisowe"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -50,7 +52,9 @@
     "protection_electrical": "Projekt → Zabezpieczenia → Zabezpieczenia elektryczne",
     "protection_process": "Projekt → Zabezpieczenia → Zabezpieczenia procesowe",
     "controller_connection": "Projekt → Sterownik → Połączenie i podgląd",
-    "help": "Pomoc"
+    "help": "Pomoc",
+    "mqtt": "Projekt → Konfiguracja → Integracja MQTT",
+    "service_notes": "Projekt → Konfiguracja → Notatki serwisowe"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -464,7 +468,32 @@
     "settings_status_same": "Sterownik: rewizja {revision} (zapis: {modified_by}), projekt: rewizja {local_revision} - nastawy identyczne.",
     "settings_status_differ": "Sterownik: rewizja {revision} (zapis: {modified_by}), projekt: rewizja {local_revision} - różnic: {count}.",
     "take_settings_confirm": "Wpisać {count} wartości ze sterownika do tego projektu? Wartości Studio dla tych nastaw zostaną zastąpione.",
-    "take_settings_done": "Przyjęto {count} nastaw ze sterownika. Zapisz projekt, żeby je zachować."
+    "take_settings_done": "Przyjęto {count} nastaw ze sterownika. Zapisz projekt, żeby je zachować.",
+    "local_heading": "Ustawienia lokalne sterownika (poza projektem)",
+    "fetch_local": "Pobierz ustawienia lokalne",
+    "local_status_none": "Nie pobrano - język, REST, retencje i sterownik I/O tego egzemplarza sterownika.",
+    "local_status": "Źródło: {source}, język: {language}, ustawień: {count}.",
+    "local_status_failed": "Nie udało się pobrać ustawień lokalnych: {reason}",
+    "local_col_setting": "Ustawienie",
+    "local_col_value": "Wartość",
+    "counters_heading": "Liczniki łączeń (sterownik)",
+    "fetch_counters": "Pobierz liczniki",
+    "counters_status_none": "Nie pobrano.",
+    "counters_status": "Liczników: {count}.",
+    "counters_status_failed": "Nie udało się pobrać liczników: {reason}",
+    "counters_unavailable": "Ten sterownik nie ma modułu liczników łączeń w składzie.",
+    "counters_col_tag": "Punkt",
+    "counters_col_closes": "Załączenia",
+    "counters_col_opens": "Wyłączenia",
+    "counters_col_closed_time": "Czas załączenia",
+    "counters_col_threshold": "Próg ostrzegawczy",
+    "reset_counter": "Zeruj wybrany",
+    "reset_all_counters": "Zeruj wszystkie",
+    "reset_select_row": "Zaznacz licznik w tabeli.",
+    "reset_confirm": "Wyzerować licznik {tag} na sterowniku? Próg ostrzegawczy zostaje. Operacja jest nieodwracalna i trafia do dziennika audytowego (token Engineer).",
+    "reset_all_confirm": "Wyzerować wszystkie {count} liczniki na sterowniku? Operacja jest nieodwracalna i trafia do dziennika audytowego (token Engineer).",
+    "reset_done": "Wyzerowano liczników: {count}.",
+    "reset_failed": "Nie udało się wyzerować {tag}: {reason}"
   },
   "modules": {
     "col_name": "Nazwa",
@@ -564,5 +593,41 @@
     "next_screens": "Schemat synoptyczny - narysuj ekrany i powiąż symbole z punktami.",
     "next_logic": "Logika - zbuduj logikę sterowania na tych samych adresach.",
     "next_save": "Zapisz projekt (górny pasek) - kreator sam nie zapisuje pliku."
+  },
+  "mqtt": {
+    "intro": "Połączenie sterownika z brokerem MQTT (Home Assistant). To nastawa projektu: jedzie z projektem na sterownik, panel może ją zmienić (Engineer, z wpisem do dziennika), a różnice widać w panelu Sterownik → Nastawy sterownika (na żywo).",
+    "broker_heading": "Broker",
+    "enabled": "Integracja MQTT włączona",
+    "host": "Adres brokera:",
+    "port": "Port:",
+    "username": "Użytkownik:",
+    "tls": "Połączenie TLS",
+    "client_id": "Identyfikator klienta:",
+    "topic_prefix": "Prefiks tematów:",
+    "publish_interval": "Okres publikacji:",
+    "default_deadband": "Domyślna strefa nieczułości:",
+    "queue_max": "Maksymalna kolejka:",
+    "password_note": "Hasło do brokera nie jest częścią projektu - wpisuje się je raz na panelu sterownika (Ustawienia → MQTT) i zostaje tylko tam.",
+    "links_heading": "Mapowania przychodzące (temat → tag Link.*)",
+    "links_hint": "Zdalny temat MQTT trafia do lokalnego tagu Link.<id>.In<n> o podanym typie; wartość starsza niż „ważność” jest oznaczana jako nieaktualna.",
+    "col_topic": "Temat",
+    "col_tag": "Tag",
+    "col_type": "Typ",
+    "col_stale_after_s": "Ważność [s]",
+    "add_link": "Dodaj mapowanie",
+    "remove_link": "Usuń mapowanie",
+    "deadbands_heading": "Strefy nieczułości per tag",
+    "col_deadband": "Strefa nieczułości",
+    "add_deadband": "Dodaj tag",
+    "remove_deadband": "Usuń tag"
+  },
+  "service_notes": {
+    "intro": "Dziennik serwisowy aparatów, prowadzony na panelu sterownika (Operator lub wyżej). Wpisy są nieusuwalne i nieedytowalne - tu tylko do wglądu. Nowe wpisy przychodzą z „Zgraj z urządzenia” albo „Przyjmij nastawy ze sterownika”.",
+    "count": "Wpisów: {notes}, aparatów: {devices}",
+    "col_device": "Aparat / punkt",
+    "col_description": "Opis",
+    "col_date": "Data",
+    "col_author": "Poziom",
+    "col_text": "Wpis"
   }
 }

@@ -34,7 +34,9 @@
     "protection_electrical": "Electrical Protection",
     "protection_process": "Process Protection",
     "controller_connection": "Connection and Live View",
-    "help": "Help"
+    "help": "Help",
+    "mqtt": "MQTT Integration",
+    "service_notes": "Service Notes"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -50,7 +52,9 @@
     "protection_electrical": "Project → Protection → Electrical Protection",
     "protection_process": "Project → Protection → Process Protection",
     "controller_connection": "Project → Controller → Connection and Live View",
-    "help": "Help"
+    "help": "Help",
+    "mqtt": "Project → Configuration → MQTT Integration",
+    "service_notes": "Project → Configuration → Service Notes"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -464,7 +468,32 @@
     "settings_status_same": "Controller revision {revision} (saved by {modified_by}), project revision {local_revision}: settings identical.",
     "settings_status_differ": "Controller revision {revision} (saved by {modified_by}), project revision {local_revision}: {count} setting(s) differ.",
     "take_settings_confirm": "Write {count} controller value(s) into this project? Studio's own values for those settings are replaced.",
-    "take_settings_done": "{count} setting(s) taken from the controller. Save the project to keep them."
+    "take_settings_done": "{count} setting(s) taken from the controller. Save the project to keep them.",
+    "local_heading": "Controller-local Settings (outside the project)",
+    "fetch_local": "Fetch Local Settings",
+    "local_status_none": "Not fetched - language, REST, retentions and the I/O driver of this controller.",
+    "local_status": "Source: {source}, language: {language}, settings: {count}.",
+    "local_status_failed": "Could not fetch the local settings: {reason}",
+    "local_col_setting": "Setting",
+    "local_col_value": "Value",
+    "counters_heading": "Switching Counters (controller)",
+    "fetch_counters": "Fetch Counters",
+    "counters_status_none": "Not fetched.",
+    "counters_status": "Counters: {count}.",
+    "counters_status_failed": "Could not fetch the counters: {reason}",
+    "counters_unavailable": "This controller has no switching counters module in its composition.",
+    "counters_col_tag": "Point",
+    "counters_col_closes": "Closes",
+    "counters_col_opens": "Opens",
+    "counters_col_closed_time": "Closed time",
+    "counters_col_threshold": "Warning threshold",
+    "reset_counter": "Reset Selected",
+    "reset_all_counters": "Reset All",
+    "reset_select_row": "Select a counter in the table.",
+    "reset_confirm": "Reset counter {tag} on the controller? The warning threshold stays. This cannot be undone and is written to the audit log (Engineer token).",
+    "reset_all_confirm": "Reset all {count} counters on the controller? This cannot be undone and is written to the audit log (Engineer token).",
+    "reset_done": "Counters reset: {count}.",
+    "reset_failed": "Could not reset {tag}: {reason}"
   },
   "modules": {
     "col_name": "Name",
@@ -564,5 +593,41 @@
     "next_screens": "Synoptic Diagram - draw the screens and bind symbols to the points.",
     "next_logic": "Logic - build the control logic on the same addresses.",
     "next_save": "Save the project (top toolbar) - the wizard does not save the file itself."
+  },
+  "mqtt": {
+    "intro": "The controller's link to an MQTT broker (Home Assistant). A project setting: it travels with the project to the controller, the panel may change it (Engineer, audited), and differences show in Controller → Controller Settings (live).",
+    "broker_heading": "Broker",
+    "enabled": "MQTT integration enabled",
+    "host": "Broker address:",
+    "port": "Port:",
+    "username": "Username:",
+    "tls": "TLS connection",
+    "client_id": "Client id:",
+    "topic_prefix": "Topic prefix:",
+    "publish_interval": "Publish interval:",
+    "default_deadband": "Default deadband:",
+    "queue_max": "Queue limit:",
+    "password_note": "The broker password is not part of the project - it is entered once on the controller's panel (Settings → MQTT) and stays there.",
+    "links_heading": "Incoming mappings (topic → Link.* tag)",
+    "links_hint": "A remote MQTT topic feeds a local Link.<id>.In<n> tag of the given type; a value older than \"stale after\" is marked stale.",
+    "col_topic": "Topic",
+    "col_tag": "Tag",
+    "col_type": "Type",
+    "col_stale_after_s": "Stale after [s]",
+    "add_link": "Add Mapping",
+    "remove_link": "Remove Mapping",
+    "deadbands_heading": "Per-tag deadbands",
+    "col_deadband": "Deadband",
+    "add_deadband": "Add Tag",
+    "remove_deadband": "Remove Tag"
+  },
+  "service_notes": {
+    "intro": "The devices' service logbook, written on the controller's panel (Operator or higher). Entries are never edited or deleted - read-only here. New entries arrive with \"Receive from Device\" or \"Take Controller Values\".",
+    "count": "Entries: {notes}, devices: {devices}",
+    "col_device": "Device / point",
+    "col_description": "Description",
+    "col_date": "Date",
+    "col_author": "Level",
+    "col_text": "Entry"
   }
 }

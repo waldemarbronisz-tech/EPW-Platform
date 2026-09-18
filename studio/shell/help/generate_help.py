@@ -509,6 +509,108 @@ outside Studio's own scope.
 )
 
 topic(
+    # 2026-09-18: MQTT is a project setting (ZADANIA p. 6, "Ustawienia
+    # sterownika spoza formatu") - the decision and its consequences.
+    "mqtt", "Integracja MQTT", "MQTT Integration",
+    """
+# Integracja MQTT
+
+Połączenie sterownika z brokerem MQTT (Home Assistant): adres, port,
+użytkownik, TLS, identyfikator klienta, prefiks tematów, okres
+publikacji, strefy nieczułości i mapowania przychodzące (zdalny temat →
+lokalny tag `Link.<id>.In<n>`).
+
+**To nastawa projektu, nie ustawienie jednego sterownika.** Broker i
+tematy należą do instalacji - po wymianie sterownika nowy dostaje je z
+projektem. Panel może je zmienić (Engineer, wpis do dziennika, rewizja
++1 „panel”), a różnica między projektem a sterownikiem jest widoczna w
+Sterownik → Nastawy sterownika (na żywo) i można ją przyjąć jednym
+przyciskiem, tak jak próg zabezpieczenia.
+
+**Hasła do brokera nie ma w projekcie.** Wpisuje się je raz na panelu
+(Ustawienia → MQTT) i zostaje w lokalnym pliku sterownika - ta sama
+zasada, co dla PIN-ów i tokenów API.
+
+Ustawienia, które ZOSTAJĄ lokalne (nie wchodzą do projektu, bo opisują
+egzemplarz sterownika, nie instalację): język interfejsu, adres i port
+REST, retencje historiana, dziennika i historii alarmów, ostrzeżenie o
+rozmiarze bazy, sterownik I/O. Widać je w panelu Sterownik → Ustawienia
+lokalne sterownika, tylko do odczytu.
+""",
+    """
+# MQTT Integration
+
+The controller's link to an MQTT broker (Home Assistant): address,
+port, username, TLS, client id, topic prefix, publish interval,
+deadbands and incoming mappings (remote topic → local
+`Link.<id>.In<n>` tag).
+
+**A project setting, not one controller's setting.** The broker and
+topics belong to the installation - a replacement controller gets them
+with the project. The panel may change them (Engineer, audited,
+revision +1 "panel"), and the difference between project and
+controller shows in Controller → Controller Settings (live), where it
+can be taken with one button, like a protection threshold.
+
+**The broker password is not in the project.** It is entered once on
+the panel (Settings → MQTT) and stays in the controller's local file -
+the same rule as for PINs and API tokens.
+
+Settings that STAY local (not in the project, because they describe
+this controller, not the installation): UI language, REST address and
+port, historian, audit and alarm history retention, the database size
+warning, the I/O driver. They are shown read-only in Controller →
+Controller-local Settings.
+""",
+)
+
+topic(
+    "service_notes", "Notatki serwisowe", "Service Notes",
+    """
+# Notatki serwisowe
+
+Dziennik serwisowy aparatów: wpisy „co zrobiono” (wymiana zestawu
+styków, widoczne wżery), pisane ręcznie na panelu sterownika przez
+Operatora lub wyżej. Uzupełniają liczniki łączeń, które mówią „ile
+razy / jak długo”.
+
+**Wpisy są nieusuwalne i nieedytowalne** - to dziennik, nie notatnik;
+pomyłkę poprawia się kolejnym wpisem. Studio tylko je pokazuje.
+
+Od 2026-09-18 notatki są częścią projektu: każdy wpis dodany na panelu
+zapisuje się do `projekt.epw` (rewizja +1 „panel”), więc historia
+instalacji jedzie z projektem. Do Studio trafiają przez „Zgraj z
+urządzenia” albo „Przyjmij nastawy ze sterownika” (Sterownik → Nastawy
+sterownika na żywo pokazuje je jako różnicę `service_notes/<aparat>/notes`).
+
+Uwaga: wysłanie projektu, który ma mniej wpisów niż sterownik, nadpisze
+jego dziennik - panel Sterownik pokaże tę różnicę przed wysłaniem.
+""",
+    """
+# Service Notes
+
+The devices' service logbook: "what was done" entries (contact set
+replaced, pitting visible), typed on the controller's panel by an
+Operator or higher. They complement the switching counters, which say
+"how many times / how long".
+
+**Entries are never edited or deleted** - a logbook, not a notepad; a
+mistake is corrected with another entry. Studio only shows them.
+
+Since 2026-09-18 the notes are part of the project: every entry added
+on the panel is written to `projekt.epw` (revision +1 "panel"), so the
+installation's history travels with the project. They reach Studio
+through "Receive from Device" or "Take Controller Values" (Controller →
+Controller Settings (live) lists them as a `service_notes/<device>/notes`
+difference).
+
+Note: sending a project with fewer entries than the controller has
+overwrites its logbook - the Controller panel shows that difference
+before sending.
+""",
+)
+
+topic(
     # Task "fix/project-format-integrity" point 5.2 - "Skład urządzenia
     # [...] nie ma dziś tematu pomocy. Dopisz." The REAL contract
     # concept (point 2/3) - not to be confused with "io_cards" above

@@ -281,6 +281,56 @@ def download_project_file(core=Depends(get_core), level: str = Depends(_require_
                     headers={"Content-Disposition": 'attachment; filename="projekt.epw"'})
 
 
+@app.get("/api/v1/controller/settings")
+def get_controller_settings(core=Depends(get_core)):
+    """What stays on THIS controller and is not in the project
+    (controller.local.json: language, REST host/port, retentions, the
+    database size warning, the I/O driver, file paths) - read-only, so
+    Studio can show everything the controller holds ("Studio powinno
+    móc zaczytać kompletnie wszystkie informacje ze sterownika",
+    2026-09-18). Unauthenticated like /project/settings: every value is
+    on an Engineer dialog of the panel, none is a secret (the MQTT
+    password and the API tokens never sit in this file)."""
+    pm = core.project_manager
+    return {"source": "controller.local.json" if pm.is_epw_project() else "project.json",
+            "path": pm.settings_file if pm.is_epw_project() else None,
+            "language": pm.get_language(), "settings": pm.local_settings()}
+
+
+@app.get("/api/v1/counters")
+def get_switching_counters(core=Depends(get_core)):
+    """Every switching counter as the panel shows it (closes, opens,
+    closed time, threshold). {"available": false} when the module is
+    not in the composition."""
+    manager = getattr(core, "switching_counters", None)
+    if manager is None:
+        return {"available": False, "counters": {}}
+    return {"available": True, "counters": manager.get_all_snapshots()}
+
+
+@app.post("/api/v1/counters/{tag_name}/reset")
+def reset_switching_counter(tag_name: str, core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Zeroes one counter (after a device was replaced) - the same
+    SwitchingCounterManager.reset_counter() the panel's own Engineer
+    context menu calls, so the threshold stays and the audit trail gets
+    the same COUNTER_RESET entry with the API actor (decided 2026-09-18:
+    "liczniki powinny mieć możliwość zerowania poprzez Studio lub przez
+    inżyniera w runtime")."""
+    manager = getattr(core, "switching_counters", None)
+    if manager is None:
+        raise HTTPException(status_code=404, detail="Switching counters are not in this controller's composition.")
+    if tag_name not in manager.get_all_snapshots():
+        raise HTTPException(status_code=404, detail=f"No switching counter for {tag_name}.")
+    actor = f"API:{level}"
+    old = manager.reset_counter(tag_name)
+    manager.flush_to_project()
+    if core.audit_logger is not None:
+        core.audit_logger.record("COUNTER_RESET", actor,
+                                 f"{tag_name}: switching counter reset (was {old['closes']} closes, "
+                                 f"{old['opens']} opens)")
+    return {"reset": True, "tag": tag_name, "previous": old, "actor": actor}
+
+
 @app.post("/api/v1/project/install")
 async def install_project(request: Request, expected_revision: Optional[int] = None, restart: bool = True,
                           core=Depends(get_core), level: str = Depends(_require_engineer)):
