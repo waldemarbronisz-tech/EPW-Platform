@@ -46,6 +46,7 @@ PROJECT_KEYS = (
     "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points",
     "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_power_supervision",
     "process_protections", "electrical_protection_stages", "modbus_bus", "switching_counter_settings",
+    "mqtt", "service_notes",
 )
 
 # --- what the panel may change (Nastawa) ----------------------------------
@@ -59,6 +60,13 @@ PROCESS_STRUCTURE = ("name", "analog_tag")
 ELECTRICAL_SETTINGS = ("enabled", "setting", "hysteresis", "delay_ms", "action")
 ANALOG_SETTINGS = ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals")
 COUNTER_SETTINGS = ("warning_threshold",)   # per DI point - the switching counter's warning threshold
+# Decided 2026-09-18 (ZADANIA p. 6): the MQTT integration and the service
+# notes are settings of the project, not controller-local - the panel's
+# MQTT dialog and every note added on the panel go back to projekt.epw
+# (revision +1, "panel"), Studio sees the difference and takes them.
+MQTT_SETTINGS = ("enabled", "host", "port", "username", "tls", "client_id", "topic_prefix", "publish_interval_s",
+                 "default_deadband", "deadband_per_tag", "queue_max", "link_in")
+SERVICE_NOTE_SETTINGS = ("notes",)          # per device tag - its whole logbook
 ANALOG_STRUCTURE = ("description", "technical_note")
 POWER_SUPERVISION_KEYS = ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state")
 
@@ -144,6 +152,10 @@ def build_project_view(project) -> dict:
         "intrusion_power_supervision": _power_supervision_view(project.power_supervision),
         "process_protections": [asdict(p) for p in project.process_protections],
         "electrical_protection_stages": [asdict(s) for s in project.electrical_protection_stages],
+        # Read by ProjectManager.get_mqtt_config()/get_service_notes() exactly
+        # as they read project.json - only the source moved.
+        "mqtt": asdict(project.mqtt),
+        "service_notes": {tag: [dict(n) for n in notes] for tag, notes in project.service_notes.items()},
     }
 
 
@@ -156,6 +168,10 @@ class SettingChange:
     new: object
 
     def describe(self) -> str:
+        if self.section == "service_notes":
+            # A logbook, not a value - the audit line says how it grew, not every entry.
+            return (f"{self.section}[{self.record_id}].{self.field}: "
+                    f"{len(self.old or [])} -> {len(self.new or [])} entries")
         return f"{self.section}[{self.record_id}].{self.field}: {self.old!r} -> {self.new!r}"
 
 
@@ -245,6 +261,23 @@ def diff_settings(project, config: dict) -> SettingsDiff:
                   config.get("switching_counter_settings", baseline["switching_counter_settings"]),
                   baseline["switching_counter_settings"], lambda r: r.get("tag"), COUNTER_SETTINGS, (), diff)
 
+    mqtt = config.get("mqtt", baseline["mqtt"])
+    if not isinstance(mqtt, dict):
+        diff.structural.append("mqtt")
+    else:
+        for name in MQTT_SETTINGS:
+            if name in mqtt and not _same(mqtt[name], baseline["mqtt"].get(name)):
+                diff.changes.append(SettingChange("mqtt", "broker", name, baseline["mqtt"].get(name), mqtt[name]))
+
+    notes = config.get("service_notes", baseline["service_notes"])
+    if not isinstance(notes, dict):
+        diff.structural.append("service_notes")
+    else:
+        for tag in sorted(set(notes) | set(baseline["service_notes"])):
+            current, base = notes.get(tag, []), baseline["service_notes"].get(tag, [])
+            if not _same(current, base):
+                diff.changes.append(SettingChange("service_notes", tag, "notes", base, current))
+
     power = config.get("intrusion_power_supervision", baseline["intrusion_power_supervision"])
     normalized = {k: power.get(k) for k in POWER_SUPERVISION_KEYS} if isinstance(power, dict) and power else {}
     if normalized and normalized["mains_tag"] is None and normalized["battery_tag"] is None:
@@ -256,10 +289,15 @@ def diff_settings(project, config: dict) -> SettingsDiff:
 
 def _coerce_to_field(record, name, value):
     hint = typing.get_type_hints(type(record))[name]
-    targets = [a for a in typing.get_args(hint) if a is not type(None)] or [hint]
-    target = targets[0]
     if value is None:
         return None
+    origin = typing.get_origin(hint)
+    if hint is dict or origin is dict:
+        return {k: list(v) if isinstance(v, (list, tuple)) else v for k, v in dict(value).items()}
+    if hint is list or origin is list:
+        return list(value)
+    targets = [a for a in typing.get_args(hint) if a is not type(None)] or [hint]
+    target = targets[0]
     if target is bool:
         return bool(value)
     if target is int:
@@ -283,6 +321,16 @@ def apply_changes(project, changes) -> None:
     points = {p.address: p for p in project.points}
     stages = {f"{s.function_id} / {s.stage_name}": s for s in project.electrical_protection_stages}
     for change in changes:
+        if change.section == "mqtt":
+            setattr(project.mqtt, change.field, _coerce_to_field(project.mqtt, change.field, change.new))
+            continue
+        if change.section == "service_notes":
+            entries = [dict(n) for n in change.new if isinstance(n, dict)] if isinstance(change.new, list) else []
+            if entries:
+                project.service_notes[change.record_id] = entries
+            else:
+                project.service_notes.pop(change.record_id, None)
+            continue
         if change.section == "electrical_protection_stages" and change.record_id not in stages:
             function_id, stage_name = change.record_id.split(" / ", 1)
             stage = pf.ElectricalProtectionStage(function_id=function_id, stage_name=stage_name)

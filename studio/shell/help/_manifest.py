@@ -13,6 +13,8 @@ TOPICS = [
     ('protection_electrical', 'Zabezpieczenia elektryczne', 'Electrical Protection'),
     ('protection_process', 'Zabezpieczenia procesowe', 'Process Protection'),
     ('controller', 'Połączenie ze sterownikiem', 'Controller Connection'),
+    ('mqtt', 'Integracja MQTT', 'MQTT Integration'),
+    ('service_notes', 'Notatki serwisowe', 'Service Notes'),
     ('devices', 'Skład urządzenia', 'Device Composition'),
     ('about', 'O programie EPW Studio', 'About EPW Studio'),
 ]

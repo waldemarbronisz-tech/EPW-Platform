@@ -22,8 +22,10 @@ LEGACY_PROJECT_FILE = os.path.join(_RUNTIME_ROOT, "project.json")
 
 # Kept next to the project file: the state (SPEC_PROJEKT_EPW.md, "Plik
 # stanu") and the controller's own settings the project format does not
-# carry (UI language, REST host/port, MQTT, historian/audit retention,
-# service notes, the .epwsyn/.epwlogic paths - see _save_epw()).
+# carry (UI language, REST host/port, historian/audit retention, the
+# database size warning, the .epwsyn/.epwlogic paths - see _save_epw()).
+# MQTT and the service notes moved INTO the project on 2026-09-18 (they
+# belong to the installation, not to one controller - ZADANIA p. 6).
 STATE_FILE_NAME = "runtime_state.json"
 SETTINGS_FILE_NAME = "controller.local.json"
 PENDING_INSTALL_SUFFIX = ".pending"   # projekt.epw.pending - written by install_project_file(), read at start
@@ -1002,6 +1004,17 @@ class ProjectManager:
             except Exception:
                 actor = "SYSTEM"
         self._audit_logger.record(event_type, actor, detail, success=success)
+
+    def local_settings(self) -> dict:
+        """controller.local.json as it is in memory - what stays on THIS
+        controller (language, REST host/port, retentions, the database
+        size warning, the I/O driver, file paths). Read-only for Studio
+        through GET /api/v1/controller/settings, so nothing on the
+        controller is invisible from Studio; a plain project.json
+        installation has no such part and reports {}."""
+        if not self.is_epw_project():
+            return {}
+        return json.loads(_canonical(self._part("settings")))
 
     def get_project_header(self) -> dict:
         """What GET /api/v1/project reports - which project the controller

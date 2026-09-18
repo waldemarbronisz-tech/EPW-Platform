@@ -456,6 +456,33 @@ class ModbusBusConfig:
 
 
 @dataclass
+class MqttConfig:
+    """The controller's MQTT integration (HAOS) - a SETTING of the
+    project (decided 2026-09-18, ZADANIA p. 6 "Ustawienia sterownika
+    spoza formatu"): the broker and topics belong to the installation
+    and travel with the project to a replacement controller; the panel
+    may change them (Engineer, audited) and Studio sees the difference.
+    Never the broker password - runtime keeps that in its own local,
+    gitignored file, the same rule as access.local.json. Field names are
+    exactly runtime's get_mqtt_config() keys so both sides read one
+    shape. `link_in`: [{"topic", "tag", "type", "stale_after_s"}] -
+    incoming mappings, remote topic -> local Link.* tag."""
+
+    enabled: bool = False
+    host: str = ""
+    port: int = 1883
+    username: str = ""
+    tls: bool = False
+    client_id: str = ""
+    topic_prefix: str = ""
+    publish_interval_s: float = 2.0
+    default_deadband: float = 0.0
+    deadband_per_tag: Dict[str, float] = field(default_factory=dict)
+    queue_max: int = 1000
+    link_in: list = field(default_factory=list)
+
+
+@dataclass
 class Project:
     """The whole of `projekt.epw`'s in-memory representation - only the
     fields this module currently implements (see module docstring for
@@ -473,6 +500,14 @@ class Project:
     electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
     process_protections: list[ProcessProtection] = field(default_factory=list)
     modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
+    mqtt: MqttConfig = field(default_factory=MqttConfig)
+    # Service notes - the per-device maintenance logbook written on the
+    # panel (runtime's ServiceNoteManager): {device tag: [{"text",
+    # "timestamp", "author_level"}]}, append-only there. In the project
+    # since 2026-09-18 so the installation's history travels with it and
+    # Studio can read it; treated as a setting (each panel entry comes
+    # back as revision +1 by "panel"; Studio takes it like any other).
+    service_notes: dict = field(default_factory=dict)
     # The two editors' documents, embedded whole - see the module
     # docstring. {} = nothing drawn / no logic yet (a fresh project).
     screens: dict = field(default_factory=dict)
@@ -579,6 +614,12 @@ def _to_json_dict(project: Project) -> dict:
     bus = project.modbus_bus
     if bus.port or bus.host:
         data["modbus_bus"] = asdict(bus)
+    # MQTT and service notes (settings, 2026-09-18) - same "absent =
+    # untouched / nothing written" reading.
+    if project.mqtt != MqttConfig():
+        data["mqtt"] = asdict(project.mqtt)
+    if project.service_notes:
+        data["service_notes"] = project.service_notes      # kept verbatim, like the editors' documents
     # Embedded editor documents - same "omitted when empty" reading.
     if project.screens:
         data["screens"] = project.screens
@@ -866,7 +907,7 @@ def _records(data: dict, key: str, where: str, cls, warnings: list, id_field=Non
 
 _TOP_LEVEL_KEYS = {
     "format", "schema_version", "project", "revision", "modified_by", "settings_hash", "modules", "cards",
-    "locations", "points", "devices", "intrusion", "protection", "modbus_bus",
+    "locations", "points", "devices", "intrusion", "protection", "modbus_bus", "mqtt", "service_notes",
     "screens", "logic", "logic_runtime",
 }
 
@@ -995,6 +1036,13 @@ def _parse(path) -> tuple:
         bus = _build(ModbusBusConfig, data["modbus_bus"], "modbus_bus", warnings)
         if bus is not None:
             project.modbus_bus = bus
+    if "mqtt" in data:
+        mqtt = _build(MqttConfig, data["mqtt"], "mqtt", warnings)
+        if mqtt is not None:
+            project.mqtt = mqtt
+    # Service notes: kept verbatim (only the container type is checked) -
+    # runtime's ServiceNoteManager validates each entry when it loads them.
+    project.service_notes = dict(_section(data, "service_notes", "service_notes", dict, warnings))
 
     # Embedded editor documents: kept verbatim, only their container type
     # is checked here (a non-object is a warning and empty, like any other
@@ -1066,6 +1114,12 @@ SETTING_FIELDS = {
     "analog_points": ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals"),
     "switching_counters": ("warning_threshold",),
     "power_supervision": ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state"),
+    # 2026-09-18: MQTT (one record, "broker") and the service notes (one
+    # record per device tag, its whole list) are settings - the panel
+    # writes them, Studio diffs and takes them.
+    "mqtt": ("enabled", "host", "port", "username", "tls", "client_id", "topic_prefix", "publish_interval_s",
+             "default_deadband", "deadband_per_tag", "queue_max", "link_in"),
+    "service_notes": ("notes",),
 }
 
 
@@ -1107,6 +1161,9 @@ def settings_snapshot(project: Project) -> dict:
     supervision = project.power_supervision
     if getattr(supervision, "mains_tag", None) is not None or getattr(supervision, "battery_tag", None) is not None:
         record("power_supervision", "system", supervision)
+    record("mqtt", "broker", project.mqtt)
+    for tag, notes in sorted(project.service_notes.items()):
+        out[f"service_notes/{tag}/notes"] = _setting_value(notes)
     return dict(sorted(out.items()))
 
 
@@ -1141,7 +1198,7 @@ def apply_settings_snapshot(project: Project, values: dict) -> list:
     targets = {
         "zones": zones, "lines": lines, "process_protections": processes,
         "electrical_protection_stages": stages, "analog_points": points, "switching_counters": points,
-        "power_supervision": {"system": project.power_supervision},
+        "power_supervision": {"system": project.power_supervision}, "mqtt": {"broker": project.mqtt},
     }
     applied = []
     for path, value in values.items():
@@ -1149,6 +1206,16 @@ def apply_settings_snapshot(project: Project, values: dict) -> list:
         key, _, name = rest.rpartition("/")
         fields = SETTING_FIELDS.get(section)
         if not fields or name not in fields:
+            continue
+        if section == "service_notes":
+            # The device's whole logbook: a list replaces it, None/[] removes it.
+            if value:
+                if not isinstance(value, list) or not all(isinstance(n, dict) for n in value):
+                    continue
+                project.service_notes[key] = [dict(n) for n in value]
+            else:
+                project.service_notes.pop(key, None)
+            applied.append(path)
             continue
         record = targets.get(section, {}).get(key)
         if record is None:

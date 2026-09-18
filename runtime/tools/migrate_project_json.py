@@ -20,11 +20,13 @@ What goes where:
                             DI card they were (DI<n> -> <card>.DI.<n>) -
                             which physical card a flat number meant is not
                             something this script may guess.
+  mqtt, service_notes    -> projekt.epw (settings of the project since
+                            2026-09-18) - the broker settings without the
+                            password, and the per-device logbook.
   controller settings    -> controller.local.json: UI language, REST
-                            host/port, MQTT, historian and audit
-                            retention, database size warning, alarm
-                            history retention, service notes, .epwsyn and
-                            .epwlogic paths.
+                            host/port, historian and audit retention,
+                            database size warning, alarm history
+                            retention, .epwsyn and .epwlogic paths.
 
 Structure the old file may hold (zones, lines, process protections,
 descriptions, device list) is NOT invented into the project: it belongs to
@@ -62,8 +64,8 @@ from epw_os.core.runtime_state import RuntimeStateStore  # noqa: E402
 from epw_os.i18n import set_language, tr  # noqa: E402
 
 SETTINGS_KEYS = (
-    "language", "api_host", "api_port", "mqtt", "historian_deadband", "historian_retention", "audit_retention",
-    "db_size_warning", "intrusion_history_retention", "service_notes", "synoptic_project", "logic_project",
+    "language", "api_host", "api_port", "historian_deadband", "historian_retention", "audit_retention",
+    "db_size_warning", "intrusion_history_retention", "synoptic_project", "logic_project",
 )
 STRUCTURE_LEFT_TO_STUDIO = (
     "intrusion_zones", "intrusion_lines", "intrusion_power_supervision", "process_protections",
@@ -183,6 +185,19 @@ def migrate(source, target, state_file=None, settings_file=None, analog_card="AI
         counters[new_key] = record
         report["counters_migrated"].append((key, new_key))
     state["switching_counters"] = counters
+
+    # --- MQTT and service notes -> the project (settings) ------------------------
+    if isinstance(legacy.get("mqtt"), dict):
+        known = {f.name for f in pf.fields(pf.MqttConfig)}
+        for key, value in legacy["mqtt"].items():
+            if key in known:
+                setattr(project.mqtt, key, value)
+        report["settings"].append("mqtt")
+    if isinstance(legacy.get("service_notes"), dict):
+        for tag, notes in legacy["service_notes"].items():
+            if isinstance(notes, list) and notes and tag not in project.service_notes:
+                project.service_notes[str(tag)] = [dict(n) for n in notes if isinstance(n, dict)]
+        report["settings"].append("service_notes")
 
     # --- controller settings -> controller.local.json ---------------------------
     settings, _problem = read_json_object(settings_file)

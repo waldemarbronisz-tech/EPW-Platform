@@ -56,6 +56,7 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
     recognizable pattern across both, per the task's own "tu również"
     (same treatment, not a smaller one because the domain is simpler).
 """
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -82,6 +83,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -98,7 +100,7 @@ from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
-    LineInputMode, LineParametrization, LineType, Location, NORMAL_STATE_NC, NORMAL_STATE_NO,
+    LineInputMode, LineParametrization, LineType, Location, MqttConfig, NORMAL_STATE_NC, NORMAL_STATE_NO,
     Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
     apply_settings_snapshot, load_project, settings_diff, settings_hash, settings_snapshot,
 )
@@ -2845,6 +2847,357 @@ class ProcessProtectionPanel(QWidget):
         self._studio_window._on_project_changed()
 
 
+_MQTT_LINK_TYPES = ("BOOL", "REAL", "INT", "DINT", "STRING")
+
+
+def _format_duration(seconds) -> str:
+    """"3d 04:12:05" like runtime's switching_counters.format_duration -
+    the same reading of the same number, so a value seen in Studio and
+    on the panel look alike."""
+    try:
+        total = max(0, int(float(seconds)))
+    except (TypeError, ValueError):
+        total = 0
+    days, rest = divmod(total, 86400)
+    hours, rest = divmod(rest, 3600)
+    minutes, secs = divmod(rest, 60)
+    clock = f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{days}d {clock}" if days else clock
+
+
+class MqttPanel(QWidget):
+    """"Integracja MQTT" (KONFIGURACJA) - the project's MQTT settings
+    (project_format.MqttConfig), decided 2026-09-18 to be a SETTING of
+    the project rather than controller-local: the broker and topics
+    belong to the installation, so they travel with the project and
+    show up in the controller panel's live settings diff like a
+    threshold does. The broker PASSWORD is deliberately not here - it
+    stays in the controller's own local file (runtime's rule), typed on
+    the panel once. Incoming mappings (`link_in`, remote topic -> local
+    Link.* tag) and per-tag deadbands are the two tables."""
+
+    _LINK_COLS = ("topic", "tag", "type", "stale_after_s")
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
+
+        intro = QLabel(tr("mqtt.intro"))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        broker_box = QGroupBox(tr("mqtt.broker_heading"))
+        form = QFormLayout(broker_box)
+        self.enabled_check = QCheckBox(tr("mqtt.enabled"))
+        form.addRow("", self.enabled_check)
+        self.host_edit = QLineEdit()
+        self.host_edit.setPlaceholderText("homeassistant.local")
+        form.addRow(tr("mqtt.host"), self.host_edit)
+        self.port_spin = QSpinBox()
+        self.port_spin.setRange(1, 65535)
+        form.addRow(tr("mqtt.port"), self.port_spin)
+        self.username_edit = QLineEdit()
+        form.addRow(tr("mqtt.username"), self.username_edit)
+        self.tls_check = QCheckBox(tr("mqtt.tls"))
+        form.addRow("", self.tls_check)
+        self.client_id_edit = QLineEdit()
+        form.addRow(tr("mqtt.client_id"), self.client_id_edit)
+        self.prefix_edit = QLineEdit()
+        self.prefix_edit.setPlaceholderText("epw/site1")
+        form.addRow(tr("mqtt.topic_prefix"), self.prefix_edit)
+        self.interval_spin = QDoubleSpinBox()
+        self.interval_spin.setRange(0.1, 3600.0)
+        self.interval_spin.setDecimals(1)
+        self.interval_spin.setSuffix(" s")
+        form.addRow(tr("mqtt.publish_interval"), self.interval_spin)
+        self.deadband_spin = QDoubleSpinBox()
+        self.deadband_spin.setRange(0.0, 1_000_000.0)
+        self.deadband_spin.setDecimals(3)
+        form.addRow(tr("mqtt.default_deadband"), self.deadband_spin)
+        self.queue_spin = QSpinBox()
+        self.queue_spin.setRange(1, 1_000_000)
+        form.addRow(tr("mqtt.queue_max"), self.queue_spin)
+        password_note = QLabel(tr("mqtt.password_note"))
+        password_note.setWordWrap(True)
+        password_note.setStyleSheet("color: #404040;")
+        form.addRow("", password_note)
+        layout.addWidget(broker_box)
+
+        links_box = QGroupBox(tr("mqtt.links_heading"))
+        links_layout = QVBoxLayout(links_box)
+        links_hint = QLabel(tr("mqtt.links_hint"))
+        links_hint.setWordWrap(True)
+        links_layout.addWidget(links_hint)
+        self.links_table = QTableWidget(0, len(self._LINK_COLS))
+        self.links_table.setHorizontalHeaderLabels([tr(f"mqtt.col_{c}") for c in self._LINK_COLS])
+        _prep_table(self.links_table)
+        _make_column_resizable(self.links_table, 0, 260)
+        self.links_table.itemChanged.connect(self._on_links_changed)
+        links_layout.addWidget(self.links_table)
+        links_buttons = QHBoxLayout()
+        self.add_link_button = QPushButton(tr("mqtt.add_link"))
+        self.add_link_button.clicked.connect(self.add_link)
+        links_buttons.addWidget(self.add_link_button)
+        self.remove_link_button = QPushButton(tr("mqtt.remove_link"))
+        self.remove_link_button.clicked.connect(self.remove_selected_link)
+        links_buttons.addWidget(self.remove_link_button)
+        links_buttons.addStretch(1)
+        links_layout.addLayout(links_buttons)
+        layout.addWidget(links_box)
+
+        deadband_box = QGroupBox(tr("mqtt.deadbands_heading"))
+        deadband_layout = QVBoxLayout(deadband_box)
+        self.deadband_table = QTableWidget(0, 2)
+        self.deadband_table.setHorizontalHeaderLabels([tr("mqtt.col_tag"), tr("mqtt.col_deadband")])
+        _prep_table(self.deadband_table)
+        _make_column_resizable(self.deadband_table, 0, 260)
+        self.deadband_table.itemChanged.connect(self._on_deadbands_changed)
+        deadband_layout.addWidget(self.deadband_table)
+        deadband_buttons = QHBoxLayout()
+        self.add_deadband_button = QPushButton(tr("mqtt.add_deadband"))
+        self.add_deadband_button.clicked.connect(self.add_deadband)
+        deadband_buttons.addWidget(self.add_deadband_button)
+        self.remove_deadband_button = QPushButton(tr("mqtt.remove_deadband"))
+        self.remove_deadband_button.clicked.connect(self.remove_selected_deadband)
+        deadband_buttons.addWidget(self.remove_deadband_button)
+        deadband_buttons.addStretch(1)
+        deadband_layout.addLayout(deadband_buttons)
+        layout.addWidget(deadband_box)
+        layout.addStretch(1)
+
+        for widget, signal in (
+            (self.enabled_check, self.enabled_check.toggled),
+            (self.host_edit, self.host_edit.editingFinished),
+            (self.port_spin, self.port_spin.valueChanged),
+            (self.username_edit, self.username_edit.editingFinished),
+            (self.tls_check, self.tls_check.toggled),
+            (self.client_id_edit, self.client_id_edit.editingFinished),
+            (self.prefix_edit, self.prefix_edit.editingFinished),
+            (self.interval_spin, self.interval_spin.valueChanged),
+            (self.deadband_spin, self.deadband_spin.valueChanged),
+            (self.queue_spin, self.queue_spin.valueChanged),
+        ):
+            signal.connect(self._apply_form)
+        self.refresh()
+
+    def refresh(self):
+        mqtt = self._studio_window._project.mqtt
+        self._loading = True
+        try:
+            self.enabled_check.setChecked(bool(mqtt.enabled))
+            self.host_edit.setText(mqtt.host)
+            self.port_spin.setValue(int(mqtt.port))
+            self.username_edit.setText(mqtt.username)
+            self.tls_check.setChecked(bool(mqtt.tls))
+            self.client_id_edit.setText(mqtt.client_id)
+            self.prefix_edit.setText(mqtt.topic_prefix)
+            self.interval_spin.setValue(float(mqtt.publish_interval_s))
+            self.deadband_spin.setValue(float(mqtt.default_deadband))
+            self.queue_spin.setValue(int(mqtt.queue_max))
+            self.links_table.setRowCount(0)
+            for entry in mqtt.link_in:
+                self._append_link_row(entry)
+            self.deadband_table.setRowCount(0)
+            for tag, value in mqtt.deadband_per_tag.items():
+                self._append_deadband_row(tag, value)
+        finally:
+            self._loading = False
+
+    def _append_link_row(self, entry: dict):
+        row = self.links_table.rowCount()
+        self.links_table.insertRow(row)
+        values = (str(entry.get("topic", "")), str(entry.get("tag", "")),
+                  str(entry.get("type", "BOOL")), str(entry.get("stale_after_s", 30)))
+        for col, value in enumerate(values):
+            self.links_table.setItem(row, col, QTableWidgetItem(value))
+
+    def _append_deadband_row(self, tag: str, value):
+        row = self.deadband_table.rowCount()
+        self.deadband_table.insertRow(row)
+        self.deadband_table.setItem(row, 0, QTableWidgetItem(str(tag)))
+        self.deadband_table.setItem(row, 1, QTableWidgetItem(str(value)))
+
+    def _changed(self):
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _apply_form(self, *_):
+        if self._loading:
+            return
+        mqtt = self._studio_window._project.mqtt
+        new = MqttConfig(
+            enabled=self.enabled_check.isChecked(), host=self.host_edit.text().strip(),
+            port=int(self.port_spin.value()), username=self.username_edit.text().strip(),
+            tls=self.tls_check.isChecked(), client_id=self.client_id_edit.text().strip(),
+            topic_prefix=self.prefix_edit.text().strip(), publish_interval_s=float(self.interval_spin.value()),
+            default_deadband=float(self.deadband_spin.value()), deadband_per_tag=dict(mqtt.deadband_per_tag),
+            queue_max=int(self.queue_spin.value()), link_in=list(mqtt.link_in),
+        )
+        if new != mqtt:
+            self._studio_window._project.mqtt = new
+            self._changed()
+
+    # -- incoming mappings ---------------------------------------------------------------
+
+    def _collect_links(self) -> list:
+        links = []
+        for row in range(self.links_table.rowCount()):
+            cells = [self.links_table.item(row, col) for col in range(len(self._LINK_COLS))]
+            topic, tag, type_name, stale = [(c.text().strip() if c is not None else "") for c in cells]
+            type_name = type_name.upper() if type_name.upper() in _MQTT_LINK_TYPES else "BOOL"
+            try:
+                stale_after = int(float(stale))
+            except ValueError:
+                stale_after = 30
+            links.append({"topic": topic, "tag": tag, "type": type_name, "stale_after_s": stale_after})
+        return links
+
+    def _on_links_changed(self, _item=None):
+        if self._loading:
+            return
+        links = self._collect_links()
+        if links != self._studio_window._project.mqtt.link_in:
+            self._studio_window._project.mqtt.link_in = links
+            self._changed()
+
+    def add_link(self):
+        self._loading = True
+        try:
+            self._append_link_row({"topic": "", "tag": "Link.HA.In1", "type": "BOOL", "stale_after_s": 30})
+        finally:
+            self._loading = False
+        self.links_table.setCurrentCell(self.links_table.rowCount() - 1, 0)
+        self._on_links_changed()
+
+    def remove_selected_link(self):
+        row = self.links_table.currentRow()
+        if row < 0:
+            return
+        self._loading = True
+        try:
+            self.links_table.removeRow(row)
+        finally:
+            self._loading = False
+        self._on_links_changed()
+
+    # -- per-tag deadbands ---------------------------------------------------------------
+
+    def _collect_deadbands(self) -> dict:
+        result = {}
+        for row in range(self.deadband_table.rowCount()):
+            tag_item, value_item = self.deadband_table.item(row, 0), self.deadband_table.item(row, 1)
+            tag = tag_item.text().strip() if tag_item is not None else ""
+            if not tag:
+                continue
+            try:
+                result[tag] = float(value_item.text().strip()) if value_item is not None else 0.0
+            except ValueError:
+                result[tag] = 0.0
+        return result
+
+    def _on_deadbands_changed(self, _item=None):
+        if self._loading:
+            return
+        deadbands = self._collect_deadbands()
+        if deadbands != self._studio_window._project.mqtt.deadband_per_tag:
+            self._studio_window._project.mqtt.deadband_per_tag = deadbands
+            self._changed()
+
+    def add_deadband(self):
+        self._loading = True
+        try:
+            self._append_deadband_row("", 0.0)
+        finally:
+            self._loading = False
+        self.deadband_table.setCurrentCell(self.deadband_table.rowCount() - 1, 0)
+
+    def remove_selected_deadband(self):
+        row = self.deadband_table.currentRow()
+        if row < 0:
+            return
+        self._loading = True
+        try:
+            self.deadband_table.removeRow(row)
+        finally:
+            self._loading = False
+        self._on_deadbands_changed()
+
+
+class ServiceNotesPanel(QWidget):
+    """"Notatki serwisowe" (KONFIGURACJA) - the per-device logbook
+    written at the cabinet (runtime's Service Notes, Operator+), read
+    here. In the project since 2026-09-18: every note added on the panel
+    comes back as revision +1 by "panel", so "Zgraj z urządzenia" or
+    "Przyjmij nastawy ze sterownika" brings the installation's history
+    into Studio. Read-only on purpose - runtime never edits or deletes a
+    note either ("to dziennik, nie notatnik")."""
+
+    _COLS = ("device", "description", "date", "author", "text")
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        intro = QLabel(tr("service_notes.intro"))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+        self.count_label = QLabel()
+        layout.addWidget(self.count_label)
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"service_notes.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 4, 420)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        layout.addWidget(self.table, 1)
+        self.refresh()
+
+    def rows(self) -> list:
+        """[(device tag, description, timestamp, author level, text)] oldest
+        first within a device, devices in address order."""
+        project = self._studio_window._project
+        descriptions = {p.address: p.description for p in project.points}
+        descriptions.update({d.id: d.name for d in project.devices if getattr(d, "name", "")})
+        out = []
+        for tag in sorted(project.service_notes):
+            notes = project.service_notes.get(tag) or []
+            for note in sorted(notes, key=lambda n: float(n.get("timestamp") or 0)):
+                out.append((tag, descriptions.get(tag, ""), note.get("timestamp"), str(note.get("author_level", "")),
+                            str(note.get("text", ""))))
+        return out
+
+    def refresh(self):
+        from datetime import datetime
+        rows = self.rows()
+        self.table.setRowCount(0)
+        for tag, description, timestamp, author, text in rows:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            try:
+                when = datetime.fromtimestamp(float(timestamp)).strftime("%Y-%m-%d %H:%M:%S")
+            except (TypeError, ValueError, OSError, OverflowError):
+                when = "N/A"
+            for col, value in enumerate((tag, description, when, author, text)):
+                item = QTableWidgetItem(value)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(row, col, item)
+        devices = len({r[0] for r in rows})
+        self.count_label.setText(tr("service_notes.count", notes=len(rows), devices=devices))
+
+
 class ControllerPanel(QWidget):
     """"Połączenie i podgląd" (STEROWNIK) - Studio <-> a real EPW-OS
     controller, over its existing REST API (SPEC_PROJEKT_EPW.md: "Studio
@@ -2880,9 +3233,16 @@ class ControllerPanel(QWidget):
         super().__init__(parent)
         self._studio_window = studio_window
 
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
+        scroll.setWidget(content)
+        outer.addWidget(scroll)
 
         conn_box = QGroupBox(tr("controller.connection_heading"))
         form = QFormLayout(conn_box)
@@ -2954,6 +3314,65 @@ class ControllerPanel(QWidget):
         self._settings_timer = QTimer(self)
         self._settings_timer.setInterval(5000)
         self._settings_timer.timeout.connect(self._fetch_settings)
+
+        # What stays on the controller and is NOT in the project (its
+        # controller.local.json: language, REST, retentions...) - read-only
+        # here, so nothing the controller holds is invisible from Studio
+        # (decided 2026-09-18).
+        local_box = QGroupBox(tr("controller.local_heading"))
+        local_layout = QVBoxLayout(local_box)
+        local_row = QHBoxLayout()
+        self.local_button = QPushButton(tr("controller.fetch_local"))
+        self.local_button.clicked.connect(self._fetch_local_settings)
+        local_row.addWidget(self.local_button)
+        self.local_status_label = QLabel(tr("controller.local_status_none"))
+        self.local_status_label.setWordWrap(True)
+        local_row.addWidget(self.local_status_label, 1)
+        local_layout.addLayout(local_row)
+        self.local_table = QTableWidget(0, 2)
+        self.local_table.setHorizontalHeaderLabels([tr("controller.local_col_setting"), tr("controller.local_col_value")])
+        _prep_table(self.local_table)
+        _make_column_resizable(self.local_table, 0, 300)
+        self.local_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        local_layout.addWidget(self.local_table)
+        layout.addWidget(local_box, 1)
+        self._local_settings = None
+
+        # The switching counters as the panel shows them, zeroed from here
+        # after a device was replaced (POST /api/v1/counters/<tag>/reset,
+        # Engineer token) - the same reset the panel's own Engineer menu
+        # does, audited the same way.
+        counters_box = QGroupBox(tr("controller.counters_heading"))
+        counters_layout = QVBoxLayout(counters_box)
+        counters_row = QHBoxLayout()
+        self.counters_button = QPushButton(tr("controller.fetch_counters"))
+        self.counters_button.clicked.connect(self._fetch_counters)
+        counters_row.addWidget(self.counters_button)
+        self.reset_counter_button = QPushButton(tr("controller.reset_counter"))
+        self.reset_counter_button.clicked.connect(self._reset_selected_counter)
+        self.reset_counter_button.setEnabled(False)
+        counters_row.addWidget(self.reset_counter_button)
+        self.reset_all_counters_button = QPushButton(tr("controller.reset_all_counters"))
+        self.reset_all_counters_button.clicked.connect(self._reset_all_counters)
+        self.reset_all_counters_button.setEnabled(False)
+        counters_row.addWidget(self.reset_all_counters_button)
+        counters_row.addStretch(1)
+        counters_layout.addLayout(counters_row)
+        self.counters_status_label = QLabel(tr("controller.counters_status_none"))
+        self.counters_status_label.setWordWrap(True)
+        counters_layout.addWidget(self.counters_status_label)
+        self.counters_table = QTableWidget(0, 5)
+        self.counters_table.setHorizontalHeaderLabels([
+            tr("controller.counters_col_tag"), tr("controller.counters_col_closes"),
+            tr("controller.counters_col_opens"), tr("controller.counters_col_closed_time"),
+            tr("controller.counters_col_threshold")])
+        _prep_table(self.counters_table)
+        _make_column_resizable(self.counters_table, 0, 220)
+        self.counters_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.counters_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        counters_layout.addWidget(self.counters_table)
+        layout.addWidget(counters_box, 1)
+        self._remote_counters = None
 
         preview_box = QGroupBox(tr("controller.preview_heading"))
         preview_layout = QVBoxLayout(preview_box)
@@ -3125,6 +3544,130 @@ class ControllerPanel(QWidget):
             refresh()
         self._render_settings()
         QMessageBox.information(self, tr("controller.take_settings"), tr("controller.take_settings_done", count=len(applied)))
+
+    # -- what stays on the controller (controller.local.json) ----------------------------
+
+    @staticmethod
+    def _flatten(value, prefix=""):
+        if isinstance(value, dict):
+            out = []
+            for key in sorted(value):
+                out.extend(ControllerPanel._flatten(value[key], f"{prefix}{key}/"))
+            return out
+        return [(prefix.rstrip("/"), value)]
+
+    def local_settings_rows(self) -> list:
+        """[(setting path, value)] of the last GET /api/v1/controller/settings."""
+        if not self._local_settings:
+            return []
+        rows = self._flatten(self._local_settings.get("settings") or {})
+        return [(path, value if isinstance(value, str) else json.dumps(value, ensure_ascii=False))
+                for path, value in rows]
+
+    def _fetch_local_settings(self):
+        ok, result = self._request("/api/v1/controller/settings")
+        if not ok or not isinstance(result, dict):
+            self._local_settings = None
+            self.local_table.setRowCount(0)
+            self.local_status_label.setText(tr("controller.local_status_failed", reason=result))
+            return
+        self._local_settings = result
+        rows = self.local_settings_rows()
+        self.local_table.setRowCount(0)
+        for path, value in rows:
+            row = self.local_table.rowCount()
+            self.local_table.insertRow(row)
+            self.local_table.setItem(row, 0, QTableWidgetItem(path))
+            self.local_table.setItem(row, 1, QTableWidgetItem(value))
+        self.local_status_label.setText(tr("controller.local_status", source=result.get("source") or "?",
+                                           language=result.get("language") or "?", count=len(rows)))
+
+    # -- switching counters ------------------------------------------------------------
+
+    def counter_rows(self) -> list:
+        """[(tag, closes, opens, closed_seconds, threshold)] of the last fetch."""
+        counters = (self._remote_counters or {})
+        return [(tag, int(rec.get("closes", 0)), int(rec.get("opens", 0)), float(rec.get("closed_seconds", 0.0)),
+                 rec.get("warning_threshold")) for tag, rec in sorted(counters.items())]
+
+    def _fetch_counters(self):
+        ok, result = self._request("/api/v1/counters")
+        if not ok or not isinstance(result, dict):
+            self._remote_counters = None
+            self.counters_table.setRowCount(0)
+            self.counters_status_label.setText(tr("controller.counters_status_failed", reason=result))
+            self.reset_counter_button.setEnabled(False)
+            self.reset_all_counters_button.setEnabled(False)
+            return
+        if not result.get("available"):
+            self._remote_counters = None
+            self.counters_table.setRowCount(0)
+            self.counters_status_label.setText(tr("controller.counters_unavailable"))
+            self.reset_counter_button.setEnabled(False)
+            self.reset_all_counters_button.setEnabled(False)
+            return
+        self._remote_counters = dict(result.get("counters") or {})
+        selected = self._selected_counter_tag()
+        self.counters_table.setRowCount(0)
+        for tag, closes, opens, closed_seconds, threshold in self.counter_rows():
+            row = self.counters_table.rowCount()
+            self.counters_table.insertRow(row)
+            cells = (tag, str(closes), str(opens), _format_duration(closed_seconds),
+                     "" if threshold is None else str(threshold))
+            for col, value in enumerate(cells):
+                self.counters_table.setItem(row, col, QTableWidgetItem(value))
+            if tag == selected:
+                self.counters_table.selectRow(row)
+        self.counters_status_label.setText(tr("controller.counters_status", count=self.counters_table.rowCount()))
+        self.reset_counter_button.setEnabled(self.counters_table.rowCount() > 0)
+        self.reset_all_counters_button.setEnabled(self.counters_table.rowCount() > 0)
+
+    def _selected_counter_tag(self):
+        row = self.counters_table.currentRow()
+        item = self.counters_table.item(row, 0) if row >= 0 else None
+        return item.text() if item is not None else None
+
+    def _reset_counter(self, tag: str):
+        ok, result = self._request(f"/api/v1/counters/{tag}/reset", method="POST", timeout=8.0)
+        return ok, result
+
+    def _reset_selected_counter(self):
+        tag = self._selected_counter_tag()
+        if not tag:
+            QMessageBox.information(self, tr("controller.reset_counter"), tr("controller.reset_select_row"))
+            return
+        answer = QMessageBox.question(self, tr("controller.reset_counter"), tr("controller.reset_confirm", tag=tag),
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                      QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        ok, result = self._reset_counter(tag)
+        if not ok:
+            QMessageBox.warning(self, tr("controller.reset_counter"), tr("controller.reset_failed", tag=tag, reason=result))
+        self._fetch_counters()
+        if ok:
+            self.counters_status_label.setText(tr("controller.reset_done", count=1))
+
+    def _reset_all_counters(self):
+        tags = [row[0] for row in self.counter_rows()]
+        if not tags:
+            return
+        answer = QMessageBox.question(self, tr("controller.reset_all_counters"),
+                                      tr("controller.reset_all_confirm", count=len(tags)),
+                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                      QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        failed = []
+        for tag in tags:
+            ok, result = self._reset_counter(tag)
+            if not ok:
+                failed.append((tag, result))
+        self._fetch_counters()
+        if failed:
+            QMessageBox.warning(self, tr("controller.reset_all_counters"),
+                                tr("controller.reset_failed", tag=failed[0][0], reason=failed[0][1]))
+        self.counters_status_label.setText(tr("controller.reset_done", count=len(tags) - len(failed)))
 
     # -- Wyślij do urządzenia ------------------------------------------------------
 

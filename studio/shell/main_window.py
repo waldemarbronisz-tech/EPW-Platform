@@ -41,8 +41,8 @@ from studio.shell.menus import (
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
     build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
-    build_point_registry_toolbar, build_process_protection_toolbar, build_project_info_toolbar,
-    build_synoptic_context_toolbar, build_zones_toolbar,
+    build_mqtt_toolbar, build_point_registry_toolbar, build_process_protection_toolbar,
+    build_project_info_toolbar, build_service_notes_toolbar, build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -104,6 +104,11 @@ _TREE_ITEM_PROCESS_PROTECTION = "protection_process"
 # task explicitly asked for a full help department, same active-leaf
 # navigation pattern as everything else rather than a plain dialog).
 _TREE_ITEM_CONTROLLER = "controller_connection"
+# 2026-09-18: two more project aspects - the MQTT integration (a setting
+# of the project, no longer controller-local) and the service notes the
+# panel writes (read here).
+_TREE_ITEM_MQTT = "mqtt"
+_TREE_ITEM_SERVICE_NOTES = "service_notes"
 _TREE_ITEM_HELP = "help"
 
 _BREADCRUMB_KEYS = {
@@ -120,6 +125,8 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_ELECTRICAL_PROTECTION: "breadcrumb.protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
+    _TREE_ITEM_MQTT: "breadcrumb.mqtt",
+    _TREE_ITEM_SERVICE_NOTES: "breadcrumb.service_notes",
     _TREE_ITEM_HELP: "breadcrumb.help",
 }
 
@@ -146,6 +153,8 @@ _HELP_TOPIC_BY_TREE_KEY = {
     _TREE_ITEM_ELECTRICAL_PROTECTION: "protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "protection_process",
     _TREE_ITEM_CONTROLLER: "controller",
+    _TREE_ITEM_MQTT: "mqtt",
+    _TREE_ITEM_SERVICE_NOTES: "service_notes",
 }
 
 # STUDIO_UI_STANDARD.md section 1/3: panel_bg + a raised 2px bevel
@@ -376,6 +385,8 @@ class StudioMainWindow(QMainWindow):
         self._electrical_protection_panel = None
         self._process_protection_panel = None
         self._controller_panel = None
+        self._mqtt_panel = None
+        self._service_notes_panel = None
         self._help_panel = None
         self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
@@ -611,6 +622,14 @@ class StudioMainWindow(QMainWindow):
         self._item_logic.setData(0, Qt.ItemDataRole.UserRole, ("active", _TREE_ITEM_LOGIC))
         config.addChild(self._item_logic)
         self._tree_label_refs.append((self._item_logic, "tree.logic"))
+
+        # 2026-09-18: the MQTT integration is a project setting, the
+        # service notes are the panel's logbook read here - both under
+        # KONFIGURACJA, after the two editors.
+        self._item_mqtt = add_active_leaf(config, _TREE_ITEM_MQTT, "tree.mqtt", icons.icon("draw_wire"))
+        self._item_service_notes = add_active_leaf(
+            config, _TREE_ITEM_SERVICE_NOTES, "tree.service_notes", icons.icon("project_registers")
+        )
 
         # Task "fix/project-format-integrity" point 2.3 - these two
         # groups' own children are shown/hidden by _refresh_module_
@@ -1181,6 +1200,10 @@ class StudioMainWindow(QMainWindow):
                 self._open_process_protection()
             elif key == _TREE_ITEM_CONTROLLER:
                 self._open_controller()
+            elif key == _TREE_ITEM_MQTT:
+                self._open_mqtt()
+            elif key == _TREE_ITEM_SERVICE_NOTES:
+                self._open_service_notes()
             elif key == _TREE_ITEM_HELP:
                 self._open_help()
         elif kind == "inactive":
@@ -1554,6 +1577,32 @@ class StudioMainWindow(QMainWindow):
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
+    def _open_mqtt(self):
+        if self._mqtt_panel is None:
+            from studio.shell.project_panels import MqttPanel
+            self._mqtt_panel = MqttPanel(self)
+        else:
+            self._mqtt_panel.refresh()
+        self._show_aspect_container(_TREE_ITEM_MQTT, self._mqtt_panel, build_mqtt_toolbar, self._mqtt_panel)
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_MQTT
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_service_notes(self):
+        if self._service_notes_panel is None:
+            from studio.shell.project_panels import ServiceNotesPanel
+            self._service_notes_panel = ServiceNotesPanel(self)
+        else:
+            self._service_notes_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_SERVICE_NOTES, self._service_notes_panel, build_service_notes_toolbar, self._service_notes_panel
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_SERVICE_NOTES
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
     def _open_help(self):
         if self._help_panel is None:
             from studio.shell.project_panels import HelpPanel
@@ -1690,6 +1739,10 @@ class StudioMainWindow(QMainWindow):
             self._electrical_protection_panel.refresh()
         if self._process_protection_panel is not None:
             self._process_protection_panel.refresh()
+        if self._mqtt_panel is not None:
+            self._mqtt_panel.refresh()
+        if self._service_notes_panel is not None:
+            self._service_notes_panel.refresh()
 
     def _new_project(self):
         if not self._confirm_discard_project():

@@ -272,6 +272,14 @@ class SwitchingCounterManager:
             snapshot["closed_seconds"] += time.time() - snapshot["closed_since"]
         return snapshot
 
+    def get_all_snapshots(self) -> dict:
+        """{tag: snapshot} for every counter known (GET /api/v1/counters -
+        Studio's own view of the counters, with the running closed
+        interval included like get_snapshot())."""
+        with self._lock:
+            tags = list(self._counters)
+        return {tag: self.get_snapshot(tag) for tag in tags}
+
     def is_over_threshold(self, tag_name: str) -> bool:
         record = self._counters.get(tag_name)
         if not record or record.get("warning_threshold") is None:

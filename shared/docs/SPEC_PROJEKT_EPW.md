@@ -338,6 +338,40 @@ To są **nastawy do wgrania do ADA01**, nie logika zadziałania.
 Zabezpieczenie realizuje ADA01 samodzielnie, runtime jest narzędziem
 nastawczym. Zasada "ekran informuje, sprzęt chroni" pozostaje nienaruszona.
 
+### Integracja MQTT *(nastawa, od 2026-09-18)*
+
+```
+mqtt   enabled, host, port, username, tls, client_id, topic_prefix,
+       publish_interval_s, default_deadband, deadband_per_tag,
+       queue_max, link_in [{topic, tag, type, stale_after_s}]
+```
+
+Broker i tematy należą do instalacji, nie do egzemplarza sterownika —
+po wymianie sterownika nowy dostaje je z projektem. Panel może je
+zmienić (Engineer, wpis do dziennika, rewizja +1 „panel"), Studio widzi
+różnicę w podglądzie nastaw na żywo. **Hasła do brokera w pliku nie ma**
+— zostaje w lokalnym, nieśledzonym pliku sterownika, jak PIN-y i tokeny.
+
+### Notatki serwisowe *(nastawa, od 2026-09-18)*
+
+```
+service_notes   { <tag aparatu/punktu>: [{text, timestamp, author_level}] }
+```
+
+Dziennik serwisowy pisany na panelu (Operator lub wyżej), nieusuwalny
+i nieedytowalny. Każdy wpis zapisuje się do `projekt.epw` od razu
+(rewizja +1 „panel"), więc historia instalacji jedzie z projektem;
+Studio pokazuje go tylko do odczytu i przyjmuje jak każdą nastawę.
+Wysłanie projektu z mniejszą liczbą wpisów nadpisuje dziennik na
+sterowniku — Studio pokazuje tę różnicę przed wysłaniem.
+
+### Co ZOSTAJE poza projektem — `controller.local.json`
+
+Język interfejsu, adres i port REST, retencje historiana, dziennika
+i historii alarmów, ostrzeżenie o rozmiarze bazy, sterownik I/O,
+ścieżki `.epwsyn`/`.epwlogic` — opisują ten egzemplarz sterownika.
+Studio czyta je tylko do odczytu (`GET /api/v1/controller/settings`).
+
 ---
 
 ## Wersjonowanie — plik na sterowniku ŻYJE
@@ -483,6 +517,10 @@ w domu. Porównanie na żywo działa tylko wtedy, gdy połączenie jest.
 - żywe stany przy punktach podczas projektowania ekranu
 - weryfikacja, czy karta o danym adresie w ogóle odpowiada
 - zdalna diagnostyka bez chodzenia do szafki
+- ustawienia lokalne sterownika do wglądu (`GET /api/v1/controller/settings`)
+  i liczniki łączeń z zerowaniem po wymianie aparatu
+  (`GET /api/v1/counters`, `POST /api/v1/counters/<tag>/reset`, token
+  Engineer, wpis w dzienniku) — od 2026-09-18
 
 ### Wymuszanie stanów — dozwolone, obwarowane
 

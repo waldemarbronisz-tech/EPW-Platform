@@ -451,6 +451,19 @@ def build_controller_toolbar(toolbar, _panel, _studio_window):
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
 
+def build_mqtt_toolbar(toolbar, panel, _studio_window):
+    """The two tables' add/remove (incoming mappings, per-tag
+    deadbands) - the same shape as every other list panel's toolbar."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("mqtt.add_link"), panel.add_link, icon_name="add_row")
+    _add(toolbar, tr("mqtt.remove_link"), panel.remove_selected_link, icon_name="remove_row")
+
+
+def build_service_notes_toolbar(toolbar, _panel, _studio_window):
+    """Read-only: notes are written at the cabinet, never here."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+
 def build_help_toolbar(toolbar, _panel, _studio_window):
     """"Dział help pełny" - the panel's own topic list is the
     navigation; nothing to add here beyond the breadcrumb."""
