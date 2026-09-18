@@ -36,7 +36,8 @@
     "controller_connection": "Połączenie i podgląd",
     "help": "Pomoc",
     "mqtt": "Integracja MQTT",
-    "service_notes": "Notatki serwisowe"
+    "service_notes": "Notatki serwisowe",
+    "object_links": "Powiązania obiektu"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -54,7 +55,8 @@
     "controller_connection": "Projekt → Sterownik → Połączenie i podgląd",
     "help": "Pomoc",
     "mqtt": "Projekt → Konfiguracja → Integracja MQTT",
-    "service_notes": "Projekt → Konfiguracja → Notatki serwisowe"
+    "service_notes": "Projekt → Konfiguracja → Notatki serwisowe",
+    "object_links": "Projekt → Konfiguracja → Powiązania obiektu"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -639,7 +641,9 @@
     "deadbands_heading": "Strefy nieczułości per tag",
     "col_deadband": "Strefa nieczułości",
     "add_deadband": "Dodaj tag",
-    "remove_deadband": "Usuń tag"
+    "remove_deadband": "Usuń tag",
+    "object_link_tooltip": "Powiązanie obiektu ze sterownika {source} - edytuj w „Powiązania obiektu”.",
+    "object_link_remove_there": "To powiązanie obiektu - usuń je w dziale „Powiązania obiektu”."
   },
   "service_notes": {
     "intro": "Dziennik serwisowy aparatów, prowadzony na panelu sterownika (Operator lub wyżej). Wpisy są nieusuwalne i nieedytowalne - tu tylko do wglądu. Nowe wpisy przychodzą z „Zgraj z urządzenia” albo „Przyjmij nastawy ze sterownika”.",
@@ -682,5 +686,22 @@
     "force_mode_title": "Tryb wymuszania",
     "force_mode_text": "Wymuszanie nadpisuje stany wejść i wyjść na sterowniku. Zasady: tylko token Engineer, każde wymuszenie w dzienniku audytowym, widoczne na panelu przy szafce; wszystkie wymuszenia znikają po wyłączeniu trybu, po utracie łączności ze Studio (brak heartbeatu) i po restarcie sterownika. Tor zabezpieczeniowy nie podlega wymuszaniu. Włączyć tryb wymuszania?",
     "release_failed": "Nie udało się zdjąć wymuszeń: {reason}"
+  },
+  "object_links": {
+    "intro": "Wartość jednego sterownika obiektu dostępna u drugiego jako tag Link.<Id>.In<n> - przez MQTT: źródło publikuje swoje tagi, cel subskrybuje je w Integracji MQTT (mapowania przychodzące wpisuje tu Studio, ręcznych nie dotyka). Tag Link.* działa u celu w logice i na ekranach; nie jest komendą.",
+    "needs_object": "Powiązania wymagają zapisanego obiektu z co najmniej dwoma sterownikami (Plik → Dodaj sterownik do obiektu).",
+    "count": "Powiązań: {count}.",
+    "applied": "Zapisano w projektach: {details}. Zapisz obiekt, żeby utrwalić.",
+    "col_source": "Źródło",
+    "col_tag": "Punkt źródła",
+    "col_target": "Cel",
+    "col_link_tag": "Tag Link.* u celu",
+    "col_type": "Typ",
+    "col_stale": "Ważność",
+    "add": "Dodaj powiązanie",
+    "remove": "Usuń powiązanie",
+    "invalid_same": "Wybierz punkt źródła i inny sterownik jako cel.",
+    "invalid_link_tag": "Tag musi mieć postać Link.<Id>.In<nazwa>.",
+    "duplicate_link_tag": "Tag {tag} jest już użyty u tego sterownika."
   }
 }

@@ -472,6 +472,12 @@ def build_mqtt_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("mqtt.remove_link"), panel.remove_selected_link, icon_name="remove_row")
 
 
+def build_object_links_toolbar(toolbar, panel, _studio_window):
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("object_links.add"), panel.add_link, icon_name="add_row")
+    _add(toolbar, tr("object_links.remove"), panel.remove_selected_link, icon_name="remove_row")
+
+
 def build_service_notes_toolbar(toolbar, _panel, _studio_window):
     """Read-only: notes are written at the cabinet, never here."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)

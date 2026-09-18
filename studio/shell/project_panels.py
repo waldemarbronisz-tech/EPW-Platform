@@ -105,6 +105,7 @@ from studio.shell.project_format import (
     Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
     apply_settings_snapshot, load_project, settings_diff, settings_hash, settings_snapshot,
 )
+from studio.shell.site_format import LINK_TAG_RE, OBJECT_LINK_MARK, link_type_for, suggest_link_tag
 from pathlib import Path
 
 CHANNEL_KINDS = ["DI", "DO", "AI", "AO"]
@@ -3188,8 +3189,16 @@ class MqttPanel(QWidget):
         self.links_table.insertRow(row)
         values = (str(entry.get("topic", "")), str(entry.get("tag", "")),
                   str(entry.get("type", "BOOL")), str(entry.get("stale_after_s", 30)))
+        managed = bool(entry.get(OBJECT_LINK_MARK))
         for col, value in enumerate(values):
-            self.links_table.setItem(row, col, QTableWidgetItem(value))
+            item = QTableWidgetItem(value)
+            if managed:
+                # Written by the object's links panel (site_format.apply_object_links) - read here, edited there.
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                item.setBackground(_GREY_READONLY_BG)
+                item.setToolTip(tr("mqtt.object_link_tooltip", source=entry.get("source", "?")))
+            self.links_table.setItem(row, col, item)
+        self.links_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, dict(entry))
 
     def _append_deadband_row(self, tag: str, value):
         row = self.deadband_table.rowCount()
@@ -3229,7 +3238,9 @@ class MqttPanel(QWidget):
                 stale_after = int(float(stale))
             except ValueError:
                 stale_after = 30
-            links.append({"topic": topic, "tag": tag, "type": type_name, "stale_after_s": stale_after})
+            original = cells[0].data(Qt.ItemDataRole.UserRole) if cells[0] is not None else None
+            extra = dict(original) if isinstance(original, dict) else {}
+            links.append({**extra, "topic": topic, "tag": tag, "type": type_name, "stale_after_s": stale_after})
         return links
 
     def _on_links_changed(self, _item=None):
@@ -3252,6 +3263,10 @@ class MqttPanel(QWidget):
     def remove_selected_link(self):
         row = self.links_table.currentRow()
         if row < 0:
+            return
+        original = self.links_table.item(row, 0).data(Qt.ItemDataRole.UserRole) if self.links_table.item(row, 0) else None
+        if isinstance(original, dict) and original.get(OBJECT_LINK_MARK):
+            QMessageBox.information(self, tr("mqtt.links_heading"), tr("mqtt.object_link_remove_there"))
             return
         self._loading = True
         try:
@@ -3301,6 +3316,167 @@ class MqttPanel(QWidget):
         finally:
             self._loading = False
         self._on_deadbands_changed()
+
+
+class ObjectLinksPanel(QWidget):
+    """"Powiązania obiektu" (KONFIGURACJA) - one controller's tag read by
+    another controller of the same object, over MQTT (site_format.
+    apply_object_links: the source publishes at <prefix>/tag/<path>/state,
+    the target's mqtt.link_in turns it into a local Link.<Id>.In<n> tag
+    its logic and screens use). The links belong to the OBJECT file;
+    this panel writes them into the projects. Needs a real object with
+    at least two controllers."""
+
+    _COLS = ("source", "tag", "target", "link_tag", "type", "stale")
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        intro = QLabel(tr("object_links.intro"))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+        self.status_label = QLabel()
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"object_links.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 3, 240)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        layout.addWidget(self.table, 1)
+        buttons = QHBoxLayout()
+        self.add_button = QPushButton(tr("object_links.add"))
+        self.add_button.clicked.connect(self.add_link)
+        buttons.addWidget(self.add_button)
+        self.remove_button = QPushButton(tr("object_links.remove"))
+        self.remove_button.clicked.connect(self.remove_selected_link)
+        buttons.addWidget(self.remove_button)
+        buttons.addStretch(1)
+        layout.addLayout(buttons)
+        self.refresh()
+
+    def _devices(self) -> list:
+        """[(rel path, name)] of the object's controllers, in tree order."""
+        return self._studio_window.object_devices()
+
+    def rows(self) -> list:
+        site = self._studio_window._site
+        names = dict(self._devices())
+        return [(names.get(l["source"], l["source"]), l["tag"], names.get(l["target"], l["target"]), l["link_tag"],
+                 l.get("type", "BOOL"), int(l.get("stale_after_s", 30))) for l in (site.links if site else [])]
+
+    def refresh(self):
+        site = self._studio_window._site
+        devices = self._devices()
+        ready = site is not None and self._studio_window._site_path and len(devices) >= 2
+        self.add_button.setEnabled(bool(ready))
+        self.table.setRowCount(0)
+        for values in self.rows():
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            for col, value in enumerate(values):
+                self.table.setItem(row, col, QTableWidgetItem(str(value)))
+        self.remove_button.setEnabled(self.table.rowCount() > 0)
+        if not ready:
+            self.status_label.setText(tr("object_links.needs_object"))
+        else:
+            self.status_label.setText(tr("object_links.count", count=self.table.rowCount()))
+
+    def add_link(self):
+        devices = self._devices()
+        if len(devices) < 2:
+            return
+        win = self._studio_window
+        active_rel = win.active_device_rel()
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("object_links.add"))
+        form = QFormLayout(dialog)
+        source_combo = QComboBox()
+        for rel, name in devices:
+            source_combo.addItem(name, rel)
+        # Default: the source is another controller than the active one.
+        for i, (rel, _name) in enumerate(devices):
+            if rel != active_rel:
+                source_combo.setCurrentIndex(i)
+                break
+        form.addRow(tr("object_links.col_source"), source_combo)
+        point_combo = QComboBox()
+        form.addRow(tr("object_links.col_tag"), point_combo)
+        target_combo = QComboBox()
+        for rel, name in devices:
+            target_combo.addItem(name, rel)
+        idx = target_combo.findData(active_rel)
+        target_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        form.addRow(tr("object_links.col_target"), target_combo)
+        link_edit = QLineEdit()
+        form.addRow(tr("object_links.col_link_tag"), link_edit)
+        stale_spin = QSpinBox()
+        stale_spin.setRange(1, 3600)
+        stale_spin.setValue(30)
+        stale_spin.setSuffix(" s")
+        form.addRow(tr("object_links.col_stale"), stale_spin)
+
+        def fill_points():
+            point_combo.clear()
+            project = win.project_for_rel(source_combo.currentData())
+            for point in (project.points if project is not None else []):
+                label = f"{point.address}  {point.description}".rstrip()
+                point_combo.addItem(label, point.address)
+
+        def suggest():
+            source_name = source_combo.currentText()
+            target = win.project_for_rel(target_combo.currentData())
+            existing = [e.get("tag") for e in (target.mqtt.link_in if target is not None else [])]
+            existing += [l["link_tag"] for l in win._site.links if l["target"] == target_combo.currentData()]
+            link_edit.setText(suggest_link_tag(source_name, existing))
+        source_combo.currentIndexChanged.connect(lambda _i: (fill_points(), suggest()))
+        target_combo.currentIndexChanged.connect(lambda _i: suggest())
+        fill_points()
+        suggest()
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.create_link(source_combo.currentData(), point_combo.currentData(), target_combo.currentData(),
+                         link_edit.text().strip(), int(stale_spin.value()))
+
+    def create_link(self, source_rel: str, tag: str, target_rel: str, link_tag: str, stale_after_s: int = 30) -> bool:
+        """Validates and adds one link, then writes the links into the projects."""
+        win = self._studio_window
+        if not tag or source_rel == target_rel:
+            QMessageBox.warning(self, tr("object_links.add"), tr("object_links.invalid_same"))
+            return False
+        if not LINK_TAG_RE.match(link_tag or ""):
+            QMessageBox.warning(self, tr("object_links.add"), tr("object_links.invalid_link_tag"))
+            return False
+        if any(l["target"] == target_rel and l["link_tag"] == link_tag for l in win._site.links):
+            QMessageBox.warning(self, tr("object_links.add"), tr("object_links.duplicate_link_tag", tag=link_tag))
+            return False
+        win._site.links.append({"source": source_rel, "tag": tag, "target": target_rel, "link_tag": link_tag,
+                                "type": link_type_for(tag), "stale_after_s": int(stale_after_s)})
+        win._site.is_dirty = True
+        changed = win.apply_object_links()
+        self.refresh()
+        if changed:
+            self.status_label.setText(tr("object_links.applied", details="; ".join(
+                f"{dict(self._devices()).get(rel, rel)}: {', '.join(what)}" for rel, what in changed.items())))
+        return True
+
+    def remove_selected_link(self):
+        row = self.table.currentRow()
+        win = self._studio_window
+        if row < 0 or win._site is None or row >= len(win._site.links):
+            return
+        del win._site.links[row]
+        win._site.is_dirty = True
+        win.apply_object_links()
+        self.refresh()
 
 
 class ServiceNotesPanel(QWidget):

@@ -3,8 +3,12 @@ the passes of components/WallLayer.tsx (BandBody): walls joined at their
 corners become one mitred band (a closed loop gets an outer and an
 inner ring), the band is extruded up the screen by the wall's
 foreshortened height, and the faces are lit from the upper left.
-Openings cut by doors and windows (WallOpenings.ts) are not ported -
-a door symbol is still drawn on top of its wall.
+Openings: a door, window or gate seated in a wall (WallOpenings.ts -
+the nearest wall within half its thickness plus a margin) cuts the band
+and its extruded faces - the cut is the convex hull of the opening's
+footprint and the same footprint lifted by the wall's drawn height, and
+the two jambs are drawn as edges - so the room reads as one with a
+doorway, not a wall with a door pasted on it.
 
 All geometry is pure Python; drawing is draw_walls() at the bottom,
 called by screen_widget.py in place of a flat band per wall.
@@ -362,7 +366,139 @@ def draw_band(painter, band):
         _stroke(painter, _path(band["inner"]), SKIRTING_COLOR, 3, SKIRTING_OPACITY)
 
 
-def draw_walls(painter, walls):
-    for band in bands_from_walls(walls):
-        if len(band["outer"]) >= 3:
-            draw_band(painter, band)
+# --- openings (a port of project/WallOpenings.ts) -----------------------------------------------
+
+OPENING_TYPES = ("building.door", "building.window", "building.gate")
+ATTACH_MARGIN = 14      # how far off a wall's centre line an opening may sit and still be seated in it
+OVERCUT = 2             # the cut reaches a little past both faces so no sliver of wall is left
+
+
+def object_center(obj: dict) -> tuple:
+    """The object's centre ON SCREEN: Konva rotates a group about its
+    top-left origin, so the centre is the origin plus the half-size
+    vector turned by the same angle."""
+    x, y = float(obj.get("x", 0)), float(obj.get("y", 0))
+    w, h = float(obj.get("width", 0)) * float(obj.get("scaleX", 1) or 1), float(obj.get("height", 0)) * float(obj.get("scaleY", 1) or 1)
+    angle = math.radians(float(obj.get("rotation", 0) or 0))
+    cx, cy = w / 2, h / 2
+    return (x + cx * math.cos(angle) - cy * math.sin(angle), y + cx * math.sin(angle) + cy * math.cos(angle))
+
+
+def _wall_ends(wall):
+    return _pt(wall["from"]), _pt(wall["to"])
+
+
+def _project_onto_wall(wall, point) -> tuple:
+    (x1, y1), (x2, y2) = _wall_ends(wall)
+    dx, dy = x2 - x1, y2 - y1
+    length_sq = dx * dx + dy * dy
+    if length_sq <= 0:
+        return (x1, y1)
+    t = max(0.0, min(1.0, ((point[0] - x1) * dx + (point[1] - y1) * dy) / length_sq))
+    return (x1 + t * dx, y1 + t * dy)
+
+
+def _distance_to_wall(wall, point) -> float:
+    px, py = _project_onto_wall(wall, point)
+    return math.hypot(point[0] - px, point[1] - py)
+
+
+def wall_for_opening(walls, obj: dict):
+    """The wall an opening sits in: the nearest one within half its
+    thickness plus ATTACH_MARGIN of the object's centre, or None."""
+    center = object_center(obj)
+    best, best_distance = None, float("inf")
+    for wall in walls:
+        distance = _distance_to_wall(wall, center)
+        reach = clamp_thickness(wall.get("thickness")) / 2 + ATTACH_MARGIN
+        if distance <= reach and distance < best_distance:
+            best, best_distance = wall, distance
+    return best
+
+
+def find_wall_openings(walls, objects) -> list:
+    """[{object_id, wall_id, center, width, angle, thickness, drawn_height}]
+    for every door/window/gate seated in a wall."""
+    openings = []
+    for obj in objects or ():
+        if obj.get("type") not in OPENING_TYPES:
+            continue
+        wall = wall_for_opening(walls, obj)
+        if wall is None:
+            continue
+        (x1, y1), (x2, y2) = _wall_ends(wall)
+        openings.append({
+            "object_id": obj.get("id"), "wall_id": wall.get("id"),
+            "center": _project_onto_wall(wall, object_center(obj)),
+            "width": float(obj.get("width", 0)) * float(obj.get("scaleX", 1) or 1),
+            "angle": math.atan2(y2 - y1, x2 - x1),
+            "thickness": clamp_thickness(wall.get("thickness")),
+            "drawn_height": drawn_height(wall.get("height")),
+        })
+    return openings
+
+
+def _footprint_cut(opening) -> list:
+    half_width = opening["width"] / 2
+    half_depth = opening["thickness"] / 2 + OVERCUT
+    cos, sin = math.cos(opening["angle"]), math.sin(opening["angle"])
+    ax, ay = cos * half_width, sin * half_width
+    bx, by = -sin * half_depth, cos * half_depth
+    x, y = opening["center"]
+    return [(x - ax - bx, y - ay - by), (x + ax - bx, y + ay - by), (x + ax + bx, y + ay + by), (x - ax + bx, y - ay + by)]
+
+
+def convex_hull(points) -> list:
+    pts = sorted(set(points))
+    if len(pts) <= 2:
+        return pts
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    def build(seq):
+        stack = []
+        for p in seq:
+            while len(stack) >= 2 and cross(stack[-2], stack[-1], p) <= 0:
+                stack.pop()
+            stack.append(p)
+        stack.pop()
+        return stack
+    return build(pts) + build(list(reversed(pts)))
+
+
+def opening_cut_polygon(opening) -> list:
+    """The footprint and the same footprint lifted by the wall's drawn
+    height, hulled - what is cut out of the band AND its faces."""
+    footprint = _footprint_cut(opening)
+    if opening["drawn_height"] <= 0:
+        return footprint
+    lifted = [(x, y - opening["drawn_height"]) for x, y in footprint]
+    return convex_hull(footprint + lifted)
+
+
+def opening_jambs(opening) -> list:
+    cut = _footprint_cut(opening)
+    return [(cut[0], cut[3]), (cut[1], cut[2])]
+
+
+def draw_walls(painter, walls, objects=()):
+    openings = find_wall_openings(walls, objects)
+    cuts = [opening_cut_polygon(o) for o in openings]
+    painter.save()
+    try:
+        if cuts:
+            clip = QPainterPath()
+            clip.addRect(-100000.0, -100000.0, 200000.0, 200000.0)
+            for cut in cuts:
+                if len(cut) >= 3:
+                    clip = clip.subtracted(_path(cut))
+            painter.setClipPath(clip, Qt.ClipOperation.IntersectClip)
+        for band in bands_from_walls(walls):
+            if len(band["outer"]) >= 3:
+                draw_band(painter, band)
+    finally:
+        painter.restore()
+    for opening in openings:
+        for (a, b) in opening_jambs(opening):
+            _stroke(painter, _path([a, b], closed=False), COLOR_OUTLINE, EDGE_WIDTH)

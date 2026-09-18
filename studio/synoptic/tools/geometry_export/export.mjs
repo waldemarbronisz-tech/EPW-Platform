@@ -249,9 +249,14 @@ function normalizeNode(node, warnings) {
 // default. Structure is expected to be identical; where it is not, the
 // sentinel tree wins and the difference is reported.
 const SENTINEL_RE = /\{\{[a-zA-Z]+\}\}/;
-function mergeTrees(withSentinels, withDefaults, warnings, where = 'root') {
+function mergeTrees(withSentinels, withDefaults, warnings, where = 'root', notes = warnings) {
   if (withSentinels.length !== withDefaults.length) {
-    warnings.push(`${where}: structure differs between sentinel and default pass (${withSentinels.length} vs ${withDefaults.length} nodes)`);
+    // A field that ADDS nodes when set (scada.meter draws a row per
+    // value it has) is by design, not a defect: the sentinel tree wins
+    // and the runtime renders those nodes with their templates - an
+    // empty field leaves them empty. Recorded as a note, not a warning.
+    const target = withSentinels.length > withDefaults.length ? notes : warnings;
+    target.push(`${where}: structure differs between sentinel and default pass (${withSentinels.length} vs ${withDefaults.length} nodes)`);
     return withSentinels;
   }
   return withSentinels.map((node, i) => {
@@ -259,7 +264,7 @@ function mergeTrees(withSentinels, withDefaults, warnings, where = 'root') {
     const merged = {};
     for (const [key, value] of Object.entries(node)) {
       if (key === 'children') {
-        merged.children = mergeTrees(value, other.children || [], warnings, `${where}/${node.primitive}[${i}]`);
+        merged.children = mergeTrees(value, other.children || [], warnings, `${where}/${node.primitive}[${i}]`, notes);
       } else if (typeof value === 'string' && SENTINEL_RE.test(value)) {
         merged[key] = { $template: value, $default: other[key] === undefined ? null : other[key] };
       } else if (typeof value === 'number' && value === FONT_SIZE_SENTINEL) {
@@ -344,6 +349,7 @@ async function main() {
       animation: detectAnimation(type, entry && entry.file),
       states: {},
       warnings: [],
+      notes: [],
     };
     if (!component) {
       // graphics.* and anything without a dedicated case: the editor's
@@ -371,7 +377,7 @@ async function main() {
           withSentinels ? warnings : []);
         const sentinelTree = render(true, netInactive);
         const defaultTree = render(false, netInactive);
-        let tree = mergeTrees(sentinelTree, defaultTree, warnings);
+        let tree = mergeTrees(sentinelTree, defaultTree, warnings, 'root', record.notes);
         if (rotates && state === record.animation.trigger_state) {
           globalThis.__EPW_PERTURB_STATE = true;
           let perturbed;
@@ -380,7 +386,7 @@ async function main() {
         }
         record.states[state] = tree;
         if (hasWaterTerminal) {
-          record.states_net_active[state] = mergeTrees(render(true, netActive), render(false, netActive), warnings);
+          record.states_net_active[state] = mergeTrees(render(true, netActive), render(false, netActive), warnings, 'root', record.notes);
         }
       } catch (e) {
         record.states[state] = null;

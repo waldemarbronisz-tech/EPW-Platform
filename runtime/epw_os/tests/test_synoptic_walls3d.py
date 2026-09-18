@@ -124,3 +124,31 @@ def test_the_tanks_carry_a_clip_and_the_painter_honours_it():
     painter.end()
     assert image.pixelColor(15, 15).blue() == 255 and image.pixelColor(50, 50).alpha() == 0
     assert image.pixelColor(70, 70).red() == 255 and image.pixelColor(85, 85).alpha() == 0
+
+
+def test_a_door_seated_in_a_wall_cuts_an_opening_through_the_band():
+    QApplication.instance() or QApplication([])
+    walls = square("a", 100, 100, 200, material="tynk")
+    door = {"id": "d1", "type": "building.door", "x": 170, "y": 290, "width": 60, "height": 20, "rotation": 0,
+            "scaleX": 1, "scaleY": 1}                                   # centred on the bottom wall (y = 300)
+    openings = w3.find_wall_openings(walls, [door])
+    assert len(openings) == 1 and openings[0]["wall_id"] == "a2"
+    assert openings[0]["center"] == (200.0, 300.0) and openings[0]["width"] == 60
+    assert w3.find_wall_openings(walls, [dict(door, y=200)]) == []    # off every wall: not seated
+    assert w3.find_wall_openings(walls, [dict(door, type="building.table")]) == []
+    cut = w3.opening_cut_polygon(openings[0])
+    assert len(cut) >= 4 and min(y for _x, y in cut) < 300 - 30       # lifted by the drawn height
+
+    def render(objects):
+        image = QImage(400, 400, QImage.Format.Format_ARGB32)
+        image.fill(QColor(0, 0, 0, 0))
+        painter = QPainter(image)
+        w3.draw_walls(painter, walls, objects)
+        painter.end()
+        return image
+    plain, cut_image = render([]), render([door])
+    assert plain.pixelColor(200, 300).alpha() == 255                  # the wall's top, no door
+    assert cut_image.pixelColor(200, 300).alpha() == 0                # the doorway is open
+    assert cut_image.pixelColor(120, 300).alpha() == 255              # the wall beside it stays
+    jamb = w3.opening_jambs(openings[0])
+    assert {round(jamb[0][0][0]), round(jamb[1][0][0])} == {170, 230}    # the jambs stand at both sides of the cut

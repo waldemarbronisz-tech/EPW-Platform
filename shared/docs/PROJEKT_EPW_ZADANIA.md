@@ -149,6 +149,18 @@ przez `project_format.apply_settings_snapshot()`).
   czyta je tylko do odczytu przez `GET /api/v1/controller/settings`
   (panel Sterownik → „Ustawienia lokalne sterownika") — nic na sterowniku
   nie jest niewidoczne ze Studio.
+- **Obiekt z wielu sterowników** — ZROBIONE 2026-09-18: plik obiektu
+  `obiekt.epwsite` (`studio/shell/site_format.py`), lista urządzeń nad
+  drzewem, jeden projekt na sterownik, przełączanie z zachowaniem edycji.
+  Krok drugi tego samego dnia — **powiązania obiektu**: punkt jednego
+  sterownika dostępny u drugiego jako tag `Link.<Id>.In<n>` przez MQTT
+  (źródło publikuje pod `<prefiks>/tag/<ścieżka>/state`, Studio wpisuje
+  mapowanie przychodzące do `mqtt.link_in` celu, włącza MQTT i nadaje
+  prefiks tam, gdzie ich nie było; usunięcie sterownika zabiera jego
+  powiązania). Runtime bez zmian — `link_in` już był. Panel „Powiązania
+  obiektu" pod KONFIGURACJA. Nie ma adresowania między projektami na
+  ekranach (`EntryGate:ELA1.DI.1`) — ekran celu wiąże symbol z tagiem
+  `Link.*` jak z każdym innym.
 - **Wymuszanie stanów ze Studio i żywe stany przy projektowaniu** —
   ZROBIONE 2026-09-18 (SPEC „Wymuszanie stanów" i „Co jeszcze daje ten
   kanał"): `core/force_manager.py` + `/api/v1/forces` (Engineer, audyt,
@@ -179,7 +191,11 @@ przez `project_format.apply_settings_snapshot()`).
   `clipFunc` (2 symbole zbiorników) — ZROBIONE 2026-09-17: eksport uruchamia
   funkcję na kontekście nagrywającym (`rect`/`arc`/`moveTo`-`lineTo`) i
   zapisuje kształty jako `clip` węzła, painter przecina nimi obszar
-  rysowania — poziom w zbiorniku jest przycięty do jego wnętrza. Zostaje:
+  rysowania — poziom w zbiorniku jest przycięty do jego wnętrza. Otwory
+  drzwi, okien i bram wycinają ścianę i jej wytłoczenie jak w edytorze
+  (port `WallOpenings.ts`, 2026-09-18). Eksport geometrii: 0 ostrzeżeń
+  (struktura zależna od pól, jak wiersze `scada.meter`, jest notatką, nie
+  ostrzeżeniem). Zostaje:
   - eksport trzeba powtórzyć po zmianie biblioteki symboli
     (`studio/synoptic/tools/geometry_export`), test runtime to wykrywa.
 - **Sterownik Modbus — założenia do potwierdzenia na sprzęcie:** mapowanie

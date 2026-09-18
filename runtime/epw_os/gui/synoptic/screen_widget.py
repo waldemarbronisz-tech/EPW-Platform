@@ -22,7 +22,8 @@ screen's floor material with the editor's contact shadow along the
 walls, and a room record's name and location are written on the floor. Walls
 are the editor's own extruded bands (walls3d.py: mitred outer/inner
 rings, far faces with caps, the near face cut away, lit from the
-upper left) - door and window openings are not cut yet.
+upper left); a door, window or gate seated in a wall cuts an opening
+through the band and its faces (walls3d.find_wall_openings).
 """
 import time
 
@@ -283,7 +284,7 @@ class SynopticScreenWidget(QWidget):
                 self._draw_object(painter, obj, phase)
         for frame in project.frames:
             self._draw_frame(painter, frame)
-        draw_walls(painter, project.walls)
+        draw_walls(painter, project.walls, project.objects)
         self._draw_room_labels(painter, project)
         for conn in project.connections:
             self._draw_connection(painter, conn)
