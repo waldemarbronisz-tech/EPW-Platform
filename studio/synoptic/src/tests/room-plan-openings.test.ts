@@ -195,6 +195,13 @@ describe('resize redraws a plan symbol instead of stretching it', () => {
     expect(branch).toContain('height: resized.height');
     expect(branch).toContain('scaleX: 1');
   });
+
+  it('a ROTATED plan symbol is baked to width/height too, never left scaled (2026-09-18)', () => {
+    const rotated = objectNodeSource.slice(objectNodeSource.indexOf('A ROTATED plan symbol resized'));
+    expect(rotated).toContain("anchor !== 'rotater' && getSymbolDefinition(obj.type)?.resizeRedraws");
+    expect(rotated).toContain('rotation: node.rotation(),');
+    expect(rotated).toContain('scaleX: 1,');
+  });
 });
 
 describe('wiring (source scan - no runnable harness for these)', () => {

@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { effectiveSize, isOpeningFlipped, isOpeningType, objectCenter, seatOpeningInWall, topLeftForCenter } from '../project/WallOpenings';
 import type { AppState } from './appState';
 
 // Layout/arrangement operations over the current object selection
@@ -125,14 +126,34 @@ export const createLayoutSlice: StateCreator<AppState, [], [], LayoutSlice> = (s
   },
 
   rotateSelected: (direction: 'cw' | 'ccw') => {
-    const { selectedIds } = get();
+    const { selectedIds, walls } = get();
     if (selectedIds.length === 0) return;
     set((state) => ({
       objects: state.objects.map(obj => {
         if (!selectedIds.includes(obj.id)) return obj;
+        // ABOUT ITS CENTRE. Konva turns a group about its origin (the
+        // top-left), so changing `rotation` alone swung a symbol around
+        // its corner - a door rotated on its wall walked off the wall and
+        // its doorway moved with the new centre (user, 2026-09-18). The
+        // centre is kept and the origin moved to where that centre needs
+        // it, exactly what topLeftForCenter is for.
+        const center = objectCenter(obj);
+        const { width, height } = effectiveSize(obj);
         const currentRotation = obj.rotation || 0;
-        const newRotation = direction === 'cw' ? currentRotation + 90 : currentRotation - 90;
-        return { ...obj, rotation: newRotation };
+        // An opening turns by flipping its hinge/swing side whichever way
+        // is asked: on its wall that is the only meaningful turn, and
+        // seatOpeningInWall keeps it on the wall in that orientation
+        // (editor.opening_flipped, so a fresh door and a flipped one are
+        // never confused by their angle alone).
+        if (isOpeningType(obj.type)) {
+          const flipped = { ...obj, editor: { ...(obj.editor || {}), opening_flipped: !isOpeningFlipped(obj) } };
+          const seat = seatOpeningInWall(walls, flipped);
+          if (seat) return { ...flipped, ...seat };
+          const turned = currentRotation + 180;
+          return { ...flipped, ...topLeftForCenter(center, width, height, turned), rotation: turned };
+        }
+        const newRotation = currentRotation + (direction === 'cw' ? 90 : -90);
+        return { ...obj, ...topLeftForCenter(center, width, height, newRotation), rotation: newRotation };
       })
     }));
     get().saveHistory();

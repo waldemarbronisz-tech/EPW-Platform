@@ -260,6 +260,30 @@ export const ObjectNode = ({ obj, onSelect, onChange, gridSize, onShapeRef, grou
             return;
           }
 
+          // A ROTATED plan symbol resized (user, 2026-09-18: a turned
+          // table "stretched and pixelated" instead of growing): Konva's
+          // Transformer has already moved the origin so the opposite edge
+          // stayed put, so only the size is baked - into width/height,
+          // grid-snapped, scale back to 1 - and the symbol draws itself
+          // fresh at the real size, the same as the unrotated branch.
+          if (anchor && anchor !== 'rotater' && getSymbolDefinition(obj.type)?.resizeRedraws) {
+            const width = Math.max(gridSize, snapValue(obj.width * node.scaleX(), gridSize, isAltKeyDown()));
+            const height = Math.max(gridSize, snapValue(obj.height * node.scaleY(), gridSize, isAltKeyDown()));
+            node.scaleX(1);
+            node.scaleY(1);
+            onChange({
+              x: snapValue(node.x(), gridSize, isAltKeyDown()),
+              y: snapValue(node.y(), gridSize, isAltKeyDown()),
+              rotation: node.rotation(),
+              width,
+              height,
+              scaleX: 1,
+              scaleY: 1,
+            });
+            useStore.getState().saveHistory();
+            return;
+          }
+
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
 

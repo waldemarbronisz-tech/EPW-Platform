@@ -76,6 +76,8 @@ export interface SynopticObject {
     preview_value?: string;
     unit?: string;
     format?: string;
+    /** An opening (door/window/gate) flipped to the other side of its wall - see project/WallOpenings.ts. */
+    opening_flipped?: boolean;
   };
 
   // Runtime Bindings
