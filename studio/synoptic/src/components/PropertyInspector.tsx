@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
+import { effectiveSize, isOpeningType, objectCenter, openingFlipped, seatOpeningInWall, topLeftForCenter, wallForOpening } from '../project/WallOpenings';
 import { useStore } from '../store';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
 import { isCircuitOperable, listCircuits } from '../project/CircuitResolver';
@@ -213,6 +214,23 @@ export const PropertyInspector: React.FC = () => {
       };
 
       updateObject(selectedObj.id, { bindings: newBindings as SynopticObject['bindings'] });
+    } else if (name === 'rotation') {
+      // The same rule as rotateSelected: about the centre, an opening re-seated on its wall.
+      const rotation = Number.isFinite(finalValue) ? finalValue : 0;
+      const center = objectCenter(selectedObj);
+      const { width, height } = effectiveSize(selectedObj);
+      const rotated = { ...selectedObj, ...topLeftForCenter(center, width, height, rotation), rotation };
+      if (!isOpeningType(selectedObj.type)) {
+        updateObject(selectedObj.id, { x: rotated.x, y: rotated.y, rotation });
+        return;
+      }
+      // A typed angle on an opening means its side: nearer the wall turned by 180 = flipped.
+      const walls = useStore.getState().walls;
+      const wall = wallForOpening(walls, rotated);
+      const wallAngle = wall ? (Math.atan2(wall.to.y - wall.from.y, wall.to.x - wall.from.x) * 180) / Math.PI : rotation;
+      const editor = { ...(selectedObj.editor || {}), opening_flipped: openingFlipped(rotation, wallAngle) };
+      const seat = seatOpeningInWall(walls, { ...rotated, editor });
+      updateObject(selectedObj.id, { x: rotated.x, y: rotated.y, rotation, editor, ...(seat || {}) });
     } else {
       updateObject(selectedObj.id, { [name]: finalValue });
     }

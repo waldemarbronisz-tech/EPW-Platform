@@ -68,16 +68,38 @@ export interface WallOpening {
  * This is the exact inverse of topLeftForCenter below; the two must
  * stay inverses, which is what the round-trip test pins.
  */
-function objectCenter(obj: SynopticObject): WallPoint {
+/** The object's size AS DRAWN: a resized symbol keeps its registered width/height and carries the change in scaleX/scaleY (ObjectNode's transformer end), so every geometric question about it must multiply them in - the first version of the openings did not, and a widened door cut a doorway of its original width (user, 2026-09-18). */
+export function effectiveSize(obj: SynopticObject): { width: number; height: number } {
+  return { width: obj.width * (obj.scaleX || 1), height: obj.height * (obj.scaleY || 1) };
+}
+
+export function objectCenter(obj: SynopticObject): WallPoint {
   const radians = ((obj.rotation || 0) * Math.PI) / 180;
   const cos = Math.cos(radians);
   const sin = Math.sin(radians);
-  const halfW = obj.width / 2;
-  const halfH = obj.height / 2;
+  const { width, height } = effectiveSize(obj);
+  const halfW = width / 2;
+  const halfH = height / 2;
   return {
     x: obj.x + (halfW * cos - halfH * sin),
     y: obj.y + (halfW * sin + halfH * cos),
   };
+}
+
+/** An opening's side on its wall: the hinge/swing flipped to the other side (editor.opening_flipped) - explicit, not read off the angle, because a fresh door dropped on a wall drawn right to left (rotation 0, wall 180) must NOT count as flipped. */
+export function isOpeningFlipped(obj: SynopticObject): boolean {
+  return !!obj.editor?.opening_flipped;
+}
+
+/** True when a freely typed `rotation` is nearer the wall's direction turned by 180 than the direction itself. */
+export function openingFlipped(rotation: number, wallAngleDegrees: number): boolean {
+  const diff = (((rotation || 0) - wallAngleDegrees) % 360 + 540) % 360 - 180;   // -180..180
+  return Math.abs(diff) > 90;
+}
+
+/** The wall's direction, or the direction turned by 180 (kept in 0..360) when flipped. */
+export function openingRotation(wallAngleDegrees: number, flipped: boolean): number {
+  return flipped ? ((wallAngleDegrees + 180) % 360 + 360) % 360 : wallAngleDegrees;
 }
 
 /** Projects a point onto a wall's centre line segment, clamped to its ends. */
@@ -118,7 +140,7 @@ export function findWallOpenings(walls: WallElement[], objects: SynopticObject[]
       objectId: obj.id,
       wallId: wall.id,
       center: projectOntoWall(wall, objectCenter(obj)),
-      width: obj.width,
+      width: effectiveSize(obj).width,
       angle: Math.atan2(wall.to.y - wall.from.y, wall.to.x - wall.from.x),
       wallThickness: clampWallThickness(wall.thickness),
       wallDrawnHeight: drawnWallHeight(wall.height),
@@ -233,13 +255,18 @@ export function seatOpeningInWall(
   const wall = wallForOpening(walls, obj);
   if (!wall) return null;
   const center = projectOntoWall(wall, objectCenter(obj));
-  const angleDegrees = (Math.atan2(wall.to.y - wall.from.y, wall.to.x - wall.from.x) * 180) / Math.PI;
+  const wallAngle = (Math.atan2(wall.to.y - wall.from.y, wall.to.x - wall.from.x) * 180) / Math.PI;
+  // Along the wall, one way or the other: a door keeps the side its
+  // hinge/swing was flipped to (rotateSelected toggles editor.opening_flipped).
+  const rotation = openingRotation(wallAngle, isOpeningFlipped(obj));
+  const { width, height } = effectiveSize(obj);
   return {
     // Konva rotates a Group about its own origin (top-left), so the
     // top-left that puts the CENTRE on the wall is the centre minus
-    // the half-size vector, itself rotated by the same angle.
-    ...topLeftForCenter(center, obj.width, obj.height, angleDegrees),
-    rotation: angleDegrees,
+    // the half-size vector (at the DRAWN size), itself rotated by the
+    // same angle.
+    ...topLeftForCenter(center, width, height, rotation),
+    rotation,
   };
 }
 
