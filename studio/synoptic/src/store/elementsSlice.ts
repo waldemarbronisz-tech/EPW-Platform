@@ -26,7 +26,7 @@ export type ElementsSlice = Pick<AppState,
   | 'addFrame' | 'updateFrame'
   | 'addWall' | 'updateWall' | 'updateWalls' | 'applyWallStyleToRoom' | 'addRoomWalls' | 'toggleCircuitAt'
   | 'rooms' | 'updateRoom' | 'assignRoomToWalls'
-  | 'scaleSelection'
+  | 'scaleSelection' | 'scaleOrigin' | 'beginScaleSelection' | 'endScaleSelection'
   | 'circuits' | 'setCircuitDevice'
   | 'addGroupCommand' | 'updateGroupCommand'
   | 'addSetpointPanel' | 'updateSetpointPanel'
@@ -172,8 +172,24 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
   // ONE history entry for the whole drag, written by the caller when the
   // drag ENDS - not per frame, or a single resize would bury the undo
   // stack under sixty identical entries.
+  // The walls and objects AS THEY WERE when the resize started. Every
+  // frame maps from this snapshot with the drag-start box - mapping the
+  // CURRENT (already scaled) walls from the drag-start box compounded
+  // the scale on every mouse move, and a real mouse sends dozens of
+  // them: the user's room went to X = -2.99e+291 (2026-09-18).
+  scaleOrigin: null,
+
+  beginScaleSelection: () => {
+    const { walls, objects } = get();
+    set({ scaleOrigin: { walls: walls.map(w => ({ ...w })), objects: objects.map(o => ({ ...o })) } });
+  },
+
+  endScaleSelection: () => set({ scaleOrigin: null }),
+
   scaleSelection: (before, after, snapStep) => {
-    const { walls, objects, selectedWallIds, selectedIds } = get();
+    const { selectedWallIds, selectedIds, scaleOrigin } = get();
+    const walls = scaleOrigin ? scaleOrigin.walls : get().walls;
+    const objects = scaleOrigin ? scaleOrigin.objects : get().objects;
     if (selectedWallIds.length === 0 && selectedIds.length === 0) return;
     if (before.width <= 0 && before.height <= 0) return;
 

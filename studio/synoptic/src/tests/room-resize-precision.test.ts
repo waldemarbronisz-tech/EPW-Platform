@@ -48,11 +48,35 @@ describe('room resize precision', () => {
     expect(walls.find(w => w.id === 'w4')!.to).toEqual({ x: 100, y: 100 });
   });
 
+  it('thirty frames of one drag scale from the drag-start snapshot - never compounding (the 1e+291 room)', async () => {
+    const { useStore } = await import('../store');
+    useStore.setState({
+      walls: [
+        { id: 'w1', from: { x: 100, y: 100 }, to: { x: 580, y: 100 }, thickness: 12 },
+        { id: 'w2', from: { x: 580, y: 100 }, to: { x: 580, y: 500 }, thickness: 12 },
+        { id: 'w3', from: { x: 580, y: 500 }, to: { x: 100, y: 500 }, thickness: 12 },
+        { id: 'w4', from: { x: 100, y: 500 }, to: { x: 100, y: 100 }, thickness: 12 },
+      ] as never,
+      selectedWallIds: ['w1', 'w2', 'w3', 'w4'], selectedIds: [], objects: [], scaleOrigin: null,
+    });
+    const before = { x: 100, y: 100, width: 480, height: 400 };
+    useStore.getState().beginScaleSelection();
+    for (let i = 1; i <= 30; i++) {
+      useStore.getState().scaleSelection(before, resizeByDelta(before, 'se', { x: 2 * i, y: i }, 0), 0);
+    }
+    useStore.getState().endScaleSelection();
+    const walls = useStore.getState().walls;
+    expect(walls.find(w => w.id === 'w2')!.to).toEqual({ x: 640, y: 530 });
+    expect(walls.find(w => w.id === 'w1')!.from).toEqual({ x: 100, y: 100 });
+    expect(useStore.getState().scaleOrigin).toBeNull();
+  });
+
   it('the handles are no longer Konva-draggable nodes; the pointer drives them from window listeners', () => {
     expect(handlesSource).not.toMatch(/^\s*draggable\s*$/m);                 // no `draggable` prop on any node
     expect(handlesSource).toContain("window.addEventListener('mousemove', move)");
     expect(handlesSource).toContain('canvasPointFromClient(');
     expect(handlesSource).toContain('resizeByDelta(before, anchor, delta');
     expect(handlesSource).toContain('e.cancelBubble = true');
+    expect(handlesSource).toContain('callbacksRef.current.onStart?.()');
   });
 });
