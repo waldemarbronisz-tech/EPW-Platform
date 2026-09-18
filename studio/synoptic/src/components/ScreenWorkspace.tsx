@@ -17,7 +17,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Canvas } from './Canvas';
 import { ScreenView } from './ScreenView';
-import { tileRects, visibleScreens } from '../project/WorkspaceLayout';
+import {
+  FULL_FRAME, frameFromRect, freeTileRects, isFullFrame, rectFromFrame, snapZone, tileRects, visibleScreens,
+} from '../project/WorkspaceLayout';
+import type { TileFrame, WorkspaceTile } from '../project/WorkspaceLayout';
 import {
   COLOR_BEVEL_DARK, COLOR_BEVEL_LIGHT, COLOR_OUTLINE, COLOR_PANEL,
   COLOR_RUN, FONT_SIZE_SMALL, FONT_UI,
@@ -25,6 +28,14 @@ import {
 
 /** The caption strip on each tile. Tall enough to read, short enough not to eat the drawing. */
 const CAPTION_HEIGHT = 20;
+
+/** What a caption drag looks like while it is going on: the tile follows the pointer, and the snap target (if the pointer is at an edge) is previewed. */
+interface CaptionDrag {
+  screenId: string;
+  x: number;
+  y: number;
+  zone: TileFrame | null;
+}
 
 const captionStyle = (active: boolean): React.CSSProperties => ({
   height: CAPTION_HEIGHT,
@@ -55,9 +66,15 @@ export const ScreenWorkspace: React.FC = () => {
   const hiddenScreens = useStore(s => s.hiddenScreens);
   const hideScreen = useStore(s => s.hideScreen);
   const simulationRunning = useStore(s => s.simulationRunning);
+  const tileFrames = useStore(s => s.tileFrames);
+  const setTileFrame = useStore(s => s.setTileFrame);
+  const arrangeFreely = useStore(s => s.arrangeFreely);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 600 });
+  const [drag, setDrag] = useState<CaptionDrag | null>(null);
+  // The frame a maximised tile goes back to on the next double-click.
+  const restoreRef = useRef<Record<string, TileFrame>>({});
 
   useEffect(() => {
     const element = containerRef.current;
@@ -76,13 +93,71 @@ export const ScreenWorkspace: React.FC = () => {
     [hiddenScreens, activeScreenId, layout, screens]
   );
 
-  const tiles = useMemo(
-    () => tileRects(layout, shown.length, size.width, size.height),
-    [layout, shown.length, size.width, size.height]
-  );
+  const tiles = useMemo(() => {
+    // `free` falls back to the grid for a screen that has no frame yet.
+    const base = tileRects(layout === 'free' ? 'grid' : layout, shown.length, size.width, size.height);
+    return layout === 'free' ? freeTileRects(shown, tileFrames, base, size.width, size.height) : base;
+  }, [layout, shown, tileFrames, size.width, size.height]);
 
   const nameOf = (id: string) => screens.find(s => s.id === id)?.name ?? id;
   const multiple = shown.length > 1;
+
+  /** Every shown tile's current place as a frame - what the first drag freezes before the dragged one moves. */
+  const currentFrames = (): Record<string, TileFrame> =>
+    Object.fromEntries(shown.map((id, index) => [id, frameFromRect(tiles[index], size.width, size.height)]));
+
+  // feat/window-snapping: grab a caption and move the tile; drop at an
+  // edge to snap (top = whole area, side = that half, corner = that
+  // quarter), drop anywhere else to leave it there. Pointer events on the
+  // window, not the caption, so the drag survives the pointer leaving
+  // the tile - and the tile itself, which re-renders under the pointer.
+  const beginCaptionDrag = (e: React.PointerEvent, screenId: string, tile: WorkspaceTile) => {
+    if (e.button !== 0 || !multiple) return;
+    const container = containerRef.current;
+    if (!container) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = container.getBoundingClientRect();
+    const start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const state = { x: tile.x, y: tile.y, zone: null as TileFrame | null, moved: false };
+    const move = (ev: PointerEvent) => {
+      const px = ev.clientX - rect.left;
+      const py = ev.clientY - rect.top;
+      const dx = px - start.x;
+      const dy = py - start.y;
+      if (Math.abs(dx) + Math.abs(dy) > 2) state.moved = true;
+      state.x = Math.min(Math.max(0, tile.x + dx), Math.max(0, size.width - tile.width));
+      state.y = Math.min(Math.max(0, tile.y + dy), Math.max(0, size.height - tile.height));
+      state.zone = snapZone(px, py, size.width, size.height);
+      setDrag({ screenId, x: state.x, y: state.y, zone: state.zone });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setDrag(null);
+      if (!state.moved) return;
+      const frames = layout === 'free' ? {} : currentFrames();
+      const dropped = state.zone
+        ?? frameFromRect({ x: state.x, y: state.y, width: tile.width, height: tile.height }, size.width, size.height);
+      arrangeFreely({ ...frames, [screenId]: dropped });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    setDrag({ screenId, x: tile.x, y: tile.y, zone: null });
+  };
+
+  /** Double-click on a caption: the whole area, and back again. */
+  const toggleMaximize = (screenId: string, index: number) => {
+    if (!multiple) return;
+    const current = tileFrames[screenId];
+    if (layout === 'free' && isFullFrame(current)) {
+      setTileFrame(screenId, restoreRef.current[screenId] ?? { x: 0.1, y: 0.1, width: 0.6, height: 0.6 });
+      return;
+    }
+    restoreRef.current[screenId] = current ?? frameFromRect(tiles[index], size.width, size.height);
+    const frames = layout === 'free' ? {} : currentFrames();
+    arrangeFreely({ ...frames, [screenId]: FULL_FRAME });
+  };
 
   return (
     <div
@@ -100,9 +175,16 @@ export const ScreenWorkspace: React.FC = () => {
         // or start a marquee in the view that is about to be replaced.
         const activate = (e: React.SyntheticEvent) => {
           if (isActive) return;
-          e.stopPropagation();
+          // A press on the caption both activates the tile AND may start
+          // a drag - so that one is let through to the caption's own
+          // handler instead of being stopped here.
+          const target = e.target as HTMLElement | null;
+          if (!target?.closest?.('[data-tile-caption]')) e.stopPropagation();
           switchScreen(screenId);
         };
+        const dragging = drag?.screenId === screenId;
+        const left = dragging ? drag!.x : tile.x;
+        const top = dragging ? drag!.y : tile.y;
 
         return (
           <div
@@ -119,14 +201,16 @@ export const ScreenWorkspace: React.FC = () => {
             onDragEnterCapture={() => { if (!isActive) switchScreen(screenId); }}
             style={{
               position: 'absolute',
-              left: tile.x,
-              top: tile.y,
+              left,
+              top,
               width: tile.width,
               height: tile.height,
-              // In cascade the panes overlap, and the active one has to
-              // be on top - a live editor behind another window is
-              // unusable.
-              zIndex: isActive ? shown.length + 1 : tile.z + 1,
+              // In cascade (and the free arrangement) the panes overlap,
+              // and the active one has to be on top - a live editor
+              // behind another window is unusable. A tile being dragged
+              // is above everything.
+              zIndex: dragging ? shown.length + 3 : (isActive ? shown.length + 1 : tile.z + 1),
+              opacity: dragging ? 0.85 : 1,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
@@ -134,15 +218,20 @@ export const ScreenWorkspace: React.FC = () => {
                 ? `2px solid ${isActive ? COLOR_OUTLINE : COLOR_BEVEL_DARK}`
                 : 'none',
               background: COLOR_PANEL,
-              boxShadow: layout === 'cascade' ? '3px 3px 8px rgba(0,0,0,0.45)' : 'none',
+              boxShadow: layout === 'cascade' || layout === 'free' ? '3px 3px 8px rgba(0,0,0,0.45)' : 'none',
             }}
           >
             {/* A single tile needs no caption: the screen tabs above
                 already name it, and the strip would only cost height. */}
             {multiple && (
               <div
-                style={captionStyle(isActive)}
-                title={isActive ? 'Active screen' : 'Click to make this screen active'}
+                data-tile-caption="1"
+                style={{ ...captionStyle(isActive), cursor: 'move', touchAction: 'none' }}
+                title={isActive
+                  ? 'Active screen - drag to move, drop at an edge to snap, double-click to maximise'
+                  : 'Click to make this screen active - drag to move, drop at an edge to snap'}
+                onPointerDown={e => beginCaptionDrag(e, screenId, tile)}
+                onDoubleClick={e => { e.stopPropagation(); toggleMaximize(screenId, index); }}
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(screenId)}</span>
                 {isActive && <span style={{ opacity: 0.85 }}>ACTIVE</span>}
@@ -178,6 +267,28 @@ export const ScreenWorkspace: React.FC = () => {
           </div>
         );
       })}
+
+      {/* The snap preview: where the dragged tile will land if dropped now. */}
+      {drag?.zone && (() => {
+        const target = rectFromFrame(drag.zone, size.width, size.height);
+        return (
+          <div
+            data-snap-preview="1"
+            style={{
+              position: 'absolute',
+              left: target.x,
+              top: target.y,
+              width: target.width,
+              height: target.height,
+              zIndex: shown.length + 2,
+              pointerEvents: 'none',
+              boxSizing: 'border-box',
+              border: `2px dashed ${COLOR_OUTLINE}`,
+              background: 'rgba(0, 0, 128, 0.18)',
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

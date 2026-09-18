@@ -57,10 +57,12 @@ export const HELP_CONTENT_OPERATIONS: HelpContentMap = {
   'edit-pan-zoom': {
     pl: [
       { kind: 'p', text: 'Przytrzymanie spacji zamienia kursor w reke i pozwala przewijac plotno przeciagnieciem lewym przyciskiem myszy - dziala tak samo na obu rodzajach ekranu.' },
+      { kind: 'p', text: 'Wcisniecie i przytrzymanie srodkowego przycisku myszy (kolka) tez przewija plotno - bez spacji, w kazdym trybie. Okna ekranow w obszarze roboczym przesuwa sie za pasek tytulu jak w Windows: upuszczone przy gornej krawedzi wypelniaja caly obszar, przy bocznej zajmuja te polowe, w rogu - cwiartke (podczas przeciagania widac przerywany podglad miejsca); dwuklik w pasek maksymalizuje i przywraca. Pierwsze przeciagniecie przelacza uklad na Dowolny (View > Free).' },
       { kind: 'p', text: 'Ctrl+0 przywraca skale do 100% BEZ zmiany przewiniecia (pan pozostaje dokladnie tam, gdzie byl); Ctrl+9 dopasowuje jednoczesnie skale i przewiniecie, zeby zmiescic cala zawartosc projektu w biezacym oknie.' },
     ],
     en: [
       { kind: 'p', text: 'Holding Space turns the cursor into a hand and lets a left-button drag pan the canvas - this works the same way on both screen kinds.' },
+      { kind: 'p', text: 'Pressing and holding the middle mouse button (the wheel) pans the canvas too - no Space needed, in every mode. Screen windows in the workspace are moved by their caption the way Windows moves windows: dropped at the top edge a window fills the whole area, at a side it takes that half, in a corner that quarter (a dashed preview shows the target while dragging); a double-click on the caption maximises and restores. The first drag switches the arrangement to Free (View > Free).' },
       { kind: 'p', text: 'Ctrl+0 restores 100% zoom WITHOUT changing the pan (it stays exactly where it was); Ctrl+9 adjusts both zoom and pan together to fit the whole project\'s content into the current viewport.' },
     ],
   },

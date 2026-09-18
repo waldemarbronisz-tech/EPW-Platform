@@ -93,6 +93,23 @@ export function resizeBox(box: ScaleBox, anchor: ResizeAnchor, point: { x: numbe
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+/**
+ * A mouse position (clientX/Y) as a point on the canvas: relative to the
+ * stage's container, then through the stage's own pan and zoom. Pure, so
+ * the mapping the resize handles rely on can be checked exactly.
+ */
+export function canvasPointFromClient(
+  clientX: number, clientY: number,
+  containerLeft: number, containerTop: number,
+  panX: number, panY: number, zoom: number
+): { x: number; y: number } {
+  const scale = zoom > 0 ? zoom : 1;
+  return {
+    x: (clientX - containerLeft - panX) / scale,
+    y: (clientY - containerTop - panY) / scale,
+  };
+}
+
 /** Maps a point from `before` into the same relative place in `after`. A degenerate source axis maps to the new origin rather than to NaN. */
 export function mapPoint(
   point: { x: number; y: number },
