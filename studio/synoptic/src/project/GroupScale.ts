@@ -110,6 +110,27 @@ export function canvasPointFromClient(
   };
 }
 
+/**
+ * The box after dragging `anchor` by the mouse's own movement `delta`
+ * (canvas units) since the press - what the handles use (user,
+ * 2026-09-18: "przy lekkim ruchu rozjeżdża się"). The DELTA is what is
+ * snapped, not the pointer's absolute position: a room whose corner is
+ * not on the grid keeps that corner where it is until the mouse has
+ * moved a whole grid step, and a slight move changes nothing at all -
+ * instead of the corner (and, through the old per-endpoint snapping,
+ * the OPPOSITE corner too) jumping onto the grid at the first pixel.
+ */
+export function resizeByDelta(
+  box: ScaleBox,
+  anchor: ResizeAnchor,
+  delta: { x: number; y: number },
+  snapStep: number
+): ScaleBox {
+  const snap = (value: number) => (snapStep > 0 ? Math.round(value / snapStep) * snapStep : value);
+  const start = anchorPoint(box, anchor);
+  return resizeBox(box, anchor, { x: start.x + snap(delta.x), y: start.y + snap(delta.y) });
+}
+
 /** Maps a point from `before` into the same relative place in `after`. A degenerate source axis maps to the new origin rather than to NaN. */
 export function mapPoint(
   point: { x: number; y: number },

@@ -197,3 +197,10 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Diagnostic/automation hook (2026-09-18): Studio's live checks (a script
+// driving the real editor inside the shell's QWebEngineView) read the
+// store through it - the same store the bridges above read. Read-mostly;
+// nothing in the editor itself uses it.
+type StoreHook = { __synopticStore?: typeof useStore };
+(window as unknown as StoreHook).__synopticStore = useStore;

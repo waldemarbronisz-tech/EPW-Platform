@@ -33,7 +33,7 @@ import React, { useRef } from 'react';
 import { Group, Rect } from 'react-konva';
 import type { ScaleBox } from '../../project/GroupScale';
 import {
-  anchorCursor, anchorPoint, canvasPointFromClient, RESIZE_ANCHORS, resizeBox,
+  anchorCursor, anchorPoint, canvasPointFromClient, RESIZE_ANCHORS, resizeByDelta,
 } from '../../project/GroupScale';
 import { COLOR_OUTLINE, COLOR_WHITE, MARQUEE_DASH } from '../../theme/ScadaTheme';
 
@@ -119,15 +119,22 @@ export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
               beforeRef.current = before;
               const container = stage.container();
               container.style.cursor = anchorCursor(anchor);
+              const startRect = container.getBoundingClientRect();
+              // Where the press landed, in canvas units: the edge moves by
+              // the mouse's movement from HERE (snapped to the grid as a
+              // delta), so a slight move changes nothing and a corner off
+              // the grid stays off it - see GroupScale.resizeByDelta.
+              const press = canvasPointFromClient(
+                e.evt.clientX, e.evt.clientY, startRect.left, startRect.top, stage.x(), stage.y(), stage.scaleX() || 1,
+              );
 
               const move = (ev: MouseEvent) => {
                 const rect = container.getBoundingClientRect();
-                const step = callbacksRef.current.snapStep;
-                const snap = (value: number) => (step > 0 ? Math.round(value / step) * step : value);
                 const pointer = canvasPointFromClient(
                   ev.clientX, ev.clientY, rect.left, rect.top, stage.x(), stage.y(), stage.scaleX() || 1,
                 );
-                callbacksRef.current.onResize(before, resizeBox(before, anchor, { x: snap(pointer.x), y: snap(pointer.y) }));
+                const delta = { x: pointer.x - press.x, y: pointer.y - press.y };
+                callbacksRef.current.onResize(before, resizeByDelta(before, anchor, delta, callbacksRef.current.snapStep));
               };
               const up = () => {
                 window.removeEventListener('mousemove', move);

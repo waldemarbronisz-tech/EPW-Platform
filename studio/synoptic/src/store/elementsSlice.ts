@@ -177,12 +177,15 @@ export const createElementsSlice: StateCreator<AppState, [], [], ElementsSlice> 
     if (selectedWallIds.length === 0 && selectedIds.length === 0) return;
     if (before.width <= 0 && before.height <= 0) return;
 
-    const snap = snapStep && snapStep > 0
-      ? (value: number) => Math.round(value / snapStep) * snapStep
-      : (value: number) => value;
-
-    const wallUpdates = scaleWalls(walls, selectedWallIds, before, after, snap);
-    const objectUpdates = scaleObjectPositions(objects, selectedIds, before, after, snap);
+    // Endpoints are mapped EXACTLY from `before` to `after` - never snapped
+    // here (user, 2026-09-18: snapping every endpoint moved the opposite,
+    // supposedly fixed, edge of the room onto the grid at the first pixel
+    // of a drag). The dragged edge itself is what the handle snapped;
+    // `snapStep` stays in the signature for that caller's contract.
+    void snapStep;
+    const identity = (value: number) => value;
+    const wallUpdates = scaleWalls(walls, selectedWallIds, before, after, identity);
+    const objectUpdates = scaleObjectPositions(objects, selectedIds, before, after, identity);
 
     set((state) => {
       const byId = new Map(wallUpdates.map(u => [u.id, u.updates]));

@@ -138,6 +138,40 @@ def _load_synoptic_launcher_module():
     return module
 
 
+_SOURCE_ROOTS = ("src", "public")
+_SOURCE_FILES = ("index.html", "package.json", "package-lock.json", "vite.config.ts", "vite.config.js",
+                 "tsconfig.json", "tsconfig.app.json", "tsconfig.node.json")
+
+
+def newest_source_mtime(root) -> float:
+    """The newest modification time among the editor's sources - what a
+    build depends on (src/ and public/ trees, the Vite/TS config files,
+    the package manifest). 0.0 when nothing is there."""
+    root = Path(root)
+    newest = 0.0
+    for name in _SOURCE_FILES:
+        candidate = root / name
+        if candidate.is_file():
+            newest = max(newest, candidate.stat().st_mtime)
+    for folder in _SOURCE_ROOTS:
+        base = root / folder
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if path.is_file():
+                newest = max(newest, path.stat().st_mtime)
+    return newest
+
+
+def dist_is_stale(dist_dir, root) -> bool:
+    """True when dist/index.html is missing or older than any source -
+    then the frontend is built again before it is served."""
+    index = Path(dist_dir) / "index.html"
+    if not index.is_file():
+        return True
+    return newest_source_mtime(root) > index.stat().st_mtime
+
+
 class SynopticPanel(QWidget):
     """One widget: builds/serves studio/synoptic/dist/ and shows it in
     a QWebEngineView.
@@ -212,7 +246,11 @@ class SynopticPanel(QWidget):
 
         try:
             launcher = _load_synoptic_launcher_module()
-            if not (launcher.DIST_DIR / "index.html").exists():
+            # Rebuilt when MISSING or STALE: a dist/ older than the editor's
+            # sources served the previous editor for days (user report
+            # 2026-09-18: "nie działa kółko, rozciąganie pokoju rozjeżdża
+            # się" - both already fixed in src/, never built).
+            if dist_is_stale(launcher.DIST_DIR, launcher.ROOT_DIR):
                 launcher.build_frontend()
         except SystemExit as e:
             # build_frontend()/_npm_command() call sys.exit(1) on a
