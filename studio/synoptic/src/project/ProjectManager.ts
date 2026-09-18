@@ -137,6 +137,7 @@ export class ProjectManager {
       screenViews: {},
       screenHistories: {},
       hiddenScreens: [],
+      tileFrames: {},
       groupCommands: project.groupCommands || [],
       setpointPanels: project.setpointPanels || [],
       devices: project.devices || [],

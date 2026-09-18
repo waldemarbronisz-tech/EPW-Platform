@@ -13,7 +13,7 @@
 // the arithmetic without mounting anything.
 
 /** The arrangements offered. `single` is the one-screen view the editor had before, kept as a first-class choice rather than as "a grid with one cell". */
-export type WorkspaceLayout = 'single' | 'rows' | 'columns' | 'grid' | 'cascade';
+export type WorkspaceLayout = 'single' | 'rows' | 'columns' | 'grid' | 'cascade' | 'free';
 
 /** Menu/label text for each arrangement, in one place so the menu and the tab bar cannot drift apart. */
 export const WORKSPACE_LAYOUTS: { id: WorkspaceLayout; label: string; hint: string }[] = [
@@ -22,7 +22,96 @@ export const WORKSPACE_LAYOUTS: { id: WorkspaceLayout; label: string; hint: stri
   { id: 'columns', label: 'Side by side', hint: 'Screens next to each other' },
   { id: 'grid', label: 'Tiled', hint: 'Screens laid out in a grid' },
   { id: 'cascade', label: 'Cascade', hint: 'Screens stacked on top of each other, offset' },
+  { id: 'free', label: 'Free', hint: 'Windows where you drop them - drag a caption; drop at an edge to snap to half or full' },
 ];
+
+// feat/window-snapping (user, 2026-09-18: "łapiesz za górę, przeciągasz,
+// do góry / do boku równiutko wchodzi na pół ekranu - ustawianie rodem z
+// Windowsa"): a tile dragged by its caption goes where it is dropped, and
+// a drop at an edge snaps it exactly as Windows does - the top edge
+// fills the area, a side edge takes that half, a corner takes that
+// quarter. Once a tile has been dragged the arrangement is `free` and
+// every tile keeps a FRAME: its place as fractions of the area, so the
+// windows keep their proportions when the workspace itself is resized.
+
+/** A tile's place as fractions (0..1) of the workspace area. */
+export interface TileFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** How close to an edge (in pixels) the pointer has to be dropped for the tile to snap there. */
+export const SNAP_MARGIN = 28;
+
+export const FULL_FRAME: TileFrame = { x: 0, y: 0, width: 1, height: 1 };
+
+/**
+ * The frame a drop at pointer (px, py) snaps to, or null away from every
+ * edge. Corners win over edges (a pointer in the top-left corner is also
+ * at the top edge, and the quarter is the more specific answer); the
+ * bottom edge alone snaps to nothing, the same as Windows.
+ */
+export function snapZone(px: number, py: number, width: number, height: number): TileFrame | null {
+  if (width <= 0 || height <= 0) return null;
+  const left = px <= SNAP_MARGIN;
+  const right = px >= width - SNAP_MARGIN;
+  const top = py <= SNAP_MARGIN;
+  const bottom = py >= height - SNAP_MARGIN;
+  if (top && left) return { x: 0, y: 0, width: 0.5, height: 0.5 };
+  if (top && right) return { x: 0.5, y: 0, width: 0.5, height: 0.5 };
+  if (bottom && left) return { x: 0, y: 0.5, width: 0.5, height: 0.5 };
+  if (bottom && right) return { x: 0.5, y: 0.5, width: 0.5, height: 0.5 };
+  if (top) return FULL_FRAME;
+  if (left) return { x: 0, y: 0, width: 0.5, height: 1 };
+  if (right) return { x: 0.5, y: 0, width: 0.5, height: 1 };
+  return null;
+}
+
+export function isFullFrame(frame: TileFrame | undefined): boolean {
+  return !!frame && frame.x === 0 && frame.y === 0 && frame.width === 1 && frame.height === 1;
+}
+
+/** A pixel rectangle as a frame of the `width` x `height` area, kept inside it and never smaller than MIN_TILE. */
+export function frameFromRect(rect: { x: number; y: number; width: number; height: number }, width: number, height: number): TileFrame {
+  if (width <= 0 || height <= 0) return FULL_FRAME;
+  const w = Math.min(width, Math.max(MIN_TILE, rect.width));
+  const h = Math.min(height, Math.max(MIN_TILE, rect.height));
+  const x = Math.min(Math.max(0, rect.x), width - w);
+  const y = Math.min(Math.max(0, rect.y), height - h);
+  return { x: x / width, y: y / height, width: w / width, height: h / height };
+}
+
+/** A frame back in pixels for the current area. */
+export function rectFromFrame(frame: TileFrame, width: number, height: number): { x: number; y: number; width: number; height: number } {
+  return {
+    x: Math.round(frame.x * width),
+    y: Math.round(frame.y * height),
+    width: Math.max(1, Math.round(frame.width * width)),
+    height: Math.max(1, Math.round(frame.height * height)),
+  };
+}
+
+/**
+ * Tiles for the free arrangement: a screen with a frame sits where its
+ * frame says, one without (a screen added after the arrangement was
+ * freed) takes the place the fallback arrangement would give it. `z`
+ * follows the order given, the active tile is raised by the component.
+ */
+export function freeTileRects(
+  screenIds: string[],
+  frames: Record<string, TileFrame>,
+  fallback: WorkspaceTile[],
+  width: number,
+  height: number
+): WorkspaceTile[] {
+  return screenIds.map((id, index) => {
+    const frame = frames[id];
+    if (!frame) return fallback[index] ?? { x: 0, y: 0, width, height, z: index };
+    return { ...rectFromFrame(frame, width, height), z: index };
+  });
+}
 
 /**
  * The screens actually on show, in PROJECT order.
@@ -86,6 +175,10 @@ export function tileRects(
   if (count === 1 || layout === 'single') {
     return [{ x: 0, y: 0, width, height, z: 0 }];
   }
+  // `free` has no arithmetic of its own here: a screen without a frame
+  // yet (freeTileRects) takes the grid's place, so the grid is what this
+  // function answers with for it.
+  if (layout === 'free') layout = 'grid';
 
   if (layout === 'cascade') {
     const paneWidth = Math.max(MIN_TILE, width * CASCADE_FILL);

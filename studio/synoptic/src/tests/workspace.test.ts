@@ -297,7 +297,7 @@ describe('workspace wiring (source scan)', () => {
 
   it('offers every arrangement in the View menu, from the one list', () => {
     expect(viewMenuSource).toContain('WORKSPACE_LAYOUTS');
-    expect(WORKSPACE_LAYOUTS.map(l => l.id)).toEqual(['single', 'rows', 'columns', 'grid', 'cascade']);
+    expect(WORKSPACE_LAYOUTS.map(l => l.id)).toEqual(['single', 'rows', 'columns', 'grid', 'cascade', 'free']);
   });
 
   it('scopes the lower panel to the active screen, and names it', () => {
@@ -306,5 +306,62 @@ describe('workspace wiring (source scan)', () => {
     for (const tab of ['Build check', 'Simulation', 'Lighting', 'Quantities', 'Messages']) {
       expect(secondaryPanelSource).toContain(tab);
     }
+  });
+});
+
+// feat/window-snapping (user, 2026-09-18): tiles dragged by their caption
+// go where they are dropped, and a drop at an edge snaps like Windows.
+import {
+  FULL_FRAME, frameFromRect, freeTileRects, isFullFrame, rectFromFrame, snapZone, SNAP_MARGIN,
+} from '../project/WorkspaceLayout';
+import { useStore } from '../store';
+
+describe('window snapping', () => {
+  it('snaps the top edge to the whole area, a side to that half and a corner to that quarter', () => {
+    expect(snapZone(400, 5, 800, 600)).toEqual(FULL_FRAME);
+    expect(snapZone(3, 300, 800, 600)).toEqual({ x: 0, y: 0, width: 0.5, height: 1 });
+    expect(snapZone(799, 300, 800, 600)).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
+    expect(snapZone(2, 2, 800, 600)).toEqual({ x: 0, y: 0, width: 0.5, height: 0.5 });
+    expect(snapZone(798, 598, 800, 600)).toEqual({ x: 0.5, y: 0.5, width: 0.5, height: 0.5 });
+    expect(snapZone(400, 598, 800, 600)).toBeNull();                 // the bottom edge alone: nothing
+    expect(snapZone(400, SNAP_MARGIN + 1, 800, 600)).toBeNull();     // away from every edge
+    expect(snapZone(1, 1, 0, 0)).toBeNull();
+  });
+
+  it('keeps a dropped tile inside the area and no smaller than a readable tile', () => {
+    expect(frameFromRect({ x: 100, y: 50, width: 400, height: 300 }, 800, 600))
+      .toEqual({ x: 0.125, y: 50 / 600, width: 0.5, height: 0.5 });
+    const clamped = frameFromRect({ x: 700, y: 550, width: 400, height: 300 }, 800, 600);
+    expect(clamped.x + clamped.width).toBeCloseTo(1);
+    expect(clamped.y + clamped.height).toBeCloseTo(1);
+    const tiny = frameFromRect({ x: 0, y: 0, width: 10, height: 10 }, 800, 600);
+    expect(tiny.width * 800).toBe(MIN_TILE);
+    expect(rectFromFrame(FULL_FRAME, 800, 600)).toEqual({ x: 0, y: 0, width: 800, height: 600 });
+    expect(isFullFrame(FULL_FRAME)).toBe(true);
+    expect(isFullFrame({ x: 0, y: 0, width: 0.5, height: 1 })).toBe(false);
+  });
+
+  it('places framed tiles by their frames and the rest by the fallback arrangement', () => {
+    const fallback = tileRects('grid', 3, 800, 600);
+    const tiles = freeTileRects(['a', 'b', 'c'], { b: { x: 0.5, y: 0, width: 0.5, height: 1 } }, fallback, 800, 600);
+    expect(tiles[0]).toEqual(fallback[0]);
+    expect(tiles[1]).toEqual({ x: 400, y: 0, width: 400, height: 600, z: 1 });
+    expect(tiles[2]).toEqual(fallback[2]);
+  });
+
+  it('a hand-placed tile switches the store to the free arrangement and keeps the others where they were', () => {
+    useStore.setState({ workspaceLayout: 'grid', tileFrames: {} });
+    useStore.getState().arrangeFreely({ a: { x: 0, y: 0, width: 0.5, height: 1 }, b: { x: 0.5, y: 0, width: 0.5, height: 1 } });
+    expect(useStore.getState().workspaceLayout).toBe('free');
+    useStore.getState().setTileFrame('b', FULL_FRAME);
+    expect(useStore.getState().tileFrames).toEqual({ a: { x: 0, y: 0, width: 0.5, height: 1 }, b: FULL_FRAME });
+    expect(WORKSPACE_LAYOUTS.some(l => l.id === 'free')).toBe(true);
+  });
+
+  it('the workspace drags captions on the window and previews the snap target (source scan)', () => {
+    expect(workspaceSource).toContain("window.addEventListener('pointermove', move)");
+    expect(workspaceSource).toContain('snapZone(px, py, size.width, size.height)');
+    expect(workspaceSource).toContain('data-snap-preview');
+    expect(workspaceSource).toContain('onDoubleClick={e => { e.stopPropagation(); toggleMaximize(screenId, index); }}');
   });
 });

@@ -29,8 +29,8 @@ import { visibleScreens } from '../project/WorkspaceLayout';
 // what the project is - so none of it is ever serialized.
 
 export type WorkspaceSlice = Pick<AppState,
-  | 'workspaceLayout' | 'hiddenScreens' | 'screenViews' | 'screenHistories'
-  | 'setWorkspaceLayout' | 'showScreen' | 'hideScreen'
+  | 'workspaceLayout' | 'hiddenScreens' | 'screenViews' | 'screenHistories' | 'tileFrames'
+  | 'setWorkspaceLayout' | 'showScreen' | 'hideScreen' | 'setTileFrame' | 'arrangeFreely'
 >;
 
 export const createWorkspaceSlice: StateCreator<AppState, [], [], WorkspaceSlice> = (set, get) => ({
@@ -45,8 +45,22 @@ export const createWorkspaceSlice: StateCreator<AppState, [], [], WorkspaceSlice
   hiddenScreens: [],
   screenViews: {},
   screenHistories: {},
+  tileFrames: {},
 
   setWorkspaceLayout: (layout) => set({ workspaceLayout: layout }),
+
+  // feat/window-snapping: a tile dragged by its caption. The first drag
+  // freezes the current automatic arrangement into frames (so the other
+  // tiles stay exactly where they were) and switches to `free`.
+  setTileFrame: (screenId, frame) => set((state) => ({
+    workspaceLayout: 'free',
+    tileFrames: { ...state.tileFrames, [screenId]: frame },
+  })),
+
+  arrangeFreely: (frames) => set((state) => ({
+    workspaceLayout: 'free',
+    tileFrames: { ...state.tileFrames, ...frames },
+  })),
 
   showScreen: (screenId) => {
     set((state) => ({ hiddenScreens: state.hiddenScreens.filter(id => id !== screenId) }));

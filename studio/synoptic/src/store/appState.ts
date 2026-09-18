@@ -17,7 +17,7 @@ import type { SetpointPanelElement } from '../elements/SetpointElement';
 import type { ChannelKind, Device, LocationEntry, CardEntry } from '../project/DeviceSchema';
 import type { CanvasState, DeviceCreateOrAssignRequest, DeviceFormRequest, HistorySnapshot, Message, ScreenKind, SynopticConnection, SynopticObject } from './types';
 import type { HelpLanguage } from '../i18n/HelpLanguage';
-import type { WorkspaceLayout } from '../project/WorkspaceLayout';
+import type { WorkspaceLayout, TileFrame } from '../project/WorkspaceLayout';
 import type { CommandRequest } from '../project/CommandRequest';
 import type { SimulationEvent } from './simulationSlice';
 import type { RoomElement } from '../elements/RoomElement';
@@ -85,9 +85,15 @@ export interface AppState {
   screenViews: Record<string, CanvasState>;
   /** Each screen's own undo stack, so clicking between tiles never empties it. */
   screenHistories: Record<string, { history: HistorySnapshot[]; historyIndex: number }>;
+  /** feat/window-snapping: where each tile sits in the `free` arrangement, as fractions of the area. Session state like the rest. */
+  tileFrames: Record<string, TileFrame>;
   setWorkspaceLayout: (layout: WorkspaceLayout) => void;
   showScreen: (screenId: string) => void;
   hideScreen: (screenId: string) => void;
+  /** One tile moved or snapped by hand. */
+  setTileFrame: (screenId: string, frame: TileFrame) => void;
+  /** Leaves the automatic arrangement: every shown tile keeps the place it has right now, and from here the user places them. */
+  arrangeFreely: (frames: Record<string, TileFrame>) => void;
 
   // feat/workspace: simulation - the plan operated the way the
   // controller will operate it, through a confirmation window rather

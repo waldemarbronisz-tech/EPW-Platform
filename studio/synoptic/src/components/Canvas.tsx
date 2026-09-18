@@ -251,6 +251,18 @@ export const Canvas: React.FC = () => {
 
   // Panning
   const isPanningRef = useRef(false);
+  // A pan released outside the stage (the button let go over a panel or
+  // another tile) would otherwise leave the canvas panning on the next
+  // move; the window sees every mouseup.
+  useEffect(() => {
+    const endPan = () => {
+      if (!isPanningRef.current) return;
+      isPanningRef.current = false;
+      if (containerRef.current) containerRef.current.style.cursor = 'default';
+    };
+    window.addEventListener('mouseup', endPan);
+    return () => window.removeEventListener('mouseup', endPan);
+  }, []);
   const lastPanPosRef = useRef({ x: 0, y: 0 });
 
   // Freehand wire drawing (usterka B): points already placed, and the
@@ -707,6 +719,10 @@ export const Canvas: React.FC = () => {
     // Middle-button pan (unchanged), or a left-button drag while Space
     // is held (commit 4) - the same panning gesture either way.
     if (e.evt.button === 1 || (isSpaceKeyDown() && e.evt.button === 0)) {
+      // The browser's own middle-button autoscroll must not start on top
+      // of the pan (user, 2026-09-18: "ruch po kanwasie przez kliknięcie i
+      // przytrzymanie scrolla").
+      e.evt.preventDefault();
       isPanningRef.current = true;
       lastPanPosRef.current = { x: e.evt.clientX, y: e.evt.clientY };
       if (containerRef.current) containerRef.current.style.cursor = 'grabbing';

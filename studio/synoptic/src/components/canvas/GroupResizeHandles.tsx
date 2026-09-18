@@ -16,11 +16,25 @@
 // so they stay grabbable at every magnification - a handle that shrinks
 // with the drawing is unusable the moment you zoom out to see the whole
 // room you meant to resize.
+//
+// PRECISION (user, 2026-09-18: "rozciąganie pokoju działa
+// nieprecyzyjnie"). The first version let Konva DRAG the handle node and
+// read the node's own position as the pointer. Every frame the store
+// changed the bounds, React put the handle back at the new anchor, and
+// Konva's drag offset then fought that placement - the handle lagged and
+// jittered behind the mouse, and the edge never landed exactly where the
+// pointer was. Now the handle is not draggable at all: a press starts a
+// resize, the POINTER's own position (mapped through the stage's pan and
+// zoom, GroupScale.canvasPointFromClient) is what the edge follows, and
+// the window sees every move and the release - so the drag also
+// survives the pointer leaving the stage.
 
 import React, { useRef } from 'react';
 import { Group, Rect } from 'react-konva';
 import type { ScaleBox } from '../../project/GroupScale';
-import { anchorCursor, anchorPoint, RESIZE_ANCHORS, resizeBox } from '../../project/GroupScale';
+import {
+  anchorCursor, anchorPoint, canvasPointFromClient, RESIZE_ANCHORS, resizeBox,
+} from '../../project/GroupScale';
 import { COLOR_OUTLINE, COLOR_WHITE, MARQUEE_DASH } from '../../theme/ScadaTheme';
 
 export interface GroupResizeHandlesProps {
@@ -46,10 +60,13 @@ export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
   // would compound rounding on every mouse move, so a room dragged out
   // and back would not come back to where it started.
   const beforeRef = useRef<ScaleBox | null>(null);
+  // The latest callbacks, so the window listeners registered at press
+  // time never call a stale render's closures.
+  const callbacksRef = useRef({ onResize, onCommit, snapStep });
+  callbacksRef.current = { onResize, onCommit, snapStep };
 
   const size = HANDLE_SCREEN_SIZE / Math.max(0.05, zoom);
   const half = size / 2;
-  const snap = (value: number) => (snapStep > 0 ? Math.round(value / snapStep) * snapStep : value);
 
   return (
     <Group>
@@ -81,39 +98,46 @@ export const GroupResizeHandles: React.FC<GroupResizeHandlesProps> = ({
             stroke={COLOR_OUTLINE}
             strokeWidth={1}
             strokeScaleEnabled={false}
-            draggable
             onMouseEnter={e => {
               const stage = e.target.getStage();
               if (stage) stage.container().style.cursor = anchorCursor(anchor);
             }}
             onMouseLeave={e => {
+              if (beforeRef.current) return;               // mid-drag: keep the resize cursor
               const stage = e.target.getStage();
               if (stage) stage.container().style.cursor = 'default';
             }}
-            onDragStart={e => {
-              // Konva moves a dragged node itself; the handle's place is
-              // derived from the bounds instead, so the drag must not
-              // also bubble up and pan or rubber-band the canvas.
+            onMouseDown={e => {
+              if (e.evt.button !== 0) return;
+              // The press must not also bubble up and start a marquee or
+              // a pan on the stage.
               e.cancelBubble = true;
-              beforeRef.current = { ...bounds };
-            }}
-            onDragMove={e => {
-              e.cancelBubble = true;
-              const before = beforeRef.current;
-              if (!before) return;
-              const node = e.target;
-              const pointer = { x: snap(node.x() + half), y: snap(node.y() + half) };
-              onResize(before, resizeBox(before, anchor, pointer));
-            }}
-            onDragEnd={e => {
-              e.cancelBubble = true;
-              beforeRef.current = null;
-              onCommit();
-              // The handle is placed from the bounds on the next render;
-              // leaving Konva's own drag offset on it would put it a few
-              // pixels out until something else moved.
+              e.evt.preventDefault();
               const stage = e.target.getStage();
-              if (stage) stage.container().style.cursor = 'default';
+              if (!stage) return;
+              const before = { ...bounds };
+              beforeRef.current = before;
+              const container = stage.container();
+              container.style.cursor = anchorCursor(anchor);
+
+              const move = (ev: MouseEvent) => {
+                const rect = container.getBoundingClientRect();
+                const step = callbacksRef.current.snapStep;
+                const snap = (value: number) => (step > 0 ? Math.round(value / step) * step : value);
+                const pointer = canvasPointFromClient(
+                  ev.clientX, ev.clientY, rect.left, rect.top, stage.x(), stage.y(), stage.scaleX() || 1,
+                );
+                callbacksRef.current.onResize(before, resizeBox(before, anchor, { x: snap(pointer.x), y: snap(pointer.y) }));
+              };
+              const up = () => {
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', up);
+                beforeRef.current = null;
+                container.style.cursor = 'default';
+                callbacksRef.current.onCommit();
+              };
+              window.addEventListener('mousemove', move);
+              window.addEventListener('mouseup', up);
             }}
           />
         );
