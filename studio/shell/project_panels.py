@@ -3390,15 +3390,35 @@ class ControllerPanel(QWidget):
 
         self._load_connection_settings()
 
+    def _connection_scope(self) -> str:
+        """Each device of an object has its own controller: the address and
+        token are remembered per project file (a hash of its path), the
+        old global keys staying as the fallback for a project seen for
+        the first time."""
+        import hashlib
+        path = getattr(self._studio_window, "_project_path", None)
+        if not path:
+            return ""
+        return "controller/" + hashlib.sha1(os.path.abspath(path).encode("utf-8")).hexdigest()[:12] + "/"
+
     def _load_connection_settings(self):
         settings = self._studio_window.settings
-        self.host_edit.setText(settings.value(self._SETTINGS_HOST, ""))
-        self.token_edit.setText(settings.value(self._SETTINGS_TOKEN, ""))
+        scope = self._connection_scope()
+        self.host_edit.setText(settings.value(scope + "host", settings.value(self._SETTINGS_HOST, "")) if scope
+                               else settings.value(self._SETTINGS_HOST, ""))
+        self.token_edit.setText(settings.value(scope + "token", settings.value(self._SETTINGS_TOKEN, "")) if scope
+                                else settings.value(self._SETTINGS_TOKEN, ""))
+
+    def reload_connection(self):
+        """After the active device changed (main_window._enter_slot)."""
+        self._load_connection_settings()
 
     def _save_connection_settings(self):
         settings = self._studio_window.settings
-        settings.setValue(self._SETTINGS_HOST, self.host_edit.text().strip())
-        settings.setValue(self._SETTINGS_TOKEN, self.token_edit.text())
+        scope = self._connection_scope()
+        for prefix in ((scope,) if scope else ()) + ("controller/",):
+            settings.setValue(prefix + "host", self.host_edit.text().strip())
+            settings.setValue(prefix + "token", self.token_edit.text())
 
     def _request(self, path: str, timeout: float = 4.0, method: str = "GET", data=None, raw: bool = False,
                  content_type: str = None):

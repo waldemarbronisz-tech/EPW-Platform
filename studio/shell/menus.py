@@ -152,6 +152,19 @@ def build_fixed_menu(menubar: QMenuBar, studio_window):
     # co gdzie dodawać") - the guided way to build a project's own
     # composition: info -> modules -> locations -> cards, then a summary
     # naming where the rest (points, apparatus, screens, logic) lives.
+    # The OBJECT (user, 2026-09-18, Etango-style): one .epwsite listing
+    # the devices' projects - new/open/save-all, add/remove a device.
+    file_menu.addSeparator()
+    studio_window.act_menu_new_site = _add(file_menu, tr("menu.file.new_site"), studio_window._new_site)
+    studio_window.act_menu_open_site = _add(file_menu, tr("menu.file.open_site"), studio_window._open_site)
+    studio_window.act_menu_save_site = _add(file_menu, tr("menu.file.save_site"), studio_window._save_site)
+    file_menu.addSeparator()
+    studio_window.act_menu_add_device = _add(file_menu, tr("menu.file.add_device"), studio_window._add_new_device)
+    studio_window.act_menu_add_existing_device = _add(
+        file_menu, tr("menu.file.add_existing_device"), studio_window._add_existing_device)
+    studio_window.act_menu_remove_device = _add(
+        file_menu, tr("menu.file.remove_device"), studio_window._remove_device)
+    file_menu.addSeparator()
     studio_window.act_menu_device_wizard = _add(
         file_menu, tr("menu.file.device_wizard"), studio_window._run_device_wizard, icon_name="wizard"
     )

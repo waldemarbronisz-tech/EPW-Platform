@@ -25,13 +25,15 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
      happens to implement which part - EKRANY/LOGIKA become two leaves
      among many, most still unbuilt and shown, honestly, as such.
 """
+import os
+import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QElapsedTimer, QEventLoop, QSettings, QSize, QTimer
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
-    QDialog, QFileDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle, QStyledItemDelegate,
-    QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
+    QDialog, QFileDialog, QInputDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle,
+    QStyledItemDelegate, QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
     QVBoxLayout,
 )
 
@@ -45,6 +47,8 @@ from studio.shell.menus import (
     build_project_info_toolbar, build_service_notes_toolbar, build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
+from studio.shell.site_format import (SITE_SUFFIX, SiteFormatError, load_site, new_site, relative_project_path,
+                                      resolve_project_path, save_site)
 from studio.shell.style import STUDIO_CHROME_QSS
 
 _TREE_ITEM_SCREENS = "screens"
@@ -248,6 +252,24 @@ def _set_breadcrumb_text(label, text):
     label.setToolTip(text)
 
 
+class _ProjectSlot:
+    """One device of the object (user, 2026-09-18, Etango-style "obiekt +
+    urządzenia"): its Project, its file, and the tree marks it had when
+    the user switched away. The ACTIVE slot's project is the window's
+    self._project; the editors always hold the active project's
+    documents (parked into the slot's Project on a switch)."""
+
+    def __init__(self, project, path, edited_aspects=None):
+        self.project = project
+        self.path = path
+        self.edited_aspects = set(edited_aspects or ())
+
+
+def _safe_folder_name(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", name).strip("_.")
+    return cleaned or "device"
+
+
 class _TreeRowHeightDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
@@ -383,6 +405,14 @@ class StudioMainWindow(QMainWindow):
         self._logic_panel = None
         self._synoptic_dirty = False  # last isDirty read off the Synoptic state bridge
         self._edited_aspects = set()  # tree keys edited since the last save - drawn red with " *"
+        # The OBJECT (site_format.Site): its devices are _ProjectSlots, one
+        # active. None = an implicit one-device object (a plain projekt.epw).
+        self._site = None
+        self._site_path = None
+        self._slots = []
+        self._active_slot = -1
+        self._devices_updating = False
+        self._in_device_signal = False
         self._logic_dirty_seen = False
         self._project_info_panel = None
         self._modules_panel = None
@@ -414,6 +444,8 @@ class StudioMainWindow(QMainWindow):
         # regression, not a fix.
         self._project = new_project(tr("project_info.default_name"))
         self._project_path = None
+        self._slots = [_ProjectSlot(self._project, None)]
+        self._active_slot = 0
 
         self._build_ui()
         self._restore_splitter_state()
@@ -451,6 +483,27 @@ class StudioMainWindow(QMainWindow):
     def _build_ui(self):
         self.tree = self._build_tree()
 
+        # Left column, Etango-style (user, 2026-09-18): the OBJECT's device
+        # list on top - one row per controller/project, the ones with
+        # unsaved edits bold red - and the selected device's own aspect
+        # tree below, headed "Sterownik: <name>".
+        devices_container = QWidget()
+        devices_layout = QVBoxLayout(devices_container)
+        devices_layout.setContentsMargins(0, 0, 0, 0)
+        devices_layout.setSpacing(0)
+        self._devices_header = QLabel(tr("site.devices_header"))
+        self._devices_header.setObjectName("TreeHeader")
+        self._devices_header.setStyleSheet(_TREE_HEADER_QSS)
+        devices_layout.addWidget(self._devices_header)
+        self.device_tree = QTreeWidget()
+        self.device_tree.setObjectName("ProjectTree")
+        self.device_tree.setHeaderHidden(True)
+        self.device_tree.setIndentation(12)
+        self.device_tree.setItemDelegate(_TreeRowHeightDelegate(self.device_tree))
+        self.device_tree.currentItemChanged.connect(self._on_device_selection_changed)
+        self.device_tree.itemChanged.connect(self._on_device_item_changed)
+        devices_layout.addWidget(self.device_tree, 1)
+
         tree_container = QWidget()
         tree_layout = QVBoxLayout(tree_container)
         tree_layout.setContentsMargins(0, 0, 0, 0)
@@ -460,6 +513,14 @@ class StudioMainWindow(QMainWindow):
         self._tree_header.setStyleSheet(_TREE_HEADER_QSS)
         tree_layout.addWidget(self._tree_header)
         tree_layout.addWidget(self.tree, 1)
+
+        self._left_splitter = QSplitter(Qt.Orientation.Vertical)
+        self._left_splitter.addWidget(devices_container)
+        self._left_splitter.addWidget(tree_container)
+        self._left_splitter.setStretchFactor(0, 0)
+        self._left_splitter.setStretchFactor(1, 1)
+        self._left_splitter.setSizes([170, 640])
+        self._refresh_device_list()
 
         self.stack = QStackedWidget()
         self._empty_placeholder = QWidget()
@@ -471,7 +532,7 @@ class StudioMainWindow(QMainWindow):
         self.stack.addWidget(self._inactive_placeholder)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.addWidget(tree_container)
+        self.splitter.addWidget(self._left_splitter)
         self.splitter.addWidget(self.stack)
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
@@ -1153,10 +1214,11 @@ class StudioMainWindow(QMainWindow):
 
     def _retranslate(self):
         self.setWindowTitle(tr("app.title"))
-        self._tree_header.setText(tr("tree.root"))
+        self._devices_header.setText(tr("site.devices_header"))
         for item, key in self._tree_label_refs:
             item.setText(0, tr(key))
         self._refresh_tree_marks()
+        self._refresh_device_list()
 
         old_toolbar = self._shared_toolbar
         self.removeToolBar(old_toolbar)
@@ -1670,6 +1732,406 @@ class StudioMainWindow(QMainWindow):
         if self._logic_panel is not None:
             self._logic_panel.sync_cards_from_studio(self._project)
         self._refresh_tree_marks()
+        self._refresh_device_list()
+
+    # ------------------------------------------------------------------
+    # The object and its devices (user, 2026-09-18: "tworzymy obiekt,
+    # dodajemy urządzenia")
+    # ------------------------------------------------------------------
+
+    def device_names(self) -> list:
+        """The device list as shown: [(name, dirty)] in tree order."""
+        return [(self._slot_name(index), self._slot_dirty(index)) for index in range(len(self._slots))]
+
+    def _slot_name(self, index: int) -> str:
+        slot = self._slots[index]
+        project = self._project if index == self._active_slot else slot.project
+        name = (project.metadata.name or "").strip()
+        if name:
+            return name
+        path = self._project_path if index == self._active_slot else slot.path
+        return Path(path).parent.name if path else tr("project_info.default_name")
+
+    def _slot_dirty(self, index: int) -> bool:
+        if index == self._active_slot:
+            return bool(self._project.is_dirty or self._editors_dirty())
+        return bool(self._slots[index].project.is_dirty)
+
+    def _site_label(self) -> str:
+        if self._site is not None and self._site.name.strip():
+            return self._site.name.strip()
+        return tr("site.unsaved_object")
+
+    def _refresh_device_list(self):
+        tree = getattr(self, "device_tree", None)
+        if tree is None:
+            return
+        if self._in_device_signal:
+            QTimer.singleShot(0, self._refresh_device_list)   # never rebuild the tree inside its own signal
+            return
+        self._devices_updating = True
+        try:
+            tree.clear()
+            root = QTreeWidgetItem([self._site_label()])
+            root.setIcon(0, icons.icon("draw_building"))
+            root.setFlags((root.flags() & ~Qt.ItemFlag.ItemIsSelectable) | Qt.ItemFlag.ItemIsEditable)
+            font = root.font(0)
+            font.setBold(True)
+            root.setFont(0, font)
+            tree.addTopLevelItem(root)
+            self._device_root_item = root
+            current = None
+            for index in range(len(self._slots)):
+                dirty = self._slot_dirty(index)
+                label = f"{self._slot_name(index)} *" if dirty else self._slot_name(index)
+                item = QTreeWidgetItem([label])
+                item.setIcon(0, icons.icon("device_list"))
+                item.setData(0, Qt.ItemDataRole.UserRole, index)
+                if dirty:
+                    item.setForeground(0, QColor(_EDITED_MARK_COLOR))
+                    item_font = item.font(0)
+                    item_font.setBold(True)
+                    item.setFont(0, item_font)
+                root.addChild(item)
+                if index == self._active_slot:
+                    current = item
+            root.setExpanded(True)
+            if current is not None:
+                tree.setCurrentItem(current)
+            self._tree_header.setText(tr("site.device_header", name=self.root_label()))
+        finally:
+            self._devices_updating = False
+
+    def _on_device_selection_changed(self, current, _previous):
+        if self._devices_updating or current is None:
+            return
+        index = current.data(0, Qt.ItemDataRole.UserRole)
+        if index is None or index == self._active_slot:
+            return
+        self._in_device_signal = True
+        try:
+            self._activate_slot(index)
+        finally:
+            self._in_device_signal = False
+
+    def _on_device_item_changed(self, item, _column):
+        """The object's name edited in place at the device list's root."""
+        if self._devices_updating or item is not getattr(self, "_device_root_item", None):
+            return
+        name = item.text(0).strip()
+        if self._site is None:
+            self._site = new_site(name)
+        elif name != self._site.name:
+            self._site.name = name
+            self._site.is_dirty = True
+        self._refresh_device_list()
+
+    def _activate_slot(self, index: int) -> bool:
+        """Switches the active device: the editors' documents are parked
+        into the current project first (an editor that refuses to give
+        its document cancels the switch), then the other project is
+        entered - its own documents pushed into the editors, its own
+        tree marks restored."""
+        if index == self._active_slot or not (0 <= index < len(self._slots)):
+            return False
+        if not self._park_active_slot():
+            self.statusBar().showMessage(tr("site.switch_failed"), 8000)
+            self._refresh_device_list()
+            return False
+        self._enter_slot(index)
+        return True
+
+    def _park_active_slot(self) -> bool:
+        if not (0 <= self._active_slot < len(self._slots)):
+            return True
+        slot = self._slots[self._active_slot]
+        editors_dirty = self._editors_dirty()
+        if not self._collect_editor_documents():
+            return False
+        if editors_dirty:
+            # The unsaved editor work now lives in the project object -
+            # keep the project dirty and its branch marked.
+            self._project.touch()
+            if self._synoptic_dirty:
+                self._edited_aspects.add(_TREE_ITEM_SCREENS)
+            if self._logic_panel is not None and self._logic_panel.is_dirty():
+                self._edited_aspects.add(_TREE_ITEM_LOGIC)
+        slot.project = self._project
+        slot.path = self._project_path
+        slot.edited_aspects = set(self._edited_aspects)
+        return True
+
+    def _enter_slot(self, index: int):
+        slot = self._slots[index]
+        self._active_slot = index
+        self._project = slot.project
+        self._project_path = slot.path
+        self._push_editor_documents()
+        self._edited_aspects = set(slot.edited_aspects)
+        self._on_project_changed(aspect_edit=False)
+        self._refresh_all_project_panels()
+        self._refresh_device_list()
+
+    def _install_workspace(self, slots: list, site, site_path, active: int = 0):
+        """Replaces the whole object: after New/Open (a plain projekt.epw
+        is an implicit one-device object) or after opening an .epwsite."""
+        self._site = site
+        self._site_path = site_path
+        self._slots = list(slots)
+        self._active_slot = -1
+        self._edited_aspects = set()
+        self._enter_slot(active)
+
+    # -- object files -------------------------------------------------------------------
+
+    def _ask_site_path(self, name: str):
+        start_dir = self.settings.value("project/last_dir", "") or ""
+        suggested = str(Path(start_dir) / f"{_safe_folder_name(name)}{SITE_SUFFIX}") if start_dir \
+            else f"{_safe_folder_name(name)}{SITE_SUFFIX}"
+        path, _filter = QFileDialog.getSaveFileName(self, tr("site.save_dialog_title"), suggested,
+                                                    f"EPW Object (*{SITE_SUFFIX})")
+        if not path:
+            return None
+        if not path.lower().endswith(SITE_SUFFIX):
+            path += SITE_SUFFIX
+        return path
+
+    def _create_device_files(self, site_path: str, site, device_name: str) -> _ProjectSlot:
+        """A new device of the object: its own folder next to the object
+        file, a fresh projekt.epw inside, listed in the object."""
+        base = Path(site_path).parent
+        folder = base / _safe_folder_name(device_name)
+        n = 2
+        while folder.exists():
+            folder = base / f"{_safe_folder_name(device_name)}_{n}"
+            n += 1
+        folder.mkdir(parents=True)
+        project = new_project(device_name)
+        path = folder / "projekt.epw"
+        save_project(project, path)
+        site.projects.append(relative_project_path(site_path, str(path)))
+        site.is_dirty = True
+        return _ProjectSlot(project, str(path))
+
+    def _new_site(self):
+        if not self._confirm_discard_project():
+            return
+        name, ok = QInputDialog.getText(self, tr("site.new_title"), tr("site.name_prompt"))
+        if not ok or not name.strip():
+            return
+        path = self._ask_site_path(name.strip())
+        if not path:
+            return
+        device_name, ok = QInputDialog.getText(self, tr("site.add_device_title"), tr("site.device_name_prompt"),
+                                               text=tr("site.default_device_name"))
+        if not ok or not device_name.strip():
+            device_name = tr("site.default_device_name")
+        site = new_site(name.strip())
+        try:
+            slot = self._create_device_files(path, site, device_name.strip())
+            save_site(site, path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("site.new_title"), str(exc))
+            return
+        self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
+        self._install_workspace([slot], site, path)
+
+    def _open_site(self):
+        if not self._confirm_discard_project():
+            return
+        path, _filter = QFileDialog.getOpenFileName(self, tr("site.open_dialog_title"),
+                                                    self.settings.value("project/last_dir", ""),
+                                                    f"EPW Object (*{SITE_SUFFIX})")
+        if not path:
+            return
+        self._load_site_from_path(path)
+
+    def _load_site_from_path(self, path: str) -> bool:
+        try:
+            site = load_site(path)
+        except (SiteFormatError, OSError) as exc:
+            QMessageBox.critical(self, tr("site.open_failed_title"), str(exc))
+            self._remove_recent_project(path)
+            return False
+        slots, problems = [], []
+        for rel in site.projects:
+            full = resolve_project_path(path, rel)
+            try:
+                slots.append(_ProjectSlot(load_project(full), full))
+            except (ProjectFormatError, OSError) as exc:
+                problems.append(f"{rel}: {exc}")
+        if problems:
+            QMessageBox.warning(self, tr("site.open_failed_title"), "\n".join(problems))
+        if not slots:
+            QMessageBox.critical(self, tr("site.open_failed_title"), tr("site.empty_text"))
+            return False
+        self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
+        self._install_workspace(slots, site, path)
+        return True
+
+    def _ensure_site_file(self) -> bool:
+        """Adding a device needs a real object file: an implicit
+        one-device object is saved first (its project, if still unsaved,
+        before that - the object lists projects as files)."""
+        if self._site_path:
+            return True
+        if self._project_path is None:
+            QMessageBox.information(self, tr("site.add_device_title"), tr("site.save_project_first"))
+            if not self._save_project_as():
+                return False
+        default = (self._site.name if self._site is not None else "") or self._project.metadata.name \
+            or tr("site.default_name")
+        name, ok = QInputDialog.getText(self, tr("site.new_title"), tr("site.name_prompt"), text=default)
+        if not ok or not name.strip():
+            return False
+        path = self._ask_site_path(name.strip())
+        if not path:
+            return False
+        site = self._site or new_site(name.strip())
+        site.name = name.strip()
+        site.projects = []
+        for index, slot in enumerate(self._slots):
+            slot_path = self._project_path if index == self._active_slot else slot.path
+            if slot_path:
+                site.projects.append(relative_project_path(path, slot_path))
+        try:
+            save_site(site, path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("site.new_title"), str(exc))
+            return False
+        self._site, self._site_path = site, path
+        self.settings.setValue("project/last_dir", str(Path(path).parent))
+        self._remember_recent_project(path)
+        self._refresh_device_list()
+        return True
+
+    def _add_new_device(self):
+        if not self._ensure_site_file():
+            return
+        name, ok = QInputDialog.getText(self, tr("site.add_device_title"), tr("site.device_name_prompt"),
+                                        text=tr("site.default_device_name"))
+        if not ok or not name.strip():
+            return
+        if not self._park_active_slot():
+            self.statusBar().showMessage(tr("site.switch_failed"), 8000)
+            return
+        try:
+            slot = self._create_device_files(self._site_path, self._site, name.strip())
+            save_site(self._site, self._site_path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("site.add_device_title"), str(exc))
+            return
+        self._slots.append(slot)
+        self._enter_slot(len(self._slots) - 1)
+
+    def _add_existing_device(self):
+        if not self._ensure_site_file():
+            return
+        path, _filter = QFileDialog.getOpenFileName(self, tr("site.add_existing_title"),
+                                                    self.settings.value("project/last_dir", ""), "EPW Project (*.epw)")
+        if not path:
+            return
+        self._add_existing_device_from_path(path)
+
+    def _add_existing_device_from_path(self, path: str) -> bool:
+        full = os.path.abspath(path)
+        known = [os.path.abspath(self._project_path if i == self._active_slot else s.path)
+                 for i, s in enumerate(self._slots) if (self._project_path if i == self._active_slot else s.path)]
+        if full in known:
+            QMessageBox.information(self, tr("site.add_existing_title"), tr("site.already_in_object"))
+            return False
+        try:
+            project = load_project(full)
+        except (ProjectFormatError, OSError) as exc:
+            QMessageBox.critical(self, tr("site.add_existing_title"), str(exc))
+            return False
+        if not self._park_active_slot():
+            self.statusBar().showMessage(tr("site.switch_failed"), 8000)
+            return False
+        self._slots.append(_ProjectSlot(project, full))
+        self._site.projects.append(relative_project_path(self._site_path, full))
+        try:
+            save_site(self._site, self._site_path)
+        except OSError as exc:
+            QMessageBox.critical(self, tr("site.add_existing_title"), str(exc))
+        self._enter_slot(len(self._slots) - 1)
+        return True
+
+    def _remove_device(self):
+        """Takes the active device out of the object - the project file
+        stays on disk."""
+        if len(self._slots) <= 1:
+            QMessageBox.information(self, tr("site.remove_title"), tr("site.remove_last_text"))
+            return
+        name = self._slot_name(self._active_slot)
+        if self._project.is_dirty or self._editors_dirty():
+            answer = QMessageBox.question(self, tr("site.remove_title"), tr("site.discard_device_text", name=name),
+                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                          QMessageBox.StandardButton.No)
+        else:
+            answer = QMessageBox.question(self, tr("site.remove_title"), tr("site.remove_confirm", name=name),
+                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                          QMessageBox.StandardButton.No)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        index = self._active_slot
+        removed_path = self._project_path
+        del self._slots[index]
+        if self._site is not None and removed_path and self._site_path:
+            rel = relative_project_path(self._site_path, removed_path)
+            self._site.projects = [rel_path for rel_path in self._site.projects if rel_path != rel]
+            try:
+                save_site(self._site, self._site_path)
+            except OSError as exc:
+                QMessageBox.critical(self, tr("site.remove_title"), str(exc))
+        self._active_slot = -1
+        self._edited_aspects = set()
+        self._enter_slot(max(0, index - 1))
+
+    def _save_all_projects(self) -> bool:
+        """Every device with unsaved edits; the active one through
+        _save_project() (it collects the editors' documents), the parked
+        ones straight from their Project objects."""
+        if not self._save_project():
+            return False
+        for index, slot in enumerate(self._slots):
+            if index == self._active_slot or not slot.project.is_dirty:
+                continue
+            if slot.path is None:
+                QMessageBox.warning(self, tr("site.save_title"), tr("site.device_unsaved_text", name=self._slot_name(index)))
+                return False
+            try:
+                save_project(slot.project, slot.path)
+            except OSError as exc:
+                QMessageBox.critical(self, tr("project_info.save_failed_title"), str(exc))
+                return False
+            slot.edited_aspects = set()
+        self._refresh_device_list()
+        return True
+
+    def _save_site(self) -> bool:
+        """"Zapisz obiekt": every device, then the object file itself."""
+        if not self._save_all_projects():
+            return False
+        if not self._ensure_site_file():
+            return False
+        if self._site.is_dirty:
+            try:
+                save_site(self._site, self._site_path)
+            except OSError as exc:
+                QMessageBox.critical(self, tr("site.save_title"), str(exc))
+                return False
+        self._refresh_device_list()
+        return True
+
+    def _workspace_dirty(self) -> bool:
+        if self._project.is_dirty or self._editors_dirty():
+            return True
+        if any(slot.project.is_dirty for i, slot in enumerate(self._slots) if i != self._active_slot):
+            return True
+        return bool(self._site is not None and self._site.is_dirty and self._site_path)
 
     def _note_aspect_edit(self, aspect_edit: bool):
         """Keeps _edited_aspects honest: a save (nothing dirty any more)
@@ -1803,7 +2265,7 @@ class StudioMainWindow(QMainWindow):
     def _confirm_discard_project(self) -> bool:
         """True = caller may proceed (nothing unsaved, or the user chose
         Save/Discard). False = Cancel, caller must stop."""
-        if not self._project.is_dirty and not self._editors_dirty():
+        if not self._workspace_dirty():
             return True
         reply = QMessageBox.question(
             self, tr("project_info.unsaved_title"), tr("project_info.unsaved_text"),
@@ -1811,6 +2273,8 @@ class StudioMainWindow(QMainWindow):
             | QMessageBox.StandardButton.Cancel,
         )
         if reply == QMessageBox.StandardButton.Save:
+            if len(self._slots) > 1 or self._site_path:
+                return self._save_site()
             return self._save_project()
         return reply == QMessageBox.StandardButton.Discard
 
@@ -1843,16 +2307,15 @@ class StudioMainWindow(QMainWindow):
             self._mqtt_panel.refresh()
         if self._service_notes_panel is not None:
             self._service_notes_panel.refresh()
+        if self._controller_panel is not None:
+            self._controller_panel.reload_connection()
 
     def _new_project(self):
         if not self._confirm_discard_project():
             return
-        self._project = new_project(tr("project_info.default_name"))
-        self._project_path = None
-        self._push_editor_documents()
-        self._edited_aspects.clear()          # a new project starts dirty, but nothing was edited yet
-        self._on_project_changed(aspect_edit=False)
-        self._refresh_all_project_panels()
+        # A new project is an implicit one-device object (it starts dirty,
+        # but nothing was edited yet - no marks).
+        self._install_workspace([_ProjectSlot(new_project(tr("project_info.default_name")), None)], None, None)
 
     def _open_project(self):
         if not self._confirm_discard_project():
@@ -1881,17 +2344,15 @@ class StudioMainWindow(QMainWindow):
             QMessageBox.critical(self, tr("project_info.open_failed_title"), message)
             self._remove_recent_project(path)  # a saved-but-now-broken/missing entry is worse than none
             return
-        self._project = project
-        self._project_path = path
         self.settings.setValue("project/last_dir", str(Path(path).parent))
         self._remember_recent_project(path)
-        self._push_editor_documents()
-        self._edited_aspects.clear()
-        self._on_project_changed(aspect_edit=False)
-        self._refresh_all_project_panels()
+        self._install_workspace([_ProjectSlot(project, path)], None, None)
 
     def _open_recent_project(self, path: str):
         if not self._confirm_discard_project():
+            return
+        if path.lower().endswith(SITE_SUFFIX):
+            self._load_site_from_path(path)
             return
         self._load_project_from_path(path)
 
@@ -1963,7 +2424,20 @@ class StudioMainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.critical(self, tr("project_info.save_failed_title"), str(exc))
             return False
+        previous = self._project_path
         self._project_path = path
+        if 0 <= self._active_slot < len(self._slots):
+            self._slots[self._active_slot].path = path
+        if self._site is not None and self._site_path:
+            old_rel = relative_project_path(self._site_path, previous) if previous else None
+            new_rel = relative_project_path(self._site_path, path)
+            self._site.projects = [new_rel if rel == old_rel else rel for rel in self._site.projects]
+            if new_rel not in self._site.projects:
+                self._site.projects.append(new_rel)
+            try:
+                save_site(self._site, self._site_path)
+            except OSError as exc:
+                QMessageBox.critical(self, tr("site.save_title"), str(exc))
         self.settings.setValue("project/last_dir", str(Path(path).parent))
         self._remember_recent_project(path)
         self._mark_editors_saved()
@@ -2110,6 +2584,9 @@ class StudioMainWindow(QMainWindow):
         state = self.settings.value("shell/splitter_state")
         if state is not None:
             self.splitter.restoreState(state)
+        left_state = self.settings.value("shell/left_splitter_state")
+        if left_state is not None:
+            self._left_splitter.restoreState(left_state)
         else:
             # Task 1.4's fuller tree (nested groups) needs a bit more
             # room than the old two-flat-item tree's 170px default.
@@ -2123,6 +2600,7 @@ class StudioMainWindow(QMainWindow):
             event.ignore()
             return
         self.settings.setValue("shell/splitter_state", self.splitter.saveState())
+        self.settings.setValue("shell/left_splitter_state", self._left_splitter.saveState())
         super().closeEvent(event)
 
 

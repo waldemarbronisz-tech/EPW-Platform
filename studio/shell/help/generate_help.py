@@ -41,6 +41,15 @@ sterownikiem — wszystko w jednym oknie, jednym drzewie projektu.
 nie osobne programy — dawne samodzielne uruchamianie każdego z osobna
 nie jest już używane.
 
+**Obiekt i urządzenia.** Lewa kolumna zaczyna się od LISTY URZĄDZEŃ:
+obiekt (np. dom, zakład) i jego sterowniki, każdy jako osobny projekt
+`projekt.epw` w swoim folderze, spięte plikiem `obiekt.epwsite` (Plik →
+Nowy obiekt / Otwórz obiekt / Dodaj sterownik do obiektu). Kliknięcie
+sterownika na liście przełącza całe drzewo poniżej na jego projekt;
+sterownik ze zmianami jest czerwony z gwiazdką. „Zapisz” zapisuje
+aktywny sterownik, „Zapisz obiekt” — wszystkie. Zwykły pojedynczy
+`projekt.epw` nadal działa jak dotąd, jako obiekt z jednym sterownikiem.
+
 **Drzewo projektu pokazuje, gdzie masz niezapisane zmiany**: dział,
 w którym coś edytowałeś, jest czerwony z gwiazdką (`Lokalizacje *`)
 aż do zapisania projektu. Korzeń drzewa nosi nazwę projektu (np.
@@ -61,6 +70,15 @@ controller connection — all in one window, one project tree.
 **Screens (Synoptic Editor) and Logic (Logic Studio) are departments of
 Studio**, not separate programs — launching each one standalone is no
 longer how this is used.
+
+**Object and devices.** The left column starts with the DEVICE LIST:
+an object (a house, a plant) and its controllers, each its own
+`projekt.epw` in its own folder, tied together by an `obiekt.epwsite`
+file (File → New Object / Open Object / Add Controller to Object).
+Clicking a controller switches the whole tree below to its project; a
+controller with unsaved edits is red with an asterisk. "Save" saves the
+active controller, "Save Object" saves them all. A plain single
+`projekt.epw` still works as before, as a one-controller object.
 
 **The project tree shows where unsaved edits are**: a branch you
 edited is red with an asterisk (`Locations *`) until the project is
