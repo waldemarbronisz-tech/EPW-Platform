@@ -7,7 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { applyScadaCssVariables } from './theme/ScadaTheme'
 import { useStore } from './store'
 import type { CardEntry, LocationEntry, Device } from './project/DeviceSchema'
-import { loadProjectFromStudio, markSavedByStudio, projectDataForStudio, importDevicesFromStudio } from './project/StudioBridge'
+import { loadProjectFromStudio, markSavedByStudio, projectDataForStudio, importDevicesFromStudio, setLiveValuesFromStudio } from './project/StudioBridge'
 
 // Must run before the first paint, so the interface CSS (which reads these
 // as var(--scada-*)) never has a chance to render with stale fallback
@@ -197,6 +197,20 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// feat/live-view: Studio pushes the controller's tag values as JSON text
+// (or "null" when live goes off) - studio/shell/synoptic_panel.py's
+// push_live_values().
+type LiveBridge = { __synopticLiveValues?: (json: string) => void };
+(window as unknown as LiveBridge).__synopticLiveValues = (json: string): void => {
+  let values: Record<string, unknown> | null = null;
+  try {
+    values = json ? JSON.parse(json) : null;
+  } catch {
+    values = null;
+  }
+  setLiveValuesFromStudio(values);
+};
 
 // Diagnostic/automation hook (2026-09-18): Studio's live checks (a script
 // driving the real editor inside the shell's QWebEngineView) read the

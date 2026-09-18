@@ -47,6 +47,7 @@ from studio.shell.menus import (
     build_project_info_toolbar, build_service_notes_toolbar, build_synoptic_context_toolbar, build_zones_toolbar,
 )
 from studio.shell.project_format import ProjectFormatError, load_project, new_project, save_project
+from studio.shell.controller_link import ControllerLink, LiveMonitor
 from studio.shell.site_format import (SITE_SUFFIX, SiteFormatError, load_site, new_site, relative_project_path,
                                       resolve_project_path, save_site)
 from studio.shell.style import STUDIO_CHROME_QSS
@@ -413,6 +414,14 @@ class StudioMainWindow(QMainWindow):
         self._active_slot = -1
         self._devices_updating = False
         self._in_device_signal = False
+        # SPEC "Studio - sterownik - połączenie na żywo": one link, one
+        # monitor; force mode is Studio-side state (the controller keeps
+        # the forces themselves and their heartbeat).
+        self._controller_link = ControllerLink(self)
+        self._live_monitor = LiveMonitor(self._controller_link, self)
+        self._live_monitor.updated.connect(self._on_live_updated)
+        self._live_monitor.failed.connect(self._on_live_failed)
+        self._force_mode = False
         self._logic_dirty_seen = False
         self._project_info_panel = None
         self._modules_panel = None
@@ -796,6 +805,11 @@ class StudioMainWindow(QMainWindow):
         self.act_shared_redo = _make("toolbar.redo", "redo", self._shared_redo)
         tb.addSeparator()
         self.act_shared_help = _make("toolbar.help", "help", self._help_topics)
+        tb.addSeparator()
+        # "Na żywo": the controller's values next to the points, the cards'
+        # health and the screens' symbols - while this is checked.
+        self.act_shared_live = _make("toolbar.live", "scada_preview", self._toggle_live)
+        self.act_shared_live.setCheckable(True)
         self._set_shared_toolbar_enabled(False, False)
 
     # ------------------------------------------------------------------
@@ -2132,6 +2146,86 @@ class StudioMainWindow(QMainWindow):
         if any(slot.project.is_dirty for i, slot in enumerate(self._slots) if i != self._active_slot):
             return True
         return bool(self._site is not None and self._site.is_dirty and self._site_path)
+
+    # ------------------------------------------------------------------
+    # Live values and forcing (controller_link.py)
+    # ------------------------------------------------------------------
+
+    def controller_link(self) -> ControllerLink:
+        return self._controller_link
+
+    def live_monitor(self) -> LiveMonitor:
+        return self._live_monitor
+
+    def live_enabled(self) -> bool:
+        return self._live_monitor.is_enabled()
+
+    def _toggle_live(self, checked=None):
+        enabled = self.act_shared_live.isChecked() if checked is None else bool(checked)
+        if self.act_shared_live.isChecked() != enabled:
+            self.act_shared_live.setChecked(enabled)
+        if not enabled and self._force_mode:
+            self.set_force_mode(False)
+        self._live_monitor.set_enabled(enabled)
+        if enabled:
+            self.statusBar().showMessage(tr("live.enabled", host=self._controller_link.host()), 5000)
+
+    def _on_live_updated(self, tags, forces):
+        if self._point_registry_panel is not None:
+            self._point_registry_panel.apply_live(tags, forces)
+        if self._cards_panel is not None:
+            self._cards_panel.apply_live(tags, forces)
+        panel = self._synoptic_panel
+        if panel is not None and panel.is_page_ready():
+            panel.push_live_values(self._live_monitor.values() if self._live_monitor.connected else None)
+        if forces and not self._force_mode:
+            # Forces held from elsewhere (another Studio, an earlier session)
+            # are shown, never silently adopted - the heartbeat stays theirs.
+            self.statusBar().showMessage(tr("live.forces_held_elsewhere", count=len(forces)), 4000)
+
+    def _on_live_failed(self, reason):
+        self.statusBar().showMessage(tr("live.failed", reason=reason), 4000)
+
+    def force_mode_enabled(self) -> bool:
+        return self._force_mode
+
+    def set_force_mode(self, enabled: bool) -> bool:
+        """SPEC "Wymuszanie stanów" condition 1 - deliberate: a warning
+        dialog, the Engineer token on the controller side, live on.
+        Turning it off releases every force in one move (condition 3)."""
+        if enabled == self._force_mode:
+            return enabled
+        if enabled:
+            answer = QMessageBox.warning(self, tr("live.force_mode_title"), tr("live.force_mode_text"),
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                         QMessageBox.StandardButton.No)
+            if answer != QMessageBox.StandardButton.Yes:
+                self._sync_force_mode_action()
+                return False
+            if not self.live_enabled():
+                self._toggle_live(True)
+            self._force_mode = True
+            self._live_monitor.heartbeat_wanted = True
+        else:
+            self._force_mode = False
+            self._live_monitor.heartbeat_wanted = False
+            self.release_all_forces()
+        self._sync_force_mode_action()
+        return self._force_mode
+
+    def _sync_force_mode_action(self):
+        action = getattr(self, "act_force_mode", None)
+        if action is not None and action.isChecked() != self._force_mode:
+            action.setChecked(self._force_mode)
+
+    def release_all_forces(self):
+        """"Zdjęcie wszystkiego jednym poleceniem" - DELETE /api/v1/forces."""
+        ok, result = self._controller_link.request("/api/v1/forces", method="DELETE", timeout=6.0)
+        if not ok:
+            self.statusBar().showMessage(tr("live.release_failed", reason=result), 5000)
+        if self.live_enabled():
+            self._live_monitor.poll()
+        return ok
 
     def _note_aspect_edit(self, aspect_edit: bool):
         """Keeps _edited_aspects honest: a save (nothing dirty any more)

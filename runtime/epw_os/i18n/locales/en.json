@@ -114,7 +114,10 @@
     "intrusion_exit_delay": "SECURITY: EXIT DELAY ({seconds}s)",
     "intrusion_entry_delay": "SECURITY: ENTRY DELAY ({seconds}s)",
     "intrusion_alarm": "🚨 INTRUSION ALARM",
-    "tooltip_intrusion_status": "Aggregate intrusion alarm system state across every zone. Manage from the Intrusion Alarm page."
+    "tooltip_intrusion_status": "Aggregate intrusion alarm system state across every zone. Manage from the Intrusion Alarm page.",
+    "forces_active": "⚠ FORCES: {count}",
+    "tooltip_forces": "Studio is forcing: {tags}. Forces go away when released, when the link to Studio is lost and on restart.",
+    "release_all_forces": "Release all forces"
   },
   "topbar": {
     "project": "Project",

@@ -553,6 +553,19 @@ class SynopticPanel(QWidget):
         )
         self._view.page().runJavaScript(js)
 
+    def push_live_values(self, values):
+        """{tag: value} from the controller (or None when live is off) -
+        the editor shows device-bound symbols in their live state
+        (src/store/liveSlice.ts)."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        payload = json.dumps(values) if values is not None else "null"
+        js = (
+            "typeof window.__synopticLiveValues === 'function' "
+            f"&& window.__synopticLiveValues({json.dumps(payload)});"
+        )
+        self._view.page().runJavaScript(js)
+
     def mark_saved(self, name: str):
         """Studio just wrote projekt.epw with this editor's document inside."""
         if self._pages.currentIndex() != _PAGE_VIEW:

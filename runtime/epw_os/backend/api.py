@@ -58,6 +58,11 @@ logger = logging.getLogger("API")
 
 
 # Models
+class ForceRequest(BaseModel):
+    tag: str
+    value: object
+
+
 class CommandRequest(BaseModel):
     device_tag: str
     command: str
@@ -279,6 +284,68 @@ def download_project_file(core=Depends(get_core), level: str = Depends(_require_
                                  success=True)
     return Response(content=payload, media_type="application/gzip",
                     headers={"Content-Disposition": 'attachment; filename="projekt.epw"'})
+
+
+# --- forcing (SPEC "Wymuszanie stanów - dozwolone, obwarowane"; core/force_manager.py) -----
+
+def _forces_body(manager) -> dict:
+    return {"forces": manager.snapshot(), "heartbeat_timeout_s": manager.heartbeat_timeout_s,
+            "seconds_since_heartbeat": manager.seconds_since_heartbeat()}
+
+
+@app.get("/api/v1/forces")
+def get_forces(core=Depends(get_core)):
+    """Every active force - what Studio marks and what the panel's own
+    indicator counts. Read-only, unauthenticated like the other views:
+    a force is deliberately visible to everyone."""
+    manager = getattr(core, "force_manager", None)
+    if manager is None:
+        return {"forces": [], "heartbeat_timeout_s": None, "seconds_since_heartbeat": None}
+    return _forces_body(manager)
+
+
+@app.post("/api/v1/forces")
+def set_force(body: ForceRequest, core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Pins an input or drives an output (Engineer token). Refused for
+    anything off the project's points or on the protection path - the
+    refusal is audited too. Counts as a heartbeat."""
+    manager = getattr(core, "force_manager", None)
+    if manager is None:
+        raise HTTPException(status_code=404, detail="Forcing is not available on this controller.")
+    ok, reason = manager.force(body.tag, body.value, actor=f"API:{level}")
+    if not ok:
+        raise HTTPException(status_code=403, detail={"error": "force_refused", "reason": reason})
+    return {"forced": True, "tag": body.tag, "value": body.value, **_forces_body(manager)}
+
+
+@app.post("/api/v1/forces/heartbeat")
+def force_heartbeat(core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Studio calls this while it holds forces; silence for longer than
+    heartbeat_timeout_s releases them all (a closed laptop, a lost
+    link)."""
+    manager = getattr(core, "force_manager", None)
+    if manager is None:
+        raise HTTPException(status_code=404, detail="Forcing is not available on this controller.")
+    manager.heartbeat()
+    return _forces_body(manager)
+
+
+@app.delete("/api/v1/forces/{tag_name}")
+def release_force(tag_name: str, core=Depends(get_core), level: str = Depends(_require_engineer)):
+    manager = getattr(core, "force_manager", None)
+    if manager is None or not manager.release(tag_name, actor=f"API:{level}"):
+        raise HTTPException(status_code=404, detail=f"{tag_name} is not forced.")
+    return {"released": True, "tag": tag_name, **_forces_body(manager)}
+
+
+@app.delete("/api/v1/forces")
+def release_all_forces(core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """"Zdjęcie wszystkiego jednym poleceniem"."""
+    manager = getattr(core, "force_manager", None)
+    if manager is None:
+        raise HTTPException(status_code=404, detail="Forcing is not available on this controller.")
+    count = manager.release_all(actor=f"API:{level}", reason="released from Studio")
+    return {"released": count, **_forces_body(manager)}
 
 
 @app.get("/api/v1/controller/settings")

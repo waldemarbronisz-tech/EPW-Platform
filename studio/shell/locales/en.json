@@ -169,7 +169,8 @@
     "synoptic_new": "New screen",
     "synoptic_open": "Open screen...",
     "synoptic_save": "Save screen",
-    "synoptic_save_as": "Save screen as..."
+    "synoptic_save_as": "Save screen as...",
+    "live": "Live from the controller"
   },
   "canvas": {
     "distribute_h": "Distribute Horizontally",
@@ -288,7 +289,10 @@
     "modbus_tcp_port": "TCP Port:",
     "col_channel_kinds": "Channels (kind and count)",
     "channels_suffix": " ch.",
-    "kind_tooltip": "Tick if this card has {kind} channels, then enter how many."
+    "kind_tooltip": "Tick if this card has {kind} channels, then enter how many.",
+    "col_responds": "Responds",
+    "responds_yes": "yes",
+    "responds_no": "NO"
   },
   "points": {
     "filter_card": "Card:",
@@ -309,7 +313,17 @@
     "location_blank": "(none)",
     "set_location_for_selected": "Set Location for Selected...",
     "set_location_dialog_title": "Location for the Selected Points",
-    "col_warning_threshold": "Counter warning at"
+    "col_warning_threshold": "Counter warning at",
+    "col_live": "Live",
+    "live_forced": "F → {value}",
+    "live_forced_tooltip": "Forced by {actor}",
+    "force_value": "Force Value...",
+    "release_force": "Release Force",
+    "force_mode": "Force Mode (Engineer)",
+    "release_all_forces": "Release All Forces",
+    "force_dialog_title": "Force Value",
+    "force_dialog_text": "Value to force for: {points}",
+    "force_refused": "The controller refused:\n{details}"
   },
   "devices": {
     "col_id": "Id",
@@ -660,5 +674,13 @@
     "discard_device_text": "{name} has unsaved changes. Remove it from the object anyway (the changes are lost)?",
     "device_unsaved_text": "{name} has no file yet - save it first.",
     "switch_failed": "Could not switch controller: the editor did not hand over its document."
+  },
+  "live": {
+    "enabled": "Live: reading the controller at {host} every 2 s.",
+    "failed": "Live: no reading from the controller ({reason}).",
+    "forces_held_elsewhere": "The controller holds {count} force(s) from outside this Studio.",
+    "force_mode_title": "Force Mode",
+    "force_mode_text": "Forcing overrides input and output states on the controller. Rules: Engineer token only, every force is audited and shown on the cabinet panel; all forces are released when the mode is turned off, when the link to Studio is lost (no heartbeat) and on a controller restart. The protection path is never forced. Enable force mode?",
+    "release_failed": "Could not release the forces: {reason}"
   }
 }

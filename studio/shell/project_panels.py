@@ -80,6 +80,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
@@ -342,6 +343,9 @@ _DEOL_STATES = ("SHORT", "VIOLATED", "SECURE", "TAMPER", "FAULT_OPEN")
 
 _GREY_READONLY_BG = QColor("#E8E8E8")
 _DIFF_BG = QColor("#FFF1B8")   # a setting that differs between Studio and the controller
+_LIVE_BG = QColor("#E4F5E4")   # a live value of GOOD quality
+_LIVE_BAD_BG = QColor("#FFE0B3")   # a live value whose quality is not GOOD
+_FORCED_BG = QColor("#FFB3B3")   # a forced tag - red, always visible (SPEC "Wymuszanie stanów")
 _LOCATION_CODE_RE = re.compile(r"^[A-Z0-9]+$")
 # User report #3: "karta bez adresu jednostki nie odezwie się na
 # magistrali [...] pusty adres ma być widocznym brakiem, nie ciszą" - a
@@ -898,7 +902,8 @@ class CardsPanel(QWidget):
     punkty" happens HERE, not in the point registry panel, which only
     ever shows what cards already produced."""
 
-    _CARD_COLS = ["id", "model", "channel_kinds", "modbus_unit_id", "location"]
+    _CARD_COLS = ["id", "model", "channel_kinds", "modbus_unit_id", "location", "responds"]
+    _RESPONDS_COL = 5
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1027,7 +1032,36 @@ class CardsPanel(QWidget):
         idx = card_loc_combo.findData(card.location)
         card_loc_combo.setCurrentIndex(idx if idx >= 0 else 0)
         card_loc_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_card_location_changed(r))
+        responds = QTableWidgetItem("")
+        responds.setFlags(responds.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        responds.setBackground(_GREY_READONLY_BG)
+        self.cards_table.setItem(row, self._RESPONDS_COL, responds)
+        self._paint_responds_cell(row, card.id)
         self.cards_table.setCellWidget(row, 4, card_loc_combo)
+
+    # -- live: SafetyKernel's Safety.<card>.Healthy says whether the module answers ----------------
+
+    def _paint_responds_cell(self, row: int, card_id: str):
+        item = self.cards_table.item(row, self._RESPONDS_COL)
+        if item is None:
+            return
+        entry = getattr(self, "_live_tags", {}).get(f"Safety.{card_id}.Healthy")
+        if entry is None:
+            item.setText("")
+            item.setBackground(_GREY_READONLY_BG)
+            return
+        healthy = bool(entry.get("value"))
+        item.setText(tr("cards.responds_yes") if healthy else tr("cards.responds_no"))
+        item.setBackground(_LIVE_BG if healthy else _LIVE_BAD_BG)
+
+    def apply_live(self, tags: dict, forces: dict = None):
+        self._live_tags = dict(tags or {})
+        for row in range(self.cards_table.rowCount()):
+            self._paint_responds_cell(row, self.cards_table.item(row, 0).text())
+
+    def responds_rows(self) -> list:
+        return [(self.cards_table.item(r, 0).text(), self.cards_table.item(r, self._RESPONDS_COL).text())
+                for r in range(self.cards_table.rowCount())]
 
     def _on_card_location_changed(self, row):
         if self._loading:
@@ -1309,7 +1343,9 @@ class PointRegistryPanel(QWidget):
         "signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals",
         "warning_threshold",   # DI only: the switching counter's warning threshold (a setting)
         "device",
+        "live",                # the controller's value while "Na żywo" is on; red while forced
     ]
+    _LIVE_COL = 13
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1341,7 +1377,13 @@ class PointRegistryPanel(QWidget):
         _make_column_resizable(self.table, 1, 260)
         self.table.setColumnWidth(0, 90)
         self.table.setColumnWidth(3, 160)
+        # SPEC "Studio - sterownik": live values next to the points, and
+        # the force table (Engineer, force mode on) from the row's menu.
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._point_context_menu)
         layout.addWidget(self.table)
+        self._live_tags = {}
+        self._live_forces = {}
 
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -1474,6 +1516,132 @@ class PointRegistryPanel(QWidget):
         if owner_id:
             device_item.setToolTip(owner_id)
         self.table.setItem(row, 12, device_item)
+
+        live_item = QTableWidgetItem("")
+        live_item.setFlags(live_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        live_item.setBackground(_GREY_READONLY_BG)
+        self.table.setItem(row, self._LIVE_COL, live_item)
+        self._paint_live_cell(row, point.address)
+
+    # -- live values and forces (controller_link.LiveMonitor -> apply_live) ---------------------
+
+    @staticmethod
+    def format_live(entry) -> str:
+        value = entry.get("value")
+        if isinstance(value, bool):
+            text = "1" if value else "0"
+        elif isinstance(value, float):
+            text = f"{value:.3f}".rstrip("0").rstrip(".")
+        else:
+            text = "" if value is None else str(value)
+        quality = entry.get("quality") or "GOOD"
+        return text if quality == "GOOD" else f"{text} ({quality})"
+
+    def _paint_live_cell(self, row: int, address: str):
+        item = self.table.item(row, self._LIVE_COL)
+        if item is None:
+            return
+        entry = self._live_tags.get(address)
+        force = self._live_forces.get(address)
+        if force is not None:
+            item.setText(tr("points.live_forced", value=self.format_live({"value": force.get("value")})))
+            item.setBackground(_FORCED_BG)
+            item.setToolTip(tr("points.live_forced_tooltip", actor=force.get("actor") or "?"))
+        elif entry is not None:
+            item.setText(self.format_live(entry))
+            item.setBackground(_LIVE_BAD_BG if (entry.get("quality") or "GOOD") != "GOOD" else _LIVE_BG)
+            item.setToolTip("")
+        else:
+            item.setText("")
+            item.setBackground(_GREY_READONLY_BG)
+            item.setToolTip("")
+
+    def apply_live(self, tags: dict, forces: dict):
+        """The monitor's latest read ({} when live is off or the link is down)."""
+        self._live_tags = dict(tags or {})
+        self._live_forces = dict(forces or {})
+        for row in range(self.table.rowCount()):
+            self._paint_live_cell(row, self.table.item(row, 0).text())
+
+    def live_rows(self) -> list:
+        """[(address, live text, forced)] - what the live column shows (tests)."""
+        return [(self.table.item(r, 0).text(), self.table.item(r, self._LIVE_COL).text(),
+                 self.table.item(r, 0).text() in self._live_forces) for r in range(self.table.rowCount())]
+
+    def _selected_addresses(self) -> list:
+        rows = sorted({idx.row() for idx in self.table.selectionModel().selectedRows()})
+        return [self.table.item(r, 0).text() for r in rows]
+
+    def _point_context_menu(self, pos):
+        row = self.table.rowAt(pos.y())
+        if row < 0:
+            return
+        if not self.table.item(row, 0).isSelected():
+            self.table.selectRow(row)
+        menu = QMenu(self)
+        force_mode = self._studio_window.force_mode_enabled()
+        force_action = menu.addAction(tr("points.force_value"))
+        force_action.setEnabled(force_mode)
+        release_action = menu.addAction(tr("points.release_force"))
+        release_action.setEnabled(force_mode and any(a in self._live_forces for a in self._selected_addresses()))
+        chosen = menu.exec(self.table.viewport().mapToGlobal(pos))
+        if chosen is force_action:
+            self.force_selected_points()
+        elif chosen is release_action:
+            self.release_selected_forces()
+
+    def force_selected_points(self):
+        """One value for every selected point (a dialog: 0/1 for a digital
+        point, a number for an analog one) -> POST /api/v1/forces each."""
+        addresses = self._selected_addresses()
+        if not addresses or not self._studio_window.force_mode_enabled():
+            return
+        kinds = {parse_address(a)[1] for a in addresses}
+        digital = kinds <= {"DI", "DO"}
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("points.force_dialog_title"))
+        form = QVBoxLayout(dialog)
+        form.addWidget(QLabel(tr("points.force_dialog_text", points=", ".join(addresses))))
+        if digital:
+            editor = QComboBox()
+            editor.addItem("1 (TRUE)", True)
+            editor.addItem("0 (FALSE)", False)
+        else:
+            editor = QDoubleSpinBox()
+            editor.setRange(-1_000_000.0, 1_000_000.0)
+            editor.setDecimals(3)
+        form.addWidget(editor)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        value = editor.currentData() if digital else float(editor.value())
+        self.apply_forces([(address, value) for address in addresses])
+
+    def apply_forces(self, requests: list) -> list:
+        """[(address, value)] -> the controller; returns [(address, reason)] refused."""
+        link = self._studio_window.controller_link()
+        refused = []
+        for address, value in requests:
+            ok, result = link.request_json("/api/v1/forces", {"tag": address, "value": value})
+            if not ok:
+                detail = link.last_error_detail
+                reason = detail.get("reason") if isinstance(detail, dict) else result
+                refused.append((address, reason))
+        if refused:
+            QMessageBox.warning(self, tr("points.force_dialog_title"),
+                                tr("points.force_refused", details="\n".join(f"{a}: {r}" for a, r in refused)))
+        self._studio_window.live_monitor().poll()
+        return refused
+
+    def release_selected_forces(self):
+        link = self._studio_window.controller_link()
+        for address in self._selected_addresses():
+            if address in self._live_forces:
+                link.request(f"/api/v1/forces/{address}", method="DELETE", timeout=6.0)
+        self._studio_window.live_monitor().poll()
 
     def set_location_for_selected(self):
         """User report 3.4: "zaznaczenie wielu wierszy -> ustawienie
@@ -3390,78 +3558,34 @@ class ControllerPanel(QWidget):
 
         self._load_connection_settings()
 
-    def _connection_scope(self) -> str:
-        """Each device of an object has its own controller: the address and
-        token are remembered per project file (a hash of its path), the
-        old global keys staying as the fallback for a project seen for
-        the first time."""
-        import hashlib
-        path = getattr(self._studio_window, "_project_path", None)
-        if not path:
-            return ""
-        return "controller/" + hashlib.sha1(os.path.abspath(path).encode("utf-8")).hexdigest()[:12] + "/"
+    def _link(self):
+        """studio/shell/controller_link.py - the one link every panel and
+        the live monitor share; address and token per project file."""
+        return self._studio_window.controller_link()
 
     def _load_connection_settings(self):
-        settings = self._studio_window.settings
-        scope = self._connection_scope()
-        self.host_edit.setText(settings.value(scope + "host", settings.value(self._SETTINGS_HOST, "")) if scope
-                               else settings.value(self._SETTINGS_HOST, ""))
-        self.token_edit.setText(settings.value(scope + "token", settings.value(self._SETTINGS_TOKEN, "")) if scope
-                                else settings.value(self._SETTINGS_TOKEN, ""))
+        link = self._link()
+        self.host_edit.setText(link.host())
+        self.token_edit.setText(link.token())
 
     def reload_connection(self):
         """After the active device changed (main_window._enter_slot)."""
         self._load_connection_settings()
 
     def _save_connection_settings(self):
-        settings = self._studio_window.settings
-        scope = self._connection_scope()
-        for prefix in ((scope,) if scope else ()) + ("controller/",):
-            settings.setValue(prefix + "host", self.host_edit.text().strip())
-            settings.setValue(prefix + "token", self.token_edit.text())
+        self._link().set_connection(self.host_edit.text(), self.token_edit.text())
 
     def _request(self, path: str, timeout: float = 4.0, method: str = "GET", data=None, raw: bool = False,
                  content_type: str = None):
-        """One request against the configured host, stdlib only. Returns
-        (True, parsed_json) - or (True, bytes) with raw=True - or
-        (False, error_message); never raises, same "a connectivity
-        problem is data, not a crash" stance every other network-adjacent
-        feature in this codebase already takes. An HTTP error's JSON
-        `detail` (runtime's own 409/400 bodies) is kept in
-        `self.last_error_detail` for the caller's message."""
-        import json as _json
-        import urllib.error
-        import urllib.request
-
-        self.last_error_detail = None
-        host = self.host_edit.text().strip().rstrip("/")
-        if not host:
-            return False, tr("controller.error_no_host")
-        url = f"{host}{path}"
-        headers = {}
-        token = self.token_edit.text().strip()
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        if content_type:
-            headers["Content-Type"] = content_type
-        request = urllib.request.Request(url, headers=headers, data=data, method=method)
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                body = response.read()
-            if raw:
-                return True, body
-            text = body.decode("utf-8")
-            return True, _json.loads(text) if text else {}
-        except urllib.error.HTTPError as e:
-            try:
-                self.last_error_detail = _json.loads(e.read().decode("utf-8")).get("detail")
-            except Exception:  # noqa: BLE001 - a body that is not JSON is simply no detail
-                self.last_error_detail = None
-            return False, tr("controller.error_http", code=e.code, reason=e.reason)
-        except urllib.error.URLError as e:
-            return False, tr("controller.error_connection", reason=str(e.reason))
-        except Exception as e:  # noqa: BLE001 - any failure here is "show it", not a Studio crash
-            return False, str(e)
+        """The shared link's request(); last_error_detail mirrored here for
+        the callers that read it off the panel."""
+        link = self._link()
+        # The edits on this panel are the truth while it is open - a
+        # just-typed address works before focus leaves the field.
+        link.set_connection(self.host_edit.text(), self.token_edit.text())
+        result = link.request(path, timeout=timeout, method=method, data=data, raw=raw, content_type=content_type)
+        self.last_error_detail = link.last_error_detail
+        return result
 
     def _test_connection(self):
         self.status_label.setText(tr("controller.status_testing"))

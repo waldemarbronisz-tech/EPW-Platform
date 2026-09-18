@@ -135,6 +135,7 @@ def main():
                 # boundary" treatment as time_sync_status_changed above.
                 mqtt_status_changed = Signal(str)
                 restart_requested = Signal(str)
+                forces_changed = Signal(int)
 
             bridge = QtEventBridge()
             
@@ -340,7 +341,8 @@ def main():
                                    feature_config_changed_callback=rebuild_window,
                                    mqtt_manager=gui_mqtt, mqtt_status_changed_signal=bridge.mqtt_status_changed,
                                    apparatus_registry=core.apparatus_registry,
-                                   startup_issues=core.startup_issues)
+                                   startup_issues=core.startup_issues,
+                                   force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,
@@ -416,6 +418,12 @@ def main():
             def on_presentation_started(name):
                 bridge.presentation_started.emit(name)
             core.event_bus.subscribe("presentation_started", on_presentation_started)
+
+            # SPEC "Wymuszanie stanów": visible at the cabinet too - the
+            # status-bar indicator follows every change (force_manager.py).
+            def on_forces_changed(count):
+                bridge.forces_changed.emit(int(count))
+            core.event_bus.subscribe("forces_changed", on_forces_changed)
 
             def on_presentation_stopped():
                 bridge.presentation_stopped.emit()

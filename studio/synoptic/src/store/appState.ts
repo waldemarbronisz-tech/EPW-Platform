@@ -85,6 +85,10 @@ export interface AppState {
   screenViews: Record<string, CanvasState>;
   /** Each screen's own undo stack, so clicking between tiles never empties it. */
   screenHistories: Record<string, { history: HistorySnapshot[]; historyIndex: number }>;
+  /** feat/live-view: the controller's tag values Studio pushes in while "Na żywo" is on (null = off), and the per-object states derived from them - see store/liveSlice.ts. */
+  liveValues: Record<string, unknown> | null;
+  liveStates: Record<string, string>;
+  setLiveValues: (values: Record<string, unknown> | null) => void;
   /** feat/window-snapping: where each tile sits in the `free` arrangement, as fractions of the area. Session state like the rest. */
   tileFrames: Record<string, TileFrame>;
   setWorkspaceLayout: (layout: WorkspaceLayout) => void;

@@ -174,7 +174,11 @@ class EPWCore:
         }
         self.simulated_plant = SimulatedPlant(self.event_bus, mappings=plant_mappings)
         
+        from epw_os.core.force_manager import ForceManager
+        self.force_manager = ForceManager(self.event_bus, self.tag_manager, self.driver_manager, self.audit_logger,
+                                          self.apparatus_registry, driver_for_tag=self._driver_id_for_tag)
         self.command_manager = CommandManager(self.tag_manager, self.logic_engine, self.safety_kernel, self.event_bus)
+        self.command_manager.force_manager = self.force_manager
         self.command_manager.set_driver_manager(self.driver_manager)
 
         # Presentation Mode (Task: scenariusz demonstracyjny uruchamiany
@@ -1100,6 +1104,11 @@ class EPWCore:
         # explicit stop() in this method.
         if self.presentation_mode is not None:
             self.presentation_mode.stop(actor="System (shutdown)")
+        # Forces never survive the process (SPEC: "automatycznie [...]
+        # przy restarcie") - released, audited, before the drivers stop.
+        force_manager = getattr(self, "force_manager", None)
+        if force_manager is not None:
+            force_manager.shutdown()
 
         # Same "don't leave a dangling background callback past process
         # exit" concern as Presentation Mode above - a zone mid-exit- or

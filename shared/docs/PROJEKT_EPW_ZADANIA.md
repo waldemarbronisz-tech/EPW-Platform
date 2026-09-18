@@ -149,6 +149,13 @@ przez `project_format.apply_settings_snapshot()`).
   czyta je tylko do odczytu przez `GET /api/v1/controller/settings`
   (panel Sterownik → „Ustawienia lokalne sterownika") — nic na sterowniku
   nie jest niewidoczne ze Studio.
+- **Wymuszanie stanów ze Studio i żywe stany przy projektowaniu** —
+  ZROBIONE 2026-09-18 (SPEC „Wymuszanie stanów" i „Co jeszcze daje ten
+  kanał"): `core/force_manager.py` + `/api/v1/forces` (Engineer, audyt,
+  heartbeat 15 s, zdjęcie przy zamknięciu), wskaźnik na pasku panelu,
+  w Studio przełącznik „Na żywo" (rejestr punktów, karty „Odpowiada",
+  symbole w edytorze) i tryb wymuszania w rejestrze punktów. Zostaje:
+  raport testu zabezpieczeń (pomiar czasu zadziałania).
 - **Zerowanie liczników łączeń ze Studio** — ZROBIONE 2026-09-18:
   `GET /api/v1/counters` (stan wszystkich liczników) i
   `POST /api/v1/counters/<tag>/reset` (token Engineer, ta sama ścieżka co

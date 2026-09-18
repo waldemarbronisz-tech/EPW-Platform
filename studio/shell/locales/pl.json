@@ -169,7 +169,8 @@
     "synoptic_new": "Nowy ekran",
     "synoptic_open": "Otwórz ekran...",
     "synoptic_save": "Zapisz ekran",
-    "synoptic_save_as": "Zapisz ekran jako..."
+    "synoptic_save_as": "Zapisz ekran jako...",
+    "live": "Na żywo ze sterownika"
   },
   "canvas": {
     "distribute_h": "Rozłóż poziomo",
@@ -288,7 +289,10 @@
     "modbus_tcp_port": "Port TCP:",
     "col_channel_kinds": "Kanały (rodzaj i liczba)",
     "channels_suffix": " kan.",
-    "kind_tooltip": "Zaznacz, jeśli karta ma kanały {kind}, i podaj ich liczbę."
+    "kind_tooltip": "Zaznacz, jeśli karta ma kanały {kind}, i podaj ich liczbę.",
+    "col_responds": "Odpowiada",
+    "responds_yes": "tak",
+    "responds_no": "NIE"
   },
   "points": {
     "filter_card": "Karta:",
@@ -309,7 +313,17 @@
     "location_blank": "(brak)",
     "set_location_for_selected": "Ustaw lokalizację zaznaczonym...",
     "set_location_dialog_title": "Lokalizacja dla zaznaczonych punktów",
-    "col_warning_threshold": "Próg ostrz. licznika"
+    "col_warning_threshold": "Próg ostrz. licznika",
+    "col_live": "Na żywo",
+    "live_forced": "F → {value}",
+    "live_forced_tooltip": "Wymuszone przez {actor}",
+    "force_value": "Wymuś wartość...",
+    "release_force": "Zdejmij wymuszenie",
+    "force_mode": "Tryb wymuszania (Engineer)",
+    "release_all_forces": "Zdejmij wszystkie wymuszenia",
+    "force_dialog_title": "Wymuś wartość",
+    "force_dialog_text": "Wartość do wymuszenia dla: {points}",
+    "force_refused": "Sterownik odmówił:\n{details}"
   },
   "devices": {
     "col_id": "Id",
@@ -660,5 +674,13 @@
     "discard_device_text": "{name} ma niezapisane zmiany. Usunąć z obiektu mimo to (zmiany przepadną)?",
     "device_unsaved_text": "{name} nie ma jeszcze pliku - zapisz go najpierw.",
     "switch_failed": "Nie udało się przełączyć sterownika: edytor nie oddał dokumentu."
+  },
+  "live": {
+    "enabled": "Na żywo: odczyt ze sterownika {host} co 2 s.",
+    "failed": "Na żywo: brak odczytu ze sterownika ({reason}).",
+    "forces_held_elsewhere": "Sterownik trzyma {count} wymuszeń spoza tego Studio.",
+    "force_mode_title": "Tryb wymuszania",
+    "force_mode_text": "Wymuszanie nadpisuje stany wejść i wyjść na sterowniku. Zasady: tylko token Engineer, każde wymuszenie w dzienniku audytowym, widoczne na panelu przy szafce; wszystkie wymuszenia znikają po wyłączeniu trybu, po utracie łączności ze Studio (brak heartbeatu) i po restarcie sterownika. Tor zabezpieczeniowy nie podlega wymuszaniu. Włączyć tryb wymuszania?",
+    "release_failed": "Nie udało się zdjąć wymuszeń: {reason}"
   }
 }

@@ -221,6 +221,16 @@ topic(
     """
 # Rejestr punktów
 
+**Na żywo i wymuszanie.** Przycisk „Na żywo ze sterownika" na pasku
+głównym dopisuje kolumnę z wartością każdego punktu odczytaną ze
+sterownika (jakość inna niż GOOD w nawiasie, tło pomarańczowe). Tryb
+wymuszania (ikona kłódki w pasku rejestru, po dialogu z zasadami, token
+Engineer) pozwala z menu wiersza wymusić wartość albo zdjąć wymuszenie;
+wymuszony punkt jest czerwony z „F →". „Zdejmij wszystkie wymuszenia"
+albo wyłączenie trybu zdejmuje wszystko; sterownik zdejmuje sam po
+utracie łączności ze Studio i po restarcie. Tor zabezpieczeniowy nie
+podlega wymuszaniu.
+
 Każdy kanał każdej karty ma tu swój wiersz — pusty, dopóki go nie
 nazwiesz. Kolumny:
 
@@ -238,6 +248,15 @@ Filtr **Karta** u góry ogranicza widok do jednej karty naraz.
 """,
     """
 # Point Registry
+
+**Live and forcing.** "Live from the controller" on the main toolbar
+adds a column with every point's value read from the controller (a
+quality other than GOOD in brackets, orange background). Force mode
+(the padlock on the registry's toolbar, after a dialog with the rules,
+Engineer token) lets a row's menu force a value or release the force; a
+forced point is red with "F →". "Release All Forces" or leaving the mode
+drops everything; the controller drops them itself when the link to
+Studio is lost and on restart. The protection path is never forced.
 
 Every channel of every card gets its own row here — empty until you
 name it. Columns:

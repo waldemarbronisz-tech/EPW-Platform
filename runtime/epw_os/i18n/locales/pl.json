@@ -114,7 +114,10 @@
     "intrusion_exit_delay": "SYSTEM: ODLICZANIE WYJŚCIA ({seconds}s)",
     "intrusion_entry_delay": "SYSTEM: ODLICZANIE WEJŚCIA ({seconds}s)",
     "intrusion_alarm": "🚨 ALARM WŁAMANIOWY",
-    "tooltip_intrusion_status": "Zbiorczy stan systemu alarmowego dla wszystkich stref. Zarządzaj ze strony System alarmowy."
+    "tooltip_intrusion_status": "Zbiorczy stan systemu alarmowego dla wszystkich stref. Zarządzaj ze strony System alarmowy.",
+    "forces_active": "⚠ WYMUSZENIA: {count}",
+    "tooltip_forces": "Studio wymusza stany: {tags}. Wymuszenia znikają po zdjęciu, po utracie łączności ze Studio i po restarcie.",
+    "release_all_forces": "Zdejmij wszystkie wymuszenia"
   },
   "topbar": {
     "project": "Projekt",

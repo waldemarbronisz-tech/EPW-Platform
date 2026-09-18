@@ -483,7 +483,7 @@ def build_help_toolbar(toolbar, _panel, _studio_window):
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
 
-def build_point_registry_toolbar(toolbar, panel, _studio_window):
+def build_point_registry_toolbar(toolbar, panel, studio_window):
     """No add/remove here on purpose - SPEC_PROJEKT_EPW.md's own rule:
     "Karty rodzą punkty [...] Nie wpisujesz ich ręcznie" - a point's
     only entry points are a card being added/resized (CardsPanel) or
@@ -500,6 +500,16 @@ def build_point_registry_toolbar(toolbar, panel, _studio_window):
     icon asset for one button."""
     toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
     _add(toolbar, tr("points.set_location_for_selected"), panel.set_location_for_selected, icon_name="settings")
+    toolbar.addSeparator()
+    # SPEC "Wymuszanie stanów": force mode is entered deliberately here,
+    # a force is set from a row's own menu, and everything is dropped
+    # with one button.
+    studio_window.act_force_mode = _add(toolbar, tr("points.force_mode"),
+                                        lambda checked=False: studio_window.set_force_mode(bool(checked)),
+                                        icon_name="lock")
+    studio_window.act_force_mode.setCheckable(True)
+    studio_window.act_force_mode.setChecked(studio_window.force_mode_enabled())
+    _add(toolbar, tr("points.release_all_forces"), studio_window.release_all_forces, icon_name="remove_row")
 
 
 def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):

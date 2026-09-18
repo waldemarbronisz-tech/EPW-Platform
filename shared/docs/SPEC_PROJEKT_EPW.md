@@ -514,8 +514,13 @@ w domu. Porównanie na żywo działa tylko wtedy, gdy połączenie jest.
 
 ### Co jeszcze daje ten kanał
 
-- żywe stany przy punktach podczas projektowania ekranu
-- weryfikacja, czy karta o danym adresie w ogóle odpowiada
+- żywe stany przy punktach podczas projektowania ekranu — ZROBIONE
+  2026-09-18: przełącznik „Na żywo ze sterownika" na pasku Studio;
+  rejestr punktów dostaje kolumnę z wartością i jakością, edytor
+  ekranów rysuje symbole związane z aparatem w stanie na żywo
+  (`studio/shell/controller_link.py`, `store/liveSlice.ts`)
+- weryfikacja, czy karta o danym adresie w ogóle odpowiada — ZROBIONE
+  2026-09-18: kolumna „Odpowiada" w kartach z `Safety.<karta>.Healthy`
 - zdalna diagnostyka bez chodzenia do szafki
 - ustawienia lokalne sterownika do wglądu (`GET /api/v1/controller/settings`)
   i liczniki łączeń z zerowaniem po wymianie aparatu
@@ -561,6 +566,35 @@ ani przez API, ani w trybie serwisowym.
 **Powiązanie:** ta sama mechanika obsługuje "wewnętrznego Omicrona" —
 test zabezpieczeń to wymuszenie stanu, pomiar czasu zadziałania
 i raport. Jeden mechanizm, dwa zastosowania.
+
+**Stan 2026-09-18 — ZROBIONE** (`runtime/epw_os/core/force_manager.py`,
+REST `/api/v1/forces`, Studio: tryb wymuszania w rejestrze punktów):
+
+1. Domyślnie wyłączone — Studio wchodzi w tryb wymuszania po dialogu
+   z zasadami, sterownik przyjmuje wymuszenie tylko z tokenem Engineer,
+   każde wymuszenie, zdjęcie, odmowa i wygaśnięcie trafia do dziennika
+   audytowego (`FORCE_SET`, `FORCE_RELEASED`, `FORCE_RELEASED_ALL`,
+   `FORCE_REFUSED`).
+2. Widoczne po obu stronach — w Studio wymuszony punkt jest czerwony
+   w kolumnie „Na żywo", na panelu pasek stanu pokazuje „⚠ WYMUSZENIA: n"
+   (menu kontekstowe zdejmuje wszystkie, Engineer), `GET /api/v1/forces`
+   widzi każdy.
+3. Zdjęcie wszystkiego jednym poleceniem (`DELETE /api/v1/forces`,
+   wyłączenie trybu w Studio), automatycznie po utracie heartbeatu ze
+   Studio (15 s; Studio wysyła go co 2 s, gdy trzyma wymuszenia) i przy
+   zamknięciu sterownika — wymuszenia nie są nigdzie zapisywane, restart
+   nigdy ich nie dziedziczy.
+
+Tor zabezpieczeniowy: sterownik odmawia wymuszenia punktów aparatu,
+którego rodzaj mówi o wyłączniku/zabezpieczeniu lub którego oznaczenie
+zaczyna się od Q (IEC 81346), oraz wszystkiego, co nie jest punktem
+projektu (tagi systemowe, `Safety.*`, statusy urządzeń). Wymuszone
+wejście jest przypięte w TagManager (sterownik i logika nie nadpiszą go
+do zdjęcia; po zdjęciu jakość UNCERTAIN do następnego odczytu),
+wymuszone wyjście przechodzi przez tę samą granicę sterowników co
+komenda (Tryb ćwiczebny odcina je tak samo), a komenda na wymuszone
+wyjście jest odrzucana. Test zabezpieczeń („wewnętrzny Omicron") jako
+raport z pomiarem czasu — osobny krok.
 
 ---
 

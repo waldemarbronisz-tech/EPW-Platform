@@ -23,6 +23,7 @@ class CommandManager:
         self.event_bus = event_bus
         self.driver_manager = driver_manager
         self.project_manager = project_manager
+        self.force_manager = None       # set by EPWCore; a forced output refuses commands (force_manager.py)
         self._pending_commands: Dict[str, CommandRecord] = {}
         self._timeout_handles = {}
 
@@ -192,6 +193,17 @@ class CommandManager:
             self.event_bus.emit("command_status", cmd_id, CommandState.BLOCKED, record.reason)
             return record
             
+        # 2b. A forced output belongs to the person forcing it, not to logic
+        # or an operator (SPEC "Wymuszanie stanów"): refused, audibly.
+        if self.force_manager is not None:
+            forced_def = self._definitions.get(f"{target}.{action}")
+            forced_tag = getattr(forced_def, "output_tag", None) if forced_def is not None else None
+            if forced_tag and self.force_manager.is_forced(forced_tag):
+                record.state = CommandState.BLOCKED
+                record.reason = f"Output {forced_tag} is forced from Studio - release the force first"
+                self.event_bus.emit("command_status", cmd_id, CommandState.BLOCKED, record.reason)
+                return record
+
         # 3. Logic Runtime Interlock
         permitted, reasons = self.logic_engine.validate_command(target, action)
         if not permitted:
