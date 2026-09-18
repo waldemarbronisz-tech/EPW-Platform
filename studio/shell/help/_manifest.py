@@ -13,6 +13,7 @@ TOPICS = [
     ('protection_electrical', 'Zabezpieczenia elektryczne', 'Electrical Protection'),
     ('protection_process', 'Zabezpieczenia procesowe', 'Process Protection'),
     ('controller', 'Połączenie ze sterownikiem', 'Controller Connection'),
+    ('protection_tests', 'Test zabezpieczeń', 'Protection Tests'),
     ('mqtt', 'Integracja MQTT', 'MQTT Integration'),
     ('object_links', 'Powiązania obiektu', 'Object Links'),
     ('service_notes', 'Notatki serwisowe', 'Service Notes'),

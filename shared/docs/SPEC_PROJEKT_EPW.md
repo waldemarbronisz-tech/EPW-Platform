@@ -593,8 +593,29 @@ wejście jest przypięte w TagManager (sterownik i logika nie nadpiszą go
 do zdjęcia; po zdjęciu jakość UNCERTAIN do następnego odczytu),
 wymuszone wyjście przechodzi przez tę samą granicę sterowników co
 komenda (Tryb ćwiczebny odcina je tak samo), a komenda na wymuszone
-wyjście jest odrzucana. Test zabezpieczeń („wewnętrzny Omicron") jako
-raport z pomiarem czasu — osobny krok.
+wyjście jest odrzucana.
+
+**Wewnętrzny Omicron — ZROBIONE 2026-09-18**
+(`runtime/epw_os/core/protection_test.py`, REST
+`/api/v1/protection-tests`, Studio: Sterownik → Test zabezpieczeń).
+Test wykonuje sterownik, bezgłowo, jeden naraz, token Engineer:
+
+- *zabezpieczenie procesowe* — punkt analogowy wymuszony ponad górny
+  próg, czas do `Process.<id>.Exceeded` zmierzony i porównany
+  z nastawioną zwłoką (przed zwłoką lub ponad tolerancję = FAIL), potem
+  wartość wymuszona z powrotem w pasmo i czas skasowania; wymuszenie
+  zdjęte; wyłączone lub już zadziałane = BLOCKED;
+- *aparat* — komenda zmieniająca stan (OPEN gdy sprzężenie mówi
+  zamknięty, inaczej CLOSE) przez CommandManager, tą samą drogą co
+  z panelu (blokady, kontrola bezpieczeństwa, odrzucenie = BLOCKED),
+  czas sprzężenia, komenda przeciwna i czas powrotu.
+
+Raport (nastawy, pomiar, wynik PASS/FAIL/BLOCKED, uzasadnienie, kroki
+z czasem) zostaje na sterowniku (`protection_test_reports.json`,
+dowód — nie dane projektu), start i wynik w dzienniku audytowym
+(`PROTECTION_TEST_*`). Studio pokazuje kandydatów i raporty, uruchamia
+test, śledzi go i zapisuje raporty do CSV. Stopnie ADA01 (sprzęt)
+nadal sprawdza weryfikator panelu rampą pomiaru — nie ten test.
 
 ---
 

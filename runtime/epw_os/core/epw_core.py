@@ -179,6 +179,9 @@ class EPWCore:
                                           self.apparatus_registry, driver_for_tag=self._driver_id_for_tag)
         self.command_manager = CommandManager(self.tag_manager, self.logic_engine, self.safety_kernel, self.event_bus)
         self.command_manager.force_manager = self.force_manager
+        # The "internal Omicron" (SPEC): forced state, measured response, a report.
+        from epw_os.core.protection_test import ProtectionTestRunner
+        self.protection_tests = ProtectionTestRunner(self)
         self.command_manager.set_driver_manager(self.driver_manager)
 
         # Presentation Mode (Task: scenariusz demonstracyjny uruchamiany

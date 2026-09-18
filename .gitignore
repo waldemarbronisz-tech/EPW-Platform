@@ -80,3 +80,5 @@ runtime/controller.local.json
 
 # one-off migration backups of the live project file (2026-09-18)
 runtime/projekt.epw.bak-*
+# protection test reports written by the controller (core/protection_test.py)
+runtime/protection_test_reports.json

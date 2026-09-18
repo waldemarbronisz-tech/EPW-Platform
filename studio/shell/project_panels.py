@@ -56,6 +56,8 @@ Follow-up ("co jeszcze możemy dorobić") added in the same file:
     recognizable pattern across both, per the task's own "tu również"
     (same treatment, not a smaller one because the domain is simpler).
 """
+import csv
+import io
 import json
 import os
 import re
@@ -3540,6 +3542,258 @@ class ServiceNotesPanel(QWidget):
                 self.table.setItem(row, col, item)
         devices = len({r[0] for r in rows})
         self.count_label.setText(tr("service_notes.count", notes=len(rows), devices=devices))
+
+
+class ProtectionTestsPanel(QWidget):
+    """"Test zabezpieczeń" (STEROWNIK) - SPEC "Wymuszanie stanów -
+    Powiązanie": the internal Omicron. The controller runs the test
+    itself (runtime/epw_os/core/protection_test.py, REST
+    /api/v1/protection-tests): a process protection has its analog
+    point forced past the threshold and the trip is timed against the
+    configured delay, then the reset; an apparatus is commanded and its
+    feedback is timed, then restored. This panel only lists what the
+    controller can test, starts one test (Engineer token), follows it
+    and shows the reports the controller keeps - and writes them out as
+    CSV for the commissioning file. Nothing here is project data."""
+
+    _CAND_COLS = ("kind", "id", "name", "details", "state")
+    _REPORT_COLS = ("started", "kind", "subject", "result", "configured", "measured", "reason")
+    POLL_MS = 1000
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._reports = []
+        self._candidates = []
+        self._running_id = None
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        intro = QLabel(tr("protection_tests.intro"))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        row = QHBoxLayout()
+        self.refresh_button = QPushButton(tr("protection_tests.refresh"))
+        self.refresh_button.clicked.connect(self.refresh)
+        row.addWidget(self.refresh_button)
+        self.run_button = QPushButton(tr("protection_tests.run"))
+        self.run_button.clicked.connect(self.run_selected_test)
+        row.addWidget(self.run_button)
+        self.export_button = QPushButton(tr("protection_tests.export_csv"))
+        self.export_button.clicked.connect(self.export_csv)
+        row.addWidget(self.export_button)
+        row.addStretch(1)
+        layout.addLayout(row)
+
+        self.status_label = QLabel(tr("protection_tests.status_idle"))
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+
+        layout.addWidget(_section_label(tr("protection_tests.candidates_heading")))
+        self.candidates_table = QTableWidget(0, len(self._CAND_COLS))
+        self.candidates_table.setHorizontalHeaderLabels([tr(f"protection_tests.col_{c}") for c in self._CAND_COLS])
+        _prep_table(self.candidates_table)
+        self.candidates_table.doubleClicked.connect(lambda _index: self.run_selected_test())
+        layout.addWidget(self.candidates_table, 1)
+
+        layout.addWidget(_section_label(tr("protection_tests.reports_heading")))
+        self.reports_table = QTableWidget(0, len(self._REPORT_COLS))
+        self.reports_table.setHorizontalHeaderLabels([tr(f"protection_tests.rep_col_{c}") for c in self._REPORT_COLS])
+        _prep_table(self.reports_table)
+        self.reports_table.doubleClicked.connect(self._show_steps)
+        layout.addWidget(self.reports_table, 2)
+
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(self.POLL_MS)
+        self._poll_timer.timeout.connect(self._poll)
+
+    # -- data -------------------------------------------------------------------------------
+
+    def _link(self):
+        return self._studio_window._controller_link
+
+    def clear(self):
+        """After a project swap: the other controller's lists mean nothing here."""
+        self._poll_timer.stop()
+        self._running_id = None
+        self._reports, self._candidates = [], []
+        self._fill_candidates()
+        self._fill_reports()
+        self.status_label.setText(tr("protection_tests.status_idle"))
+
+    def refresh(self):
+        ok, data = self._link().request("/api/v1/protection-tests", timeout=3.0)
+        if not ok:
+            self.clear()
+            self.status_label.setText(tr("protection_tests.fetch_failed", reason=data))
+            return False
+        if not data.get("available", False):
+            self.clear()
+            self.status_label.setText(tr("protection_tests.unavailable"))
+            return False
+        candidates = data.get("candidates") or {}
+        self._candidates = ([dict(c, kind="process") for c in candidates.get("process", [])]
+                            + [dict(c, kind="apparatus") for c in candidates.get("apparatus", [])])
+        self._reports = list(data.get("reports") or [])
+        running = data.get("running")
+        self._fill_candidates()
+        self._fill_reports()
+        if running:
+            self._running_id = running["id"]
+            self.status_label.setText(tr("protection_tests.status_running", subject=running["subject"]))
+            self._poll_timer.start()
+        else:
+            self._poll_timer.stop()
+            self._running_id = None
+            self.status_label.setText(tr("protection_tests.status_ready", count=len(self._candidates),
+                                         reports=len(self._reports)))
+        self.run_button.setEnabled(running is None)
+        return True
+
+    def _fill_candidates(self):
+        table = self.candidates_table
+        table.setRowCount(0)
+        for candidate in self._candidates:
+            row = table.rowCount()
+            table.insertRow(row)
+            if candidate["kind"] == "process":
+                details = tr("protection_tests.details_process", tag=candidate.get("analog_tag", ""),
+                             upper=_fmt(candidate.get("upper_threshold")), lower=_fmt(candidate.get("lower_threshold")),
+                             delay=_fmt(candidate.get("delay_seconds")))
+                if candidate.get("exceeded"):
+                    state = tr("protection_tests.state_exceeded")
+                elif not candidate.get("enabled", True):
+                    state = tr("protection_tests.state_disabled")
+                else:
+                    state = tr("protection_tests.state_ready")
+            else:
+                details = tr("protection_tests.details_apparatus", feedback=", ".join(candidate.get("feedback", [])),
+                             command=", ".join(candidate.get("command", [])), style=candidate.get("command_style", ""))
+                state = tr("protection_tests.state_ready")
+            values = (tr(f"protection_tests.kind_{candidate['kind']}"), candidate["id"],
+                      candidate.get("name") or candidate.get("kind_label") or candidate.get("kind", ""), details, state)
+            for col, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                table.setItem(row, col, item)
+        table.resizeColumnsToContents()
+
+    def _fill_reports(self):
+        table = self.reports_table
+        table.setRowCount(0)
+        for report in reversed(self._reports):
+            row = table.rowCount()
+            table.insertRow(row)
+            values = (report.get("started_at", ""), tr(f"protection_tests.kind_{report.get('kind', 'process')}"),
+                      report.get("subject", ""), report.get("result", ""), _summary(report.get("configured")),
+                      _summary(report.get("measured")), report.get("reason", ""))
+            for col, value in enumerate(values):
+                item = QTableWidgetItem(str(value))
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if col == 3:
+                    color = {"PASS": QColor("#1a7f1a"), "FAIL": QColor("#c00000"),
+                             "BLOCKED": QColor("#a05a00")}.get(value)
+                    if color is not None:
+                        item.setForeground(color)
+                table.setItem(row, col, item)
+        table.resizeColumnsToContents()
+
+    # -- actions ----------------------------------------------------------------------------
+
+    def selected_candidate(self):
+        row = self.candidates_table.currentRow()
+        if row < 0 or row >= len(self._candidates):
+            return None
+        return self._candidates[row]
+
+    def run_selected_test(self):
+        candidate = self.selected_candidate()
+        if candidate is None:
+            self.status_label.setText(tr("protection_tests.select_row"))
+            return False
+        ok, data = self._link().request_json("/api/v1/protection-tests", {"kind": candidate["kind"], "id": candidate["id"]})
+        if not ok:
+            detail = self._link().last_error_detail
+            reason = detail.get("reason") if isinstance(detail, dict) and detail.get("reason") else data
+            if isinstance(detail, dict) and detail.get("report"):
+                self._reports.append(detail["report"])
+                self._fill_reports()
+            self.status_label.setText(tr("protection_tests.start_failed", subject=candidate["id"], reason=reason))
+            return False
+        self._running_id = data.get("id")
+        self.status_label.setText(tr("protection_tests.status_running", subject=data.get("subject", candidate["id"])))
+        self.run_button.setEnabled(False)
+        self._poll_timer.start()
+        return True
+
+    def _poll(self):
+        if not self._running_id:
+            self._poll_timer.stop()
+            return
+        ok, data = self._link().request(f"/api/v1/protection-tests/{self._running_id}", timeout=3.0)
+        if not ok:
+            self._poll_timer.stop()
+            self.status_label.setText(tr("protection_tests.fetch_failed", reason=data))
+            self.run_button.setEnabled(True)
+            return
+        if data.get("result") == "RUNNING":
+            return
+        self._poll_timer.stop()
+        finished = data
+        self._running_id = None
+        self.refresh()
+        self.status_label.setText(tr("protection_tests.finished", subject=finished.get("subject", ""),
+                                     result=finished.get("result", ""), reason=finished.get("reason", "")))
+
+    def _show_steps(self, index):
+        row = index.row()
+        reports = list(reversed(self._reports))
+        if row < 0 or row >= len(reports):
+            return
+        report = reports[row]
+        box = QMessageBox(self)
+        box.setWindowTitle(tr("protection_tests.steps_title", subject=report.get("subject", "")))
+        box.setText(f"{report.get('result', '')}: {report.get('reason', '')}")
+        box.setDetailedText("\n".join(report.get("steps") or []))
+        box.exec()
+
+    def reports_csv(self) -> str:
+        """One row per report - the commissioning file's own evidence."""
+        out = io.StringIO()
+        writer = csv.writer(out, delimiter=";", lineterminator="\n")
+        writer.writerow(["started_at", "finished_at", "kind", "subject", "name", "actor", "result", "reason",
+                         "configured", "measured", "steps"])
+        for report in self._reports:
+            writer.writerow([report.get("started_at", ""), report.get("finished_at", ""), report.get("kind", ""),
+                             report.get("subject", ""), report.get("name", ""), report.get("actor", ""),
+                             report.get("result", ""), report.get("reason", ""), _summary(report.get("configured")),
+                             _summary(report.get("measured")), " | ".join(report.get("steps") or [])])
+        return out.getvalue()
+
+    def export_csv(self, path: str = None) -> bool:
+        if not self._reports:
+            self.status_label.setText(tr("protection_tests.no_reports"))
+            return False
+        if path is None:
+            path, _ = QFileDialog.getSaveFileName(self, tr("protection_tests.export_csv"), "protection_tests.csv",
+                                                  "CSV (*.csv)")
+            if not path:
+                return False
+        try:
+            with open(path, "w", encoding="utf-8-sig", newline="") as f:
+                f.write(self.reports_csv())
+        except OSError as e:
+            self.status_label.setText(tr("protection_tests.export_failed", reason=str(e)))
+            return False
+        self.status_label.setText(tr("protection_tests.csv_saved", path=path))
+        return True
+
+
+def _summary(values) -> str:
+    if not isinstance(values, dict):
+        return ""
+    return ", ".join(f"{k}={_fmt(v)}" for k, v in values.items())
 
 
 class ControllerPanel(QWidget):

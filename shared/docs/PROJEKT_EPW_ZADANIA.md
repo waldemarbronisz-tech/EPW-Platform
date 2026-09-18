@@ -166,8 +166,15 @@ przez `project_format.apply_settings_snapshot()`).
   kanał"): `core/force_manager.py` + `/api/v1/forces` (Engineer, audyt,
   heartbeat 15 s, zdjęcie przy zamknięciu), wskaźnik na pasku panelu,
   w Studio przełącznik „Na żywo" (rejestr punktów, karty „Odpowiada",
-  symbole w edytorze) i tryb wymuszania w rejestrze punktów. Zostaje:
-  raport testu zabezpieczeń (pomiar czasu zadziałania).
+  symbole w edytorze) i tryb wymuszania w rejestrze punktów. Raport testu
+  zabezpieczeń: osobny wpis niżej.
+- **Test zabezpieczeń („wewnętrzny Omicron")** — ZROBIONE 2026-09-18 (SPEC
+  „Wymuszanie stanów — Powiązanie"): `core/protection_test.py` (test
+  zabezpieczenia procesowego: wymuszenie ponad próg, czas zadziałania vs
+  zwłoka, czas skasowania; test aparatu: komenda przez CommandManager, czas
+  sprzężenia, powrót), REST `/api/v1/protection-tests` (Engineer), raporty
+  na sterowniku + audyt, Studio: Sterownik → Test zabezpieczeń (lista,
+  start, śledzenie, CSV).
 - **Zerowanie liczników łączeń ze Studio** — ZROBIONE 2026-09-18:
   `GET /api/v1/counters` (stan wszystkich liczników) i
   `POST /api/v1/counters/<tag>/reset` (token Engineer, ta sama ścieżka co
