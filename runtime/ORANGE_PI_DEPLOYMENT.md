@@ -96,7 +96,9 @@ sterownika): `EPW_PROJECT_FILE` (inny `projekt.epw`), `EPW_ACCESS_FILE`
 
 Runtime czyta też katalog `shared/` repozytorium (format projektu,
 adresowanie, `shared/symbols/geometry.json` — biblioteka symboli do
-rysowania ekranu z projektu), więc na sterowniku musi być całe
+rysowania ekranu z projektu, oraz `shared/logic/` — biblioteka bloków
+i silnik, którym sterownik **wykonuje** logikę z projektu; patrz
+`shared/docs/LOGIKA_W_RUNTIME.md`), więc na sterowniku musi być całe
 repozytorium, nie sam katalog `runtime/`.
 
 Sprawdzenie, czy wszystko się zainstalowało poprawnie (bez trybu kiosku,

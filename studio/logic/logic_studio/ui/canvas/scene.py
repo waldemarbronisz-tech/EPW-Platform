@@ -231,8 +231,8 @@ class LogicScene(QGraphicsScene):
         if not self.clipboard_data or not self.views():
             return
 
-        from logic_studio.blocks.registry import BlockRegistry
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.registry import BlockRegistry
+        from shared.logic.blocks.pin import Pin
         from logic_studio.ui.canvas.block_item import BlockItem
 
         window = logic_main_window(self.views()[0])
@@ -482,7 +482,7 @@ class LogicScene(QGraphicsScene):
         — used when dragging a DI/DO/AI/AO leaf from DeviceExplorerPanel, so
         the block lands already configured instead of needing a property-
         grid detour to set its Address."""
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         from logic_studio.ui.canvas.block_item import BlockItem
 
         block = BlockRegistry.create_block(type_id)
@@ -539,8 +539,8 @@ class LogicScene(QGraphicsScene):
         new boundary pin. One undo entry, like duplicate_selected_items()/
         paste_clipboard(). Returns False (nothing changed) if there's no
         project attached or nothing is selected."""
-        from logic_studio.blocks.pin import Pin
-        from logic_studio.blocks.macro_instance import MacroInstanceBlock
+        from shared.logic.blocks.pin import Pin
+        from shared.logic.blocks.macro_instance import MacroInstanceBlock
         from logic_studio.core import macros as macros_module
         from logic_studio.ui.canvas.block_item import BlockItem
         from logic_studio.ui.canvas.port_item import PortItem

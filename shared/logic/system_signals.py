@@ -58,7 +58,15 @@ def get_catalog_version() -> str:
 
 def _device_signals(project) -> list:
     """Per-device "Komunikacja" signals for every ELA/ADA device `project`
-    defines (project=None -> the single-device ELA01/ADA01 default)."""
+    defines (project=None -> no devices at all, see below)."""
+    # feat/logic-execution: DeviceModel is Logic Studio's, and this module
+    # is imported by EPW-OS (which has no editor on its path) every time a
+    # system.signal block resolves its own type. Behavior is unchanged:
+    # DeviceModel.get_ela_devices(None)/get_ada_devices(None) already
+    # return [] for project=None (a project is the ONLY source of a device
+    # list) - so with no project there was never anything to import it for.
+    if project is None:
+        return []
     from logic_studio.core.device_model import DeviceModel
 
     signals = []

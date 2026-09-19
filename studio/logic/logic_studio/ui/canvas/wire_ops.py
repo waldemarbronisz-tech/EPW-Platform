@@ -5,7 +5,7 @@ context menu). Kept separate from wire_item.py/port_item.py so the
 graphics-item classes stay focused on presentation and menu wiring —
 this module never touches a QGraphicsItem, only Project/Wire/Pin.
 """
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.wire import Wire
 
 # §A3.2: "długość dwa oczka siatki" — two grid cells, GRID_SNAP being

@@ -128,7 +128,7 @@ class ElementPreviewPanel(QWidget):
         if source == "library" and self._current_source == "canvas":
             return  # canvas selection wins (§6)
 
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             self._set_empty_state()

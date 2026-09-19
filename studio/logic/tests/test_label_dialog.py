@@ -5,8 +5,8 @@ from PySide6.QtWidgets import QApplication, QDialog
 from logic_studio.ui.label_dialog import (
     label_validation_error, find_similar_label, LabelNameDialog, prompt_for_label,
 )
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.wire import Wire
 

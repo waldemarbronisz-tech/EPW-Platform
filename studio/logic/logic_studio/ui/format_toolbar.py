@@ -21,7 +21,7 @@ from PySide6.QtGui import QAction, QActionGroup, QFont
 from PySide6.QtWidgets import QComboBox, QFontComboBox, QToolBar
 
 from logic_studio.ui.icons import action_icon
-from logic_studio.blocks.documentation import (
+from shared.logic.blocks.documentation import (
     ALIGN_KEY, ALIGNMENTS, BOLD_KEY, FONT_KEY, ITALIC_KEY, TEXT_SIZE_KEY, UNDERLINE_KEY,
 )
 

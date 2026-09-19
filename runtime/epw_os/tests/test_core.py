@@ -3,6 +3,7 @@ from epw_os.core.epw_core import EPWCore
 from epw_os.core.tag_manager import TagType, TagQuality, TagManager
 from epw_os.core.alarm_manager import AlarmState
 from epw_os.core.events import EventBus
+from epw_os.tests import _logic_program
 
 # Task (refactor/test-db-fixture): the `db` fixture (epw_os/tests/conftest.py)
 # is requested individually per test below, not file-wide - EPWCore().startup()
@@ -31,14 +32,7 @@ def test_normal_startup_does_not_block_any_existing_command_path(db):
     core = EPWCore()
     core.startup()
 
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
 
     # A standalone output channel (DO01-64) has no DeviceManager-tracked
@@ -251,14 +245,7 @@ def test_logic_engine_allow_all_stub_still_works(db):
     core = EPWCore()
     core.startup()
 
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
 
     # Task (device-communication-status gate) - same reasoning as
@@ -271,14 +258,7 @@ def test_logic_engine_allow_all_stub_still_works(db):
 def test_safety_kernel(db):
     core = EPWCore()
     core.startup()
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
     # Task (device-communication-status gate): the "permitted is True"
     # assertion just below the EMERGENCY_STOP checks now also depends on
@@ -333,14 +313,7 @@ def test_command_chain(db):
     core = EPWCore()
     core.startup()
     
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
     # Task (device-communication-status gate) - same reasoning as
     # test_logic_engine_fail_safe() above: this test's own target
@@ -384,14 +357,7 @@ def test_driver_chain(db):
 def test_fat_command_action_mapping(db):
     core = EPWCore()
     core.startup()
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
     
     # Load configuration
@@ -476,14 +442,7 @@ def test_driver_single_start(db):
 def test_true_timeout_fat(db):
     core = EPWCore()
     core.startup()
-    class AllowAllLogicRuntime:
-        ready = True
-        is_running = True
-        def validate_command(self, target, action):
-            return True, []
-        def scan(self): pass
-        def load_program(self, filepath): return True
-    core.logic_engine = AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
     
     # Load configuration with 100ms timeout

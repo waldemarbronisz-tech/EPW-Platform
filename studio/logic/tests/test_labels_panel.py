@@ -4,7 +4,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.wire import Wire
 from logic_studio.ui.panels.labels import LabelsPanel, _COL_LABEL, _COL_TYPE, _COL_SOURCE, _COL_RECEIVERS, _COL_STATE
 

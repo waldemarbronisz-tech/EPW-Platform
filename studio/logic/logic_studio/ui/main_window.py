@@ -400,9 +400,9 @@ class MainWindow(QMainWindow):
 
         # Init Application State
         from logic_studio.core.project import Project
-        from logic_studio.engine.execution import ExecutionEngine
-        from logic_studio.engine.io_provider import SimulationIOProvider
-        from logic_studio.engine.time_provider import SystemTimeProvider
+        from shared.logic.engine.execution import ExecutionEngine
+        from shared.logic.engine.io_provider import SimulationIOProvider
+        from shared.logic.engine.time_provider import SystemTimeProvider
         from logic_studio.ui.qt_lifetime import create_owned_timer
 
         self.project = Project()
@@ -778,7 +778,7 @@ class MainWindow(QMainWindow):
     def _update_step_buttons(self):
         """Manual step (§6.3) is only meaningful when the engine is not
         actively free-running: PAUSED, or STOPPED with a program loaded."""
-        from logic_studio.engine.execution import ExecutionState
+        from shared.logic.engine.execution import ExecutionState
         can_step = (
             self.engine.state in (ExecutionState.PAUSED, ExecutionState.STOPPED)
             and self.engine.program is not None
@@ -861,7 +861,7 @@ class MainWindow(QMainWindow):
         if self.current_macro_def_id is not None:
             return "concept_macros"
 
-        from logic_studio.engine.execution import ExecutionState
+        from shared.logic.engine.execution import ExecutionState
         if self.engine.state in (ExecutionState.RUNNING, ExecutionState.PAUSED):
             return "guide_simulation"
 
@@ -1032,7 +1032,7 @@ class MainWindow(QMainWindow):
 
         self.engine.start()
 
-        from logic_studio.engine.execution import ExecutionState
+        from shared.logic.engine.execution import ExecutionState
         if self.engine.state == ExecutionState.FAULT:
             self.output_panel.log_runtime("Engine transitioned to FAULT on start.")
             self.lbl_ready.setText("Simulation: engine error")
@@ -1419,7 +1419,7 @@ class MainWindow(QMainWindow):
         )
 
     def _on_sim_tick(self):
-        from logic_studio.engine.execution import ExecutionState
+        from shared.logic.engine.execution import ExecutionState
         if self.engine.state == ExecutionState.RUNNING:
             self._run_scan()
 
@@ -1432,7 +1432,7 @@ class MainWindow(QMainWindow):
         ExecutionEngine.step() itself now refuses to write real outputs in
         that state (§9.3) — surfaced here so the engineer sees it too,
         not just infers it. PAUSED steps normally, with real writes."""
-        from logic_studio.engine.execution import ExecutionState
+        from shared.logic.engine.execution import ExecutionState
         if self.engine.state not in (ExecutionState.PAUSED, ExecutionState.STOPPED):
             return
         if not self.engine.program or not self.engine.program.execution_order:

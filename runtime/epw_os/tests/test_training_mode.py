@@ -26,6 +26,7 @@ from epw_os.core.training_mode import TrainingModeManager
 from epw_os.core.driver_manager import DriverManager
 from epw_os.core.epw_core import EPWCore
 from epw_os.core.tag_manager import TagType
+from epw_os.tests import _logic_program
 
 
 class FakeAuditLogger:
@@ -205,19 +206,12 @@ def test_route_command_still_fails_normally_for_a_dead_driver_when_inactive():
 
 # --- Layer 3: end-to-end through a real EPWCore -------------------------
 
-class _AllowAllLogicRuntime:
-    ready = True
-    is_running = True
-    def validate_command(self, target, action):
-        return True, []
-    def scan(self): pass
-    def load_program(self, filepath): return True
 
 
 def _make_core_with_allow_all_logic():
     core = EPWCore()
     core.startup()
-    core.logic_engine = _AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
     return core
 
@@ -342,7 +336,7 @@ def test_self_referential_command_reaches_the_same_command_manager_state_either_
             def validate_command(self, t, a): return True, []
             def scan(self): pass
             def load_program(self, f): return True
-        core.logic_engine = AllowAll()
+        core.logic_engine = _logic_program.AllowAllLogicEngine()
         core.command_manager.logic_engine = core.logic_engine
         if training_active:
             core.training_mode.set_active(True, actor="Engineer")
@@ -403,7 +397,7 @@ def test_permissions_and_interlocks_work_the_same_in_training_mode(db):
     whether Training Mode exists)."""
     core = EPWCore()
     core.startup()
-    core.logic_engine = _AllowAllLogicRuntime()
+    core.logic_engine = _logic_program.AllowAllLogicEngine()
     core.command_manager.logic_engine = core.logic_engine
 
     # Task (device-communication-status gate, a separate fix in this

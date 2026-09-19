@@ -12,11 +12,11 @@ from logic_studio.core.macro_library import (
     collect_dependencies, export_definition, save_to_file, load_from_file,
     validate_bundle, import_bundle, FORMAT, SCHEMA_VERSION,
 )
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.logic_gates import AndGate
-from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.logic_gates import AndGate
+from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 

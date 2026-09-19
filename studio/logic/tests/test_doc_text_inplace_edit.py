@@ -9,8 +9,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 
 register_builtin_blocks()
 

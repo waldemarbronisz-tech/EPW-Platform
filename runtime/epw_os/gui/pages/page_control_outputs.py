@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-                             QTableWidget, QTableWidgetItem)
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton,
+                             QTableWidget, QTableWidgetItem, QDialog, QDialogButtonBox,
+                             QDoubleSpinBox, QFormLayout)
 from PySide6.QtCore import Qt
 from epw_os.gui.widgets.synoptic_objects import Lamp
 from epw_os.gui.widgets.popups import ForceOutputConfirmPopup
@@ -11,6 +12,7 @@ from epw_os.gui.table_helpers import (
 )
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.addressing import is_address, parse_address
+from epw_os.core.analog_scaling import format_display_value, normalize_config
 from epw_os.gui.theme_manager import get_theme_manager, current_colors
 from epw_os.i18n import tr
 from datetime import datetime
@@ -213,6 +215,47 @@ class SwitchingDeviceRow:
         dlg.exec()
 
 
+class AnalogOutputDialog(QDialog):
+    """Asks for ONE analog output's value in engineering units - the
+    range comes from the point's own configuration, so the operator sets
+    "65 %" and never the raw register number behind it (the conversion
+    is analog_scaling.compute_raw_value()'s job, in the core)."""
+
+    def __init__(self, tag_name: str, description: str, config: dict, current, parent=None):
+        super().__init__(parent)
+        self.setObjectName("IndustrialDialog")
+        self.setWindowTitle(tr("pages.control_outputs.analog_set_title", tag=tag_name))
+        self.setModal(True)
+        self.setMinimumWidth(340)
+
+        merged = normalize_config(config)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+        if description:
+            label = QLabel(description)
+            label.setWordWrap(True)
+            layout.addWidget(label)
+
+        form = QFormLayout()
+        layout.addLayout(form)
+        self.spin_value = QDoubleSpinBox()
+        low, high = float(merged["eng_min"]), float(merged["eng_max"])
+        self.spin_value.setRange(min(low, high), max(low, high))
+        self.spin_value.setDecimals(int(merged["decimals"] or 0))
+        self.spin_value.setSuffix((" " + merged["unit"]) if merged["unit"] else "")
+        if isinstance(current, (int, float)):
+            self.spin_value.setValue(float(current))
+        form.addRow(tr("pages.control_outputs.analog_value"), self.spin_value)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def result_value(self) -> float:
+        return float(self.spin_value.value())
+
+
 class PageControlOutputs(QWidget):
     def __init__(self, tag_manager, access_manager, service_notes=None, parent=None, descriptions_editable=True):
         super().__init__(parent)
@@ -299,8 +342,32 @@ class PageControlOutputs(QWidget):
 
         layout.addWidget(self.table, stretch=1)
 
+        # Analog outputs (task punkt 2): the same page, because this is
+        # the same thing on an analog channel - a value this controller
+        # drives out. Absent entirely on a project whose cards have no AO
+        # channels, rather than an empty table nobody can explain.
+        self.analog_rows = []
+        self.analog_title = QLabel(tr("pages.control_outputs.analog_title"))
+        self.analog_title.setObjectName("SectionHeader")
+        self.analog_table = QTableWidget(0, 5)
+        self.analog_table.setHorizontalHeaderLabels([
+            tr("pages.common.col_tag"), tr("pages.common.col_description"), tr("pages.common.col_value"),
+            tr("pages.common.col_timestamp"), tr("pages.control_outputs.col_set"),
+        ])
+        set_header_tooltips(self.analog_table, [
+            "", "", tr("pages.control_outputs.tooltip_analog_value"),
+            tr("pages.common.tooltip_col_timestamp"), tr("pages.control_outputs.tooltip_col_set"),
+        ])
+        set_resizable_columns(self.analog_table.horizontalHeader(), [110, 300, 130, 160, 80])
+        self.analog_table.verticalHeader().setVisible(False)
+        self.analog_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        layout.addWidget(self.analog_title)
+        layout.addWidget(self.analog_table, stretch=1)
+        self._build_analog_rows()
+
         self.table.itemChanged.connect(self._on_output_item_edited)
         self.tag_manager.tag_changed.connect(self._on_switching_device_tag_changed)
+        self.access_manager.level_changed.connect(self._refresh_analog_buttons)
         self.access_manager.level_changed.connect(self._on_access_level_changed)
         get_theme_manager().theme_changed.connect(self.refresh_theme)
 
@@ -311,6 +378,115 @@ class PageControlOutputs(QWidget):
         theme."""
         for row_obj in self.device_rows:
             row_obj.refresh_force_button()
+
+    def _analog_points(self) -> list:
+        """The AO points of the project, with their scaling. A tag manager
+        that does not know about them (an isolated widget test) gives
+        none, and the whole section stays hidden."""
+        getter = getattr(self.tag_manager, "get_analog_output_points", None)
+        points = getter() if callable(getter) else []
+        return [dict(point) for point in points or [] if point.get("tag")]
+
+    def _build_analog_rows(self):
+        points = sorted(self._analog_points(),
+                        key=lambda point: (parse_address(point["tag"])[0], parse_address(point["tag"])[2])
+                        if is_address(point["tag"], "AO") else (point["tag"], 0))
+        self.analog_rows = points
+        self.analog_table.setRowCount(len(points))
+        for row, point in enumerate(points):
+            tag_item = QTableWidgetItem(point["tag"])
+            desc_item = QTableWidgetItem(point.get("description") or "")
+            value_item = QTableWidgetItem(self._analog_display(point))
+            time_item = QTableWidgetItem("-")
+            for item in (tag_item, desc_item, value_item, time_item):
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.analog_table.setItem(row, 0, tag_item)
+            self.analog_table.setItem(row, 1, desc_item)
+            self.analog_table.setItem(row, 2, value_item)
+            self.analog_table.setItem(row, 3, time_item)
+            container = QWidget()
+            style_transparent_cell_container(container)
+            container_layout = QHBoxLayout(container)
+            container_layout.setContentsMargins(2, 2, 2, 2)
+            container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.analog_table.setCellWidget(row, 4, container)
+        visible = bool(points)
+        self.analog_title.setVisible(visible)
+        self.analog_table.setVisible(visible)
+        self._refresh_analog_buttons()
+
+    def _analog_display(self, point: dict) -> str:
+        """What the card is being driven with, in engineering units - the
+        tag holds the raw value, exactly like an analog input."""
+        raw = self.tag_manager.get_value(point["tag"])
+        if raw is None:
+            return "-"
+        # The unit rides along with the number here: unlike the Analog
+        # Inputs page, this table has no column of its own for it.
+        unit = normalize_config(point)["unit"]
+        text = format_display_value(raw, point)
+        return f"{text} {unit}" if unit else text
+
+    def _refresh_analog_buttons(self, *_):
+        """The Set button only EXISTS while Engineer access is active -
+        hidden by removal, the same rule the Force button follows."""
+        can_set = self.access_manager.has_access(AccessLevel.ENGINEER) and \
+            callable(getattr(self.tag_manager, "write_analog_output", None))
+        for row in range(self.analog_table.rowCount()):
+            container = self.analog_table.cellWidget(row, 4)
+            if container is None:
+                continue
+            container_layout = container.layout()
+            while container_layout.count():
+                child = container_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+            if not can_set:
+                continue
+            button = QPushButton(tr("pages.control_outputs.btn_set"))
+            apply_table_button_style(
+                button, extra_css=f"QPushButton {{ color: {current_colors()['action_danger']}; }}")
+            button.setToolTip(tr("pages.control_outputs.tooltip_col_set"))
+            button.clicked.connect(lambda checked=False, r=row: self.set_analog_output(r))
+            container_layout.addWidget(button)
+
+    def set_analog_output(self, row: int) -> bool:
+        """Engineer-gated at click time too, not only by the button's
+        presence - the same defense in depth every other control path on
+        this page has."""
+        if row >= len(self.analog_rows):
+            return False
+        point = self.analog_rows[row]
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.window().deny_access(AccessLevel.ENGINEER, "Set analog output")
+            return False
+        current = self.tag_manager.get_value(point["tag"])
+        merged = normalize_config(point)
+        engineering = None
+        if isinstance(current, (int, float)):
+            from epw_os.core.analog_scaling import compute_display_value
+            engineering = compute_display_value(current, merged)
+        dialog = AnalogOutputDialog(point["tag"], point.get("description") or "", merged, engineering, self)
+        if not dialog.exec():
+            return False
+        value = dialog.result_value()
+        result = self.tag_manager.write_analog_output(
+            point["tag"], value, actor=self.access_manager.level, level=self.access_manager.level)
+        if not result.get("success"):
+            QMessageBox.warning(self, tr("pages.control_outputs.analog_set_failed_title"),
+                                result.get("reason", ""))
+            return False
+        ui_logger.log("WARNING", "OPERATION", point["tag"],
+                      f"Analog output set to {value}", "Engineer", self.tag_manager.mode, "")
+        self._refresh_analog_row(row)
+        return True
+
+    def _refresh_analog_row(self, row: int):
+        if row >= len(self.analog_rows) or self.analog_table.item(row, 2) is None:
+            return
+        point = self.analog_rows[row]
+        self.analog_table.item(row, 2).setText(self._analog_display(point))
+        self.analog_table.item(row, 3).setText(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     def _on_output_item_edited(self, item):
         # Only the Description column (2) is user-editable; State/Timestamp
@@ -347,6 +523,12 @@ class PageControlOutputs(QWidget):
             f"Description changed from \"{old_desc}\" to \"{new_desc}\"",
             "Operator", self.tag_manager.mode, ""
         )
+
+    def _on_analog_tag_changed(self, tag_name):
+        for row, point in enumerate(self.analog_rows):
+            if point["tag"] == tag_name:
+                self._refresh_analog_row(row)
+                return
 
     def _on_switching_device_tag_changed(self, tag_name, new_value, quality):
         for row_obj in self.device_rows:

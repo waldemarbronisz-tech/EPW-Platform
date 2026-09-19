@@ -354,7 +354,15 @@
       "threshold_label": "Warn after this many closes:"
     },
     "control_outputs": {
-      "title": "OPERATOR CONTROL CENTER"
+      "title": "OPERATOR CONTROL CENTER",
+      "analog_title": "Analog outputs",
+      "col_set": "Set",
+      "btn_set": "Set...",
+      "tooltip_col_set": "Sets this output's value (Engineer). The value is in engineering units; the controller converts it to what the card expects.",
+      "tooltip_analog_value": "What this output is being driven with, in engineering units.",
+      "analog_set_title": "Set analog output {tag}",
+      "analog_value": "Value:",
+      "analog_set_failed_title": "Output not set"
     },
     "analog_inputs": {
       "btn_add": "Add Point",
@@ -437,7 +445,8 @@
       "geometry_missing": "The symbol library file is missing, so symbols are drawn as plain boxes: {reason}",
       "screen_warnings": "The screen loaded with {count} warning(s) - the details are in the log.",
       "state_unknown_title": "State unknown",
-      "state_unknown": "The state of {device} is not known (no feedback yet), so the command direction cannot be chosen."
+      "state_unknown": "The state of {device} is not known (no feedback yet), so the command direction cannot be chosen.",
+      "screen_label": "Screen:"
     },
     "system_topology": {
       "info_title": "DEVICE INFORMATION",
@@ -993,6 +1002,8 @@
     "project_missing": "There is no project file at {path}. The controller runs with an empty project - install the projekt.epw prepared in Studio.",
     "project_refused": "The project file {path} was not loaded. The controller runs with an empty project. Reason:",
     "project_warnings": "The project file {path} was loaded with {count} warning(s) - the details are in the log.",
+    "logic_rejected": "The logic program in the project was refused and is NOT running: {reason} The controller runs without user logic - recompile the project in Logic Studio and install it again.",
+    "logic_not_started": "The logic program was loaded, but the scan did not start: {reason} The interlocks in that program are NOT running.",
     "state_missing": "The runtime state file {path} does not exist: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
     "state_damaged": "The runtime state file {path} is damaged: the alarm system's arming state from before the restart is unknown, so every zone started DISARMED. Check the site and arm again if needed.",
     "composition_logic": "The logic file {path} refers to {count} signal(s) of the module \"{module}\", which is not part of this controller: {signals}. They cannot work until the module is added to the device in Studio or the references are removed from the logic.",

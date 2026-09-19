@@ -89,9 +89,13 @@ macro parameter rather than being typed in directly.
 """
 import uuid as uuid_module
 
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 
-MACRO_TYPE_PREFIX = "macro."
+# feat/logic-execution: the "macro.<def_id>" spelling itself moved to
+# shared/logic/macro_type.py (blocks/registry.py needs it and is imported
+# by EPW-OS, which has no Logic Studio on its path) - re-exported here
+# unchanged, so every editor module keeps importing it from this module.
+from shared.logic.macro_type import MACRO_TYPE_PREFIX, macro_def_id  # noqa: F401
 
 SETTINGS_KEY = "macro_definitions"
 
@@ -108,15 +112,6 @@ PARAM_TYPES = ("INT", "REAL", "BOOL", "STRING", "ENUM")
 # stale parameter's leftover property" apart from an ordinary base
 # property every block has.
 _INSTANCE_BASE_PROPERTY_KEYS = frozenset({"Address", "Tag", "Comment"})
-
-
-def macro_def_id(type_id: str):
-    """None if `type_id` doesn't name a macro instance; else the
-    definition id it references (the part after "macro.")."""
-    if not type_id or not type_id.startswith(MACRO_TYPE_PREFIX):
-        return None
-    def_id = type_id[len(MACRO_TYPE_PREFIX):]
-    return def_id or None  # bare "macro." (an unconfigured/corrupt instance) has no real def_id
 
 
 def new_def_id() -> str:
@@ -214,8 +209,8 @@ def instantiate_definition_blocks(definition: dict) -> tuple:
     should never actually be non-empty for data this app produced, but a
     hand-edited/corrupted file could still smuggle one in, so this reports
     it the same way Project.deserialize() would rather than crashing."""
-    from logic_studio.blocks.registry import BlockRegistry
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.registry import BlockRegistry
+    from shared.logic.blocks.pin import Pin
 
     blocks = []
     unknown_type_ids = []
@@ -304,7 +299,7 @@ def add_boundary_pin(project, def_id: str, direction, block_uuid: str, pin_name:
     — does NOT resync instances itself, call resync_all_instances() right
     after (kept separate so a caller building several changes at once,
     e.g. exposing many pins together, only resyncs once at the end)."""
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     definition = get_definition(project, def_id)
     if definition is None:
@@ -340,7 +335,7 @@ def remove_boundary_pin(project, def_id: str, direction, index: int) -> bool:
     input_pins/output_pins. Returns False (no-op) for a missing
     definition or an out-of-range index. Does NOT resync instances
     itself — same reasoning as add_boundary_pin()."""
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     definition = get_definition(project, def_id)
     if definition is None:
@@ -392,7 +387,7 @@ def _resync_pin_list(current_pins, new_boundary_entries, direction):
             remaining.remove(match)
             new_pins.append(match)
         else:
-            from logic_studio.blocks.pin import Pin
+            from shared.logic.blocks.pin import Pin
             new_pins.append(Pin(label, direction, data_type))
     return new_pins, remaining
 
@@ -407,7 +402,7 @@ def _resync_instance_live(instance, new_definition):
     of them by uuid; `param_resets` is `sync_instance_parameters()`'s own
     return (see there) for the caller to turn into a compile-warning-
     shaped message naming this instance."""
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     new_inputs, removed_inputs = _resync_pin_list(instance.inputs, new_definition.get("input_pins", []), Pin.DIR_INPUT)
     new_outputs, removed_outputs = _resync_pin_list(instance.outputs, new_definition.get("output_pins", []), Pin.DIR_OUTPUT)
@@ -440,7 +435,7 @@ def _resync_instance_dict(b_data, new_definition, sibling_blocks_data):
     own `param_resets` — this instance has no `short_id` to report by
     (it's not live anywhere right now), so the caller identifies it some
     other way (e.g. the enclosing definition's own name)."""
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     def resync_side(data_key, boundary_key, direction):
         remaining = list(b_data.get(data_key, []))
@@ -972,7 +967,7 @@ def expand_project(project) -> tuple:
 
 
 def _expand_blocks(blocks, macro_defs, expanding, errors, rewire_plan, wire_scopes):
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     result = []
     for block in blocks:
@@ -1007,7 +1002,7 @@ def _expand_blocks(blocks, macro_defs, expanding, errors, rewire_plan, wire_scop
 
 
 def _expand_instance(instance_block, def_id, macro_def, macro_defs, expanding, errors, rewire_plan, wire_scopes):
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     pin_uuid_map = {}       # old internal pin uuid (in the definition) -> new (fresh) internal pin uuid
     block_by_old_uuid = {}  # old internal block uuid (in the definition) -> fresh block object

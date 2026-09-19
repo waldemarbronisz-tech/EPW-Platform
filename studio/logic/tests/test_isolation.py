@@ -1,11 +1,11 @@
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
-from logic_studio.engine.execution import ExecutionEngine
-from logic_studio.engine.io_provider import SimulationIOProvider
-from logic_studio.engine.time_provider import SimulationTimeProvider
-from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-from logic_studio.blocks.logic_gates import NotGate
+from shared.logic.engine.execution import ExecutionEngine
+from shared.logic.engine.io_provider import SimulationIOProvider
+from shared.logic.engine.time_provider import SimulationTimeProvider
+from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+from shared.logic.blocks.logic_gates import NotGate
 
 def test_isolation():
     project = Project()

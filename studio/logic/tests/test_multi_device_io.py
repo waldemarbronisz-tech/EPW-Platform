@@ -12,8 +12,8 @@ device" section at the end of this file, respectively.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 
@@ -321,7 +321,7 @@ def test_no_project_generates_no_device_signals():
     no ELA/ADA devices) must generate NO per-device diagnostic signals -
     there is no device to generate one for, and no reason to keep
     pretending "ELA01"/"ADA01" exist."""
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
 
     for sig_id in ("ELA01.ONLINE", "ELA01.FAULT", "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK"):
         assert system_signals.get_signal(sig_id) is None, sig_id
@@ -331,7 +331,7 @@ def test_project_with_devices_generates_their_signals():
     """Companion to the above - a project that DOES define ELA01/ADA01
     (its own real configuration, not a silent default) still gets
     exactly the same diagnostic content the old static catalog had."""
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -352,7 +352,7 @@ def test_project_with_devices_generates_their_signals():
         assert entry["safety_relevant"] is safety
 
 def test_second_device_gets_its_own_diagnostic_signals():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
 
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
@@ -374,7 +374,7 @@ def test_second_device_gets_its_own_diagnostic_signals():
     assert safe_path["safety_relevant"] is True
 
 def test_get_categories_places_device_signals_under_komunikacja():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
 
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]

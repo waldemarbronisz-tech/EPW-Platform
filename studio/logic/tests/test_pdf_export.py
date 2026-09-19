@@ -8,7 +8,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog
 from PySide6.QtGui import QPainter
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.crossref import build_crossref
 from logic_studio.ui.pdf_export import (
     signal_list_rows, export_schematic_to_pdf, _draw_signal_list_pages,

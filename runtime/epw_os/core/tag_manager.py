@@ -174,10 +174,23 @@ class TagManager:
                 dev_type = "ELA"
             elif kind == "DO":
                 dev_type = "ADA"
-            elif kind in ("AI", "AO"):
+            elif kind == "AI":
                 # AI points become tags through the Analog Inputs module
                 # (EPWCore._register_analog_input_tags(), only when that
-                # module is part of the device); AO has no runtime support yet.
+                # module is part of the device) - they are a module's
+                # points, not plain channels.
+                continue
+            elif kind == "AO":
+                # An analog OUTPUT is a channel of the card, like DO: it
+                # exists because the card has it, not because a module is
+                # switched on. The tag holds the RAW register value (same
+                # as an analog input); analog_scaling.compute_raw_value()
+                # turns an engineering value into it on the way out.
+                for i in range(1, int(dev.get("channels", 0) or 0) + 1):
+                    self.add_tag(format_address(dev_id, "AO", i), 0.0, TagType.REAL,
+                                 quality=TagQuality.NOT_INITIALIZED, source="HARDWARE",
+                                 description=f"Analog output channel {i} on module '{dev_id}' - the raw value "
+                                             f"written to the card. NOT_INITIALIZED until something writes it.")
                 continue
             if dev_type == "ELA":
                 for i in range(1, dev.get("channels", 32) + 1):

@@ -18,10 +18,10 @@ code between the two here.
 """
 from dataclasses import dataclass, field
 
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.device_model import DeviceModel
-from logic_studio.core.internal_bits import internal_bit_id
-from logic_studio.core import system_signals
+from shared.logic.internal_bits import internal_bit_id
+from shared.logic import system_signals
 
 KIND_PHYSICAL_DI = "physical_di"
 KIND_PHYSICAL_DO = "physical_do"

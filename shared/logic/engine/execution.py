@@ -1,6 +1,6 @@
 import time
-from logic_studio.engine.io_provider import IOProvider, SimulationIOProvider
-from logic_studio.engine.time_provider import TimeProvider
+from shared.logic.engine.io_provider import IOProvider, SimulationIOProvider
+from shared.logic.engine.time_provider import TimeProvider
 
 class ExecutionState:
     STOPPED = "STOPPED"
@@ -8,7 +8,7 @@ class ExecutionState:
     PAUSED = "PAUSED"
     FAULT = "FAULT"
 
-from logic_studio.engine.program import CompiledProgram
+from shared.logic.engine.program import CompiledProgram
 
 class RuntimeSnapshot:
     """Public read-only DTO for external UI/Tests to inspect runtime state without mutating it."""

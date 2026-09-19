@@ -5,12 +5,12 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QFont, QFontMetricsF
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.ui.canvas.block_item import BlockItem, GATE_SHAPES
 from logic_studio.ui.canvas.port_item import PortItem
 from logic_studio.ui.canvas import style, shapes
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 
 
 def _app():
@@ -219,15 +219,15 @@ def test_negated_and_non_negated_gates_are_the_same_width():
 def test_base_block_has_tag_and_comment_and_aliases():
     """§3.1/§4.6: every block gets Tag/Comment properties and an aliases
     list, defaulting to empty."""
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
     a = AndGate()
     assert a.properties["Tag"] == ""
     assert a.properties["Comment"] == ""
     assert a.aliases == []
 
 def test_timer_and_deadband_aliases_populated():
-    from logic_studio.blocks.timers import TON, TOF, TP
-    from logic_studio.blocks.analog_processing import DeadbandBlock, QualityBlock
+    from shared.logic.blocks.timers import TON, TOF, TP
+    from shared.logic.blocks.analog_processing import DeadbandBlock, QualityBlock
 
     assert "zwłoka" in TON().aliases or "opóźnienie załączenia" in TON().aliases
     assert any("wyłączenia" in a for a in TOF().aliases)
@@ -239,7 +239,7 @@ def test_tag_comment_not_persisted_in_properties_only_when_empty_is_fine():
     """Tag/Comment round-trip through serialize()/deserialize() like any
     other property — no special-casing needed since they're just entries in
     the existing `properties` dict."""
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     a = AndGate()
     a.properties["Tag"] = "C1"

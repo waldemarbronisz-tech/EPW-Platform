@@ -12,13 +12,13 @@ import math
 
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.compiler.core import Compiler
-from logic_studio.engine.execution import ExecutionEngine
-from logic_studio.engine.io_provider import SimulationIOProvider
-from logic_studio.engine.time_provider import SimulationTimeProvider
+from shared.logic.engine.execution import ExecutionEngine
+from shared.logic.engine.io_provider import SimulationIOProvider
+from shared.logic.engine.time_provider import SimulationTimeProvider
 
 register_builtin_blocks()
 
@@ -34,7 +34,7 @@ def _adc_noise(sample_index: int, amplitude: float = 0.001) -> float:
 # ---- §10.1: frozen sensor with realistic last-bit noise -------------------
 
 def test_frozen_sensor_with_realistic_noise_needs_tolerance_to_detect():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     base = 50.0
     q_no_tolerance = QualityBlock()
@@ -71,8 +71,8 @@ def test_max_rate_per_second_is_independent_of_cycle_time_end_to_end():
     (cycle_time_ms actually comes from project.settings, and the engine
     is stepped scan-by-scan at that real cadence) rather than calling
     QualityBlock.evaluate() directly."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     results = {}
     for cycle_time_ms in (100, 50):
@@ -130,7 +130,7 @@ def test_signal_dropout_and_return_end_to_end():
     virtual signal, a bare Quality block reading something upstream of
     an AI's own holdover), which this reproduces end-to-end through
     Compiler/ExecutionEngine rather than a bare evaluate() call."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     project = Project()
     q = QualityBlock()
@@ -173,8 +173,8 @@ def test_ai_holdover_means_a_downstream_quality_never_sees_the_raw_dropout():
     everything downstream, like a perfectly ordinary steady reading --
     Quality only ever finds out about the eventual real jump once the
     signal actually returns, and correctly treats THAT as the anomaly."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     project = Project()
     project.settings["analog_points"] = [
@@ -219,7 +219,7 @@ def test_ai_holdover_means_a_downstream_quality_never_sees_the_raw_dropout():
 # ---- §10.4: slow drift through DEADBAND ------------------------------------
 
 def test_deadband_change_count_matches_expected_for_a_slow_drift():
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Deadband"] = 1.0  # absolute
@@ -245,7 +245,7 @@ def test_deadband_pure_noise_with_no_drift_barely_reports():
     """The companion case: noise alone (no real trend) around a threshold
     comfortably larger than the noise amplitude must report only once
     (the mandatory first scan) -- report-by-exception doing its job."""
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Deadband"] = 1.0
@@ -261,7 +261,7 @@ def test_deadband_pure_noise_with_no_drift_barely_reports():
 # ---- §10.5: signal oscillating at a hysteresis comparator's threshold -----
 
 def test_comparator_hysteresis_settles_with_at_most_one_switch_in_100_scans():
-    from logic_studio.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.comparators import GreaterBlock
 
     g = GreaterBlock()
     g.properties["Hysteresis"] = 1.0  # +/-1.0 Schmitt-trigger band around the threshold
@@ -295,7 +295,7 @@ def test_ai_range_margin_matrix(value, expect_good):
     """input.ai's -40..150 range, 10% margin == 19 either side (AUDIT_
     REPORT.md's own quality-check contract) -- every boundary case in one
     parametrized sweep instead of one-off assertions."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     class FakeIO:
         def __init__(self, v):
@@ -317,7 +317,7 @@ def test_ai_range_margin_matrix(value, expect_good):
 # ---- §10.7: AI Max Hold, stepped scan-by-scan like a real PLC -------------
 
 def test_ai_max_hold_expires_after_5_seconds_of_simulated_scan_time():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     project = Project()
     project.settings["analog_points"] = [

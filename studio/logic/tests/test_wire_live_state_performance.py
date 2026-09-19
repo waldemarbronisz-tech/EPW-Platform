@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.ui.canvas.scene import LogicScene
 from logic_studio.ui.canvas.block_item import BlockItem

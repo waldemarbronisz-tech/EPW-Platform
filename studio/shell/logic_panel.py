@@ -80,7 +80,7 @@ class LogicPanel(QWidget):
         _ensure_logic_studio_importable()
 
         global _blocks_registered
-        from logic_studio.blocks import register_builtin_blocks
+        from shared.logic.blocks import register_builtin_blocks
         if not _blocks_registered:
             register_builtin_blocks()
             _blocks_registered = True

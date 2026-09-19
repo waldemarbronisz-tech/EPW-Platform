@@ -1,8 +1,8 @@
 import pytest
 from logic_studio.core.project import Project
-from logic_studio.blocks.logic_gates import NotGate
-from logic_studio.blocks.io_blocks import DigitalInputBlock
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.logic_gates import NotGate
+from shared.logic.blocks.io_blocks import DigitalInputBlock
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 

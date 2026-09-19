@@ -17,7 +17,7 @@ import shiboken6
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.qt_lifetime import create_owned_timer
 from logic_studio.ui.canvas.navigation import pulse_highlight
 
@@ -37,6 +37,10 @@ def _app():
 # ============================================================================
 
 _SRC_ROOT = Path(__file__).resolve().parent.parent / "logic_studio"
+# The block library and the execution engine moved to shared/logic/ (they
+# are the contract with runtime); this audit still has to see them - they
+# are the same code, at a new address.
+_SHARED_LOGIC_ROOT = Path(__file__).resolve().parents[3] / "shared" / "logic"
 _FACTORY_FILE = (_SRC_ROOT / "ui" / "qt_lifetime.py").resolve()
 
 # No exceptions today -- every call site this project had (navigation.py,
@@ -70,12 +74,12 @@ def _qtimer_call_lines(path: Path) -> list:
 
 
 def _all_source_files():
-    return sorted(_SRC_ROOT.rglob("*.py"))
+    return sorted(_SRC_ROOT.rglob("*.py")) + sorted(_SHARED_LOGIC_ROOT.rglob("*.py"))
 
 
 @pytest.mark.parametrize(
     "path", _all_source_files(),
-    ids=lambda p: str(p.relative_to(_SRC_ROOT)).replace("\\", "/"),
+    ids=lambda p: str(p.relative_to(_SRC_ROOT.parents[2])).replace("\\", "/"),
 )
 def test_no_direct_qtimer_construction_outside_the_sanctioned_factory(path):
     resolved = path.resolve()
@@ -133,7 +137,7 @@ def _lifecycle_class_call_lines(path: Path) -> dict:
 
 @pytest.mark.parametrize(
     "path", _all_source_files(),
-    ids=lambda p: str(p.relative_to(_SRC_ROOT)).replace("\\", "/"),
+    ids=lambda p: str(p.relative_to(_SRC_ROOT.parents[2])).replace("\\", "/"),
 )
 def test_no_other_qt_lifecycle_object_used_anywhere_yet(path):
     """§C1.1: confirms today's audit finding (none of QThread/

@@ -82,7 +82,7 @@ def describe_watch(project, kind: str, signal_id: str) -> str:
         entry = DeviceModel.get_internal_bit(project, signal_id)
         return entry.get("description", "") if entry else ""
     if kind == KIND_SYSTEM:
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
         entry = system_signals.get_signal(signal_id, project)
         return entry.get("description", "") if entry else ""
     return ""
@@ -102,7 +102,7 @@ def is_boolean_kind(project, kind: str, signal_id: str) -> bool:
         entry = DeviceModel.get_internal_bit(project, signal_id)
         return not entry or entry.get("type") != "REAL"
     if kind == KIND_SYSTEM:
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
         entry = system_signals.get_signal(signal_id, project)
         return not entry or entry.get("type") != "REAL"
     return True
@@ -183,7 +183,7 @@ def read_value(project, io_provider, kind: str, signal_id: str, now_ms: int = 0)
         return io_provider.read_analog_output(signal_id)
     if kind in (KIND_INTERNAL_BIT, KIND_INTERNAL_REG):
         from logic_studio.core.device_model import DeviceModel
-        from logic_studio.core.internal_bits import internal_bit_id
+        from shared.logic.internal_bits import internal_bit_id
 
         entry = DeviceModel.get_internal_bit(project, signal_id)
         if entry is None:

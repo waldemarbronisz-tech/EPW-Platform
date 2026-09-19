@@ -13,10 +13,10 @@ import pytest
 from logic_studio.core.project import Project
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.validator import Validator
-from logic_studio.blocks.logic_gates import (
+from shared.logic.blocks.logic_gates import (
     AndGate, And3Gate, And4Gate, OrGate, Or3Gate, NotGate, BufferGate,
 )
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 
@@ -32,7 +32,7 @@ def test_allows_disabled_inputs_false_for_single_input_gates():
         assert cls().allows_disabled_inputs is False
 
 def test_allows_disabled_inputs_false_by_default_on_base_block():
-    from logic_studio.blocks.io_blocks import DigitalOutputBlock
+    from shared.logic.blocks.io_blocks import DigitalOutputBlock
     assert DigitalOutputBlock().allows_disabled_inputs is False
 
 

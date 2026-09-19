@@ -4,8 +4,8 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QRectF, Qt
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.ui.canvas.block_item import BlockItem
 from logic_studio.ui.canvas import style
 

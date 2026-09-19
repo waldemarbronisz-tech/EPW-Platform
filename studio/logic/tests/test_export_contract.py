@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.analog_io import AnalogInputBlock
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.analog_io import AnalogInputBlock
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.exporter import Exporter, verify_checksum, CHECKSUM_FIELDS
 from logic_studio.core.project import Project
@@ -266,8 +266,8 @@ def test_runtime_reconstructable_internal_signal_type_and_retentive(tmp_path):
     actually used in the logic — the same reasoning as
     test_runtime_reconstructable_without_project() above, for internal_bits
     instead of analog_points."""
-    from logic_studio.blocks.registry import BlockRegistry
-    from logic_studio.core.internal_bits import internal_bit_id
+    from shared.logic.blocks.registry import BlockRegistry
+    from shared.logic.internal_bits import internal_bit_id
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -304,7 +304,7 @@ def test_runtime_reconstructable_internal_signal_type_and_retentive(tmp_path):
     assert internal_bit_id(ro_entry) == "MW.USTAWKA"      # REAL, not retentive
 
 def test_export_carries_system_catalog_version():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])

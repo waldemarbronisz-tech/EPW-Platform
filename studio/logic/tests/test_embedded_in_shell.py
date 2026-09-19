@@ -26,8 +26,8 @@ against the real shell) and must keep passing after it.
 """
 from PySide6.QtWidgets import QStackedWidget, QWidget
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.ui.main_window import MainWindow
 from logic_studio.ui.panels.library import TYPE_ID_ROLE
 

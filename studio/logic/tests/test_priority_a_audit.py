@@ -2,7 +2,7 @@ import pytest
 import os
 from PySide6.QtWidgets import QApplication
 from logic_studio.ui.main_window import MainWindow
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 def test_priority_a_audit(qsettings):
     # 9. REGISTRY / 1. LIBRARY
@@ -13,11 +13,11 @@ def test_priority_a_audit(qsettings):
 
     register_builtin_blocks()
     m = MainWindow(settings=qsettings)
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
     m.engine.time = SimulationTimeProvider()
 
     # Verify Library categories
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     cats = BlockRegistry.get_categories()
     assert "Inputs / Outputs" in cats
     assert "Other" in cats

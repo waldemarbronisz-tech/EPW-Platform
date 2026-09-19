@@ -11,9 +11,17 @@ import pytest
 from epw_os.core.composition_check import find_signals_outside_composition
 from epw_os.core.epwsyn_loader import load_epwsyn_data, load_epwsyn_file
 from epw_os.core.logic_engine import LogicEngine
+from epw_os.tests import _logic_program
 
 
 def _runtime_logic(tags):
+    """A logic DOCUMENT for the composition check, which only ever reads
+    the raw JSON looking for signal names (see composition_check.py) -
+    deliberately not a runnable program: the tags below are exactly the
+    "signals that are not in this controller" the check exists to find.
+    Anything that has to actually RUN uses _logic_program.py instead,
+    which builds a real, checksum-signed export out of the shared block
+    library."""
     return {"format": "EPW_RUNTIME_LOGIC", "schema_version": 1, "blocks": [{"id": "b", "inputs": tags}],
             "execution_order": ["b"]}
 
@@ -29,14 +37,17 @@ def _screens():
 
 def test_logic_engine_loads_the_embedded_program():
     engine = LogicEngine(tag_manager=None)
-    assert engine.load_program_data(_runtime_logic([])) is True
+    assert engine.load_program_data(_logic_program.di_to_do()) is True
     assert engine.load_program_data({"format": "EPW_LOGIC"}) is False
     assert engine.load_program_data("not a dict") is False
+    # The marker alone is no longer enough: a document that cannot become
+    # a runnable program is refused, not accepted and quietly not run.
+    assert engine.load_program_data(_runtime_logic([])) is False
 
 
 def test_logic_engine_file_path_still_goes_through_the_same_acceptance(tmp_path):
     path = tmp_path / "x.epwlogic.runtime.json"
-    path.write_text(json.dumps(_runtime_logic([])), encoding="utf-8")
+    path.write_text(json.dumps(_logic_program.di_to_do()), encoding="utf-8")
     assert LogicEngine(tag_manager=None).load_program(str(path)) is True
 
 
@@ -99,7 +110,7 @@ def start_core(db):
 def test_core_runs_the_logic_embedded_in_projekt_epw(tmp_path, start_core):
     from epw_os.core import project_format as pf
     project = pf.new_project("Embedded", author="Test")
-    project.logic_runtime = _runtime_logic([])
+    project.logic_runtime = _logic_program.di_to_do()
     project.screens = _screens()
     path = tmp_path / "projekt.epw"
     pf.save_project(project, path)

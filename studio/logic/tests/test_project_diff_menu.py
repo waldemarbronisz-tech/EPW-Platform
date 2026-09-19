@@ -6,7 +6,7 @@ import json
 import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.project_diff_dialog import ProjectDiffDialog
 
 register_builtin_blocks()
@@ -158,7 +158,7 @@ def test_compare_with_saved_file_normalizes_to_top_level_first(qsettings, tmp_pa
     window.project.save_to_file(path)
     window.current_file = path
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
     window.enter_macro_instance(instance)
     assert window.current_macro_def_id is not None

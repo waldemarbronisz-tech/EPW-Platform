@@ -1,6 +1,6 @@
 import pytest
 from PySide6.QtWidgets import QApplication
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 
@@ -239,7 +239,7 @@ def test_scene_add_block_from_library_without_address_keeps_default():
     _app()
     register_builtin_blocks()
     from logic_studio.ui.canvas.scene import LogicScene
-    from logic_studio.blocks.io_blocks import DigitalInputBlock
+    from shared.logic.blocks.io_blocks import DigitalInputBlock
 
     scene = LogicScene()
     scene.add_block_from_library("input.di", 0, 0)
@@ -390,7 +390,7 @@ def test_analog_chain_full_scan_through_main_window(qsettings):
 def test_step_buttons_enabled_state_transitions(qsettings):
     _app()
     from logic_studio.ui.main_window import MainWindow
-    from logic_studio.engine.execution import ExecutionState
+    from shared.logic.engine.execution import ExecutionState
 
     register_builtin_blocks()
     m = MainWindow(settings=qsettings)
@@ -441,7 +441,7 @@ def test_step_in_stopped_shows_dry_run_status_message(qsettings):
     surfaced on the status bar, not just inferred from the engine state."""
     _app()
     from logic_studio.ui.main_window import MainWindow
-    from logic_studio.engine.execution import ExecutionState
+    from shared.logic.engine.execution import ExecutionState
 
     register_builtin_blocks()
     m = MainWindow(settings=qsettings)
@@ -479,7 +479,7 @@ def test_property_grid_analog_address_combobox(qsettings):
     _app()
     from PySide6.QtWidgets import QComboBox
     from logic_studio.ui.panels.property_grid import PropertyGridPanel
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])

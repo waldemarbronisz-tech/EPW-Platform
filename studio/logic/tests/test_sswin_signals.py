@@ -9,11 +9,11 @@ import re
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.project import Project
-from logic_studio.core import system_signals
+from shared.logic import system_signals
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.exporter import Exporter, verify_checksum
 
@@ -109,9 +109,9 @@ def test_reading_a_logic_sourced_signal_compiles():
     assert res is not None, f"Compile failed: {c.errors}"
 
 def test_write_then_read_roundtrips_across_two_scans():
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SystemTimeProvider
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SystemTimeProvider
 
     p = Project()
     out = _out_block("SSWIN.CMD_ARM")

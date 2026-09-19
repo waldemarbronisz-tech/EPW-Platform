@@ -1,8 +1,8 @@
 import math
 
-from logic_studio.blocks.base import BaseLogicBlock
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks.base import BaseLogicBlock
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.registry import BlockRegistry
 
 class BaseAnalogBlock(BaseLogicBlock):
     def __init__(self, type_id, default_name, category, description):
@@ -304,7 +304,7 @@ class QualityBlock(BaseAnalogBlock):
         # Range" alone measures ~132px at FONT_SIZE_PIN_LABEL, needing
         # >=~293px of block width (132 / 0.45) to render unclipped;
         # "Out Of…" gave no hint whether it meant range or something else.
-        # This can't be computed from font metrics here (logic_studio.blocks
+        # This can't be computed from font metrics here (shared.logic.blocks
         # is deliberately Qt-free — see ui/canvas/block_item.py for where
         # that measurement DOES happen, for IO-shaped blocks) — a fixed,
         # comfortably-rounded width instead, wide enough with margin.

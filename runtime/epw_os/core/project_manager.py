@@ -892,6 +892,25 @@ class ProjectManager:
             return True  # an old project.json is not rewritten on every page change
         return self.save_runtime_state()
 
+    def get_analog_output_points(self) -> list:
+        """[{tag, description, technical_note, signal_type, raw_min,
+        raw_max, eng_min, eng_max, unit, decimals}] for every AO point of
+        the project - the scaling an analog output is written through
+        (analog_scaling.compute_raw_value())."""
+        return [dict(point) for point in self.config.get("analog_outputs", [])]
+
+    def get_last_synoptic_screen(self):
+        """Which screen of the project's `screens` the panel had open."""
+        return self.config.get("last_synoptic_screen")
+
+    def set_last_synoptic_screen(self, screen_id) -> bool:
+        if self.config.get("last_synoptic_screen") == screen_id:
+            return True
+        self.config["last_synoptic_screen"] = screen_id
+        if not self.is_epw_project():
+            return True  # an old project.json is not rewritten on every screen change
+        return self.save_runtime_state()
+
     def save_runtime_state(self) -> bool:
         """Writes only the state part - runtime_state.json for projekt.epw,
         the whole file for an old project.json."""

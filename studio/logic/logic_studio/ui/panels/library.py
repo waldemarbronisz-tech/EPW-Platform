@@ -157,7 +157,7 @@ class LibraryPanel(QWidget):
         self._rebuild_macro_section()
 
     def _populate_tree(self):
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
 
         self.tree.clear()
         self._category_roots = {}
@@ -224,7 +224,7 @@ class LibraryPanel(QWidget):
         macro_name = self._macro_definition_name(type_id)
         if macro_name is not None:
             return macro_name
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             return type_id
@@ -240,7 +240,7 @@ class LibraryPanel(QWidget):
             n_in = len(definition.get("input_pins", []))
             n_out = len(definition.get("output_pins", []))
             return f"User macro ({n_in} in / {n_out} out)"
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             return ""
@@ -284,7 +284,7 @@ class LibraryPanel(QWidget):
         """Call whenever a block is actually placed on the canvas — from
         either a library drag/double-click or a plain canvas paste/duplicate
         path that goes through LogicScene.add_block_from_library()."""
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         if not BlockRegistry.get_block_class(type_id):
             return
 
@@ -471,7 +471,7 @@ class LibraryPanel(QWidget):
             # args, the branch below) only ever gives the generic
             # "Macro" name/description, never THIS macro's own.
             return text in type_id.lower() or text in macro_name.lower()
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             return text in type_id.lower()

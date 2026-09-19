@@ -6,8 +6,8 @@ from PySide6.QtCore import Qt, QPoint, QPointF, QRectF
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QSpinBox
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.ui.canvas import style
 from logic_studio.ui.canvas.block_item import BlockItem
@@ -56,7 +56,7 @@ def test_documentation_module_never_imports_qt(type_id):
     this specific new property."""
     import ast
     import inspect
-    import logic_studio.blocks.documentation as doc_module
+    import shared.logic.blocks.documentation as doc_module
     source = inspect.getsource(doc_module)
     tree = ast.parse(source)
     for node in ast.walk(tree):

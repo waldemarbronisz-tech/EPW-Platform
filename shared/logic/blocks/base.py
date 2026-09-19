@@ -316,7 +316,7 @@ class BaseLogicBlock:
         new_block.execution_priority = self.execution_priority
         new_block.enabled = self.enabled
 
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
 
         # Pins are cloned into fresh objects (never shared) to avoid mutable-state
         # aliasing between the original and the copy. When preserve_uuid is set

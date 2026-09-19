@@ -16,8 +16,8 @@ block evaluated with nothing wired to its input(s).
 """
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 
 register_builtin_blocks()
 

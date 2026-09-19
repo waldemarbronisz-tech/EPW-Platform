@@ -110,7 +110,7 @@ class LabelsPanel(QWidget):
         self._update_empty_state()
 
     def _append_row(self, key, group, info, pin_to_block):
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
 
         row = self.table.rowCount()
         self.table.insertRow(row)

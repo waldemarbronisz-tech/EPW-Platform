@@ -356,7 +356,7 @@ class SignalsPanel(QWidget):
         if usage.kind in (KIND_PHYSICAL_DI, KIND_ANALOG_IN):
             return "device", "The signal comes from a physical device, not from a block in the project."
         if usage.kind == KIND_SYSTEM:
-            from logic_studio.core import system_signals
+            from shared.logic import system_signals
             entry = system_signals.get_signal(signal_id, self.project)
             if entry is None or entry.get("source") != "logic":
                 return "device", "The signal comes from a physical device, not from a block in the project."

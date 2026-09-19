@@ -8,9 +8,9 @@ test_macro_pin_editing.py's own fixture shape.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.core import macros as M
@@ -293,9 +293,9 @@ def test_updating_the_parameter_property_uses_generic_type_casting():
 # ---- §C5.1: THE flagship test — two instances, independent nastawy -----
 
 def test_two_instances_of_the_same_macro_keep_independent_presets_and_timing():
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])

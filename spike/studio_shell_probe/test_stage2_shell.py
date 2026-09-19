@@ -79,7 +79,7 @@ def step4_after_logic():
     # own drag-and-drop uses (add_block_from_library), so a real
     # undo-stack entry gets pushed - not a synthetic append, the actual
     # production code path.
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     category = BlockRegistry.get_categories()[0]
     block_type = BlockRegistry.get_blocks_in_category(category)[0]
     mw.scene.add_block_from_library(block_type, 200, 200)

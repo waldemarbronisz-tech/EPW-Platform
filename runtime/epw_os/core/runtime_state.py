@@ -42,6 +42,10 @@ _LAYOUT = {
     "intrusion_alarm_memory": (("intrusion_state", "alarm_memory"), dict),
     "intrusion_line_supervision": (("intrusion_state", "line_supervision"), dict),
     "last_screen": (("last_screen",), lambda: None),
+    # Which SYNOPTIC screen the panel had open (task punkt 3: a project
+    # can carry several). Separate from "last_screen" above, which is
+    # the page of the navigation tree.
+    "last_synoptic_screen": (("last_synoptic_screen",), lambda: None),
 }
 
 STATE_KEYS = tuple(_LAYOUT)

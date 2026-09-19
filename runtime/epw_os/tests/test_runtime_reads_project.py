@@ -33,6 +33,7 @@ from epw_os.core.access_manager import AccessLevel
 from epw_os.core.addressing import is_address
 from epw_os.core.epw_core import EPWCore
 from epw_os.core.project_manager import ProjectManager
+from epw_os.tests import _logic_program
 
 ALL_MODULES = ("intrusion", "analog_inputs", "switching_counters", "protection_process", "protection_settings",
                "engineer_mode", "service_notes")
@@ -177,14 +178,14 @@ def test_a_module_outside_the_composition_does_not_exist_at_all(tmp_path, start_
 
 def test_logic_referring_to_signals_of_a_missing_module_is_reported_at_startup(tmp_path, start_core):
     path = _studio_project(tmp_path, modules=("analog_inputs",), with_zone=False)
+    # A REAL compiled program (the controller executes it now, so a
+    # hand-shaped document would be refused before the composition check
+    # ever got to look at it) whose inputs name signals this controller's
+    # composition does not have - which is exactly what that check is for.
     logic = tmp_path / "site.epwlogic.runtime.json"
-    logic.write_text(json.dumps({
-        "format": "EPW_RUNTIME_LOGIC", "schema_version": 4,
-        "blocks": {"b1": {"type": "AND", "properties": {"input": "Security.Zone.Z1.State"}},
-                   "b2": {"type": "NOT", "properties": {"input": "Process.PP1.Exceeded"}},
-                   "b3": {"type": "GT", "properties": {"input": "AI1.AI.1"}}},
-        "io_labels": {},
-    }), encoding="utf-8")
+    blocks = [_logic_program.make_block("input.di", Address=address) for address in
+              ("Security.Zone.Z1.State", "Process.PP1.Exceeded", "AI1.AI.1")]
+    logic.write_text(json.dumps(_logic_program.export(blocks)), encoding="utf-8")
     (tmp_path / "controller.local.json").write_text(json.dumps(
         {"format": "EPW_CONTROLLER_SETTINGS", "schema_version": 1, "logic_project": str(logic)}), encoding="utf-8")
 

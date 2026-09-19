@@ -11,11 +11,11 @@ from logic_studio.core.macros import (
     instantiate_definition_blocks, update_definition_blocks,
     add_boundary_pin, remove_boundary_pin, resync_all_instances,
 )
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.logic_gates import AndGate
-from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.logic_gates import AndGate
+from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 
@@ -692,7 +692,7 @@ def test_resync_adds_a_fresh_unconnected_pin_to_a_live_top_level_instance():
     # gate to the definition's own internals and expose ITS input as a
     # brand new third boundary pin.
     definition = get_definition(p, def_id)
-    from logic_studio.blocks.logic_gates import NotGate
+    from shared.logic.blocks.logic_gates import NotGate
     not_gate_data = NotGate().serialize()
     definition["blocks"].append(not_gate_data)
     set_definition(p, def_id, definition)

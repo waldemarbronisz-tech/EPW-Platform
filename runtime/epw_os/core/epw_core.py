@@ -605,6 +605,27 @@ class EPWCore:
         # is only the fallback for a project saved before that task.
         embedded_logic = self.project_manager.get_embedded_logic_runtime()
         logic_file = self.project_manager.get_logic_file()
+
+        # The scan needs a way to reach the plant before it can start:
+        # inputs off the TagManager image, outputs through the driver
+        # layer's own boundary (never around it), SYS.* signals off this
+        # controller's real managers. Built here, not in __init__, because
+        # the driver/force managers it routes through do not exist that
+        # early.
+        from epw_os.core.logic_runtime import SystemSignalSource, TagIOProvider
+        self.logic_engine.attach_io(TagIOProvider(
+            self.tag_manager,
+            write_digital=self._logic_write_digital,
+            write_analog=self._logic_write_analog,
+            force_manager=self.force_manager,
+            system_signals=SystemSignalSource(
+                health_manager=self.health_manager,
+                access_manager=self.access_manager,
+                training_mode=self.training_mode,
+                time_sync_monitor=self.time_sync_monitor,
+            ),
+        ))
+
         if embedded_logic:
             loaded = self.logic_engine.load_program_data(embedded_logic)
         elif logic_file:
@@ -615,9 +636,13 @@ class EPWCore:
             self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.DEGRADED)
         elif not loaded:
             self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
-        else:
-            self.logic_engine.is_running = True
-            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
+            self._startup_issue("LOGIC_PROGRAM_REJECTED", "startup.logic_rejected",
+                                {"reason": self.logic_engine.last_error},
+                                f"The logic program was refused and is NOT running: "
+                                f"{self.logic_engine.last_error} The controller runs without user logic.",
+                                priority=4)
+        # A loaded program is only STARTED once the drivers are up (step 3
+        # below) - see there.
 
         # Composition vs. logic and screens (task "runtime czyta
         # projekt.epw", 3.3) - see composition_check.py for exactly which
@@ -674,6 +699,25 @@ class EPWCore:
             log.error("Required driver startup failed")
             
         self.health_manager.update_subsystem("DRIVERS", SubsystemState.RUNNING)
+
+        # The logic scan starts HERE, not where the program was loaded a
+        # few steps above: an output written by the very first scan has to
+        # be able to reach the hardware, and SYS.COMMS_OK has to mean
+        # something by the time the program first reads it. Both are true
+        # only once the drivers are actually running.
+        if loaded:
+            if self.logic_engine.start():
+                self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
+            else:
+                # Loaded, but the scan itself would not start - a fault,
+                # not a degradation: the interlocks in that program are
+                # not running.
+                self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
+                self._startup_issue("LOGIC_SCAN_NOT_STARTED", "startup.logic_not_started",
+                                    {"reason": self.logic_engine.last_error},
+                                    f"The logic program was loaded but the scan did not start: "
+                                    f"{self.logic_engine.last_error} The interlocks in that program are NOT "
+                                    f"running.", priority=4)
 
         # 4. Time sync monitor - check once synchronously right away so the
         # status bar indicator has a real reading immediately, then keep
@@ -843,6 +887,84 @@ class EPWCore:
                 p["tag"] = tag_name
                 break
         self.project_manager.save_project()
+
+    # --- Analog outputs (task punkt 2: AO w runtime) -----------------------
+
+    def _analog_output_config(self, tag_name: str) -> dict:
+        return next((point for point in self.project_manager.get_analog_output_points()
+                     if point.get("tag") == tag_name), {})
+
+    def _route_analog_output(self, tag_name: str, value) -> dict:
+        """Engineering value -> raw register value -> the driver layer's
+        own boundary. Everything an analog write DOES, with none of the
+        gating around it: write_analog_output() adds the Engineer check
+        and the audit record for an operator-initiated write, the logic
+        scan (_logic_write_analog) adds neither, because a program
+        writing its own output every cycle is not an operator action and
+        must not fill the audit trail with one entry per scan."""
+        from epw_os.core.analog_scaling import compute_raw_value
+        config = self._analog_output_config(tag_name)
+        raw = compute_raw_value(value, config)
+        if raw is None:
+            return {"success": False, "reason": f"{value!r} is not a number.", "raw": None}
+
+        driver_id = self._driver_id_for_tag(tag_name)
+        if not self.driver_manager.route_command(driver_id, tag_name, raw):
+            log.error(f"Analog output {tag_name} = {value} ({raw} raw) was not written by driver {driver_id}.")
+            return {"success": False, "reason": f"Driver {driver_id} did not write {tag_name}.", "raw": raw}
+        return {"success": True, "reason": "", "raw": raw}
+
+    def _logic_write_digital(self, tag_name: str, value: bool) -> bool:
+        """What the logic scan calls for a DO block. Goes through
+        DriverManager.route_command() - the same single boundary an
+        operator command crosses, so Training Mode cuts a logic-driven
+        output exactly as it cuts a commanded one."""
+        return self.driver_manager.route_command(self._driver_id_for_tag(tag_name), tag_name, bool(value))
+
+    def _logic_write_analog(self, tag_name: str, value) -> bool:
+        """The AO counterpart of _logic_write_digital()."""
+        return self._route_analog_output(tag_name, value)["success"]
+
+    def write_analog_output(self, tag_name: str, value, actor: str = "", level: str = None) -> dict:
+        """Sets one analog output. The caller gives the ENGINEERING value
+        (42.0 °C, 65 %); the point's own scaling turns it into the raw
+        register value the card expects (analog_scaling.compute_raw_value(),
+        the way back from what an analog input is read through), and the
+        write leaves through the driver layer's single boundary
+        (DriverManager.route_command() - where Training Mode cuts, exactly
+        as it does for a digital command).
+
+        Engineer level, audited: the same bar as forcing a digital output,
+        because this is the same thing on an analog channel. Returns
+        {"success", "reason", "raw"}."""
+        from epw_os.core.access_manager import AccessLevel
+        from epw_os.core.analog_scaling import compute_raw_value
+        if level is not None:
+            order = AccessLevel._ORDER
+            try:
+                if order.index(level) < order.index(AccessLevel.ENGINEER):
+                    log.warning(f"Refused to set analog output {tag_name!r}: level {level!r} is below Engineer.")
+                    return {"success": False, "reason": "Access denied - Engineer level required.", "raw": None}
+            except ValueError:
+                log.warning(f"Refused to set analog output {tag_name!r}: unrecognized level {level!r}.")
+                return {"success": False, "reason": "Access denied - Engineer level required.", "raw": None}
+
+        from epw_os.core.addressing import is_address
+        if not is_address(tag_name, "AO") or self.tag_manager.get_tag(tag_name) is None:
+            log.warning(f"Refused to set {tag_name!r}: it is not an analog output of this project.")
+            return {"success": False, "reason": f"{tag_name} is not an analog output of this project.", "raw": None}
+
+        result = self._route_analog_output(tag_name, value)
+        if not result["success"]:
+            return result
+        raw = result["raw"]
+
+        unit = self._analog_output_config(tag_name).get("unit") or ""
+        if self.audit_logger is not None:
+            self.audit_logger.record("ANALOG_OUTPUT_SET", actor or "SYSTEM",
+                                     f"{tag_name} set to {value}{(' ' + unit) if unit else ''} ({raw} raw)",
+                                     success=True)
+        return {"success": True, "reason": "", "raw": raw}
 
     # --- Feature configuration (Task: "okno konfiguracji funkcji") ---------
     #
@@ -1132,7 +1254,10 @@ class EPWCore:
 
         # Stop runtimes
         from epw_os.core.health_manager import SubsystemState
-        self.logic_engine.is_running = False
+        # stop() joins the scan thread and drives every output the program
+        # ever touched to its safe state (see logic_engine.py) - the flag
+        # this used to set by hand is now stop()"s own business.
+        self.logic_engine.stop()
         self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.STOPPING)
         
         # Flush Historian & Stop Drivers

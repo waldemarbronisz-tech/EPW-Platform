@@ -6,8 +6,8 @@ import pytest
 
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core import crossref
 from logic_studio.core.crossref import (
     build_crossref, find_issues, KIND_PHYSICAL_DI, KIND_PHYSICAL_DO,
@@ -144,7 +144,7 @@ def test_system_signal_block_reads_a_catalog_signal():
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     any_signal = system_signals.get_all_signals()[0]
     sig = _block("system.signal", sygnal=any_signal["id"])
     p.add_block(sig)

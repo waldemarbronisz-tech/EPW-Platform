@@ -646,7 +646,7 @@ class Project:
         silently dropping blocks from a safety-logic project is not acceptable,
         so a missing block type must fail loudly instead of losing logic quietly.
         """
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
 
         # Schema validation
         fmt = data.get("format")
@@ -794,7 +794,7 @@ class Project:
             # copying it) the last two times a field was added to Pin. A
             # field newly added to Pin.SERIALIZED_FIELDS is picked up here
             # automatically, with no separate edit needed in this loop.
-            from logic_studio.blocks.pin import Pin
+            from shared.logic.blocks.pin import Pin
             for i, pin_data in enumerate(b_data.get("inputs", [])):
                 if i < len(block.inputs):
                     Pin.restore_fields(block.inputs[i], pin_data)

@@ -9,9 +9,9 @@ selection has in common.
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.documentation import (
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.documentation import (
     ALIGN_KEY, BOLD_KEY, FONT_KEY, ITALIC_KEY, TEXT_SIZE_KEY, UNDERLINE_KEY,
 )
 
@@ -135,7 +135,7 @@ def test_font_size_box_applies_a_picked_and_a_typed_size():
     from PySide6.QtWidgets import QApplication
     from logic_studio.ui.main_window import MainWindow
     from logic_studio.ui.canvas.block_item import BlockItem
-    from logic_studio.blocks.documentation import TEXT_SIZE_KEY
+    from shared.logic.blocks.documentation import TEXT_SIZE_KEY
 
     QApplication.instance() or QApplication([])
     mw = MainWindow()
