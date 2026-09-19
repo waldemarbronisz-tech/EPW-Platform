@@ -1,39 +1,37 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Macro blocks and parameters
 
-# Makrobloki i parametry
+A macro block lets you wrap a piece of a diagram into a single, reusable
+block — useful for repeating arrangements (a "motor start sequence", say)
+that would otherwise have to be copied and pasted separately into every
+place they are needed.
 
-Makroblok pozwala zamknąć fragment schematu w jeden, wielokrotnie
-używalny blok — przydatne dla powtarzalnych układów (np. "sekwencja
-startowa silnika"), które inaczej trzeba by kopiować i wklejać osobno w
-każdym miejscu.
+## Wrapping a fragment into a macro
 
-## Jak zamknąć fragment w makro
+Select the blocks that are to make up the macro and use the "create macro
+from selection" command (the selection's context menu). This produces a
+new macro definition together with its first instance, in place of the
+old selection.
 
-Zaznacz bloki, które mają wejść w skład makra, i użyj polecenia
-utworzenia makra z zaznaczenia (menu kontekstowe zaznaczenia). Powstaje
-nowa definicja makra oraz jego pierwsza instancja w miejscu starego
-zaznaczenia.
+## Where the boundary pins come from
 
-## Skąd biorą się piny graniczne
+**This is the most common misunderstanding**: the pins on a macro block's
+edge are NOT something you have to add by hand. They are created
+automatically from every wire that CROSSED the selection boundary at the
+moment the macro was made — one end inside the selected blocks, the other
+outside. Each such wire becomes one boundary pin of the macro, with the
+direction the signal was flowing in. If it turns out afterwards that a
+pin is missing (because something was not connected before you selected,
+say) or that one is superfluous, boundary pins can be edited later,
+without building the macro again from scratch.
 
-**To jest najczęstsze nieporozumienie**: piny na brzegu makrobloku NIE
-są czymś, co trzeba ręcznie dodać. Powstają automatycznie z każdego
-przewodu, który w momencie tworzenia makra PRZECINAŁ granicę
-zaznaczenia — jeden koniec wewnątrz zaznaczonych bloków, drugi na
-zewnątrz. Każdy taki przewód staje się jednym pinem granicznym makra, z
-kierunkiem wynikającym z tego, w którą stronę sygnał płynął. Jeśli po
-utworzeniu makra okaże się, że brakuje pinu (bo np. zapomniałeś podłączyć
-coś przed zaznaczeniem) albo jest zbędny — piny graniczne można edytować
-później, bez konieczności tworzenia makra od nowa.
+## Binding a setting to a parameter
 
-## Jak powiązać nastawę z parametrem
+A macro parameter lets each INSTANCE of the same macro carry its own
+value for some property (a delay time that differs per bay, for example)
+instead of one value shared by every copy. A property of a block INSIDE
+the macro definition is bound to a macro parameter — from then on each
+instance asks for its own value of that parameter instead of inheriting
+the value stored in the definition.
 
-Parametr makra pozwala, żeby każda INSTANCJA tego samego makra miała
-własną wartość jakiejś właściwości (np. czas opóźnienia inny dla
-każdego pola), zamiast jednej wspólnej dla wszystkich kopii. Właściwość
-bloku WEWNĄTRZ definicji makra wiąże się z parametrem makra — od tej
-pory każda instancja pyta o swoją własną wartość tego parametru, zamiast
-dziedziczyć wartość zapisaną w definicji.
-
-Zobacz też: [Jak utworzyć makro i użyć go w kilku
-polach](help:guide_macros).
+See also: [Creating a macro and using it in several
+bays](help:guide_macros).

@@ -1,12 +1,11 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
-
-# O programie
+# About
 
 **EPW Logic Studio {version}**
 
-Edytor schematów logicznych do projektowania i symulacji logiki
-sterowania, eksportowanej do uruchomienia w EPW-OS.
+An editor for logic diagrams, for designing and simulating control logic
+that is then exported to run in EPW-OS.
 
-Ten system pomocy jest częścią programu — Katalog bloków generowany jest
-bezpośrednio z zarejestrowanych typów bloków przy każdym otwarciu, więc
-zawsze odpowiada dokładnie tej wersji programu, z której korzystasz.
+This help system is part of the program — the Block catalogue is
+generated directly from the registered block types every time it is
+opened, so it always matches exactly the version of the program you are
+using.

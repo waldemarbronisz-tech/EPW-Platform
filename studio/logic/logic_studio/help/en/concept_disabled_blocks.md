@@ -1,34 +1,33 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Disabled blocks and forces
 
-# Bloki wyłączone i wymuszenia
+## What a disabled block means
 
-## Co oznacza wyłączony blok
+A block can be disabled (from the selection menu, or with a shortcut if
+one is bound) — a disabled block is skipped during project validation, as
+if it did not logically exist for the time being, while remaining visible
+on the diagram. Useful for switching a piece of logic off temporarily
+without deleting it and without tearing up wires that would then have to
+be redrawn by hand.
 
-Blok można wyłączyć (z menu zaznaczenia albo skrótem, jeśli
-przypisany) — wyłączony blok jest pomijany przy walidacji projektu, tak
-jakby chwilowo nie istniał logicznie, choć wciąż widoczny na schemacie.
-Przydatne przy tymczasowym wyłączaniu fragmentu logiki bez usuwania go
-i bez zrywania przewodów, które trzeba by potem odtwarzać ręcznie.
+A disabled block is marked CLEARLY on the canvas (it looks different from
+an active one) — deliberately hard to miss, so that nobody overlooks the
+fact that part of the logic on the sheet is inactive.
 
-Wyłączony blok jest oznaczany na kanwie WYRAŹNIE (inny wygląd niż blok
-aktywny) — celowo rzucająco się w oczy, żeby nikt nie przeoczył, że
-część logiki na schemacie jest nieaktywna.
+## What the flag does in the export
 
-## Co robi flaga w eksporcie
+The disabled state is part of the exported runtime — EPW-OS knows the
+block is to be skipped, in exactly the same way the editor and the
+simulation do. Disabling a block in Logic Studio is therefore not a
+cosmetic operation on the drawing: it genuinely changes what ends up
+running on the plant.
 
-Stan wyłączenia jest częścią eksportowanego runtime'u — EPW-OS wie, że
-dany blok ma być pominięty, dokładnie tak samo jak w edytorze i
-symulacji. Wyłączenie bloku w Logic Studio nie jest więc czysto
-kosmetyczną operacją na schemacie — ma realny wpływ na to, co
-ostatecznie działa na obiekcie.
+## Forces
 
-## Wymuszenia (Force)
-
-Podczas symulacji wejścia/wyjścia fizyczne (DI/DO) i wewnętrzne bity
-mogą mieć wymuszoną wartość (FORCE TRUE/FORCE FALSE) niezależnie od
-tego, co faktycznie podaje symulowany sprzęt albo obliczona logika —
-ustawiane w panelu właściwości zaznaczonego bloku podczas symulacji.
-Wymuszenie jest stanem WYŁĄCZNIE runtime'owym: nigdy nie jest zapisywane
-w pliku projektu ani w eksportowanym runtime, więc wymuszenie ustawione
-podczas testów na stanowisku nie może przypadkiem "pojechać" razem z
-projektem na obiekt i wymusić czegoś na prawdziwym sprzęcie.
+During simulation, physical inputs/outputs (DI/DO) and internal bits can
+be given a forced value (FORCE TRUE/FORCE FALSE) regardless of what the
+simulated hardware or the computed logic actually produces — set from the
+property panel of the selected block while the simulation runs. A force
+is runtime state ONLY: it is never written to the project file or to the
+exported runtime, so a force set while testing on the bench cannot
+accidentally travel with the project to site and force something on real
+hardware.

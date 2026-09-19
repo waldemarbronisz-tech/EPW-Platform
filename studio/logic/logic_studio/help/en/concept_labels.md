@@ -1,54 +1,49 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Labels, markers and device bits
 
-# Etykiety, znaczniki i bity urządzenia
+Three different ways to take a value computed in one place on a diagram
+and use it somewhere else, without drawing one long wire across the whole
+sheet. They are easy to confuse — here is the rule for choosing, and what
+actually sets them apart.
 
-Trzy różne sposoby, żeby wartość policzona w jednym miejscu schematu
-trafiła w inne, bez rysowania jednego, długiego przewodu przez cały
-schemat. Łatwo je pomylić — poniżej reguła wyboru i to, co je realnie
-różni.
-
-| Sposób | Co to jest | Opóźnienie o cykl skanu |
+| Way | What it is | One-scan delay |
 |---|---|---|
-| **Bit urządzenia** (DI/DO/AI/AO) | Fizyczny sygnał na konkretnym module ELA/ADA | Nie dotyczy — czytane/pisane bezpośrednio z/do sprzętu |
-| **Znacznik** (bit/rejestr wewnętrzny, M./MR./MW.) | Pamięć wewnętrzna projektu, niezwiązana z żadnym fizycznym terminalem | **Tak, może wystąpić** |
-| **Etykieta przewodu** | Tekstowa nazwa nadana wolnemu końcowi przewodu | Docelowo: nie — patrz zastrzeżenie niżej |
+| **Device bit** (DI/DO/AI/AO) | A physical signal on a particular ELA/ADA module | Not applicable — read/written straight from/to the hardware |
+| **Marker** (internal bit or register, M./MR./MW.) | The project's own internal memory, tied to no physical terminal | **Yes, it can happen** |
+| **Wire label** | A text name given to a free wire end | Eventually: no — see the caveat below |
 
-## Znacznik: dlaczego może dać opóźnienie o cykl
+## Marker: why it can cost you a scan
 
-Zapis do znacznika (blok "Wyjście bitowe (wewn.)"/"Wyjście rejestru
-(wewn.)") nie trafia do pamięci od razu — silnik buforuje wszystkie
-zapisy z danego skanu i zatwierdza je dopiero PO obliczeniu wszystkich
-bloków w tym skanie. Jeśli więc blok A zapisuje znacznik, a blok B go w
-tym samym skanie odczytuje, blok B zobaczy wartość SPRZED zapisu bloku
-A — dopiero w NASTĘPNYM skanie zobaczy nową wartość. To jest właśnie
-opóźnienie z⁻¹, opisane osobno w [Cykl skanu i opóźnienie o jeden
-cykl](help:concept_scan_cycle). Kolejność bloków na schemacie (czy A
-jest "przed", czy "za" B) nie ma tu znaczenia — liczy się wyłącznie to,
-że zapis i odczyt są rozdzielone przez granicę skanu.
+A write to a marker (the "Bit output (internal)" / "Register output
+(internal)" blocks) does not reach memory immediately — the engine
+buffers every write made during a scan and commits them only AFTER every
+block in that scan has been evaluated. So if block A writes a marker and
+block B reads it in the SAME scan, block B sees the value from BEFORE
+A's write — it sees the new value only on the NEXT scan. That is exactly
+the z⁻¹ delay described separately in [The scan cycle and the one-scan
+delay](help:concept_scan_cycle). Where the blocks sit on the sheet
+(whether A is "before" or "after" B) makes no difference here — all that
+matters is that the write and the read are separated by a scan boundary.
 
-## Etykieta przewodu: stan obecny
+## Wire label: how it stands today
 
-Przewód może dziś mieć jeden koniec **wolny** (niepodłączony do żadnego
-pinu) i nosić tekstową etykietę — to zapobiega ostrzeżeniu kompilatora
-"Niedokończony przewód" i dokumentuje, do czego ten koniec miał
-prowadzić. **Scalanie dwóch przewodów o tej samej etykiecie w jeden
-węzeł sieci (żeby etykieta faktycznie PRZENOSIŁA sygnał, bez rysowania
-przewodu) jest planowaną, jeszcze niezaimplementowaną częścią tego
-mechanizmu** — dziś etykieta jest metadaną dokumentacyjną, nie
-działającym sposobem przenoszenia sygnału. Dopóki to nie powstanie,
-jedynym DZIAŁAJĄCYM sposobem przeniesienia sygnału bez rysowania
-przewodu przez cały schemat jest znacznik (patrz [Jak przenieść sygnał
-w inne miejsce schematu](help:guide_move_signal)).
+A wire may have one **free** end (connected to no pin) and carry a text
+label — this suppresses the compiler's "Unfinished wire" warning and
+documents where that end was meant to go. **Merging two wires with the
+same label into one network node (so that the label actually CARRIES the
+signal, with no wire drawn) is a planned, not yet implemented part of
+this mechanism** — today a label is documentation metadata, not a working
+way to move a signal. Until that exists, the only WORKING way to move a
+signal without drawing a wire across the sheet is a marker (see [Moving a
+signal elsewhere on the diagram](help:guide_move_signal)).
 
-## Reguła wyboru
+## The rule for choosing
 
-- Sygnał fizyczny (prawdziwy wejście/wyjście na module) → bit
-  urządzenia, zawsze.
-- Sygnał pomocniczy, potrzebny w kilku miejscach schematu, gdzie
-  opóźnienie o jeden cykl jest akceptowalne (a zwykle jest — dotyczy to
-  tylko relacji między dwoma konkretnymi blokami w tym samym skanie) →
-  znacznik.
-- Zaślepka na przewodzie, który dopiero zamierzasz podłączyć → wolny
-  koniec bez etykiety (patrz [Zaślepka wejścia, wolny koniec przewodu,
-  etykieta](help:concept_stubs) — to TRZECIA, osobna rzecz, mimo że
-  wygląda podobnie).
+- A physical signal (a real input/output on a module) → a device bit,
+  always.
+- A helper signal needed in several places on the sheet, where one scan
+  of delay is acceptable (it usually is — it only ever affects the
+  relationship between two particular blocks within the same scan) → a
+  marker.
+- A stub on a wire you are about to connect → a free end with no label
+  (see [Input stub, free wire end, label](help:concept_stubs) — that is a
+  THIRD, separate thing, however similar it looks).

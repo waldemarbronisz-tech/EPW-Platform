@@ -1,43 +1,40 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Analog signal quality
 
-# Jakość sygnału analogowego
+The [QUALITY](help:block:analog.quality) block and the `Quality` output
+of the [AI](help:block:input.ai) block watch whether an analog
+measurement can be trusted at all, before safety logic starts relying on
+it.
 
-Blok [QUALITY](help:block:analog.quality) i wyjście `Quality` bloku
-[AI](help:block:input.ai) nadzorują, czy pomiarowi analogowemu można w
-ogóle ufać, zanim logika bezpieczeństwa zacznie na nim polegać.
+## What the Quality output is for
 
-## Do czego służy wyjście Quality
+`Quality`/`Good` is true only when the reading is a NUMBER (not NaN or
+Inf), lies within the measuring range, does not change faster than the
+permitted rate of change, and is not "frozen" (see Stuck below). This
+output is marked **safety relevant** — logic driving critical outputs
+should check it before trusting the measured value, not just the value
+itself.
 
-`Quality`/`Good` jest prawdziwe tylko wtedy, gdy odczyt jest LICZBĄ (nie
-NaN/Inf), mieści się w zakresie pomiarowym, nie zmienia się szybciej niż
-dopuszczalna szybkość zmiany i nie jest "zamrożony" (patrz Stuck niżej).
-To wyjście jest oznaczone jako **istotne dla bezpieczeństwa** — logika
-sterująca krytycznymi wyjściami powinna sprawdzać je, zanim zaufa
-wartości pomiarowej, a nie tylko samej wartości.
+## Why Stuck Tolerance MUST be greater than zero on a real measuring chain
 
-## Dlaczego Stuck Tolerance MUSI być większa od zera na realnym torze pomiarowym
+Detecting a "frozen" signal (Stuck) works by comparing two consecutive
+readings. With the default `Stuck Tolerance = 0.0` (exact equality), a
+signal from a REAL analog-to-digital converter will practically never be
+judged frozen — noise in the converter's last bit means two consecutive
+samples are almost never bit-identical, even when the measured quantity
+is not physically changing. The effect: stuck detection does NOT really
+work until `Stuck Tolerance` is set above zero. A starting point: about
+0.1% of the measuring range — tight enough to catch a genuinely frozen
+signal, loose enough that ordinary converter noise does not defeat the
+detection every scan.
 
-Detekcja "zamrożenia" sygnału (Stuck) polega na porównaniu dwóch
-kolejnych odczytów. Przy domyślnym `Stuck Tolerance = 0.0` (dokładna
-równość) sygnał z PRAWDZIWEGO przetwornika analogowo-cyfrowego
-praktycznie nigdy nie zostanie uznany za zamrożony — szum ostatniego
-bitu przetwornika sprawia, że dwie kolejne próbki niemal nigdy nie są
-identyczne co do bitu, nawet gdy fizycznie mierzona wielkość się nie
-zmienia. Efekt: detekcja zamrożenia realnie NIE DZIAŁA, dopóki `Stuck
-Tolerance` nie zostanie ustawiona powyżej zera. Punkt startowy: około
-0,1% zakresu pomiarowego — na tyle ciasno, żeby złapać prawdziwie
-zamrożony sygnał, na tyle luźno, żeby normalny szum przetwornika nie
-psuł detekcji co skan.
+## What Max Hold (ms) does
 
-## Co robi Max Hold (ms)
-
-Gdy `Quality` jest fałszywe, blok AI trzyma OSTATNIĄ dobrą wartość na
-wyjściu `Value` (fail-safe: logika dalej działa na wiarygodnych, choć
-nieco nieaktualnych danych, zamiast na śmieciach). Bez limitu czasowego
-ta "ostatnia dobra wartość" mogłaby być trzymana godzinami albo dniami,
-jeśli nic nie obserwuje `Quality`. `Max Hold (ms)` ogranicza to w
-czasie — po jego przekroczeniu `Hold Expired` (też istotne dla
-bezpieczeństwa) staje się prawdziwe, a `Value` przełącza się na wartość
-wybraną we właściwości `Hold Timeout Value` (zero, ostatnia dobra
-wartość, albo dolna granica zakresu). `Max Hold (ms) = 0` oznacza brak
-limitu — zachowanie identyczne jak przed wprowadzeniem tej właściwości.
+While `Quality` is false, the AI block holds the LAST good value on its
+`Value` output (fail-safe: logic keeps running on trustworthy if slightly
+stale data rather than on garbage). With no time limit, that "last good
+value" could be held for hours or days if nothing happens to be watching
+`Quality`. `Max Hold (ms)` bounds it in time — once exceeded, `Hold
+Expired` (also safety relevant) becomes true and `Value` switches to
+whatever the `Hold Timeout Value` property selects (zero, the last good
+value, or the bottom of the range). `Max Hold (ms) = 0` means no limit —
+behaviour identical to what it was before this property existed.

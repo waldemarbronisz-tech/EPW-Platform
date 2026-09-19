@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         # source (AUDIT_REPORT.md §2.1) — see _setup_layout() for the signal wiring
         # and compile_project()/start_simulation()/stop_simulation()/_on_sim_tick()
         # for where each value actually gets pushed in.
-        self.lbl_ready = QLabel("Gotowy")
+        self.lbl_ready = QLabel("Ready")
         self.lbl_grid = QLabel("Grid: ON")
         self.lbl_snap = QLabel("Snap: ON")
         self.lbl_cursor = QLabel("X: 0, Y: 0")
@@ -376,7 +376,7 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.view)
 
         self.output_panel = CompilerOutputPanel()
-        self.output_panel.tabs.addTab(self.watch_panel, "Obserwowane")
+        self.output_panel.tabs.addTab(self.watch_panel, "Watched")
 
         center_splitter.addWidget(canvas_container)
         center_splitter.addWidget(self.output_panel)
@@ -1005,7 +1005,7 @@ class MainWindow(QMainWindow):
                 f"Compiled {block_count} block(s). execution_order length: {order_len}."
             )
             self.output_panel.log_message("Compilation successful.")
-            self.lbl_ready.setText("Gotowy")
+            self.lbl_ready.setText("Ready")
             if "program" in res:
                 self.engine.load_program(res["program"])
                 self.output_panel.log_runtime(
@@ -1056,7 +1056,7 @@ class MainWindow(QMainWindow):
         self.engine.stop()
         self.sim_timer.stop()
         self.lbl_sim.setText("Simulation: Stopped")
-        self.lbl_ready.setText("Gotowy")
+        self.lbl_ready.setText("Ready")
         self.output_panel.log_runtime("Simulation stopped.")
         # Reset block values
         for block in self.project.blocks:

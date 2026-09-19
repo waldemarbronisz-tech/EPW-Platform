@@ -18,5 +18,6 @@ na nowo, zachowując opisy już wpisane.
 Na dole panelu: **Magistrala Modbus** — jedna, wspólna dla wszystkich
 modułów: RTU (port szeregowy, prędkość, parzystość) albo TCP (adres
 bramki, port). To ustawienie, jak sterownik ma w ogóle mówić z
-modułami — dziś zapisywane w projekcie, gotowe na przyszły sterownik
-Modbus w runtime (jeszcze nie zaimplementowany).
+modułami — dziś zapisywane w projekcie, a sterownik Modbus w runtime
+czyta i zapisuje po nim moduły (ustawienie `io_driver` w ustawieniach
+sterownika).

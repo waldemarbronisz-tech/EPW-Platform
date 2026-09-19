@@ -2,69 +2,69 @@
   "chapters": [
     {
       "id": "intro",
-      "title": "Wprowadzenie",
+      "title": "Introduction",
       "topics": [
-        {"id": "welcome", "title": "Witamy w EPW Logic Studio"}
+        {"id": "welcome", "title": "Welcome to EPW Logic Studio"}
       ]
     },
     {
       "id": "concepts",
-      "title": "Pojęcia",
+      "title": "Concepts",
       "topics": [
-        {"id": "concept_labels", "title": "Etykiety, znaczniki i bity urządzenia"},
-        {"id": "concept_stubs", "title": "Zaślepka wejścia, wolny koniec przewodu, etykieta"},
-        {"id": "concept_scan_cycle", "title": "Cykl skanu i opóźnienie o jeden cykl"},
-        {"id": "concept_analog_quality", "title": "Jakość sygnału analogowego"},
-        {"id": "concept_macros", "title": "Makrobloki i parametry"},
-        {"id": "concept_disabled_blocks", "title": "Bloki wyłączone i wymuszenia"}
+        {"id": "concept_labels", "title": "Labels, markers and device bits"},
+        {"id": "concept_stubs", "title": "Input stub, free wire end, label"},
+        {"id": "concept_scan_cycle", "title": "The scan cycle and the one-scan delay"},
+        {"id": "concept_analog_quality", "title": "Analog signal quality"},
+        {"id": "concept_macros", "title": "Macro blocks and parameters"},
+        {"id": "concept_disabled_blocks", "title": "Disabled blocks and forces"}
       ]
     },
     {
       "id": "guides",
-      "title": "Poradniki",
+      "title": "Guides",
       "topics": [
-        {"id": "guide_first_diagram", "title": "Pierwszy schemat: wejście, bramka, wyjście"},
-        {"id": "guide_move_signal", "title": "Jak przenieść sygnał w inne miejsce schematu"},
-        {"id": "guide_simulation", "title": "Jak uruchomić symulację i sprawdzić działanie logiki"},
-        {"id": "guide_compile_export", "title": "Jak skompilować i wyeksportować logikę do EPW-OS"},
-        {"id": "guide_macros", "title": "Jak utworzyć makro i użyć go w kilku polach"}
+        {"id": "guide_first_diagram", "title": "A first diagram: input, gate, output"},
+        {"id": "guide_move_signal", "title": "Moving a signal elsewhere on the diagram"},
+        {"id": "guide_simulation", "title": "Running a simulation and checking what the logic does"},
+        {"id": "guide_compile_export", "title": "Compiling and exporting the logic to EPW-OS"},
+        {"id": "guide_macros", "title": "Creating a macro and using it in several bays"}
       ]
     },
     {
       "id": "shortcuts_chapter",
-      "title": "Skróty klawiszowe",
+      "title": "Keyboard shortcuts",
       "topics": [
-        {"id": "shortcuts", "title": "Skróty klawiszowe"}
+        {"id": "shortcuts", "title": "Keyboard shortcuts"}
       ]
     },
     {
       "id": "about_chapter",
-      "title": "O programie",
+      "title": "About",
       "topics": [
-        {"id": "about", "title": "O programie"}
+        {"id": "about", "title": "About"}
       ]
     }
   ],
   "index": [
-    {"term": "etykieta", "topic": "concept_labels"},
-    {"term": "znacznik", "topic": "concept_labels"},
-    {"term": "bit urządzenia", "topic": "concept_labels"},
-    {"term": "zaślepka", "topic": "concept_stubs"},
-    {"term": "wolny koniec przewodu", "topic": "concept_stubs"},
-    {"term": "cykl skanu", "topic": "concept_scan_cycle"},
-    {"term": "opóźnienie o cykl", "topic": "concept_scan_cycle"},
+    {"term": "label", "topic": "concept_labels"},
+    {"term": "marker", "topic": "concept_labels"},
+    {"term": "device bit", "topic": "concept_labels"},
+    {"term": "stub", "topic": "concept_stubs"},
+    {"term": "free wire end", "topic": "concept_stubs"},
+    {"term": "scan cycle", "topic": "concept_scan_cycle"},
+    {"term": "one-scan delay", "topic": "concept_scan_cycle"},
     {"term": "z-1", "topic": "concept_scan_cycle"},
-    {"term": "jakość sygnału", "topic": "concept_analog_quality"},
+    {"term": "signal quality", "topic": "concept_analog_quality"},
     {"term": "quality", "topic": "concept_analog_quality"},
     {"term": "stuck tolerance", "topic": "concept_analog_quality"},
-    {"term": "makroblok", "topic": "concept_macros"},
-    {"term": "parametr makra", "topic": "concept_macros"},
-    {"term": "piny graniczne", "topic": "concept_macros"},
-    {"term": "wyłączony blok", "topic": "concept_disabled_blocks"},
-    {"term": "wymuszenie", "topic": "concept_disabled_blocks"},
+    {"term": "macro block", "topic": "concept_macros"},
+    {"term": "macro parameter", "topic": "concept_macros"},
+    {"term": "boundary pins", "topic": "concept_macros"},
+    {"term": "disabled block", "topic": "concept_disabled_blocks"},
     {"term": "force", "topic": "concept_disabled_blocks"},
-    {"term": "symulacja", "topic": "guide_simulation"},
-    {"term": "kompilacja", "topic": "guide_compile_export"},
-    {"term": "eksport", "topic": "guide_compile_export"}
+    {"term": "forcing", "topic": "concept_disabled_blocks"},
+    {"term": "simulation", "topic": "guide_simulation"},
+    {"term": "compile", "topic": "guide_compile_export"},
+    {"term": "export", "topic": "guide_compile_export"}
   ]
 }

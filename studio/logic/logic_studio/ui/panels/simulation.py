@@ -546,7 +546,7 @@ class SimulationPanel(QWidget):
         used = self._only_used
         self.only_used_btn.setText(
             f"only used ({len(self._used_di_addrs() | self._used_do_addrs())})" if used
-            else f"wszystkie ({len(self._di_addrs) + len(self._do_addrs)})"
+            else f"all ({len(self._di_addrs) + len(self._do_addrs)})"
         )
         self.di_used_group.setVisible(used)
         self.do_used_group.setVisible(used)
