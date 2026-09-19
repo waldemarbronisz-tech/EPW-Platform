@@ -247,3 +247,21 @@ przez `project_format.apply_settings_snapshot()`).
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
   - Test weryfikacji zabezpieczeń dostaje id aparatu z listy aparatów projektu mających wyjście i punkt zwrotny.
 - **Wgranie projektu nie przebudowuje działającego sterownika** — potrzebny restart (p. 3).
+- **Brak kart a edytory** — ZROBIONE 2026-09-19 (zgłoszenie: „nie dodano kart DI/DO").
+  Blok wymagający fizycznego zacisku, wstawiony w projekcie bez karty, dawał
+  pustą listę adresów i żadnego wyjaśnienia — powód pojawiał się dopiero przy
+  kompilacji. Teraz mówi to jedno miejsce (`logic_studio/core/io_availability.py`):
+  pole Address pokazuje „(no DI channels in this project)" i po kliknięciu
+  tłumaczy, gdzie dodać kartę (w Studio: Configuration → I/O Cards; samodzielne
+  Logic Studio: Project Settings), a upuszczenie takiego bloku pisze to na pasku
+  stanu i do zakładki Warnings (celowo nie modalnie — dziesięć bloków to
+  dziesięć okien). W Synoptyce ostrzeżenie stoi przy samym polu, obok „+ Card".
+  Przy okazji znalezione i naprawione dwie rzeczy, które to zgłoszenie odsłoniło:
+  - **logika w Studiu w ogóle się nie kompilowała** — widok kompilacji
+    (`_ExpandedProjectView`) nie przenosił mostkowanych kart, więc walidator
+    odrzucał każdy adres komunikatem „Card 'ELA1' does not exist in the project"
+    o karcie, która istnieje;
+  - **punkty analogowe nie były mostkowane do edytora logiki** — listy adresów
+    AI/AO w Studiu były zawsze puste, niezależnie od kanałów kart; teraz
+    `LogicPanel.sync_cards_from_studio()` przenosi też punkty (z zakresem
+    inżynierskim i jednostką), a eksport runtime niesie ich rejestr.

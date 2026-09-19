@@ -145,3 +145,95 @@ def test_resyncing_with_no_change_does_not_rebuild_panels(tmp_path):
     studio_project.cards.append(Card(id="ELA2", model="ELA01", channel_kinds={"DI": 2}))
     panel.sync_cards_from_studio(studio_project)  # a real card change
     assert calls == [1]
+
+
+# ---- the analog half of the same bridge ------------------------------------
+# User report ("informacja, gdy nie ma kart"): while writing that notice it
+# turned out an embedded Logic Studio had no analog addresses AT ALL - the
+# bridge above covered DI/DO only, so every AI/AO block's Address dropdown
+# was empty in Studio however many analog channels the cards declared, and
+# the compiler had no engineering range to resolve for an AI block's
+# quality check. A DI/DO channel is fully described by its address; an
+# analog one also needs the range and unit, which live on Studio's own
+# points - so the points, not just the cards, are what crosses here.
+
+def _studio_project_with_analog_card(card_id="ELA1", kinds=None):
+    from studio.shell.project_panels import sync_points_for_card
+    studio_project = new_project("Test")
+    card = Card(id=card_id, model="ELA01", channel_kinds=kinds or {"AI": 2})
+    studio_project.cards.append(card)
+    sync_points_for_card(studio_project, card)
+    return studio_project
+
+
+def test_an_analog_card_brings_its_input_points_into_logic_studio(tmp_path):
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+
+    panel.sync_cards_from_studio(_studio_project_with_analog_card())
+
+    project = panel.main_window().project
+    assert DeviceModel.get_analog_input_addresses(project) == ["ELA1.AI.1", "ELA1.AI.2"]
+    assert DeviceModel.get_analog_output_addresses(project) == []
+
+
+def test_an_analog_output_card_arrives_with_direction_output(tmp_path):
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+
+    panel.sync_cards_from_studio(_studio_project_with_analog_card("ADA1", {"AO": 3}))
+
+    project = panel.main_window().project
+    assert DeviceModel.get_analog_output_addresses(project) == ["ADA1.AO.1", "ADA1.AO.2", "ADA1.AO.3"]
+    assert DeviceModel.get_analog_input_addresses(project) == []
+
+
+def test_the_points_carry_studios_own_range_and_unit(tmp_path):
+    """What the compiler resolves into the runtime export for an AI
+    block's out-of-range check (Compiler.compile()'s set_range()) - it
+    has to be the range the engineer typed in Studio's point registry,
+    not a default invented at the bridge."""
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+
+    studio_project = _studio_project_with_analog_card()
+    point = next(p for p in studio_project.points if p.address == "ELA1.AI.1")
+    point.description = "Outside temperature"
+    point.eng_min, point.eng_max, point.unit = -30.0, 60.0, "degC"
+    panel.sync_cards_from_studio(studio_project)
+
+    resolved = DeviceModel.get_analog_point(panel.main_window().project, "ELA1.AI.1")
+    assert resolved["min"] == -30.0 and resolved["max"] == 60.0
+    assert resolved["unit"] == "degC"
+    assert resolved["name"] == "Outside temperature"
+
+
+def test_a_digital_card_contributes_no_analog_points(tmp_path):
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+
+    panel.sync_cards_from_studio(_studio_project_with_analog_card("ELA1", {"DI": 4}))
+
+    project = panel.main_window().project
+    assert DeviceModel.get_analog_points(project) == []
+    assert len(DeviceModel.get_ela_addresses(project)) == 4
+
+
+def test_changing_only_a_points_range_still_reaches_logic_studio(tmp_path):
+    """The re-sync guard compares both halves now - a range edited in the
+    point registry (no card added or removed) must not be swallowed as
+    "nothing changed"."""
+    _app()
+    panel = LogicPanel(settings=_qsettings(tmp_path, "logic"))
+    from logic_studio.core.device_model import DeviceModel
+
+    studio_project = _studio_project_with_analog_card()
+    panel.sync_cards_from_studio(studio_project)
+    next(p for p in studio_project.points if p.address == "ELA1.AI.1").eng_max = 250.0
+    panel.sync_cards_from_studio(studio_project)
+
+    assert DeviceModel.get_analog_point(panel.main_window().project, "ELA1.AI.1")["max"] == 250.0

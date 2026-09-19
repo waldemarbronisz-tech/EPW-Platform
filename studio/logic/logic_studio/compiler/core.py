@@ -36,9 +36,22 @@ class _ExpandedProjectView:
     exist at all, the same reasoning that keeps them hardware-agnostic
     (ARCHITECTURE.md §1)."""
 
-    def __init__(self, blocks, settings, wires=None):
+    def __init__(self, blocks, settings, wires=None, source=None):
         self.blocks = blocks
         self.settings = settings
+        # The host-bridged registries (Project.external_cards /
+        # external_analog_points) are attributes of the PROJECT, not
+        # entries in `settings` - and DeviceModel reads them off whatever
+        # object it is handed. A view that dropped them made every card
+        # Studio bridged in invisible to the three stages below, so
+        # compiling inside EPW Studio failed on every single DI/DO block
+        # with "Invalid DI Address ... Card 'ELA1' does not exist in the
+        # project" for a card that plainly did exist (and, with no ELA/ADA
+        # device in this project's own settings either, there was no
+        # address it WOULD have accepted). Carried through here, so the
+        # view answers DeviceModel exactly as the real project does.
+        self.external_cards = getattr(source, "external_cards", None)
+        self.external_analog_points = getattr(source, "external_analog_points", None)
         # feat/wire-labels §2.5/§5: Validator's free-end/label checks and
         # (from §5 onward) the label-node-merging step all need the
         # live project's Wire records too — passed through UNCHANGED
@@ -89,7 +102,8 @@ class Compiler:
         # scope, so they get the flat union; label-merging below runs
         # ONCE PER SCOPE instead, precisely so it never does.
         all_wires = [w for scope in wire_scopes for w in scope]
-        compile_view = _ExpandedProjectView(expanded_blocks, self.project.settings, wires=all_wires)
+        compile_view = _ExpandedProjectView(expanded_blocks, self.project.settings, wires=all_wires,
+                                            source=self.project)
 
         # 1. Label-based node merging (fix/wire-labels-and-project-
         # integrity §A1/§A2) — BEFORE Validator, deliberately: this
@@ -116,7 +130,8 @@ class Compiler:
         # resolve to pins that are actually its own).
         from logic_studio.compiler.label_merge import merge_and_validate_labels
         for wires_in_scope in wire_scopes:
-            scoped_view = _ExpandedProjectView(expanded_blocks, self.project.settings, wires=wires_in_scope)
+            scoped_view = _ExpandedProjectView(expanded_blocks, self.project.settings, wires=wires_in_scope,
+                                               source=self.project)
             merge_and_validate_labels(scoped_view, self.errors, self.warnings)
 
         # 2. Validation Stage

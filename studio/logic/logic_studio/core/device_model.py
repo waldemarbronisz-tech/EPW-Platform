@@ -238,6 +238,15 @@ class DeviceModel:
 
     @classmethod
     def get_analog_points(cls, project) -> list:
+        """The project's analog points - Studio's own point registry when
+        this project is embedded in Studio (Project.external_analog_points,
+        mirrored by studio/shell/logic_panel.py), otherwise the project's
+        own settings, which is what standalone Logic Studio edits. Same
+        "when the host provides it, it is the ONLY source" rule as
+        _external_family() uses for DI/DO - see this class's docstring."""
+        external = getattr(project, "external_analog_points", None) if project is not None else None
+        if external is not None:
+            return list(external)
         return list(project.settings.get("analog_points", []))
 
     @classmethod

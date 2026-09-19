@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import type { CardEntry, ChannelAddress, ChannelKind } from '../project/DeviceSchema';
 import { parseChannelAddress } from '../project/DeviceValidation';
+import { COLOR_ALARM, FONT_SIZE_SMALL } from '../theme/ScadaTheme';
 import { AddCardDialog } from './AddCardDialog';
 
 export interface ChannelAddressPickerProps {
@@ -94,21 +95,43 @@ export const ChannelAddressPicker: React.FC<ChannelAddressPickerProps> = ({ valu
     </>
   );
 
+  // A project with no card of this kind cannot produce an address at
+  // all. The "(no DI cards)" option inside the closed dropdown only says
+  // so to someone who already opened it; this line says it where the
+  // field itself is, and points at the button that fixes it. Same
+  // moment, same wording idea as Logic Studio's own empty-Address
+  // notice (logic_studio/core/io_availability.py).
+  const missingCards = matchingCards.length === 0;
+  const missingCardsNotice = missingCards ? (
+    <div style={missingCardsStyle}>
+      No {expectedKind} cards in this project - add one with "+ Card" before this field can be set.
+    </div>
+  ) : null;
+
   if (!allowEmpty) {
-    return <div style={rowStyle}>{selects}</div>;
+    return (
+      <div>
+        <div style={rowStyle}>{selects}</div>
+        {missingCardsNotice}
+      </div>
+    );
   }
 
   return (
-    <div style={rowStyle}>
-      <input
-        type="checkbox"
-        checked={!!value}
-        onChange={e => e.target.checked ? emit(selectedCard, selectedChannel) : onChange(undefined)}
-      />
-      {value !== undefined && selects}
+    <div>
+      <div style={rowStyle}>
+        <input
+          type="checkbox"
+          checked={!!value}
+          onChange={e => e.target.checked ? emit(selectedCard, selectedChannel) : onChange(undefined)}
+        />
+        {value !== undefined && selects}
+      </div>
+      {value !== undefined && missingCardsNotice}
     </div>
   );
 };
 
 const rowStyle: React.CSSProperties = { display: 'flex', gap: '4px', alignItems: 'center' };
+const missingCardsStyle: React.CSSProperties = { color: COLOR_ALARM, fontSize: `${FONT_SIZE_SMALL}px`, marginTop: '2px' };
 const selectStyle: React.CSSProperties = { fontSize: 'var(--scada-font-size-base)' };

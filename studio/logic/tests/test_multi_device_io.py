@@ -421,3 +421,62 @@ def test_signal_picker_lists_second_device_signal(qsettings):
 
     assert "ADA02.ONLINE" in ids
     assert "ADA02.SAFE_PATH_OK" in ids
+
+
+# ---- the bridged card list must survive COMPILATION too ---------------------
+# Found while adding the "no cards" notice (core/io_availability.py): a
+# project embedded in EPW Studio could not compile AT ALL. Compiler.
+# compile() runs Validator/GraphBuilder/Exporter against its own
+# _ExpandedProjectView, which carried `.settings` but not the host-bridged
+# `external_cards` - so DeviceModel saw zero devices and every DI/DO block
+# was rejected with "Card 'ELA1' does not exist in the project" for a card
+# that plainly did, with no address it would have accepted.
+
+def _bridged_project():
+    from shared.logic.blocks.registry import BlockRegistry
+    p = Project()
+    p.external_cards = [{"id": "ELA1", "kind": "DI", "channels": 4},
+                        {"id": "ADA1", "kind": "DO", "channels": 4},
+                        {"id": "ELA1", "kind": "AI", "channels": 2}]
+    p.external_analog_points = [
+        {"address": "ELA1.AI.1", "name": "Outside temperature", "unit": "degC",
+         "min": -30.0, "max": 60.0, "direction": "input"},
+    ]
+    di = BlockRegistry.create_block("input.di")
+    di.properties["Address"] = "ELA1.DI.1"
+    do = BlockRegistry.create_block("output.do")
+    do.properties["Address"] = "ADA1.DO.1"
+    di.outputs[0].connect(do.inputs[0])
+    p.add_block(di)
+    p.add_block(do)
+    return p
+
+
+def test_a_project_with_bridged_cards_compiles():
+    from logic_studio.compiler.core import Compiler
+    compiler = Compiler(_bridged_project())
+    result = compiler.compile()
+    assert compiler.errors == []
+    assert result is not None
+
+
+def test_bridged_analog_points_reach_the_runtime_export():
+    """EPW-OS gets the analog registry from the export (the exporter's
+    own "a consumer reading this file in isolation" reasoning) - an
+    embedded project must not ship it an empty one."""
+    from shared.logic.blocks.registry import BlockRegistry
+    from logic_studio.compiler.core import Compiler
+
+    p = _bridged_project()
+    ai = BlockRegistry.create_block("input.ai")
+    ai.properties["Address"] = "ELA1.AI.1"
+    p.add_block(ai)
+
+    result = Compiler(p).compile()
+    assert result is not None
+    assert [point["address"] for point in result["analog_points"]] == ["ELA1.AI.1"]
+    # ...and the block's own resolved range, which is what the controller
+    # rebuilds its out-of-range check from.
+    entry = next(b for b in result["blocks"].values() if b["type_id"] == "input.ai")
+    assert entry["properties"]["_resolved_range_min"] == -30.0
+    assert entry["properties"]["_resolved_range_max"] == 60.0

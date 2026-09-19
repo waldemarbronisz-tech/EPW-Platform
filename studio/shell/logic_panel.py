@@ -70,6 +70,15 @@ def _ensure_logic_studio_importable():
         sys.path.insert(0, path_str)
 
 
+def _point_kind(address: str):
+    """"ELA1.AI.3" -> "AI"; None for anything that is not a well-formed
+    point address. Goes through the platform's one address grammar
+    (shared/addressing.py) rather than splitting the string here."""
+    from shared.addressing import try_parse_address
+    parsed = try_parse_address(address)
+    return parsed[1] if parsed else None
+
+
 class LogicPanel(QWidget):
     """One widget: Logic Studio's real MainWindow, embedded. Construction
     is lazy (only happens the first time LOGIKA/LOGIC is actually
@@ -161,10 +170,32 @@ class LogicPanel(QWidget):
             for c in studio_project.cards
             for kind, channels in c.channel_kinds.items()
         ]
+        # The analog half of the same mirror. A card's AI/AO channels are
+        # already in new_cards above, but a DI/DO channel is fully
+        # described by its address while an ANALOG one also needs its
+        # engineering range and unit - which live on Studio's own points,
+        # not on the card. Without this, an embedded Logic Studio had no
+        # analog addresses at all (every AI/AO block's Address dropdown
+        # was empty in Studio, whatever the cards said), and the compiler
+        # had no range to resolve for an AI block's quality check.
+        new_analog_points = [
+            {
+                "address": point.address,
+                "name": point.description or "",
+                "unit": point.unit or "",
+                "min": point.eng_min,
+                "max": point.eng_max,
+                "direction": "input" if _point_kind(point.address) == "AI" else "output",
+            }
+            for point in studio_project.points
+            if _point_kind(point.address) in ("AI", "AO")
+        ]
+
         project = self._main_window.project
-        if project.external_cards == new_cards:
+        if project.external_cards == new_cards and project.external_analog_points == new_analog_points:
             return
         project.external_cards = new_cards
+        project.external_analog_points = new_analog_points
         self._main_window._refresh_project_dependent_panels()
 
     def canvas_background(self) -> str:

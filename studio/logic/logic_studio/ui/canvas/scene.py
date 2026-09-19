@@ -522,7 +522,29 @@ class LogicScene(QGraphicsScene):
             window.set_dirty()
             project.add_block(block)
 
+        self._warn_if_no_io_to_address(window, project, type_id)
+
         self.block_added.emit(type_id)
+
+    def _warn_if_no_io_to_address(self, window, project, type_id: str):
+        """A block that addresses a physical terminal, dropped into a
+        project that has no card of that kind, is a dead end the engineer
+        will otherwise meet twice: an empty Address dropdown now, and a
+        compiler error later. Said here, at the moment of the drop -
+        deliberately NOT as a modal dialog: dropping ten DI blocks before
+        wiring the cards is normal work, and ten dialogs would be
+        punishment. The Address editor itself explains it again, in full,
+        the moment anyone actually goes looking for an address
+        (ui/panels/property_grid.py's _MissingIOCombo)."""
+        from logic_studio.core import io_availability
+        message = io_availability.missing_io_message(project, type_id)
+        if not message or window is None:
+            return
+        if hasattr(window, 'statusBar'):
+            window.statusBar().showMessage(message, 8000)
+        output_panel = getattr(window, 'output_panel', None)
+        if output_panel is not None:
+            output_panel.log_warning(message)
 
     # ---- feat/macro-blocks: creating a macro from a live selection --------
 
