@@ -10,10 +10,11 @@ popup, then CommandManager.request_command(<apparatus id>, CLOSE|OPEN)
 apparatus_command_definitions()) decide what that does on the outputs.
 """
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel, QMessageBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QWidget
 
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.logging import log
+from epw_os.core.screen_set import active_screen_id, has_screen, screen_document, screen_list
 from epw_os.gui.synoptic.screen_state import command_for_toggle
 from epw_os.gui.synoptic.screen_widget import SynopticScreenWidget
 from epw_os.i18n import tr
@@ -36,6 +37,22 @@ class PageSynoptic(QWidget):
         title.setObjectName("PageHeader")
         layout.addWidget(title)
 
+        # One project can carry several screens (SPEC: "screens: name,
+        # kolejność przełączania"); the row appears only when there is
+        # more than one to switch between.
+        self.screen_row = QWidget(self)
+        row_layout = QHBoxLayout(self.screen_row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(QLabel(tr("pages.synoptic.screen_label")))
+        self.screen_selector = QComboBox()
+        self.screen_selector.setMinimumWidth(220)
+        self.screen_selector.currentIndexChanged.connect(self._on_screen_selected)
+        row_layout.addWidget(self.screen_selector)
+        row_layout.addStretch()
+        layout.addWidget(self.screen_row)
+        self.screen_row.setVisible(False)
+        self._document = {}
+
         self.status_label = QLabel("")
         self.status_label.setObjectName("SynopticStatus")
         self.status_label.setWordWrap(True)
@@ -51,8 +68,10 @@ class PageSynoptic(QWidget):
     # -- data -------------------------------------------------------------------------
 
     def reload(self):
-        """Re-reads the embedded screen and the analog units from the
-        project manager - call after a project (re)load."""
+        """Re-reads the embedded screens and the analog units from the
+        project manager - call after a project (re)load. Opens the screen
+        the panel had open before the restart when the project still has
+        it, otherwise the one the editor left active."""
         screens = {}
         analog_units = {}
         if self.project_manager is not None:
@@ -62,9 +81,42 @@ class PageSynoptic(QWidget):
             for point in (points() if callable(points) else []) or []:
                 if isinstance(point, dict) and point.get("tag"):
                     analog_units[point["tag"]] = point.get("unit") or ""
+        self._document = screens or {}
         self.screen.set_sources(self.tag_manager, self.apparatus_registry, analog_units)
-        self.screen.set_screen(screens)
-        self._update_status(bool(screens))
+
+        entries = screen_list(self._document) if self._document else []
+        remembered = None
+        if self.project_manager is not None:
+            getter = getattr(self.project_manager, "get_last_synoptic_screen", None)
+            remembered = getter() if callable(getter) else None
+        chosen = remembered if (remembered and has_screen(self._document, remembered))             else active_screen_id(self._document)
+
+        self.screen_selector.blockSignals(True)
+        self.screen_selector.clear()
+        for entry in entries:
+            self.screen_selector.addItem(entry["name"] or entry["id"], entry["id"])
+        index = self.screen_selector.findData(chosen)
+        if index >= 0:
+            self.screen_selector.setCurrentIndex(index)
+        self.screen_selector.blockSignals(False)
+        self.screen_row.setVisible(len(entries) > 1)
+
+        self._show_screen(chosen, remember=False)
+
+    def _on_screen_selected(self, index: int):
+        screen_id = self.screen_selector.itemData(index)
+        if screen_id is not None:
+            self._show_screen(screen_id)
+
+    def _show_screen(self, screen_id, remember: bool = True):
+        """Draws one screen of the document and (unless this is the
+        restore at load) remembers it in runtime_state.json."""
+        self.screen.set_screen(screen_document(self._document, screen_id) if self._document else {})
+        if remember and self.project_manager is not None:
+            setter = getattr(self.project_manager, "set_last_synoptic_screen", None)
+            if callable(setter):
+                setter(screen_id)
+        self._update_status(bool(self._document))
 
     def _update_status(self, has_section: bool):
         messages = []

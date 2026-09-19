@@ -94,6 +94,20 @@ Zakres:
 - Main View: symbole biorą aparat z `deviceId` obiektów ekranu zamiast reguły nazewniczej z p. 6;
 - `settings_hash` liczony z nastaw; Studio porównuje go przed wysłaniem projektu (SPEC, „Wersjonowanie").
 
+## 4a. Runtime WYKONUJE logikę — ZROBIONE 2026-09-19
+
+Do tego zadania sterownik logikę tylko **trzymał**: `LogicEngine` sprawdzał
+marker formatu i odpowiadał „czy cokolwiek jest skonfigurowane", a graf
+blokad nigdy nie był liczony (mówił to własny komentarz w kodzie: „In a
+real engine, we'd evaluate the interlock graph").
+
+Teraz skan naprawdę działa, na tym samym silniku i tej samej bibliotece
+bloków, co symulacja w Logic Studio (`shared/logic/`). Szczegóły —
+odmowy ładowarki, granice wobec trybu szkoleniowego i wymuszeń,
+odwzorowanie sygnałów `SYS.*` oraz to, czego jeszcze NIE ma
+(`SSWIN.*`, trwałość bitów retencyjnych) — opisuje osobny dokument:
+**`LOGIKA_W_RUNTIME.md`**.
+
 ## 5. Wysyłanie projektu na sterownik przez REST — ZROBIONE 2026-09-17
 
 - token Engineer: `GET /api/v1/project/file`, `POST /api/v1/project/install`;

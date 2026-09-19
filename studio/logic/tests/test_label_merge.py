@@ -8,8 +8,8 @@ it does EXACTLY the same thing a direct wire would, no more, no less.
 """
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.core.wire import Wire
@@ -187,9 +187,9 @@ def test_one_source_three_receivers_matches_direct_fanout_wiring():
     assert all(i > direct_shape[0] for i in direct_shape[1])
 
 def test_label_and_direct_wire_produce_identical_simulation_results():
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
 
     labeled_p, _, _ = _labeled_project()
     direct_p, _, _ = _directly_wired_project()
@@ -265,9 +265,9 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
     geometrii". mid_b has NO physical wire to src at all -- it only
     receives anything because it shares "Shared" with the
     already-wired mid_a link."""
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])

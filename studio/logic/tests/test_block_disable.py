@@ -5,14 +5,14 @@ until now.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
-from logic_studio.engine.execution import ExecutionEngine
-from logic_studio.engine.io_provider import SimulationIOProvider
-from logic_studio.engine.time_provider import SimulationTimeProvider
+from shared.logic.engine.execution import ExecutionEngine
+from shared.logic.engine.io_provider import SimulationIOProvider
+from shared.logic.engine.time_provider import SimulationTimeProvider
 
 register_builtin_blocks()
 

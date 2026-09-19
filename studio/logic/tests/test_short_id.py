@@ -5,17 +5,17 @@ import pytest
 
 from logic_studio.core.project import Project
 from logic_studio.core import short_id
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.logic_gates import AndGate, NotGate
-from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-from logic_studio.blocks.timers import TON
-from logic_studio.blocks.memory import SR
-from logic_studio.blocks.edges import RTrigBlock
-from logic_studio.blocks.counters import CTU
-from logic_studio.blocks.documentation import TextBlock
-from logic_studio.blocks.constants import TrueConstant
-from logic_studio.blocks.comparators import GreaterBlock
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.logic_gates import AndGate, NotGate
+from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+from shared.logic.blocks.timers import TON
+from shared.logic.blocks.memory import SR
+from shared.logic.blocks.edges import RTrigBlock
+from shared.logic.blocks.counters import CTU
+from shared.logic.blocks.documentation import TextBlock
+from shared.logic.blocks.constants import TrueConstant
+from shared.logic.blocks.comparators import GreaterBlock
 
 register_builtin_blocks()
 

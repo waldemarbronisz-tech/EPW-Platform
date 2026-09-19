@@ -9,8 +9,8 @@ silent gap.
 """
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core import block_catalog
 
 register_builtin_blocks()
@@ -36,7 +36,7 @@ def test_every_pin_of_every_registered_block_has_a_non_empty_description(type_id
     for pin in entry["pins"]:
         assert pin["description"].strip(), (
             f"{type_id}: pin {pin['name']!r} has no description -- add it to "
-            f"the block's PIN_DESCRIPTIONS (see logic_studio/blocks/base.py)"
+            f"the block's PIN_DESCRIPTIONS (see shared/logic/blocks/base.py)"
         )
 
 
@@ -53,7 +53,7 @@ def test_generator_returns_a_complete_entry_for_every_registered_type_without_ra
             seen_type_ids.add(entry["type_id"])
 
     # every registered, cataloguable type actually appears somewhere
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     for type_id in _all_type_ids():
         if BlockRegistry.get_block_class(type_id) is MacroInstanceBlock:
             continue
@@ -90,7 +90,7 @@ def test_macro_instance_type_is_not_in_the_fixed_catalog():
     registered type -- macro_instance.py deliberately isn't decorated
     with @BlockRegistry.register (see its own module comment), so it
     must never appear here even if looked up directly by class."""
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     assert block_catalog.describe_block_type("macro.anything") is None
     for type_id in _all_type_ids():
         assert BlockRegistry.get_block_class(type_id) is not MacroInstanceBlock

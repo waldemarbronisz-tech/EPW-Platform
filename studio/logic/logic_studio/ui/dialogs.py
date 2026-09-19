@@ -421,7 +421,7 @@ class ProjectSettingsDialog(QDialog):
                             f"it is used by blocks that need type {required}: {names}."
                         ), None
 
-        from logic_studio.core.internal_bits import validate_internal_bits_registry
+        from shared.logic.internal_bits import validate_internal_bits_registry
         format_errors = validate_internal_bits_registry(entries)
         if format_errors:
             return None, "\n".join(format_errors), None
@@ -442,7 +442,7 @@ class ProjectSettingsDialog(QDialog):
             QMessageBox.critical(self, "Import error", str(e))
             return
 
-        from logic_studio.core.internal_bits import validate_internal_bits_registry
+        from shared.logic.internal_bits import validate_internal_bits_registry
         errors = validate_internal_bits_registry(entries)
         if errors:
             QMessageBox.critical(self, "Invalid file", "\n".join(errors))

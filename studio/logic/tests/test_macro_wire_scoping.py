@@ -15,8 +15,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.core.wire import Wire
@@ -182,7 +182,7 @@ def test_entering_a_macro_swaps_to_its_own_wires_and_leaving_restores_the_top_le
     items["logic.not"].setSelected(True)
     window.scene.create_macro_from_selection("M")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
 
     window.enter_macro_instance(instance)
@@ -226,7 +226,7 @@ def test_check_wire_pin_consistency_has_no_false_positive_while_editing_a_macro(
     items["logic.not"].setSelected(True)
     window.scene.create_macro_from_selection("M")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
     window.enter_macro_instance(instance)
 
@@ -270,7 +270,7 @@ def test_macro_internal_label_does_not_merge_with_a_same_named_top_level_label()
     def_id = macros_module.new_def_id()
     macros_module.set_definition(p, def_id, definition)
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = MacroInstanceBlock(def_id=def_id)
     instance.configure(macros_module.get_definition(p, def_id))
     p.add_block(instance)
@@ -304,7 +304,7 @@ def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
     def_id = macros_module.new_def_id()
     macros_module.set_definition(p, def_id, definition)
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance_a = MacroInstanceBlock(def_id=def_id)
     instance_a.configure(macros_module.get_definition(p, def_id))
     instance_b = MacroInstanceBlock(def_id=def_id)

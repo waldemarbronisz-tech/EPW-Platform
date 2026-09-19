@@ -129,6 +129,9 @@ class MockTagManager(QObject):
     def get_output_description(self, name, default=""): return default
     def set_output_description(self, name, desc): pass
     def get_analog_points(self): return list(self._analog_points)
+    def get_analog_output_points(self): return []
+    def write_analog_output(self, tag_name, value, actor="", level=None):
+        return {"success": False, "reason": "mock tag manager", "raw": None}
 
     def add_analog_point(self, point):
         if any(p["tag"] == point["tag"] for p in self._analog_points):
@@ -175,6 +178,9 @@ class ThemeCapableTagManager(QObject):
     def get_tag(self, name): return None
     def get_output_description(self, name, default=""): return default
     def get_analog_points(self): return []
+    def get_analog_output_points(self): return []
+    def write_analog_output(self, tag_name, value, actor="", level=None):
+        return {"success": False, "reason": "mock tag manager", "raw": None}
 
     def update_tag(self, name, val, q=None):
         if name not in self._tags:
@@ -240,6 +246,9 @@ class DICapableTagManager(QObject):
     def get_tag(self, name): return None
     def get_output_description(self, name, default=""): return default
     def get_analog_points(self): return []
+    def get_analog_output_points(self): return []
+    def write_analog_output(self, tag_name, value, actor="", level=None):
+        return {"success": False, "reason": "mock tag manager", "raw": None}
 
     def update_tag(self, name, val, q=None):
         if name not in self._tags:

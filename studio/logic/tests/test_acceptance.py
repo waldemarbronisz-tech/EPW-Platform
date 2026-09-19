@@ -1,7 +1,7 @@
 import pytest
 from PySide6.QtWidgets import QApplication
 from logic_studio.ui.main_window import MainWindow
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 import os
 import json
@@ -100,10 +100,10 @@ def test_headless_engine_no_qt():
     # and asserts that 'PySide6' is not in sys.modules.
     script = """
 import sys
-from logic_studio.engine.execution import ExecutionEngine
+from shared.logic.engine.execution import ExecutionEngine
 from logic_studio.compiler.core import Compiler
 from logic_studio.core.project import Project
-from logic_studio.blocks.logic_gates import AndGate
+from shared.logic.blocks.logic_gates import AndGate
 
 assert 'PySide6' not in sys.modules, "PySide6 was imported!"
 assert 'logic_studio.ui' not in sys.modules, "UI package was imported!"
@@ -131,7 +131,11 @@ assert 'logic_studio.ui' not in sys.modules, "UI package was imported!"
     try:
         with os.fdopen(fd, "w") as f:
             f.write(script)
-        res = subprocess.run([sys.executable, script_path], capture_output=True, text=True)
+        # The block library moved to shared/logic/ (it is the contract with
+        # runtime), so the subprocess needs the repository root too - its own
+        # sys.path[0] is only studio/logic/, where the script sits.
+        environment = {**os.environ, "PYTHONPATH": str(Path(LOGIC_STUDIO_DIR).resolve().parents[1])}
+        res = subprocess.run([sys.executable, script_path], capture_output=True, text=True, env=environment)
         assert res.returncode == 0, f"Headless import test failed: {res.stderr}"
     finally:
         os.remove(script_path)

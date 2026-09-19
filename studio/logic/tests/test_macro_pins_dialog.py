@@ -6,7 +6,7 @@ MainWindow wiring built on top of this."""
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.ui.macro_pins_dialog import MacroPinsDialog
 
 

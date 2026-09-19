@@ -4,8 +4,8 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 
 
 def _app():
@@ -185,7 +185,7 @@ def test_preview_panel_shows_library_selection():
 def test_preview_panel_canvas_selection_wins_over_library():
     _app()
     from logic_studio.ui.panels.element_preview import ElementPreviewPanel
-    from logic_studio.blocks.logic_gates import OrGate
+    from shared.logic.blocks.logic_gates import OrGate
     from PySide6.QtCore import QSettings
     import tempfile, os
 
@@ -206,7 +206,7 @@ def test_preview_panel_canvas_selection_wins_over_library():
 def test_preview_panel_highlights_safety_relevant_pins():
     _app()
     from logic_studio.ui.panels.element_preview import ElementPreviewPanel
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
     from PySide6.QtCore import QSettings
     import tempfile, os
 
@@ -259,6 +259,6 @@ def test_doc_search_alias_finds_all_three_doc_blocks(qsettings):
     assert {"doc.text", "doc.note", "doc.section"} <= visible
 
 def test_pin_defaults_to_not_safety_relevant():
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
     p = Pin("X", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN)
     assert p.safety_relevant is False

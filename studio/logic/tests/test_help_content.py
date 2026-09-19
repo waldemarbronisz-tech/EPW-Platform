@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.help_content import HelpContentStore, HELP_ROOT
 from logic_studio.core import block_catalog, shortcuts
 

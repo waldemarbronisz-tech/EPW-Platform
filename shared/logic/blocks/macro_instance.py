@@ -7,8 +7,8 @@ Python class constructor could represent. Never registered via
 ui/canvas/scene.py resolve this class directly via the "macro." type_id
 prefix (core/macros.py::macro_def_id()) instead.
 """
-from logic_studio.blocks.base import BaseLogicBlock
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.base import BaseLogicBlock
+from shared.logic.blocks.pin import Pin
 
 CATEGORY = "Macros"
 

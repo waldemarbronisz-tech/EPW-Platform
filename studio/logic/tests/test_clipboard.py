@@ -5,7 +5,7 @@ the selection.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 
 register_builtin_blocks()

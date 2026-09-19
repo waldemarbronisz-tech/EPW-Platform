@@ -6,7 +6,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from PySide6.QtCore import Qt, QPointF
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 

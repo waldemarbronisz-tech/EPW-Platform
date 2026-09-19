@@ -31,7 +31,7 @@ result. Called on `_ExpandedProjectView`'s already-cloned pins
 (compiler/core.py's `compile_view`) — see that module's own note on
 why mutating THOSE pins is always safe (never the live project's own).
 """
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 
 
 def group_labeled_pins(wires, blocks) -> dict:

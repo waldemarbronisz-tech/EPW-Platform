@@ -20,7 +20,7 @@ from pathlib import Path
 # failed with FileNotFoundError - see this branch's own report for the
 # full bisection. Anchored to this file's own location instead, so it
 # resolves the same regardless of the caller's CWD.
-CATALOG_PATH = Path(__file__).resolve().parent.parent / "logic_studio" / "core" / "system_signals_catalog.json"
+CATALOG_PATH = Path(__file__).resolve().parents[3] / "shared" / "logic" / "system_signals_catalog.json"
 REQUIRED_FIELDS = {"id", "description", "label", "type", "source", "safety_relevant"}
 # core/system_signals.py's own _device_signals() and every static entry
 # in the catalog today only ever use these values -- an entry using
@@ -45,7 +45,7 @@ def _all_signals(catalog):
 
 
 def test_catalog_format_and_schema_version_match_the_loader():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     catalog = _load_catalog()
     assert catalog["format"] == "EPW_SIGNAL_CATALOG"
     assert catalog["schema_version"] == 1

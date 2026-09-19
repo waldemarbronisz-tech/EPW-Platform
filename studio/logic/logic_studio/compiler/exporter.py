@@ -1,32 +1,22 @@
-import json
-import hashlib
 from datetime import datetime, timezone
 
 from logic_studio import __version__
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.device_model import DeviceModel
-from logic_studio.core import system_signals
+from shared.logic import system_signals
 
-# Bump when the EPW_RUNTIME_LOGIC structure changes in a way a consumer
-# (EPW-OS) needs to know about. See AUDIT_REPORT.md §2.2.
-RUNTIME_SCHEMA_VERSION = 4
-
-# The closed set of fields that make up the EPW_RUNTIME_LOGIC schema and are
-# covered by the checksum. Compiler.compile() attaches a non-serializable
-# "program" (CompiledProgram) key, and a "cycle_delayed_reads" list (feat/
-# internal-bits §5/§8.1 — diagnostic data DERIVED from the fields already
-# covered below, not independent data), on top of Exporter.export()'s
-# return value for the ExecutionEngine's/EPW-OS's own use — those keys (and
-# anything else outside this set) are deliberately ignored by both
-# checksumming and verification, so handing verify_checksum() a compile()
-# result instead of an export() result degrades to "checksum still valid"
-# rather than a TypeError.
-CHECKSUM_FIELDS = (
-    "format", "schema_version", "source_version", "cycle_time_ms",
-    "execution_order", "blocks", "generated_at", "generated_by",
-    "project_name", "block_count", "contains_forced_io", "analog_points",
-    "internal_bits", "system_catalog_version", "io_labels",
-    "contains_disabled_blocks",
+# feat/logic-execution: the contract itself (format marker, schema
+# version, checksum fields and the checksum functions) moved to
+# shared/logic/runtime_export.py - EPW-OS's program loader verifies the
+# exported payload with the SAME implementation that writes it, instead
+# of a second copy of this list on the reading side. Re-exported here so
+# every existing import from this module keeps working.
+from shared.logic.runtime_export import (  # noqa: F401
+    CHECKSUM_FIELDS,
+    FORMAT_MARKER,
+    RUNTIME_SCHEMA_VERSION,
+    compute_checksum,
+    verify_checksum,
 )
 
 
@@ -199,7 +189,7 @@ class Exporter:
         io_labels = dict(DeviceModel.get_labelled_addresses(self.project))
 
         payload = {
-            "format": "EPW_RUNTIME_LOGIC",
+            "format": FORMAT_MARKER,
             "schema_version": RUNTIME_SCHEMA_VERSION,
             "source_version": self.project.settings.get("version", "1.0"),
             "cycle_time_ms": self.project.settings.get("cycle_time_ms", 100),
@@ -226,29 +216,7 @@ class Exporter:
         payload["checksum"] = self._compute_checksum(payload)
         return payload
 
-    @staticmethod
-    def _compute_checksum(payload: dict) -> str:
-        subset = {k: payload[k] for k in CHECKSUM_FIELDS if k in payload}
-        canonical = json.dumps(subset, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
-        return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
-
-
-def verify_checksum(data: dict) -> bool:
-    """Recomputes the SHA-256 checksum over CHECKSUM_FIELDS only and compares
-    it against the "checksum" field. Returns False (never raises) if the
-    checksum is missing, if any covered field was altered after export, or if
-    the payload can't be serialized at all — a dict that also carries
-    unrelated, non-serializable keys (e.g. a compile() result's "program")
-    is handled the same as a clean export() result, since those keys are
-    outside CHECKSUM_FIELDS and are simply ignored."""
-    if "checksum" not in data:
-        return False
-
-    try:
-        subset = {k: data[k] for k in CHECKSUM_FIELDS if k in data}
-        canonical = json.dumps(subset, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
-    except TypeError:
-        return False
-
-    expected = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
-    return expected == data["checksum"]
+    # The one shared implementation (shared/logic/runtime_export.py) -
+    # kept as a method so this class's own call site above reads the same
+    # as it always did.
+    _compute_checksum = staticmethod(compute_checksum)

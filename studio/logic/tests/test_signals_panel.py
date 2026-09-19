@@ -3,8 +3,8 @@ panel (read-only), rebuilt onto a category-grouped QTreeWidget."""
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.ui.panels.signals import SignalsPanel, COL_SIGNAL, COL_STATE, COL_WRITES, COL_READS, COL_LABEL

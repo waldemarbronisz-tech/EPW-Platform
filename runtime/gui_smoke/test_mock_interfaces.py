@@ -122,6 +122,7 @@ def test_the_conformance_check_itself_fails_on_a_mock_missing_a_real_method():
     # instead of the deliberately-broken one it claims to), minus add_tag.
     incomplete_surface = {"get_value", "get_tag", "update_tag", "list_tags", "set_description",
                            "get_output_description", "set_output_description", "get_analog_points",
+                           "get_analog_output_points", "write_analog_output",
                            "add_analog_point", "remove_analog_point", "update_analog_point", "toggle_mode"}
     missing = required_methods - incomplete_surface
     assert missing == {"add_tag"}, \

@@ -1,6 +1,6 @@
-from logic_studio.blocks.base import BaseLogicBlock
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks.base import BaseLogicBlock
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.registry import BlockRegistry
 
 @BlockRegistry.register
 class SystemBooleanSignalBlock(BaseLogicBlock):
@@ -37,7 +37,7 @@ class SystemBooleanSignalBlock(BaseLogicBlock):
         update_property(), so without the deserialize() call this stayed
         wrong (defaulting to Boolean) until the engine ran its first scan;
         see AUDIT_REPORT.md §28 for the reproduced bug this closes."""
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
         signal_id = self.properties.get("Sygnał", "")
         entry = system_signals.get_signal(signal_id) if signal_id else None
         self.outputs[0].data_type = Pin.TYPE_FLOAT if entry and entry.get("type") == "REAL" else Pin.TYPE_BOOLEAN
@@ -137,7 +137,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
         type — mirrors SystemBooleanSignalBlock._sync_output_type() above,
         same reasoning (most SSWIN.CMD_* signals are BOOL, but the catalog
         doesn't forbid a future REAL "logic" command)."""
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
         signal_id = self.properties.get("Sygnał", "")
         entry = system_signals.get_signal(signal_id) if signal_id else None
         self.inputs[0].data_type = Pin.TYPE_FLOAT if entry and entry.get("type") == "REAL" else Pin.TYPE_BOOLEAN
@@ -149,7 +149,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
         previously-selected signal's default happened to be. An engineer
         who then manually overrides the level keeps that override until
         the next time they change "Sygnał" again."""
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
         signal_id = self.properties.get("Sygnał", "")
         entry = system_signals.get_signal(signal_id) if signal_id else None
         self.properties["Minimalny poziom dostępu"] = "Engineer" if entry and entry.get("safety_relevant") else "Brak"

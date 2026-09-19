@@ -6,7 +6,7 @@ this file is specifically the Qt layer on top.
 """
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.help_window import HelpWindow
 
 register_builtin_blocks()
@@ -156,7 +156,7 @@ def test_f1_while_editing_a_macro_opens_the_macro_concept_topic(qsettings):
 
 def test_f1_while_simulation_running_opens_the_simulation_guide(qsettings):
     window = _make_window(qsettings)
-    from logic_studio.engine.execution import ExecutionState
+    from shared.logic.engine.execution import ExecutionState
     window.engine.state = ExecutionState.RUNNING
     assert window._context_help_topic() == "guide_simulation"
     _close(window)

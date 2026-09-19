@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.macros import PARAM_TYPES
 
 INDEX_ROLE = Qt.UserRole

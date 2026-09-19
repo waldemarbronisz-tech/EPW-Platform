@@ -74,7 +74,7 @@ class PortItem(QGraphicsItem):
         side_width = max(10.0, block_width * style.PIN_LABEL_SIDE_FRACTION)
         elided = fm.elidedText(self.pin.name, Qt.ElideRight, side_width)
 
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
         if self.pin.direction == Pin.DIR_INPUT:
             rect = QRectF(self.radius + gap, -10, side_width, 20)
             painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, elided)
@@ -107,7 +107,7 @@ class PortItem(QGraphicsItem):
         human-readable reason the toggle is currently unavailable even
         though the port IS the right kind (e.g. a wire is attached) — used
         to grey out the context menu action rather than hide it."""
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
 
         if self.pin.direction != Pin.DIR_INPUT:
             return False, None

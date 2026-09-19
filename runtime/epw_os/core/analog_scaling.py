@@ -87,6 +87,40 @@ def scale_to_engineering(raw_value: float, raw_min: float, raw_max: float,
     return ratio * (eng_max - eng_min) + eng_min
 
 
+def scale_to_raw(eng_value: float, raw_min: float, raw_max: float,
+                 eng_min: float, eng_max: float) -> float:
+    """The way back from scale_to_engineering(): eng_min..eng_max ->
+    raw_min..raw_max. An analog OUTPUT is configured exactly like an
+    input (the same signal type and the same two ranges); what changes is
+    the direction - the operator or the logic says 42 °C and the card
+    needs the raw register value for it.
+
+    A degenerate engineering span (eng_max == eng_min, a config typo)
+    returns raw_min instead of raising ZeroDivisionError - the same
+    stance scale_to_engineering() takes for a degenerate raw span."""
+    span = eng_max - eng_min
+    if span == 0:
+        return raw_min
+    ratio = (eng_value - eng_min) / span
+    return ratio * (raw_max - raw_min) + raw_min
+
+
+def compute_raw_value(eng_value, config: dict):
+    """What to write on the wire for an engineering value, per the
+    point's own config. A "ready value" point (SIGNAL_TYPE_READY) is
+    passed through unscaled, exactly as compute_display_value() reads it
+    back unscaled."""
+    merged = normalize_config(config)
+    try:
+        value = float(eng_value)
+    except (TypeError, ValueError):
+        return None
+    if not needs_scaling(merged["signal_type"]):
+        return value
+    return scale_to_raw(value, float(merged["raw_min"]), float(merged["raw_max"]),
+                        float(merged["eng_min"]), float(merged["eng_max"]))
+
+
 def compute_display_value(raw_value, config: dict):
     """The value to show (before formatting/unit), in engineering units
     unless the channel is a passthrough. None in -> None out (no reading

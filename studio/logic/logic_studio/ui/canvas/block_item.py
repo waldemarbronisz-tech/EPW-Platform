@@ -535,7 +535,7 @@ class BlockItem(QGraphicsItem):
             if project is None:
                 return name
             from logic_studio.core.device_model import DeviceModel
-            from logic_studio.core.internal_bits import internal_bit_id
+            from shared.logic.internal_bits import internal_bit_id
             entry = DeviceModel.get_internal_bit(project, name)
             return internal_bit_id(entry) if entry else name
         except Exception:
@@ -1166,7 +1166,7 @@ class BlockItem(QGraphicsItem):
             (e.get("block_uuid"), e.get("pin_name"))
             for e in definition.get("input_pins", []) + definition.get("output_pins", [])
         }
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
         candidates = [
             (pin, Pin.DIR_INPUT, "Input") for pin in self.logic_block.inputs
             if (self.logic_block.uuid, pin.name) not in already_exposed

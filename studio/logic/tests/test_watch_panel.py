@@ -9,12 +9,12 @@ from logic_studio.core import watch
 from logic_studio.core.crossref import (
     KIND_PHYSICAL_DI, KIND_PHYSICAL_DO, KIND_ANALOG_IN, KIND_SYSTEM,
 )
-from logic_studio.engine.io_provider import SimulationIOProvider
+from shared.logic.engine.io_provider import SimulationIOProvider
 from logic_studio.ui.panels.watch import (
     WatchPanel, _TrendDialog, _TrendChart, _TIME_WINDOWS_MS, _DEFAULT_WINDOW_INDEX,
     _COL_KIND, _COL_ID, _COL_DESC, _COL_VALUE, _COL_TREND,
 )
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 
@@ -226,7 +226,7 @@ def test_watch_panel_lives_in_the_bottom_output_panel_not_the_sidebar(qsettings)
 def test_run_scan_refreshes_the_watch_panel(qsettings):
     _app()
     from logic_studio.ui.main_window import MainWindow
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     m = MainWindow(settings=qsettings)
     from logic_studio.core.device_model import DeviceModel

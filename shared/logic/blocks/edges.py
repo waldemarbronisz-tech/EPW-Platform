@@ -1,6 +1,6 @@
-from logic_studio.blocks.base import BaseLogicBlock
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks.base import BaseLogicBlock
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.registry import BlockRegistry
 
 class EdgeBase(BaseLogicBlock):
     PIN_DESCRIPTIONS = {

@@ -4,9 +4,9 @@ test_macros.py / test_macro_instance.py / test_compiler.py for those)."""
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks.pin import Pin
 from logic_studio.ui.canvas.block_item import BlockItem, GATE_SHAPES
 from logic_studio.ui.canvas.port_item import PortItem
 

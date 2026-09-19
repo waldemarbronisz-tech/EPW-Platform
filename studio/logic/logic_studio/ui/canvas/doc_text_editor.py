@@ -65,7 +65,7 @@ class DocTextEditor(QGraphicsTextItem):
         self.setTextCursor(cursor)
 
     def _placeholder_text(self):
-        from logic_studio.blocks.registry import BlockRegistry
+        from shared.logic.blocks.registry import BlockRegistry
         fresh = BlockRegistry.create_block(self._item.logic_block.type_id)
         return fresh.properties.get("Text") if fresh is not None else None
 

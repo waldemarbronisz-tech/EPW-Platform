@@ -2,9 +2,9 @@ import pytest
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.compiler.core import Compiler
-from logic_studio.blocks.logic_gates import AndGate, OrGate
-from logic_studio.blocks.io_blocks import DigitalOutputBlock
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.logic_gates import AndGate, OrGate
+from shared.logic.blocks.io_blocks import DigitalOutputBlock
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 
@@ -107,7 +107,7 @@ def test_analog_point_validation_and_range_resolution():
     """AUDIT_REPORT.md §2.1/§2.3/§2.4: a valid AI/AO pair against a declared
     analog point compiles, and the Compiler resolves the AI block's [min, max]
     onto the isolated runtime instance (the engine has no live Project ref)."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock, AnalogOutputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock, AnalogOutputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -139,7 +139,7 @@ def test_quality_stuck_zero_tolerance_warns():
     tolerance left at its bit-exact default is a compile WARNING, not an
     error -- it's a real hazard on live hardware but a legitimate setup
     for a purely digital/simulated signal source."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -155,7 +155,7 @@ def test_quality_stuck_zero_tolerance_warns():
     assert any("Stuck Tolerance" in w for w in c.warnings)
 
 def test_quality_stuck_nonzero_tolerance_does_not_warn():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -174,8 +174,8 @@ def test_quality_stuck_nonzero_tolerance_does_not_warn():
 # ---- fix/safety-block-semantics §4: QUALITY range from the analog point --
 
 def test_quality_range_source_from_analog_point_resolves_and_exports():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -206,8 +206,8 @@ def test_quality_range_source_from_analog_point_ignores_own_min_max():
     """The resolved AI range must WIN over this block's own (stale/
     disagreeing) Min/Max properties -- the exact schematic §4's DOWÓD
     describes: AI(-40..150) -> QUALITY(Min=0, Max=100)."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -237,7 +237,7 @@ def test_quality_range_source_requires_direct_ai_input():
     """§4.2: In not wired directly to an input.ai block (unconnected, or
     wired through something else) is a compile ERROR while Range Source ==
     "Z punktu analogowego"."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -251,7 +251,7 @@ def test_quality_range_source_requires_direct_ai_input():
     assert any("Range Source" in e for e in c.errors)
 
 def test_quality_range_source_wlasny_uses_own_min_max_unaffected():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -278,9 +278,9 @@ def test_ai_comparator_do_with_quality_unconnected_warns():
     never wired up must warn -- before this fix, only the (irrelevant)
     "Input 'In2' is unconnected" warning appeared, nothing about Quality
     at all."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.comparators import GreaterBlock
-    from logic_studio.blocks.io_blocks import DigitalOutputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.io_blocks import DigitalOutputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -304,9 +304,9 @@ def test_ai_comparator_do_with_quality_unconnected_warns():
     assert any("Quality" in w and "measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_ai_quality_connected_does_not_warn():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.comparators import GreaterBlock
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -330,7 +330,7 @@ def test_ai_quality_connected_does_not_warn():
     assert not any("measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_quality_block_good_unconnected_warns():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -345,9 +345,9 @@ def test_quality_block_good_unconnected_warns():
     assert any("Good" in w and "measurement trustworthiness" in w for w in c.warnings), c.warnings
 
 def test_ai_hold_expired_unconnected_warns_independently_of_quality():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
-    from logic_studio.blocks.comparators import GreaterBlock
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -373,7 +373,7 @@ def test_unconnected_non_safety_output_never_warns():
     """Sanity check: this is a NEW category, not "every unconnected
     output" -- a gate's plain Out pin left unconnected must not trigger
     it."""
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -386,7 +386,7 @@ def test_unconnected_non_safety_output_never_warns():
     assert not any("measurement trustworthiness" in w for w in c.warnings)
 
 def test_invalid_analog_input_address_fails_compilation():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -401,7 +401,7 @@ def test_invalid_analog_input_address_fails_compilation():
     assert any("Invalid AI Address" in e for e in c.errors)
 
 def test_duplicate_analog_output_address_fails():
-    from logic_studio.blocks.analog_io import AnalogOutputBlock
+    from shared.logic.blocks.analog_io import AnalogOutputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -422,7 +422,7 @@ def test_duplicate_analog_output_address_fails():
     assert any("Multiple analog outputs" in e for e in c.errors)
 
 def test_duplicate_analog_input_address_warns_not_fails():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -446,7 +446,7 @@ def test_compiler_deterministic_execution_order():
     """AUDIT_REPORT.md §6: recompiling the same graph (same blocks, same UUIDs)
     must give the same execution_order regardless of the order blocks were
     added to the project."""
-    from logic_studio.blocks.timers import TON
+    from shared.logic.blocks.timers import TON
 
     # Same block instances (and therefore the same UUIDs) reused across every
     # project below — only the insertion order into `blocks` changes.
@@ -488,7 +488,7 @@ def test_compiler_allows_stateful_cycles():
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
-    from logic_studio.blocks.timers import TON
+    from shared.logic.blocks.timers import TON
 
     b1 = AndGate()
     b2 = TON()
@@ -515,8 +515,8 @@ def test_compile_expands_a_macro_instance_before_validating():
     Validator/GraphBuilder/Exporter — only the flattened blocks it expands
     to. If expansion didn't run, Validator would reject the unknown
     type_id outright."""
-    from logic_studio.blocks.io_blocks import DigitalInputBlock
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.io_blocks import DigitalInputBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     from logic_studio.core.macros import build_definition, set_definition, get_definition
 
     gate = AndGate()
@@ -557,7 +557,7 @@ def test_compile_expands_a_macro_instance_before_validating():
     assert inst.uuid not in program.execution_order
 
 def test_compile_reports_missing_macro_definition_like_a_validator_error():
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -572,8 +572,8 @@ def test_compile_reports_missing_macro_definition_like_a_validator_error():
     assert c.status == "COMPILE_FAILED"
 
 def test_compile_never_mutates_the_live_project_with_a_macro_instance():
-    from logic_studio.blocks.io_blocks import DigitalInputBlock
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.io_blocks import DigitalInputBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     from logic_studio.core.macros import build_definition, set_definition, get_definition
 
     gate = AndGate()

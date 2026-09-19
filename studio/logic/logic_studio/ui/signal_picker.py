@@ -47,7 +47,7 @@ class _NewInternalSignalDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_accept(self):
-        from logic_studio.core.internal_bits import validate_internal_bit_name
+        from shared.logic.internal_bits import validate_internal_bit_name
         name = self.name_edit.text().strip()
         error = validate_internal_bit_name(name)
         if error:
@@ -171,7 +171,7 @@ class SignalPickerDialog(QDialog):
 
         # §6.3, section 3: fixed system-signal catalog.
         if "system" in self.sections:
-            from logic_studio.core import system_signals
+            from shared.logic import system_signals
             sys_root = QTreeWidgetItem(self.tree, ["System signals"])
             for cat in system_signals.get_categories(self.project):
                 matching = [
@@ -277,7 +277,7 @@ class SignalPickerDialog(QDialog):
         if sub.exec() != QDialog.Accepted or sub.entry is None:
             return
 
-        from logic_studio.core.internal_bits import validate_internal_bits_registry
+        from shared.logic.internal_bits import validate_internal_bits_registry
         entries = list(self.project.settings.get("internal_bits", []))
         new_lname = sub.entry["name"].lower()
         if any(e.get("name", "").lower() == new_lname for e in entries):

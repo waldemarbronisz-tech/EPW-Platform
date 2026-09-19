@@ -41,10 +41,10 @@ class BlockRegistry:
         # .configure(definition) right after, using whichever project's
         # macro_definitions registry it has on hand (this factory has no
         # project to look one up in itself).
-        from logic_studio.core.macros import macro_def_id
+        from shared.logic.macro_type import macro_def_id
         def_id = macro_def_id(type_id)
         if def_id is not None:
-            from logic_studio.blocks.macro_instance import MacroInstanceBlock
+            from shared.logic.blocks.macro_instance import MacroInstanceBlock
             return MacroInstanceBlock(def_id=def_id)
         if type_id in cls._type_id_map:
             return cls._type_id_map[type_id]()
@@ -52,8 +52,8 @@ class BlockRegistry:
 
     @classmethod
     def get_block_class(cls, type_id):
-        from logic_studio.core.macros import macro_def_id
+        from shared.logic.macro_type import macro_def_id
         if macro_def_id(type_id) is not None:
-            from logic_studio.blocks.macro_instance import MacroInstanceBlock
+            from shared.logic.blocks.macro_instance import MacroInstanceBlock
             return MacroInstanceBlock
         return cls._type_id_map.get(type_id)

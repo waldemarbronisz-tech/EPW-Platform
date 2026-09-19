@@ -1,3 +1,30 @@
+# Square-wave period for each generator signal (§3.2/§3.3) — deterministic,
+# computed from engine.time, never time.time().
+#
+# feat/logic-execution: public, and read through pulse_signal_value()
+# below, because EPW-OS's own IOProvider (runtime/epw_os/core/
+# logic_runtime.py) serves these same signals to the same blocks. A
+# controller whose SYS.BLINK_FAST blinks at a different rate than the
+# simulation the engineer tested against is exactly the kind of quiet
+# divergence a second copy of this table produces.
+PULSE_PERIODS_MS = {
+    "SYS.PULSE_100MS": 100,
+    "SYS.PULSE_500MS": 500,
+    "SYS.PULSE_1S": 1000,
+    "SYS.BLINK_SLOW": 1000,   # 1 Hz
+    "SYS.BLINK_FAST": 250,    # 4 Hz
+}
+
+
+def pulse_signal_value(signal_id: str, now_ms: int):
+    """The 50%-duty square wave for a generator signal at `now_ms`, or
+    None if `signal_id` is not one of the generators."""
+    period = PULSE_PERIODS_MS.get(signal_id)
+    if period is None:
+        return None
+    return (now_ms % period) < (period / 2)
+
+
 class IOProvider:
     """Abstract interface for hardware IO interactions."""
     def read_digital_input(self, address: str) -> bool:
@@ -131,9 +158,9 @@ class SimulationIOProvider(IOProvider):
             return self.scan_time_ms
         if signal_id == "SYS.CYCLE_COUNT":
             return self.cycle_count
-        if signal_id in _PULSE_PERIODS_MS:
-            period = _PULSE_PERIODS_MS[signal_id]
-            return (now_ms % period) < (period / 2)
+        pulse = pulse_signal_value(signal_id, now_ms)
+        if pulse is not None:
+            return pulse
         return self.system_signal_overrides.get(signal_id, False)
 
     def write_system_signal(self, signal_id: str, value):
@@ -142,14 +169,3 @@ class SimulationIOProvider(IOProvider):
         # system.signal_out block wrote it (same or a later scan) sees the
         # written value, exactly like write_internal()/read_internal().
         self.system_signal_overrides[signal_id] = value
-
-
-# Square-wave period for each generator signal (§3.2/§3.3) — deterministic,
-# computed from engine.time, never time.time().
-_PULSE_PERIODS_MS = {
-    "SYS.PULSE_100MS": 100,
-    "SYS.PULSE_500MS": 500,
-    "SYS.PULSE_1S": 1000,
-    "SYS.BLINK_SLOW": 1000,   # 1 Hz
-    "SYS.BLINK_FAST": 250,    # 4 Hz
-}

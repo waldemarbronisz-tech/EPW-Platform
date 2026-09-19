@@ -1,5 +1,5 @@
-from logic_studio.blocks.base import BaseLogicBlock
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks.base import BaseLogicBlock
+from shared.logic.blocks.registry import BlockRegistry
 
 # Shared search aliases for every documentation block type (§9.6).
 DOC_ALIASES = ["opis", "komentarz", "tekst", "tytuł"]
@@ -63,7 +63,7 @@ class TextBlock(BaseLogicBlock):
         # block type has always painted at -- ui/canvas/style.py's own
         # FONT_SIZE_DOC_TEXT, read directly from that module's current
         # value rather than guessed. NOT imported from there: this module
-        # (like every logic_studio/blocks/*.py file) must stay importable,
+        # (like every shared/logic/blocks/*.py file) must stay importable,
         # and its blocks constructible, with zero PySide6/logic_studio.ui
         # dependency -- a headless engine/compiler process reconstructs
         # every block type on project load, doc blocks included, and must

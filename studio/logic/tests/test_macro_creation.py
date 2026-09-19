@@ -5,7 +5,7 @@ test_macros.py/test_macro_instance.py for the Qt-free logic these build on.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.macros import get_definition, get_definitions
 
 register_builtin_blocks()
@@ -58,7 +58,7 @@ def test_create_macro_replaces_selection_with_one_instance(qsettings):
 
     assert window.scene.create_macro_from_selection("MojGate") is True
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     remaining = window.project.blocks
     assert len(remaining) == 3  # di, do, and the new instance (gate is gone)
     instance = next(b for b in remaining if isinstance(b, MacroInstanceBlock))
@@ -85,7 +85,7 @@ def test_create_macro_rewires_external_connections_onto_the_instance(qsettings):
             item.setSelected(True)
     window.scene.create_macro_from_selection("MojGate")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
 
     assert instance.inputs[0].uuid in di.outputs[0].connections
@@ -110,7 +110,7 @@ def test_create_macro_draws_wires_to_the_instance_on_canvas(qsettings):
     window.scene.create_macro_from_selection("MojGate")
 
     from logic_studio.ui.canvas.wire_item import WireItem
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance_item = next(i for i in _block_items(window) if isinstance(i.logic_block, MacroInstanceBlock))
 
     wires_touching_instance = [
@@ -158,7 +158,7 @@ def test_placing_a_second_instance_from_the_library_configures_its_pins(qsetting
             item.setSelected(True)
     window.scene.create_macro_from_selection("MojGate")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     first_instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
 
     window.scene.add_block_from_library(first_instance.type_id, 600, 600)
@@ -207,7 +207,7 @@ def test_context_menu_prompt_creates_a_macro_from_the_selection(qsettings, monke
 
     item._prompt_create_macro_from_selection()
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
     assert instance.display_name == "MójMakro"
     _close(window)
@@ -251,7 +251,7 @@ def test_copy_paste_a_macro_instance_produces_a_second_configured_instance(qsett
             item.setSelected(True)
     window.scene.create_macro_from_selection("MojMakro")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     original = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
 
     for item in _block_items(window):
@@ -277,7 +277,7 @@ def test_duplicate_a_macro_instance(qsettings):
     _select_all(window)
     window.scene.create_macro_from_selection("Solo")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     original = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
     for item in _block_items(window):
         item.setSelected(item.logic_block is original)

@@ -4,7 +4,7 @@ same split as core/crossref.py vs. ui/panels/signals.py.
 """
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
-from logic_studio.engine.io_provider import SimulationIOProvider
+from shared.logic.engine.io_provider import SimulationIOProvider
 from logic_studio.core import watch
 from logic_studio.core.watch import (
     get_watches, is_watched, add_watch, remove_watch, describe_watch,

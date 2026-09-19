@@ -7,8 +7,8 @@ raises" compiler behavior.
 """
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.core.wire import Wire
 from logic_studio.compiler.core import Compiler

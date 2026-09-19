@@ -1,14 +1,14 @@
-"""feat/macro-blocks — logic_studio/blocks/macro_instance.py. See
+"""feat/macro-blocks — shared/logic/blocks/macro_instance.py. See
 core/macros.py's module docstring for the overall design; this file covers
 MacroInstanceBlock itself: construction, configure(), the deserialize()
 override, and clone()."""
 import pytest
 
 from logic_studio.core.project import Project
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 

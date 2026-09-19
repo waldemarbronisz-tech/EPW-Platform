@@ -66,7 +66,7 @@ def _with_logic_block(win):
     """One real block in the embedded Logic Studio, so the logic document
     has something to lose."""
     mw = win._logic_panel.main_window()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("logic.and")
     mw.project.add_block(block)
     mw.set_dirty()

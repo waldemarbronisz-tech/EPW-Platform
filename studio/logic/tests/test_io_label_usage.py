@@ -6,7 +6,7 @@ test_short_id.py's _block_ref tests, since both features land together).
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.ui.canvas.block_item import BlockItem
@@ -32,7 +32,7 @@ def _di_item_in_scene(address, qsettings):
     access, so a hand-rolled fake scene/view/window doesn't reliably
     survive the round trip the way a real MainWindow does."""
     from logic_studio.ui.main_window import MainWindow
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     window = MainWindow(settings=qsettings)
     block = BlockRegistry.create_block("input.di")
@@ -96,7 +96,7 @@ def test_comment_still_shown_above_virtual_io_block():
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("virtual.input")
     block.properties["Comment"] = "Some usage note"
     p.add_block(block)

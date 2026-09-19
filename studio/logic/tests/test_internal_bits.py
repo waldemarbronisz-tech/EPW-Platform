@@ -5,7 +5,7 @@ and the export contract. See ARCHITECTURE.md "Przestrzenie nazw sygnałów".
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 
@@ -28,20 +28,20 @@ def test_project_has_empty_internal_bits_by_default():
     assert p.settings["internal_bits"] == []
 
 def test_internal_bit_id_all_four_prefixes():
-    from logic_studio.core.internal_bits import internal_bit_id
+    from shared.logic.internal_bits import internal_bit_id
     assert internal_bit_id({"name": "X", "type": "BOOL", "retentive": False}) == "M.X"
     assert internal_bit_id({"name": "X", "type": "BOOL", "retentive": True}) == "MR.X"
     assert internal_bit_id({"name": "X", "type": "REAL", "retentive": False}) == "MW.X"
     assert internal_bit_id({"name": "X", "type": "REAL", "retentive": True}) == "MWR.X"
 
 def test_internal_bit_id_changes_with_type_or_retentive():
-    from logic_studio.core.internal_bits import internal_bit_id
+    from shared.logic.internal_bits import internal_bit_id
     base = {"name": "BLOKADA_ZS", "type": "BOOL", "retentive": False}
     assert internal_bit_id(base) != internal_bit_id({**base, "type": "REAL"})
     assert internal_bit_id(base) != internal_bit_id({**base, "retentive": True})
 
 def test_validate_internal_bit_name_rejects_bad_chars():
-    from logic_studio.core.internal_bits import validate_internal_bit_name
+    from shared.logic.internal_bits import validate_internal_bit_name
     assert validate_internal_bit_name("") is not None
     assert validate_internal_bit_name("BLOKADA ZS") is not None      # space
     assert validate_internal_bit_name("A/B") is not None             # slash
@@ -52,7 +52,7 @@ def test_validate_internal_bit_name_rejects_bad_chars():
     assert validate_internal_bit_name("BLOKADA.ZS") is None          # dot is fine
 
 def test_validate_internal_bits_registry_catches_case_insensitive_duplicate():
-    from logic_studio.core.internal_bits import validate_internal_bits_registry
+    from shared.logic.internal_bits import validate_internal_bits_registry
     entries = [
         {"name": "BLOKADA_ZS", "type": "BOOL"},
         {"name": "blokada_zs", "type": "BOOL"},
@@ -62,12 +62,12 @@ def test_validate_internal_bits_registry_catches_case_insensitive_duplicate():
     assert "BLOKADA_ZS" in errors[0] or "blokada_zs" in errors[0]
 
 def test_validate_internal_bits_registry_catches_bad_type():
-    from logic_studio.core.internal_bits import validate_internal_bits_registry
+    from shared.logic.internal_bits import validate_internal_bits_registry
     errors = validate_internal_bits_registry([{"name": "X", "type": "INT"}])
     assert len(errors) == 1
 
 def test_validate_internal_bits_registry_accepts_valid_entries():
-    from logic_studio.core.internal_bits import validate_internal_bits_registry
+    from shared.logic.internal_bits import validate_internal_bits_registry
     errors = validate_internal_bits_registry([
         {"name": "BLOKADA_ZS", "type": "BOOL"},
         {"name": "USTAWKA_MOCY", "type": "REAL"},
@@ -91,13 +91,13 @@ def test_device_model_get_internal_bits_and_filter():
 # ---- §2 blocks ----------------------------------------------------------
 
 def test_four_internal_signal_blocks_registered():
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     for type_id in ("virtual.input", "virtual.output", "internal.reg_in", "internal.reg_out"):
         block = BlockRegistry.create_block(type_id)
         assert block is not None, type_id
 
 def test_virtual_input_output_have_bit_not_tag():
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     vi = BlockRegistry.create_block("virtual.input")
     vo = BlockRegistry.create_block("virtual.output")
     assert "Bit" in vi.properties and "Tag" not in vi.properties
@@ -106,7 +106,7 @@ def test_virtual_input_output_have_bit_not_tag():
     assert len(vo.inputs) == 1 and len(vo.outputs) == 0
 
 def test_internal_reg_in_out_pins_and_type():
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     ri = BlockRegistry.create_block("internal.reg_in")
     ro = BlockRegistry.create_block("internal.reg_out")
     assert ri.is_source is True
@@ -114,7 +114,7 @@ def test_internal_reg_in_out_pins_and_type():
     assert len(ro.inputs) == 1 and ro.inputs[0].name == "Value"
 
 def test_io_provider_internal_signal_roundtrip():
-    from logic_studio.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.io_provider import SimulationIOProvider
     io = SimulationIOProvider()
     assert io.read_internal("M.X", False) is False
     io.write_internal("M.X", True)
@@ -127,10 +127,10 @@ def test_engine_queue_internal_write_flushes_atomically():
     """Mirrors queue_digital_output's existing atomic-flush test pattern —
     a queued internal write must not be visible on the IOProvider until
     step() explicitly flushes it (§2.3)."""
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.engine.program import CompiledProgram
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.program import CompiledProgram
 
     io = SimulationIOProvider()
     program = CompiledProgram(blocks=[], execution_order=[], cycle_time_ms=100)
@@ -146,11 +146,11 @@ def test_virtual_output_to_virtual_input_same_scan_via_compiler():
     wire between them, only the shared registry name)."""
     _app()
     from logic_studio.core.project import Project
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -178,7 +178,7 @@ def test_virtual_output_to_virtual_input_same_scan_via_compiler():
 # ---- §3 system signal catalog --------------------------------------------
 
 def test_catalog_loads_and_has_expected_categories():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     names = [c["name"] for c in system_signals.get_categories()]
     # feat/sswin-signals (catalog 1.1.0): four new categories exposing the
     # FIXED part of EPW-OS's alarm/intrusion subsystem, appended after the
@@ -193,7 +193,7 @@ def test_catalog_contains_every_signal_from_the_spec():
     """Task "jedno źródło listy kart": get_all_signals() no longer
     invents ELA01/ADA01 out of nowhere - a project that actually DEFINES
     them is what the spec's per-device diagnostics need."""
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     project = Project()
     DeviceModel.set_ela_devices(project, ["ELA01"])
     DeviceModel.set_ada_devices(project, ["ADA01"])
@@ -220,7 +220,7 @@ def test_catalog_contains_every_signal_from_the_spec():
     assert ids == expected
 
 def test_catalog_safety_relevant_signals():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     project = Project()
     DeviceModel.set_ela_devices(project, ["ELA01"])
     DeviceModel.set_ada_devices(project, ["ADA01"])
@@ -231,12 +231,12 @@ def test_catalog_safety_relevant_signals():
     }
 
 def test_catalog_get_signal_unknown_returns_none():
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     assert system_signals.get_signal("NOT.A.REAL.SIGNAL") is None
     assert system_signals.get_signal("SYS.READY")["type"] == "BOOL"
 
 def test_pulse_and_blink_generators_are_deterministic_square_waves():
-    from logic_studio.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.io_provider import SimulationIOProvider
     io = SimulationIOProvider()
     # SYS.BLINK_SLOW: 1 Hz, 50% duty — high for the first half of each 1000ms period.
     assert io.read_system_signal("SYS.BLINK_SLOW", now_ms=0) is True
@@ -251,8 +251,8 @@ def test_system_signal_block_output_type_matches_catalog():
     """§3.4: SYS.SCAN_TIME is REAL — the output pin's data_type must follow,
     not stay hardcoded BOOL."""
     _app()
-    from logic_studio.blocks.pin import Pin
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.pin import Pin
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("system.signal")
     assert block.outputs[0].data_type == Pin.TYPE_BOOLEAN  # default, unset
 
@@ -263,7 +263,7 @@ def test_system_signal_block_output_type_matches_catalog():
     assert block.outputs[0].data_type == Pin.TYPE_BOOLEAN
 
 def test_system_signal_block_inherits_safety_relevant_from_catalog():
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("system.signal")
     block.update_property("Sygnał", "SYS.FAULT")
     assert block.outputs[0].safety_relevant is True
@@ -283,8 +283,8 @@ def test_system_signal_block_inherits_safety_relevant_from_catalog():
 
 def test_deserialize_syncs_output_type_for_a_real_signal_without_evaluate():
     _app()
-    from logic_studio.blocks.pin import Pin
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.pin import Pin
+    from shared.logic.blocks.registry import BlockRegistry
 
     block = BlockRegistry.create_block("system.signal")
     block.properties["Sygnał"] = "SYS.SCAN_TIME"
@@ -298,7 +298,7 @@ def test_deserialize_syncs_output_type_for_a_real_signal_without_evaluate():
 
 def test_deserialize_syncs_safety_relevant_for_a_safety_signal():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     block = BlockRegistry.create_block("system.signal")
     block.properties["Sygnał"] = "SYS.FAULT"
@@ -310,7 +310,7 @@ def test_a_freshly_loaded_real_signal_block_can_be_wired_immediately():
     Pin.connect() rejected a perfectly legal REAL-to-REAL wire because the
     just-loaded output pin was still stuck at Boolean."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     block = BlockRegistry.create_block("system.signal")
     block.properties["Sygnał"] = "SYS.SCAN_TIME"
@@ -327,8 +327,8 @@ def test_export_reports_correct_type_for_real_signal_without_ever_running_sim():
     import json
     from logic_studio.core.project import Project
     from logic_studio.compiler.core import Compiler
-    from logic_studio.blocks.pin import Pin
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.pin import Pin
+    from shared.logic.blocks.registry import BlockRegistry
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -352,9 +352,9 @@ def test_export_falls_back_to_live_pin_type_for_unrecognized_signal():
     _app()
     import json
     from logic_studio.core.project import Project
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
     from logic_studio.compiler.core import Compiler
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -376,9 +376,9 @@ def test_system_signal_block_reads_via_read_system_signal_not_digital_input():
     """The exact bug from the audit: a system signal must never be
     readable by coincidentally matching a physical DI address."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.registry import BlockRegistry
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
 
     class _FakeEngine:
         def __init__(self, io, time):
@@ -401,7 +401,7 @@ def test_system_signal_block_unrecognized_signal_returns_safe_value():
     migration carried forward an old default that predates the catalog)
     must return a safe value, never crash or return None."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("system.signal")
     block.properties["Sygnał"] = "SYS_READY"  # old pre-catalog underscore format
     block.evaluate(engine=None)
@@ -419,7 +419,7 @@ def test_validator_error_signal_not_in_registry():
     """§4.4: the whole point of replacing free-text "Tag" with a registry —
     a typo/unregistered name is now a compile ERROR."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -434,7 +434,7 @@ def test_validator_error_type_mismatch():
     """§4.5: a BOOL block pointing at a REAL registry entry (or vice
     versa) must be an ERROR."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -449,7 +449,7 @@ def test_validator_error_type_mismatch():
 def test_validator_error_multiple_writers():
     """§4.1: exactly like output.do — must name every writing block."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -473,7 +473,7 @@ def test_validator_error_multiple_writers():
 
 def test_validator_single_writer_is_not_an_error():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -488,7 +488,7 @@ def test_validator_single_writer_is_not_an_error():
 def test_validator_warning_read_without_write():
     """§4.2: warning, not error — legitimate mid-build state."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -529,7 +529,7 @@ def test_validator_matched_writer_reader_pair_is_clean():
     """A correctly wired writer+reader pair, both pointing at a real
     registry entry, produces no errors and no internal-signal warnings."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
@@ -558,7 +558,7 @@ def test_cycle_delay_detected_when_writer_is_scheduled_after_reader():
     than relying on however two random uuids happen to compare."""
     _app()
     from logic_studio.core.project import Project
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.compiler.core import Compiler
 
     p = Project()
@@ -600,7 +600,7 @@ def test_cycle_delay_not_flagged_when_writer_precedes_reader():
     execution_priority — confirms the detector isn't just always true."""
     _app()
     from logic_studio.core.project import Project
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.compiler.core import Compiler
 
     p = Project()
@@ -822,7 +822,7 @@ def test_project_settings_dialog_loads_existing_signals():
 
 def test_project_settings_dialog_usage_column():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -879,7 +879,7 @@ def test_project_settings_dialog_rename_propagates_to_blocks(monkeypatch):
     (and, pre-fix, hung the suite) for every rename of a used signal."""
     _app()
     _refuse_any_blocking_messagebox(monkeypatch)
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
@@ -904,7 +904,7 @@ def test_project_settings_dialog_deleting_used_signal_prompts_confirmation(monke
     accept() proceeds once confirmed."""
     _app()
     from PySide6.QtWidgets import QMessageBox
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
 
     p = Project()
@@ -935,7 +935,7 @@ def test_project_settings_dialog_rejects_incompatible_type_change():
     """§7.3: changing REAL used by internal.reg_out to BOOL must be
     refused with a message, not silently applied."""
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     from logic_studio.ui.dialogs import ProjectSettingsDialog
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])

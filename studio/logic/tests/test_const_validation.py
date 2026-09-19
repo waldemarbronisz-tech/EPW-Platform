@@ -16,9 +16,9 @@ the safe default instead of crashing.
 from logic_studio.core.project import Project
 from logic_studio.compiler.core import Compiler
 from logic_studio.compiler.validator import Validator
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
-from logic_studio.blocks.constants import RealConstant, IntConstant, TimeConstant
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
+from shared.logic.blocks.constants import RealConstant, IntConstant, TimeConstant
 
 register_builtin_blocks()
 

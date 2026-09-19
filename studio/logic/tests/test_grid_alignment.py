@@ -15,8 +15,8 @@ on an odd multiple of GRID_SNAP that isn't itself a PORT_PITCH multiple
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.ui.canvas.block_item import BlockItem
 from logic_studio.ui.canvas.port_item import PortItem
 from logic_studio.ui.canvas import style, shapes
@@ -79,7 +79,7 @@ def test_deserialize_realigns_off_grid_block_positions():
     free-form dragging before snap-on-move existed) is realigned to the
     grid on load — a no-op for anything already aligned."""
     from logic_studio.core.project import Project
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     b = AndGate()
@@ -99,7 +99,7 @@ def test_deserialize_realigns_off_grid_block_positions():
 
 def test_deserialize_leaves_on_grid_positions_untouched():
     from logic_studio.core.project import Project
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     b = AndGate()
@@ -134,7 +134,7 @@ def test_gate_geometry_matches_the_spec_table(type_id, inputs_count):
     gate type, but the height/input-position formula is still exercised
     for it in test_gate_height_formula_matches_spec_for_five_inputs)."""
     _app()
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     block = BlockRegistry.create_block(type_id)
     item = BlockItem(block)
@@ -206,7 +206,7 @@ def test_gate_output_port_is_exactly_at_body_center(type_id):
     needs it: height is built from GATE_BODY/PORT_PITCH (both GRID_SNAP
     multiples), which makes height/2 land exactly on a GRID_SNAP multiple
     for every input count, always."""
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
 
     block = BlockRegistry.create_block(type_id)
     item = BlockItem(block)
@@ -232,7 +232,7 @@ def test_rail_needed_iff_input_falls_outside_fixed_body(type_id, inputs_count):
 
 def test_io_single_pin_block_port_is_at_center_of_a_40_tall_block():
     _app()
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
     block = BlockRegistry.create_block("input.di")
     item = BlockItem(block)
     assert item.height == 40
@@ -255,7 +255,7 @@ def test_io_multi_pin_block_ports_are_symmetric_around_center():
 
 def test_complex_block_ports_symmetric_around_center_both_sides():
     _app()
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
     block = BlockRegistry.create_block("counter.ctud")  # 5 inputs, 3 outputs
     item = BlockItem(block)
     center = item.height / 2
@@ -281,7 +281,7 @@ def test_position_aligned_to_the_old_coarser_grid_survives_the_new_finer_one():
     property that makes examples/*.epwlogic need zero position corrections
     under §1's grid change (verified empirically: 0/10 fixtures drifted)."""
     from logic_studio.core.project import Project
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     p = Project()
     b = AndGate()

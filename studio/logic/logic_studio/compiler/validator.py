@@ -187,7 +187,7 @@ class Validator:
                 # moment the catalog gains/loses a signal.
                 sig_id = block.properties.get("Sygnał", "")
                 if sig_id:
-                    from logic_studio.core import system_signals
+                    from shared.logic import system_signals
                     if system_signals.get_signal(sig_id, self.project) is None:
                         warnings.append(f"[{self._block_ref(block)}] Unrecognised system signal: '{sig_id}' (not in the catalog).")
             elif block.type_id == "const.real":
@@ -296,7 +296,7 @@ class Validator:
                     analog_input_addresses[addr] = self._block_ref(block)
 
         # 5. Internal signal registry (feat/internal-bits §4).
-        from logic_studio.core.internal_bits import validate_internal_bits_registry, internal_bit_id
+        from shared.logic.internal_bits import validate_internal_bits_registry, internal_bit_id
         errors.extend(validate_internal_bits_registry(self.project.settings.get("internal_bits", [])))
 
         BOOL_SIGNAL_TYPE_IDS = ("virtual.input", "virtual.output")
@@ -454,7 +454,7 @@ class Validator:
         # migration compat, case 3 above) — system.signal_out is a brand
         # new block type with no such back-compat concern, so an unknown
         # id there is a hard ERROR instead.
-        from logic_studio.core import system_signals
+        from shared.logic import system_signals
 
         sys_writers = {}  # signal_id -> [block_ref, ...]
         sys_referenced = set()  # any signal_id read OR written by a block

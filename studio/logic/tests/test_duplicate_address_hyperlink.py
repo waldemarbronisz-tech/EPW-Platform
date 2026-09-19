@@ -7,7 +7,7 @@ AUDIT_REPORT.md §10 / MEMORY.md for why.
 import pytest
 from PySide6.QtWidgets import QApplication, QMenu
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.canvas.block_item import BlockItem
 
 register_builtin_blocks()

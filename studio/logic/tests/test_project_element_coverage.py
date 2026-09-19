@@ -17,8 +17,8 @@ important to pin down as "must survive" is.
 """
 import pytest
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project, PROJECT_ELEMENTS
 from logic_studio.core.wire import Wire
 from logic_studio.core import macros as macros_module
@@ -168,7 +168,7 @@ def test_path_macro_enter_exit_swaps_blocks_and_wires_settings_stays_shared(qset
         item.setSelected(True)
     window.scene.create_macro_from_selection("M")
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instance = next(b for b in window.project.blocks if isinstance(b, MacroInstanceBlock))
     settings_object = window.project.settings
 

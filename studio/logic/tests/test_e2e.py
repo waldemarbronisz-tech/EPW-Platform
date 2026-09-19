@@ -1,7 +1,7 @@
 import pytest
 from PySide6.QtWidgets import QApplication
 from logic_studio.ui.main_window import MainWindow
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 
 import os
 
@@ -66,14 +66,14 @@ def test_headless_fat():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks.logic_gates import NotGate
-    from logic_studio.blocks.timers import TON
-    from logic_studio.blocks.memory import SR
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks.logic_gates import NotGate
+    from shared.logic.blocks.timers import TON
+    from shared.logic.blocks.memory import SR
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
 
@@ -154,11 +154,11 @@ def test_stop_drives_outputs_to_safe_state():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()
@@ -195,11 +195,11 @@ def test_fault_transition_drives_outputs_to_safe_state():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine, ExecutionState
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine, ExecutionState
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()
@@ -236,11 +236,11 @@ def test_pause_does_not_touch_outputs():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()
@@ -275,11 +275,11 @@ def _stopped_step_project():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()
@@ -304,7 +304,7 @@ def test_step_in_stopped_never_writes_outputs():
     the IOProvider's state. This is the DOWÓD scenario itself -- before
     this fix, ADA01.DO01 went True."""
     engine, io = _stopped_step_project()
-    from logic_studio.engine.execution import ExecutionState
+    from shared.logic.engine.execution import ExecutionState
     assert engine.state == ExecutionState.STOPPED
 
     io.set_digital_input("ELA01.DI.1", True)
@@ -356,12 +356,12 @@ def test_same_scan_input_fat():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks.logic_gates import NotGate
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks.logic_gates import NotGate
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()
@@ -409,13 +409,13 @@ def test_stop_restart_fat():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
-    from logic_studio.blocks.timers import TON
-    from logic_studio.blocks.memory import SR
-    from logic_studio.blocks import register_builtin_blocks
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks.timers import TON
+    from shared.logic.blocks.memory import SR
+    from shared.logic.blocks import register_builtin_blocks
 
     register_builtin_blocks()
     project = Project()

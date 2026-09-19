@@ -354,7 +354,15 @@
       "threshold_label": "Ostrzegaj po tylu zamknięciach:"
     },
     "control_outputs": {
-      "title": "CENTRUM STEROWANIA OPERATORA"
+      "title": "CENTRUM STEROWANIA OPERATORA",
+      "analog_title": "Wyjścia analogowe",
+      "col_set": "Nastaw",
+      "btn_set": "Nastaw...",
+      "tooltip_col_set": "Nastawia wartość tego wyjścia (poziom Engineer). Wartość podaje się w jednostkach fizycznych; sterownik przelicza ją na to, czego oczekuje karta.",
+      "tooltip_analog_value": "Czym to wyjście jest wysterowane, w jednostkach fizycznych.",
+      "analog_set_title": "Nastaw wyjście analogowe {tag}",
+      "analog_value": "Wartość:",
+      "analog_set_failed_title": "Nie nastawiono wyjścia"
     },
     "analog_inputs": {
       "btn_add": "Dodaj punkt",
@@ -437,7 +445,8 @@
       "geometry_missing": "Brak pliku biblioteki symboli - symbole rysowane są jako proste ramki: {reason}",
       "screen_warnings": "Ekran wczytano z ostrzeżeniami ({count}) - szczegóły są w logu.",
       "state_unknown_title": "Stan nieznany",
-      "state_unknown": "Stan aparatu {device} nie jest znany (brak potwierdzenia), więc nie można wybrać kierunku polecenia."
+      "state_unknown": "Stan aparatu {device} nie jest znany (brak potwierdzenia), więc nie można wybrać kierunku polecenia.",
+      "screen_label": "Ekran:"
     },
     "system_topology": {
       "info_title": "INFORMACJE O URZĄDZENIU",
@@ -993,6 +1002,8 @@
     "project_missing": "Brak pliku projektu {path}. Sterownik działa z pustym projektem - wgraj projekt.epw przygotowany w Studio.",
     "project_refused": "Plik projektu {path} nie został wczytany. Sterownik działa z pustym projektem. Powód:",
     "project_warnings": "Plik projektu {path} wczytano z ostrzeżeniami ({count}) - szczegóły są w logu.",
+    "logic_rejected": "Program logiki z projektu został odrzucony i NIE działa: {reason} Sterownik pracuje bez logiki użytkownika - skompiluj projekt ponownie w Logic Studio i wgraj go jeszcze raz.",
+    "logic_not_started": "Program logiki został wczytany, ale skanowanie nie wystartowało: {reason} Blokady z tego programu NIE działają.",
     "state_missing": "Brak pliku stanu {path}: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
     "state_damaged": "Plik stanu {path} jest uszkodzony: stan uzbrojenia alarmówki sprzed restartu jest nieznany, więc wszystkie strefy wstały ROZBROJONE. Sprawdź obiekt i w razie potrzeby uzbrój ponownie.",
     "composition_logic": "Plik logiki {path} odwołuje się do sygnałów ({count}) modułu \"{module}\", którego nie ma w składzie tego sterownika: {signals}. Nie zadziałają, dopóki moduł nie zostanie dodany do urządzenia w Studio albo odwołania nie zostaną usunięte z logiki.",

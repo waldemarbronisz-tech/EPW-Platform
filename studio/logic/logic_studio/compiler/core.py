@@ -170,7 +170,7 @@ class Compiler:
         # of the same macro never collide — core/macros.py's
         # _expand_instance()) so a second call's uuids would silently stop
         # matching `execution_order`, built from this first call's blocks.
-        from logic_studio.engine.program import CompiledProgram
+        from shared.logic.engine.program import CompiledProgram
         isolated_blocks = expanded_blocks
 
         # Resolve each AI block's analog point range once, here, since the
@@ -210,7 +210,7 @@ class Compiler:
         # M./MR./MW./MWR.<name> id) live in the registry, not on the block.
         # Validator has already confirmed every "Bit" resolves to a
         # registry entry of the matching type (§4.4/§4.5).
-        from logic_studio.core.internal_bits import internal_bit_id
+        from shared.logic.internal_bits import internal_bit_id
         _INTERNAL_SIGNAL_TYPE_IDS = ("virtual.input", "virtual.output", "internal.reg_in", "internal.reg_out")
         for block in isolated_blocks:
             if block.type_id in _INTERNAL_SIGNAL_TYPE_IDS and hasattr(block, 'set_signal_id'):
@@ -264,7 +264,7 @@ class Compiler:
         zapis — value from the previous scan."
         """
         from logic_studio.core.device_model import DeviceModel
-        from logic_studio.core.internal_bits import internal_bit_id
+        from shared.logic.internal_bits import internal_bit_id
 
         WRITER_TYPE_IDS = ("virtual.output", "internal.reg_out")
         READER_TYPE_IDS = ("virtual.input", "internal.reg_in")

@@ -13,7 +13,7 @@ vs. ui/panels/signals.py, and core/help_content.py below: this module
 is testable without a QApplication, and reusable for the "Eksportuj
 katalog bloków..." menu action (§2.4) with no UI dependency at all.
 """
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks.registry import BlockRegistry
 
 # feat/help-system §5.5-adjacent convenience: a category label -> a short
 # blurb, shown as the intro line of that category's page in the "Katalog
@@ -22,7 +22,7 @@ _CATEGORY_INTROS = {}
 
 
 def _direction_label(pin) -> str:
-    from logic_studio.blocks.pin import Pin
+    from shared.logic.blocks.pin import Pin
     return "Input" if pin.direction == Pin.DIR_INPUT else "Output"
 
 
@@ -40,7 +40,7 @@ def describe_block_type(type_id: str) -> dict:
     block_class = BlockRegistry.get_block_class(type_id)
     if block_class is None:
         return None
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     if block_class is MacroInstanceBlock:
         return None
 

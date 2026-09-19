@@ -7,7 +7,7 @@ duplicating this logic.
 import pytest
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.canvas.navigation import find_block_item, pulse_highlight, jump_to_block
 
 register_builtin_blocks()

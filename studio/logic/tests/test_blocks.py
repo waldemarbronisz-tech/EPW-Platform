@@ -1,11 +1,11 @@
 import pytest
 import time
-from logic_studio.blocks.timers import TON, TOF, TP
-from logic_studio.blocks.counters import CTU, CTD, CTUD
-from logic_studio.blocks.memory import SR, RS
-from logic_studio.blocks.math_blocks import DivBlock
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.engine.time_provider import SimulationTimeProvider
+from shared.logic.blocks.timers import TON, TOF, TP
+from shared.logic.blocks.counters import CTU, CTD, CTUD
+from shared.logic.blocks.memory import SR, RS
+from shared.logic.blocks.math_blocks import DivBlock
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.engine.time_provider import SimulationTimeProvider
 
 class MockEngine:
     def __init__(self):
@@ -125,7 +125,7 @@ def test_div_by_zero():
     assert d.outputs[0].value == 0.0
 
 def test_pin_single_driver():
-    from logic_studio.blocks.logic_gates import AndGate, OrGate
+    from shared.logic.blocks.logic_gates import AndGate, OrGate
     a = AndGate()
     b = OrGate()
     c = AndGate()
@@ -146,10 +146,10 @@ def test_tp_start_with_active_input_no_keyerror():
     from logic_studio.core.project import Project
     from logic_studio.core.device_model import DeviceModel
     from logic_studio.compiler.core import Compiler
-    from logic_studio.engine.execution import ExecutionEngine
-    from logic_studio.engine.io_provider import SimulationIOProvider
-    from logic_studio.engine.time_provider import SimulationTimeProvider
-    from logic_studio.blocks.io_blocks import DigitalInputBlock
+    from shared.logic.engine.execution import ExecutionEngine
+    from shared.logic.engine.io_provider import SimulationIOProvider
+    from shared.logic.engine.time_provider import SimulationTimeProvider
+    from shared.logic.blocks.io_blocks import DigitalInputBlock
 
     project = Project()
     DeviceModel.set_ela_devices(project, ["ELA01"])
@@ -175,7 +175,7 @@ def test_tp_start_with_active_input_no_keyerror():
     assert engine.state != "FAULT"
 
 def test_button_monostable():
-    from logic_studio.blocks.system_signals import ButtonBlock
+    from shared.logic.blocks.system_signals import ButtonBlock
 
     b = ButtonBlock()
     b.properties["Mode"] = "Monostabilny"
@@ -193,7 +193,7 @@ def test_button_monostable():
     assert b.outputs[0].value is False
 
 def test_button_bistable():
-    from logic_studio.blocks.system_signals import ButtonBlock
+    from shared.logic.blocks.system_signals import ButtonBlock
 
     b = ButtonBlock()
     b.properties["Mode"] = "Bistabilny"
@@ -220,7 +220,7 @@ def test_button_bistable():
 def test_analog_input_quality_and_holdover():
     """AUDIT_REPORT.md §2.1: AI holds the last good value across a bad-quality
     scan instead of passing garbage downstream."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     class FakeIO:
         def __init__(self):
@@ -254,7 +254,7 @@ def test_analog_input_quality_and_holdover():
     assert ai.outputs[0].value == 30.0
 
 def test_analog_input_no_good_value_yet():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.set_range(0.0, 100.0)
@@ -264,7 +264,7 @@ def test_analog_input_no_good_value_yet():
 
 def test_analog_input_nan_and_range_margin():
     import math
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     class FakeIO:
         def __init__(self, v):
@@ -304,7 +304,7 @@ class _FakeAnalogIO:
 def test_analog_input_default_max_hold_is_unlimited_like_before():
     """§5.6: default 0 = no limit, IDENTICAL to this block's behavior
     before Max Hold existed -- needs no engine.time at all."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     class FakeEngine:
         def __init__(self, io):
@@ -323,7 +323,7 @@ def test_analog_input_default_max_hold_is_unlimited_like_before():
     assert ai.outputs[2].value is False  # Hold Expired never trips
 
 def test_analog_input_hold_expires_and_falls_back_to_zero():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.set_range(0.0, 100.0)
@@ -348,7 +348,7 @@ def test_analog_input_hold_expires_and_falls_back_to_zero():
     assert ai.outputs[1].value is False  # Quality still False regardless
 
 def test_analog_input_hold_timeout_value_last_good():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.set_range(0.0, 100.0)
@@ -365,7 +365,7 @@ def test_analog_input_hold_timeout_value_last_good():
     assert ai.outputs[0].value == 42.0  # holds at the last good value, not 0
 
 def test_analog_input_hold_timeout_value_range_floor():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.set_range(-40.0, 150.0)
@@ -382,7 +382,7 @@ def test_analog_input_hold_timeout_value_range_floor():
     assert ai.outputs[0].value == -40.0
 
 def test_analog_input_good_reading_before_expiry_resets_the_hold_clock():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.set_range(0.0, 100.0)
@@ -407,7 +407,7 @@ def test_analog_input_good_reading_before_expiry_resets_the_hold_clock():
     assert ai.outputs[2].value is False  # clock restarted, not expired yet
 
 def test_analog_input_hold_check_requires_a_time_provider():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     class FakeEngine:
         def __init__(self, io):
@@ -422,7 +422,7 @@ def test_analog_input_hold_check_requires_a_time_provider():
 def test_analog_input_new_outputs_are_defined_from_the_start():
     """Hold Expired must never be None -- see also §8's "every output
     defined" audit."""
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     ai.reset_runtime_state()
@@ -431,7 +431,7 @@ def test_analog_input_new_outputs_are_defined_from_the_start():
 
 
 def test_analog_output_buffers_and_flushes():
-    from logic_studio.blocks.analog_io import AnalogOutputBlock
+    from shared.logic.blocks.analog_io import AnalogOutputBlock
 
     class FakeEngine:
         def __init__(self):
@@ -454,21 +454,21 @@ def test_analog_output_buffers_and_flushes():
 # ---- fix/safety-block-semantics §8.2: audit found and fixed these too ---
 
 def test_scale_no_signal_defines_output():
-    from logic_studio.blocks.analog_processing import ScaleBlock
+    from shared.logic.blocks.analog_processing import ScaleBlock
 
     s = ScaleBlock()
     s.evaluate()
     assert s.outputs[0].value == 0.0
 
 def test_limit_no_signal_defines_output():
-    from logic_studio.blocks.analog_processing import LimitBlock
+    from shared.logic.blocks.analog_processing import LimitBlock
 
     l = LimitBlock()
     l.evaluate()
     assert l.outputs[0].value == 0.0
 
 def test_hysteresis_no_signal_holds_last_latched_state():
-    from logic_studio.blocks.analog_processing import HysteresisBlock
+    from shared.logic.blocks.analog_processing import HysteresisBlock
 
     h = HysteresisBlock()
     h.evaluate()
@@ -483,14 +483,14 @@ def test_hysteresis_no_signal_holds_last_latched_state():
     assert h.outputs[0].value is True  # holds the latch, doesn't reset
 
 def test_moving_average_no_signal_ever_defines_output():
-    from logic_studio.blocks.analog_processing import MovingAverageBlock
+    from shared.logic.blocks.analog_processing import MovingAverageBlock
 
     m = MovingAverageBlock()
     m.evaluate()
     assert m.outputs[0].value == 0.0
 
 def test_moving_average_holds_last_value_if_signal_drops_after_data():
-    from logic_studio.blocks.analog_processing import MovingAverageBlock
+    from shared.logic.blocks.analog_processing import MovingAverageBlock
 
     m = MovingAverageBlock()
     m.inputs[0].value = 10.0
@@ -505,7 +505,7 @@ def test_tof_et_never_none_before_first_trigger():
     """fix/safety-block-semantics §8.2: ET (outputs[1]) was previously
     only ever set inside branches that require having been triggered
     (in_state True) at least once."""
-    from logic_studio.blocks.timers import TOF
+    from shared.logic.blocks.timers import TOF
 
     engine = MockEngine()
     t = TOF()
@@ -517,7 +517,7 @@ def test_tof_et_never_none_before_first_trigger():
 def test_deadband_no_signal_defines_both_outputs():
     """fix/safety-block-semantics §8.1: previously left Out/Changed as
     None when In was never connected."""
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.evaluate()
@@ -525,7 +525,7 @@ def test_deadband_no_signal_defines_both_outputs():
     assert d.outputs[1].value is False
 
 def test_deadband_first_scan_always_passes():
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Deadband"] = 1.0
@@ -535,7 +535,7 @@ def test_deadband_first_scan_always_passes():
     assert d.outputs[1].value is True
 
 def test_deadband_absolute_mode_holds_below_threshold():
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Mode"] = "Bezwzględny"
@@ -552,7 +552,7 @@ def test_deadband_absolute_mode_holds_below_threshold():
         assert d.outputs[1].value is False
 
 def test_deadband_absolute_mode_passes_on_threshold_crossed():
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Mode"] = "Bezwzględny"
@@ -572,7 +572,7 @@ def test_deadband_absolute_mode_passes_on_threshold_crossed():
     assert d.outputs[1].value is False
 
 def test_deadband_percent_mode_uses_range():
-    from logic_studio.blocks.analog_processing import DeadbandBlock
+    from shared.logic.blocks.analog_processing import DeadbandBlock
 
     d = DeadbandBlock()
     d.properties["Mode"] = "Procentowy"
@@ -593,7 +593,7 @@ def test_deadband_percent_mode_uses_range():
     assert d.outputs[1].value is True
 
 def test_quality_block_out_of_range_and_good():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Min"] = 0.0
@@ -614,7 +614,7 @@ def test_quality_block_rate_fault():
     physical units per SECOND, computed from engine.time, not a bare
     per-scan delta. SimulationTimeProvider.advance() steps the clock
     explicitly, same as every timer test above."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     engine = MockEngine()
     q = QualityBlock()
@@ -634,7 +634,7 @@ def test_quality_block_rate_fault_is_independent_of_cycle_time():
     """§2's own stated purpose: the SAME Max Rate (/s) setting must give
     the SAME Rate Fault verdict for the SAME physical rate of change,
     regardless of how often the engine happens to scan."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     for dt_ms, rate_faults in ((100, False), (50, True)):
         engine = MockEngine()
@@ -653,7 +653,7 @@ def test_quality_block_rate_check_requires_a_time_provider():
     """§2.3: mirrors TimerBase — silently degrading to per-scan semantics
     for lack of a TimeProvider would reintroduce exactly the bug this
     section fixes, just invisibly. Must raise, not default to False."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Max Rate (/s)"] = 5.0
@@ -665,7 +665,7 @@ def test_quality_block_rate_check_disabled_needs_no_time_provider():
     """The default (Max Rate (/s)=0) must keep working with no engine at
     all -- backward compatibility for every existing bare evaluate() call
     that never touches this property."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.inputs[0].value = 10.0
@@ -673,7 +673,7 @@ def test_quality_block_rate_check_disabled_needs_no_time_provider():
     assert q.outputs[2].value is False
 
 def test_quality_block_zero_dt_skips_rate_check_without_crashing():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     engine = MockEngine()
     q = QualityBlock()
@@ -686,7 +686,7 @@ def test_quality_block_zero_dt_skips_rate_check_without_crashing():
     assert q.outputs[2].value is False
 
 def test_quality_block_stuck_signal():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Stuck Scans"] = 2
@@ -709,7 +709,7 @@ def test_quality_block_stuck_signal():
     assert q.outputs[3].value is False
 
 def test_quality_block_non_numeric_input_is_not_good():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.evaluate()  # no input connected -> value is None
@@ -720,7 +720,7 @@ def test_quality_block_non_numeric_input_is_not_good():
 def test_quality_block_signal_dropout_resets_rate_and_stuck_history():
     """§3 DOWÓD: a signal that vanished for a while and came back must not
     be compared (rate or stuck) against whatever was seen BEFORE the gap."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     engine = MockEngine()
     q = QualityBlock()
@@ -855,7 +855,7 @@ def test_v9_project_property_grid_row_actually_shows_up_after_migration():
 def test_new_project_default_is_z_punktu_analogowego():
     """Contrast case for the migration tests above: a block placed FRESH
     (never round-tripped through a save file) keeps the new default."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     assert q.properties["Range Source"] == "Z punktu analogowego"
@@ -939,7 +939,7 @@ def test_quality_block_stuck_tolerance_zero_never_fires_on_realistic_noise():
     exact-equality default — this is the bug, and the backward-
     compatibility guarantee (default 0.0 behaves EXACTLY like before this
     property existed) in the same assertion."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Stuck Scans"] = 3
@@ -954,7 +954,7 @@ def test_quality_block_stuck_tolerance_zero_never_fires_on_realistic_noise():
 def test_quality_block_stuck_tolerance_above_zero_catches_realistic_noise():
     """Same frozen-sensor-with-noise series, but with a tolerance sized for
     real ADC noise -- Stuck MUST fire."""
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Stuck Scans"] = 3
@@ -967,7 +967,7 @@ def test_quality_block_stuck_tolerance_above_zero_catches_realistic_noise():
     assert q.outputs[3].value is True
 
 def test_quality_block_stuck_tolerance_streak_resets_on_a_real_change():
-    from logic_studio.blocks.analog_processing import QualityBlock
+    from shared.logic.blocks.analog_processing import QualityBlock
 
     q = QualityBlock()
     q.properties["Stuck Scans"] = 2
@@ -992,7 +992,7 @@ def test_quality_block_stuck_tolerance_streak_resets_on_a_real_change():
 def test_comparator_default_behavior_unchanged():
     """AUDIT_REPORT.md §5: Hysteresis=T On=T Off=0 must behave exactly like
     before this feature existed, and is_stateful must be False."""
-    from logic_studio.blocks.comparators import GreaterBlock, BetweenBlock
+    from shared.logic.blocks.comparators import GreaterBlock, BetweenBlock
 
     g = GreaterBlock()
     assert g.is_stateful is False
@@ -1009,7 +1009,7 @@ def test_comparator_default_behavior_unchanged():
     assert b.is_stateful is False
 
 def test_comparator_hysteresis_suppresses_chatter():
-    from logic_studio.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.comparators import GreaterBlock
 
     g = GreaterBlock()
     g.properties["Hysteresis"] = 2.0
@@ -1034,7 +1034,7 @@ def test_comparator_hysteresis_suppresses_chatter():
     assert g.outputs[0].value is True
 
 def test_comparator_equal_hysteresis_is_a_tolerance_band():
-    from logic_studio.blocks.comparators import EqualBlock
+    from shared.logic.blocks.comparators import EqualBlock
 
     eq = EqualBlock()
     eq.properties["Hysteresis"] = 0.5
@@ -1053,7 +1053,7 @@ def test_comparator_equal_hysteresis_is_a_tolerance_band():
     assert eq.outputs[0].value is False
 
 def test_comparator_t_on_delay():
-    from logic_studio.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.comparators import GreaterBlock
 
     engine = MockEngine()
     g = GreaterBlock()
@@ -1075,7 +1075,7 @@ def test_comparator_t_on_delay():
     assert g.outputs[0].value is True
 
 def test_comparator_t_off_delay():
-    from logic_studio.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.comparators import GreaterBlock
 
     engine = MockEngine()
     g = GreaterBlock()
@@ -1095,7 +1095,7 @@ def test_comparator_t_off_delay():
     assert g.outputs[0].value is False
 
 def test_comparator_t_on_requires_engine_time():
-    from logic_studio.blocks.comparators import GreaterBlock
+    from shared.logic.blocks.comparators import GreaterBlock
 
     g = GreaterBlock()
     g.properties["T On (ms)"] = 100
@@ -1106,7 +1106,7 @@ def test_comparator_t_on_requires_engine_time():
         g.evaluate(engine=None)
 
 def test_between_hysteresis_widens_window():
-    from logic_studio.blocks.comparators import BetweenBlock
+    from shared.logic.blocks.comparators import BetweenBlock
 
     b = BetweenBlock()
     b.properties["Hysteresis"] = 1.0
@@ -1126,8 +1126,8 @@ def test_between_hysteresis_widens_window():
     assert b.outputs[0].value is False
 
 def test_pin_type_checking():
-    from logic_studio.blocks.logic_gates import AndGate
-    from logic_studio.blocks.math_blocks import AddBlock
+    from shared.logic.blocks.logic_gates import AndGate
+    from shared.logic.blocks.math_blocks import AddBlock
 
     a = AndGate()
     add = AddBlock()

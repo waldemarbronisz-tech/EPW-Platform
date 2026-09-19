@@ -5,8 +5,8 @@ discipline, widget cleanup.
 import pytest
 from PySide6.QtWidgets import QApplication, QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, QFormLayout
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.registry import BlockRegistry
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.registry import BlockRegistry
 from logic_studio.core.project import Project
 from logic_studio.ui.panels.property_grid import (
     PropertyGridPanel, SECTION_IDENTIFICATION, SECTION_ADDRESSING,

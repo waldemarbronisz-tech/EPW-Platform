@@ -8,12 +8,12 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QPointF
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.ui.canvas.block_item import BlockItem
 from logic_studio.ui.canvas.port_item import PortItem
 from logic_studio.ui.canvas import style
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.logic_gates import And3Gate, NotGate
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.logic_gates import And3Gate, NotGate
 
 
 def _app():

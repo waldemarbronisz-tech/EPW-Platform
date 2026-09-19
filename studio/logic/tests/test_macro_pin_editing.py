@@ -6,9 +6,9 @@ isolation, and test_macro_pins_dialog.py for MacroPinsDialog itself."""
 import pytest
 from PySide6.QtWidgets import QApplication, QMenu
 
-from logic_studio.blocks import register_builtin_blocks
-from logic_studio.blocks.pin import Pin
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks import register_builtin_blocks
+from shared.logic.blocks.pin import Pin
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
 from logic_studio.ui.canvas.block_item import BlockItem
 from logic_studio.core.macros import get_definition
 
@@ -37,7 +37,7 @@ def _make_window_with_macro(qsettings):
     test_macro_navigation.py's own (kept separate/local rather than
     imported, matching this suite's existing one-helper-per-file norm)."""
     from logic_studio.ui.main_window import MainWindow
-    from logic_studio.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
+    from shared.logic.blocks.io_blocks import DigitalInputBlock, DigitalOutputBlock
 
     window = MainWindow(settings=qsettings)
     window.scene.clear()

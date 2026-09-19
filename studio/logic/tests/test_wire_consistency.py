@@ -15,7 +15,7 @@ pins() close that at the source, one call added to each site.
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.core.wire import Wire, check_wire_pin_consistency
 
@@ -139,7 +139,7 @@ def test_checker_detects_a_one_sided_asymmetric_connection():
 
 
 def _create(project, type_id):
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block(type_id)
     project.add_block(block)
     return block

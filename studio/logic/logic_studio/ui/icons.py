@@ -57,7 +57,7 @@ def block_icon(type_id: str, size: int = 24) -> QIcon:
     if key in _block_icon_cache:
         return _block_icon_cache[key]
 
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
 
     block_class = BlockRegistry.get_block_class(type_id)
     icon = QIcon()

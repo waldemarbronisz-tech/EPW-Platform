@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.wire import Wire
 from logic_studio.ui.canvas.wire_item import WireItem
 from logic_studio.ui.canvas.navigation import find_pin_owner_item, jump_to_pin

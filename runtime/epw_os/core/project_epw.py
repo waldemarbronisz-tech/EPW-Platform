@@ -43,7 +43,7 @@ from epw_os.core.feature_config import TOGGLABLE_FEATURES
 # ProjectManager.config keys that come from projekt.epw.
 PROJECT_KEYS = (
     "format", "schema_version", "project_id", "metadata", "modules", "enabled_features",
-    "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points",
+    "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points", "analog_outputs",
     "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_power_supervision",
     "process_protections", "electrical_protection_stages", "modbus_bus", "switching_counter_settings",
     "mqtt", "service_notes",
@@ -135,6 +135,11 @@ def build_project_view(project) -> dict:
         ],
         "modbus_bus": asdict(project.modbus_bus),
         "point_registry": registry,
+        # An analog OUTPUT is configured exactly like an input (signal
+        # type, raw and engineering range, unit, decimals) - the ranges
+        # are read the other way round when something writes it, see
+        # analog_scaling.compute_raw_value().
+        "analog_outputs": [_analog_record(p) for p in project.points if point_kind(p.address) == "AO"],
         "tag_descriptions": {p["address"]: p["description"] for p in registry if p["description"]},
         "output_descriptions": {p["address"]: p["description"] for p in registry
                                 if p["description"] and p["kind"] == "DO"},
@@ -257,6 +262,8 @@ def diff_settings(project, config: dict) -> SettingsDiff:
                   allow_new=True)
     _diff_records("analog_points", config.get("analog_points", baseline["analog_points"]),
                   baseline["analog_points"], lambda r: r.get("tag"), ANALOG_SETTINGS, ANALOG_STRUCTURE, diff)
+    _diff_records("analog_outputs", config.get("analog_outputs", baseline["analog_outputs"]),
+                  baseline["analog_outputs"], lambda r: r.get("tag"), ANALOG_SETTINGS, ANALOG_STRUCTURE, diff)
     _diff_records("switching_counter_settings",
                   config.get("switching_counter_settings", baseline["switching_counter_settings"]),
                   baseline["switching_counter_settings"], lambda r: r.get("tag"), COUNTER_SETTINGS, (), diff)
@@ -338,6 +345,7 @@ def apply_changes(project, changes) -> None:
             stages[change.record_id] = stage
         target = {
             "intrusion_zones": zones, "intrusion_lines": lines, "process_protections": processes,
-            "analog_points": points, "switching_counter_settings": points, "electrical_protection_stages": stages,
+            "analog_points": points, "analog_outputs": points, "switching_counter_settings": points,
+            "electrical_protection_stages": stages,
         }[change.section][change.record_id]
         setattr(target, change.field, _coerce_to_field(target, change.field, change.new))

@@ -6,9 +6,9 @@ import pytest
 import json
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.macros import get_definition, get_definitions
-from logic_studio.blocks.macro_instance import MacroInstanceBlock
+from shared.logic.blocks.macro_instance import MacroInstanceBlock
 from logic_studio.ui.canvas.block_item import BlockItem
 
 register_builtin_blocks()

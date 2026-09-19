@@ -179,6 +179,12 @@ def main():
                     self._project_manager.save_project()
                 def get_analog_points(self):
                     return self._project_manager.get_analog_points()
+                def get_analog_output_points(self):
+                    return self._project_manager.get_analog_output_points()
+                def write_analog_output(self, tag_name, value, actor="", level=None):
+                    # Task punkt 2 - the conversion, the driver-layer
+                    # boundary and the audit entry all live in EPWCore.
+                    return self._epw_core.write_analog_output(tag_name, value, actor=actor, level=level)
                 def list_tags(self):
                     # Task: signal-list export (Tools > Export Signal
                     # List..., epw_os.core.tag_export.build_tag_list_export())

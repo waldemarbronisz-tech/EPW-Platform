@@ -365,7 +365,7 @@ class WireItem(QGraphicsPathItem):
         or the group currently has no resolvable single source."""
         if self.label_info is None:
             return ""
-        from logic_studio.blocks.pin import Pin
+        from shared.logic.blocks.pin import Pin
         anchor_pin = self.source_port.pin
         if anchor_pin.direction == Pin.DIR_OUTPUT:
             return f"-> {self.label_info['receiver_count']} odb."

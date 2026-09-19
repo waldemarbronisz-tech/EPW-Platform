@@ -9,10 +9,10 @@ occurrence impossible to ship unnoticed.
 """
 import pytest
 
-from logic_studio.blocks.pin import Pin
+from shared.logic.blocks.pin import Pin
 from logic_studio.core.project import Project
-from logic_studio.blocks.logic_gates import AndGate
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks.logic_gates import AndGate
+from shared.logic.blocks import register_builtin_blocks
 
 register_builtin_blocks()
 
@@ -140,7 +140,7 @@ def test_every_serializable_block_attribute_is_accounted_for():
     being classified into one of the three fails HERE now, instead of
     silently losing its persistence the way visibility/execution_state
     did."""
-    from logic_studio.blocks.base import BaseLogicBlock
+    from shared.logic.blocks.base import BaseLogicBlock
     block = AndGate()
     actual = set(vars(block).keys())
     accounted_for = (
@@ -251,7 +251,7 @@ BLOCK_NON_DEFAULT_VALUES = {
 }
 
 def test_every_block_field_has_a_non_default_clone_test_value():
-    from logic_studio.blocks.base import BaseLogicBlock
+    from shared.logic.blocks.base import BaseLogicBlock
     assert set(BaseLogicBlock.SERIALIZED_FIELDS) == set(BLOCK_NON_DEFAULT_VALUES.keys())
 
 # short_id is deliberately ALWAYS blanked by clone() (base.py's own §4.2
@@ -260,7 +260,7 @@ def test_every_block_field_has_a_non_default_clone_test_value():
 BLOCK_CLONE_ALWAYS_FIELDS = ("display_name", "execution_priority", "color", "enabled")
 
 def test_block_clone_field_partition_covers_every_serialized_field():
-    from logic_studio.blocks.base import BaseLogicBlock
+    from shared.logic.blocks.base import BaseLogicBlock
     assert set(BLOCK_CLONE_ALWAYS_FIELDS) | {"uuid", "short_id"} == set(BaseLogicBlock.SERIALIZED_FIELDS)
 
 @pytest.mark.parametrize("preserve_uuid", [False, True])
@@ -299,7 +299,7 @@ def test_block_short_id_is_always_blanked_by_clone_regardless_of_preserve_uuid()
 # from a parametrize table.
 
 def test_clone_preserves_safety_relevant_on_output_pins():
-    from logic_studio.blocks.analog_io import AnalogInputBlock
+    from shared.logic.blocks.analog_io import AnalogInputBlock
 
     ai = AnalogInputBlock()
     assert ai.outputs[1].safety_relevant is True  # Quality, sanity check
@@ -313,7 +313,7 @@ def test_clone_preserves_safety_relevant_on_input_pins():
     """Inputs can carry safety_relevant too (Pin.__init__ makes no
     direction distinction) even though no shipped block sets one today —
     clone() must not special-case outputs only."""
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     gate = AndGate()
     gate.inputs[0].safety_relevant = True
@@ -324,7 +324,7 @@ def test_clone_preserves_safety_relevant_on_input_pins():
 def test_clone_preserves_false_safety_relevant_too():
     """Not just "copies True" -- a pin that ISN'T safety_relevant on the
     original must not become True on the clone either."""
-    from logic_studio.blocks.logic_gates import AndGate
+    from shared.logic.blocks.logic_gates import AndGate
 
     gate = AndGate()
     clone = gate.clone()

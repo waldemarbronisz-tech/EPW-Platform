@@ -5,7 +5,7 @@ import json
 import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.macros import get_definitions, get_definition, macro_def_id
 from logic_studio.core import macro_library
 from logic_studio.ui.panels.library import TYPE_ID_ROLE
@@ -202,7 +202,7 @@ def test_round_trip_import_into_a_different_project_places_a_second_instance(qse
     new_def_id = next(iter(get_definitions(target_window.project).keys()))
     target_window.scene.add_block_from_library(f"macro.{new_def_id}", 0, 0)
 
-    from logic_studio.blocks.macro_instance import MacroInstanceBlock
+    from shared.logic.blocks.macro_instance import MacroInstanceBlock
     instances = [b for b in target_window.project.blocks if isinstance(b, MacroInstanceBlock)]
     assert len(instances) == 1
     assert instances[0].display_name == "MojMakro"

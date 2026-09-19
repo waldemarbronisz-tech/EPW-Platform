@@ -8,7 +8,7 @@ and _show_signal_usage() (the action's actual effect).
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from logic_studio.blocks import register_builtin_blocks
+from shared.logic.blocks import register_builtin_blocks
 from logic_studio.core.project import Project
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.ui.canvas.block_item import BlockItem
@@ -39,7 +39,7 @@ def _close(window):
 
 def test_address_based_block_reference_is_the_address():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("input.di")
     block.properties["Address"] = "ELA01.DI.1"
     item = BlockItem(block)
@@ -47,14 +47,14 @@ def test_address_based_block_reference_is_the_address():
 
 def test_gate_has_no_signal_reference():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("logic.and")
     item = BlockItem(block)
     assert item._current_signal_reference() == ""
 
 def test_di_with_empty_address_has_no_reference():
     _app()
-    from logic_studio.blocks.registry import BlockRegistry
+    from shared.logic.blocks.registry import BlockRegistry
     block = BlockRegistry.create_block("input.di")
     block.properties["Address"] = ""
     item = BlockItem(block)
@@ -65,7 +65,7 @@ def test_system_signal_block_reference_is_the_raw_sygnal_value(qsettings):
     window = _make_window(qsettings)
     window.scene.add_block_from_library("system.signal", 0, 0)
     block = window.project.blocks[0]
-    from logic_studio.core import system_signals
+    from shared.logic import system_signals
     any_signal = system_signals.get_all_signals()[0]
     block.properties["Sygnał"] = any_signal["id"]
 
