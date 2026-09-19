@@ -348,7 +348,9 @@ def main():
                                    mqtt_manager=gui_mqtt, mqtt_status_changed_signal=bridge.mqtt_status_changed,
                                    apparatus_registry=core.apparatus_registry,
                                    startup_issues=core.startup_issues,
-                                   force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed)
+                                   force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed,
+                                   logic_engine=core.logic_engine,
+                                   logic_reload_callback=core.reload_logic)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,

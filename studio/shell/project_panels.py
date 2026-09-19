@@ -3862,6 +3862,15 @@ class ControllerPanel(QWidget):
         test_row.addWidget(self.status_label, 1)
         layout.addLayout(test_row)
 
+        # What the controller is actually EXECUTING, not just whether it
+        # answers: /api/v1/health only ever says RUNNING/FAULT/DEGRADED
+        # for the whole subsystem, which cannot tell "this project has no
+        # logic" from "the program was refused". Filled by
+        # _test_connection() below, from /api/v1/logic.
+        self.logic_label = QLabel(tr("controller.logic_unknown"))
+        self.logic_label.setWordWrap(True)
+        layout.addWidget(self.logic_label)
+
         sync_box = QGroupBox(tr("controller.sync_heading"))
         sync_layout = QHBoxLayout(sync_box)
         self.send_button = QPushButton(tr("controller.send_to_device"))
@@ -4025,6 +4034,34 @@ class ControllerPanel(QWidget):
             self.status_label.setText(tr("controller.status_ok"))
         else:
             self.status_label.setText(tr("controller.status_failed", reason=result))
+        self._refresh_logic_state(reachable=ok)
+
+    def _refresh_logic_state(self, reachable: bool):
+        """The logic program's own state, from /api/v1/logic - read-only
+        and unauthenticated there, so this needs no token even when the
+        connection has none yet. An older controller (no such endpoint)
+        simply reports unknown rather than an error: this panel's job is
+        to say what it can see, not to fail over a missing extra."""
+        if not reachable:
+            self.logic_label.setText(tr("controller.logic_unknown"))
+            return
+        ok, status = self._request("/api/v1/logic")
+        if not ok or not isinstance(status, dict):
+            self.logic_label.setText(tr("controller.logic_unknown"))
+            return
+        if not status.get("configured"):
+            self.logic_label.setText(tr("controller.logic_none"))
+        elif status.get("running"):
+            self.logic_label.setText(tr(
+                "controller.logic_running",
+                blocks=status.get("block_count", 0), cycle=status.get("cycle_time_ms", 0),
+                scans=status.get("scan_count", 0), longest=f"{status.get('max_scan_ms', 0.0):.1f}",
+                outputs=len(status.get("driven_outputs", [])),
+            ))
+        elif status.get("loaded"):
+            self.logic_label.setText(tr("controller.logic_stopped"))
+        else:
+            self.logic_label.setText(tr("controller.logic_failed", reason=status.get("last_error") or ""))
 
     def _fetch_tag_preview(self):
         ok, result = self._request("/api/v1/tags")

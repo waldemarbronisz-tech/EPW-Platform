@@ -39,8 +39,22 @@ class MainWindow(QMainWindow):
                  process_protection_manager=None,
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
-                 startup_issues=None, force_manager=None, forces_changed_signal=None):
+                 startup_issues=None, force_manager=None, forces_changed_signal=None,
+                 logic_engine=None, logic_reload_callback=None):
         super().__init__()
+        # EPWCore.reload_logic - the one operation that puts a NEW logic
+        # program into the running scan (Project menu). A callback rather
+        # than a core reference: this window deliberately holds only the
+        # managers it needs, never the composition root itself. None in
+        # tests and wherever no such operation exists.
+        self._logic_reload_callback = logic_reload_callback
+        # The scan that executes the user's logic. The status bar shows
+        # whether it is running at all (an operator standing at the
+        # cabinet has no other way to tell a controller whose interlocks
+        # are running from one whose program was refused at startup) -
+        # None in isolated widget tests and for a controller built
+        # without one.
+        self.logic_engine = logic_engine
         # SPEC "Wymuszanie stanów" condition 2 ("widoczne po obu stronach,
         # także na panelu przy szafce"): the status bar shows every force
         # Studio holds, and an Engineer can drop them all from there.
@@ -737,6 +751,17 @@ class MainWindow(QMainWindow):
         self._refresh_load_synoptic_action_visibility()
         self.access_manager.level_changed.connect(self._refresh_load_synoptic_action_visibility)
 
+        # Putting a NEW logic program into the scan without restarting the
+        # controller. Everything else in projekt.epw still needs a restart
+        # (tags/modules/pages are built from it once, at startup) - the
+        # program does not, because the scan owns nothing but the program
+        # and its own thread. Same hidden+disabled-below-Engineer,
+        # re-checked-at-click pattern as the entry above.
+        self._act_reload_logic = project_menu.addAction(tr("menu.project_reload_logic"))
+        self._act_reload_logic.triggered.connect(self._reload_logic_program)
+        self._refresh_reload_logic_action_visibility()
+        self.access_manager.level_changed.connect(self._refresh_reload_logic_action_visibility)
+
         project_menu.addSeparator()
         self._recent_projects_menu = project_menu.addMenu(tr("menu.project_recent"))
         # Rebuilt on demand right before it's shown, not kept in sync
@@ -1173,6 +1198,39 @@ class MainWindow(QMainWindow):
             self.lbl_sb_presentation.setVisible(True)
         else:
             self.lbl_sb_presentation.setVisible(False)
+
+    def _refresh_logic_indicator(self):
+        """RUN / STOPPED / FAULT / no program, plus the real scan time in
+        the tooltip. Reads the engine directly (a few attributes, no
+        locks, no I/O) rather than subscribing to anything: the scan runs
+        on its own thread at its own cycle time, so there is no event to
+        subscribe TO - a periodic read is the honest shape here."""
+        colors = self.theme_manager.current_colors()
+        engine = self.logic_engine
+        status = engine.get_status() if engine is not None and hasattr(engine, "get_status") else None
+
+        if status is None or not status.get("configured"):
+            state, color = tr("statusbar.logic_none"), colors["state_indeterminate"]
+            tooltip = tr("statusbar.tooltip_logic_none")
+        elif status.get("running"):
+            state, color = tr("statusbar.logic_run"), colors["state_ok"]
+            tooltip = tr("statusbar.tooltip_logic_run",
+                         blocks=status.get("block_count", 0),
+                         cycle=status.get("cycle_time_ms", 0),
+                         scans=status.get("scan_count", 0),
+                         last=f"{status.get('last_scan_ms', 0.0):.1f}",
+                         longest=f"{status.get('max_scan_ms', 0.0):.1f}",
+                         outputs=len(status.get("driven_outputs", [])))
+        elif status.get("loaded"):
+            state, color = tr("statusbar.logic_stopped"), colors["state_alarm"]
+            tooltip = tr("statusbar.tooltip_logic_stopped")
+        else:
+            state, color = tr("statusbar.logic_fault"), colors["state_alarm"]
+            tooltip = tr("statusbar.tooltip_logic_fault", reason=status.get("last_error") or "")
+
+        self.lbl_sb_logic.setText(f" {tr('statusbar.logic')}: {state} ")
+        self.lbl_sb_logic.setStyleSheet(f"color: {color}; font-weight: bold;")
+        self.lbl_sb_logic.setToolTip(tooltip)
 
     def _refresh_api_warning_indicator(self, *_):
         """Task: DODATKOWO - REST API exposed beyond localhost, signaled
@@ -1655,6 +1713,52 @@ class MainWindow(QMainWindow):
         self._act_load_synoptic.setVisible(is_engineer)
         self._act_load_synoptic.setEnabled(is_engineer)
 
+    def _refresh_reload_logic_action_visibility(self, *_):
+        """Engineer-only, same hidden AND disabled treatment as every
+        other Engineer-gated menu entry here."""
+        is_engineer = self.access_manager.has_access(AccessLevel.ENGINEER)
+        self._act_reload_logic.setVisible(is_engineer)
+        self._act_reload_logic.setEnabled(is_engineer)
+
+    def _reload_logic_program(self):
+        """Re-reads the logic program from the project on disk and puts it
+        into the scan (EPWCore.reload_logic() - which stops the running
+        scan first, driving every output it touched to its safe state).
+
+        Confirmed first, and the confirmation says what it will do to the
+        outputs: an engineer reloading a program while the plant runs is
+        interrupting live interlocks for as long as the swap takes, and
+        that has to be their decision rather than a surprise. Re-verified
+        at click time like every other Engineer-gated action here."""
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Reload logic program")
+            return
+
+        if self._logic_reload_callback is None:
+            QMessageBox.information(self, tr("dialog.reload_logic_title"),
+                                    tr("dialog.reload_logic_unavailable"))
+            return
+
+        answer = QMessageBox.question(
+            self, tr("dialog.reload_logic_title"), tr("dialog.reload_logic_confirm"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        result = self._logic_reload_callback(actor=f"Panel:{self.access_manager.level}", level=None)
+        self._refresh_logic_indicator()
+        if result.get("success"):
+            status = result.get("status", {})
+            QMessageBox.information(
+                self, tr("dialog.reload_logic_title"),
+                tr("dialog.reload_logic_done", blocks=status.get("block_count", 0),
+                   cycle=status.get("cycle_time_ms", 0)),
+            )
+        else:
+            QMessageBox.warning(self, tr("dialog.reload_logic_title"),
+                                tr("dialog.reload_logic_failed", reason=result.get("reason", "")))
+
     def _load_synoptic_screen(self):
         """Task (epwsyn loader): reads a .epwsyn file and shows a summary
         of what it contains - object count, device count broken down by
@@ -1976,6 +2080,12 @@ class MainWindow(QMainWindow):
         # future signal" pattern as the time sync indicator further down.
         self.lbl_sb_user = QLabel()
         self.lbl_sb_db = QLabel()
+        # The logic scan's own indicator - text/color set by
+        # _refresh_logic_indicator() below, like every other periodic one
+        # here. Always visible (never hidden-when-idle like Training
+        # Mode's): "this controller runs no logic" is itself something
+        # the person in front of it needs to be able to read off the bar.
+        self.lbl_sb_logic = QLabel()
         self.lbl_sb_lat = QLabel()
         # Task: podpowiedzi - static (what Latency/Scan actually measure
         # doesn't change; only the number does, via setText() elsewhere),
@@ -2043,6 +2153,8 @@ class MainWindow(QMainWindow):
         self.statusbar.addWidget(QLabel(" | "))
         self.statusbar.addWidget(self.lbl_sb_db)
         self.statusbar.addWidget(QLabel(" | "))
+        self.statusbar.addWidget(self.lbl_sb_logic)
+        self.statusbar.addWidget(QLabel(" | "))
         self.statusbar.addWidget(self.lbl_sb_lat)
         self.statusbar.addWidget(QLabel(" | "))
         self.statusbar.addWidget(self.lbl_sb_scan)
@@ -2100,6 +2212,14 @@ class MainWindow(QMainWindow):
         self.db_health_timer = QTimer(self)
         self.db_health_timer.timeout.connect(self._check_db_health)
         self.db_health_timer.start(4000)
+
+        # Logic scan - same periodic, cheap-read treatment as DB above
+        # (get_status() is a handful of attribute reads), on its own timer
+        # so a slow database check can never delay it.
+        self._refresh_logic_indicator()
+        self.logic_status_timer = QTimer(self)
+        self.logic_status_timer.timeout.connect(self._refresh_logic_indicator)
+        self.logic_status_timer.start(2000)
 
         # Latency - event-driven (command_status), no polling at all.
         # No data yet until the first command completes.

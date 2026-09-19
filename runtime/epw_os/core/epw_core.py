@@ -890,6 +890,73 @@ class EPWCore:
 
     # --- Analog outputs (task punkt 2: AO w runtime) -----------------------
 
+    # --- The logic program, live (task "co mamy do roboty", p. 1) ---------
+
+    def reload_logic(self, actor: str = "", level: str = None) -> dict:
+        """Re-reads the logic program from the project on disk and puts it
+        into the scan, without restarting the controller.
+
+        Everything else in projekt.epw still needs a restart (tags,
+        modules and pages are built from it once, at startup - see
+        shared/docs/PROJEKT_EPW_ZADANIA.md p. 3). The PROGRAM does not:
+        the scan owns nothing but the program and its own thread, so
+        stopping it (which drives every output it touched to its safe
+        state), loading the new one and starting again is the whole
+        operation - which is exactly why this is worth having before the
+        bigger "reinstall the project live" is.
+
+        Engineer level, audited: changing what the plant's interlocks do
+        is at least as consequential as forcing one output. Returns
+        {"success", "reason", "status"}.
+        """
+        from epw_os.core.access_manager import AccessLevel
+        from epw_os.core.health_manager import SubsystemState
+        if level is not None:
+            order = AccessLevel._ORDER
+            try:
+                if order.index(level) < order.index(AccessLevel.ENGINEER):
+                    log.warning(f"Refused to reload the logic program: level {level!r} is below Engineer.")
+                    return {"success": False, "reason": "Access denied - Engineer level required.",
+                            "status": self.logic_engine.get_status()}
+            except ValueError:
+                log.warning(f"Refused to reload the logic program: unrecognized level {level!r}.")
+                return {"success": False, "reason": "Access denied - Engineer level required.",
+                        "status": self.logic_engine.get_status()}
+
+        # Straight from the file, not from the copy loaded at startup -
+        # the point of this call is to pick up a project installed since.
+        self.project_manager.load_project()
+        embedded_logic = self.project_manager.get_embedded_logic_runtime()
+        logic_file = self.project_manager.get_logic_file()
+
+        self.logic_engine.stop()
+        if embedded_logic:
+            loaded = self.logic_engine.load_program_data(embedded_logic)
+        elif logic_file:
+            loaded = self.logic_engine.load_program(logic_file)
+        else:
+            loaded = None
+
+        if loaded is None:
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.DEGRADED)
+            reason = "The project carries no logic program."
+        elif not loaded:
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
+            reason = self.logic_engine.last_error
+        elif not self.logic_engine.start():
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.FAULT)
+            reason = self.logic_engine.last_error
+        else:
+            self.health_manager.update_subsystem("LOGIC_RUNTIME", SubsystemState.RUNNING)
+            reason = ""
+
+        success = bool(loaded) and self.logic_engine.is_running
+        if self.audit_logger is not None:
+            detail = ("the logic program was reloaded and is running"
+                      if success else f"the logic program was NOT reloaded: {reason}")
+            self.audit_logger.record("LOGIC_PROGRAM_RELOADED", actor or "SYSTEM", detail, success=success)
+        return {"success": success, "reason": reason, "status": self.logic_engine.get_status()}
+
     def _analog_output_config(self, tag_name: str) -> dict:
         return next((point for point in self.project_manager.get_analog_output_points()
                      if point.get("tag") == tag_name), {})
