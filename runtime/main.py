@@ -12,9 +12,10 @@ from epw_os.core.tag_manager import TagQuality
 RESTART_EXIT_CODE = 3
 
 
-def run_backend(core: EPWCore):
+def run_backend(core: EPWCore, fastapi_app=None):
     log.info("Starting FastAPI backend...")
-    from epw_os.backend.api import app as fastapi_app
+    if fastapi_app is None:
+        from epw_os.backend.api import app as fastapi_app
     # Inject EPWCore into FastAPI state
     fastapi_app.state.core = core
     
@@ -62,7 +63,21 @@ def main():
         log.warning("=" * 70)
 
     # 2. Start API Backend Thread
-    backend_thread = threading.Thread(target=run_backend, args=(core,), daemon=True)
+    #
+    # The FastAPI app is imported HERE, in the main thread, and handed to
+    # the thread ready-made. Importing it inside the thread (as this did)
+    # raced with whatever the main thread was importing at that moment:
+    # PySide6 installs an import hook (shiboken) and pydantic imports
+    # lazily, and the two together intermittently produced "ImportError:
+    # cannot import name 'import_string' ... (most likely due to a
+    # circular import)" INSIDE the backend thread - killing the REST API
+    # for the whole run while the panel carried on, so the controller
+    # looked healthy and simply could not be reached. Python's import
+    # machinery is only guaranteed re-entrant per module, not across two
+    # threads importing overlapping graphs at once; doing it before the
+    # thread exists removes the race rather than retrying around it.
+    from epw_os.backend.api import app as fastapi_app
+    backend_thread = threading.Thread(target=run_backend, args=(core, fastapi_app), daemon=True)
     backend_thread.start()
 
     # 3. Optional GUI Boot (if in GUI environment)

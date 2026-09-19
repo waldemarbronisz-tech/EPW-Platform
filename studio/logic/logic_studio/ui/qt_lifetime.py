@@ -53,6 +53,24 @@ import shiboken6
 from PySide6.QtCore import QObject, QTimer
 
 
+def is_alive(*objects) -> bool:
+    """False as soon as ANY of `objects` has had its C++ side destroyed -
+    shiboken6.isValid(), the same liveness check create_owned_timer()
+    guards its ticks with, for the callers that are not timers.
+
+    The case this exists for: a QGraphicsScene emits selectionChanged
+    from inside its own C++ destructor (destroying it clears its items,
+    and clearing items changes the selection). Every slot connected to
+    that signal therefore runs once more AFTER shiboken has already
+    invalidated the Python wrapper, and each one that touches the scene
+    raises "Internal C++ object (LogicScene) already deleted" - one stack
+    trace per handler, on every teardown, for work that could not
+    possibly be useful any more. Qt's own auto-disconnect does not help:
+    the emission happens before it.
+    """
+    return all(shiboken6.isValid(obj) for obj in objects)
+
+
 def create_owned_timer(owner: QObject, callback, *, guard=(), single_shot: bool = False) -> QTimer:
     """The one sanctioned way to create a QTimer in this codebase.
 
