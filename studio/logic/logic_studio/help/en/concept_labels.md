@@ -9,7 +9,7 @@ actually sets them apart.
 |---|---|---|
 | **Device bit** (DI/DO/AI/AO) | A physical signal on a particular ELA/ADA module | Not applicable — read/written straight from/to the hardware |
 | **Marker** (internal bit or register, M./MR./MW.) | The project's own internal memory, tied to no physical terminal | **Yes, it can happen** |
-| **Wire label** | A text name given to a free wire end | Eventually: no — see the caveat below |
+| **Wire label** | A text name on a wire; wires sharing a label are one node | No — it is an ordinary connection |
 
 ## Marker: why it can cost you a scan
 
@@ -24,26 +24,36 @@ delay](help:concept_scan_cycle). Where the blocks sit on the sheet
 (whether A is "before" or "after" B) makes no difference here — all that
 matters is that the write and the read are separated by a scan boundary.
 
-## Wire label: how it stands today
+## Wire label: how it works
 
-A wire may have one **free** end (connected to no pin) and carry a text
-label — this suppresses the compiler's "Unfinished wire" warning and
-documents where that end was meant to go. **Merging two wires with the
-same label into one network node (so that the label actually CARRIES the
-signal, with no wire drawn) is a planned, not yet implemented part of
-this mechanism** — today a label is documentation metadata, not a working
-way to move a signal. Until that exists, the only WORKING way to move a
-signal without drawing a wire across the sheet is a marker (see [Moving a
-signal elsewhere on the diagram](help:guide_move_signal)).
+Wires carrying **the same label are one network node**, wherever they sit
+on the sheet — the compiler joins them with exactly the same pin
+connection a hand-drawn wire goes through, so from there on (execution
+order, simulation, export) a labelled network and a drawn one are
+indistinguishable. Label comparison **ignores case** ("Interlock BB" and
+"interlock bb" name the same node).
+
+The rules that follow from it:
+
+- a label group must have **exactly one source** (an output pin); no
+  source, or two sources, is a compile error;
+- a group with a source but no receiver gives a "signal is not received
+  anywhere" warning;
+- a free end **without** a label gives an "unfinished wire" warning.
+
+A label costs no scan delay — unlike a marker, it is an ordinary
+connection, just without a wire drawn across the whole sheet.
 
 ## The rule for choosing
 
 - A physical signal (a real input/output on a module) → a device bit,
   always.
-- A helper signal needed in several places on the sheet, where one scan
-  of delay is acceptable (it usually is — it only ever affects the
-  relationship between two particular blocks within the same scan) → a
-  marker.
+- A helper signal needed in several places on THE SAME sheet, with no
+  delay → a wire label.
+- A helper signal where one scan of delay is acceptable (it usually is —
+  it only ever affects the relationship between two particular blocks
+  within the same scan), or a value that should be named and visible in
+  the signal registry → a marker.
 - A stub on a wire you are about to connect → a free end with no label
   (see [Input stub, free wire end, label](help:concept_stubs) — that is a
   THIRD, separate thing, however similar it looks).

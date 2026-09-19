@@ -27,11 +27,11 @@ ostrzeżenie "Niedokończony przewód".
 
 ## Etykieta
 
-Tekstowy podpis nadawany wolnemu końcowi przewodu. **Etykieta łączy
-WĘZŁY** (a raczej: docelowo ma łączyć — patrz zastrzeżenie w
-[Etykiety, znaczniki i bity urządzenia](help:concept_labels)), podczas
-gdy zaślepka to brak węzła do połączenia w ogóle. Dlatego zaślepki nie
-da się oznaczyć etykietą — nie ma czego etykietować.
+Tekstowy podpis nadawany przewodowi. **Etykieta łączy WĘZŁY**: wszystkie
+przewody o tej samej etykiecie stają się jedną siecią (patrz [Etykiety,
+znaczniki i bity urządzenia](help:concept_labels)), podczas gdy zaślepka
+to brak węzła do połączenia w ogóle. Dlatego zaślepki nie da się oznaczyć
+etykietą — nie ma czego etykietować.
 
 ## W skrócie
 
@@ -39,4 +39,4 @@ da się oznaczyć etykietą — nie ma czego etykietować.
 |---|---|---|---|
 | Zaślepka wejścia | Nie dotyczy (to nie przewód) | Nie dotyczy | Nic — wejście po prostu pominięte w logice |
 | Wolny koniec bez etykiety | Tak | Nie | Ostrzeżenie: niedokończony przewód |
-| Wolny koniec z etykietą | Tak | Tak | Brak ostrzeżenia (scalanie w węzeł sieci — planowane, patrz wyżej) |
+| Wolny koniec z etykietą | Tak | Tak | Scala się z pozostałymi przewodami o tej etykiecie w jeden węzeł |

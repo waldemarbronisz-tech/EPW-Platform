@@ -27,8 +27,8 @@ warning.
 
 ## Label
 
-A text caption given to a free wire end. **A label joins NODES** (or
-rather: is eventually meant to — see the caveat in [Labels, markers and
+A text caption given to a wire. **A label joins NODES**: every wire
+carrying the same label becomes one network (see [Labels, markers and
 device bits](help:concept_labels)), whereas a stub is the absence of a
 node to join at all. That is why a stub cannot be labelled: there is
 nothing there to label.
@@ -39,4 +39,4 @@ nothing there to label.
 |---|---|---|---|
 | Input stub | Not applicable (it is not a wire) | Not applicable | Nothing — the input is simply left out of the logic |
 | Free end without a label | Yes | No | Warning: unfinished wire |
-| Free end with a label | Yes | Yes | No warning (merging into a network node — planned, see above) |
+| Free end with a label | Yes | Yes | Merged with every other wire carrying that label into one node |

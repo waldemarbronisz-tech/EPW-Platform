@@ -1198,14 +1198,18 @@ class EPWCore:
         """Best-effort check for the Task's own required warning ("jesli
         logika uzytkownika uzywa tagow tej funkcji"): True if any tag
         `feature` owns appears anywhere in the currently-loaded logic
-        project. LogicEngine (Task's own placeholder engine - see its
-        module docstring) exposes no dedicated "which tags does this
-        program reference" API, so this reads its raw loaded JSON
-        directly rather than adding one just for this - logic_engine.py
-        itself is untouched. A tag name appearing as a substring of some
-        unrelated JSON value would be a false positive; there are no
-        false negatives, which is the direction that actually matters
-        for a warning."""
+        document - read as raw JSON, so it also covers a document that
+        was REFUSED (a bad checksum, an unknown block type): a warning
+        about a feature the logic references must not go quiet just
+        because that logic is currently unrunnable. A tag name appearing
+        as a substring of some unrelated JSON value would be a false
+        positive; there are no false negatives, which is the direction
+        that actually matters for a warning.
+
+        (The engine is no longer a placeholder - it executes the program,
+        so the RUNNING program's own blocks could answer this precisely.
+        Deliberately not used here for the refused-document reason
+        above.)"""
         tag_names = self.get_feature_tag_names(feature)
         if not tag_names:
             return False
