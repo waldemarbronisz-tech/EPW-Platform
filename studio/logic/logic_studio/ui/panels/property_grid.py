@@ -15,11 +15,12 @@ import re
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox, QLabel, QLineEdit,
-    QSpinBox, QDoubleSpinBox, QComboBox, QPushButton, QPlainTextEdit
+    QSpinBox, QDoubleSpinBox, QComboBox, QMessageBox, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import QSettings
 from logic_studio.ui.display_names import enum_label, property_label, unit_label
 from logic_studio.core.device_model import DeviceModel
+from logic_studio.core import io_availability
 from logic_studio.ui.window_lookup import logic_main_window
 
 # feat/internal-bits §6.1: SignalPickerDialog opens for these (type_id,
@@ -70,6 +71,27 @@ _IDENTIFICATION_KEYS = ("Tag", "Comment")  # "Identyfikator" (short_id) is alway
 # whichever block types happen to have it. Presentation-only per §5.3: the
 # `properties` dict KEY itself is never touched.
 _UNIT_SUFFIX_RE = re.compile(r'^(.*) \(([^)]+)\)$')
+
+
+class _MissingIOCombo(QComboBox):
+    """The Address editor for a block whose project has no channel of the
+    kind it needs (core/io_availability.py).
+
+    Shows the missing kind instead of a blank box, and answers the click
+    with the explanation rather than an empty drop-down - the moment the
+    engineer looks for an address is exactly the moment the information
+    is useful. Deliberately not disabled: a disabled widget cannot be
+    clicked, so it could never tell anyone why it is empty.
+    """
+
+    def __init__(self, placeholder: str, message: str, parent=None):
+        super().__init__(parent)
+        self._message = message
+        self.addItem(placeholder)
+        self.setToolTip(message or placeholder)
+
+    def showPopup(self):
+        QMessageBox.information(self, "No I/O channel to address", self._message or self.currentText())
 
 
 def _split_unit(key: str):
@@ -534,15 +556,17 @@ class PropertyGridPanel(QWidget):
         return editor
 
     def _make_addressing_editor(self, block, key, value, project):
-        if key == "Address" and block.type_id in ("input.di", "output.do"):
+        if key == "Address" and io_availability.needs_physical_io(block.type_id) and project is not None:
+            addresses = io_availability.available_addresses(project, block.type_id)
+            if not addresses:
+                # Nothing to choose from. An empty dropdown says only
+                # "nothing here"; this one says WHICH card kind is
+                # missing, and opening it explains where to add one
+                # instead of dropping down an empty list.
+                return _MissingIOCombo(io_availability.empty_address_placeholder(block.type_id),
+                                       io_availability.missing_io_message(project, block.type_id))
             combo = QComboBox()
-            combo.addItems(DeviceModel.get_ela_addresses(project) if block.type_id == "input.di" else DeviceModel.get_ada_addresses(project))
-            combo.setCurrentText(str(value))
-            combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
-            return combo
-        if key == "Address" and block.type_id in ("input.ai", "output.ao") and project is not None:
-            combo = QComboBox()
-            combo.addItems(DeviceModel.get_analog_input_addresses(project) if block.type_id == "input.ai" else DeviceModel.get_analog_output_addresses(project))
+            combo.addItems(addresses)
             combo.setCurrentText(str(value))
             combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
             return combo

@@ -468,6 +468,21 @@ class Project:
         # "which source wins" rule.
         self.external_cards = None
 
+        # Same contract as external_cards above, for the ANALOG half:
+        # Studio's own point registry already knows every AI/AO terminal
+        # its cards produce, together with the engineering range and unit
+        # an analog point needs - mirrored in here as [{"address",
+        # "name", "unit", "min", "max", "direction"}, ...] (the shape
+        # settings["analog_points"] uses) whenever Studio's project
+        # changes. None means "no host - use this project's own
+        # settings["analog_points"] instead", which is what a standalone
+        # Logic Studio (Project Settings -> Analog points) edits.
+        # Before this field existed, an embedded Logic Studio had NO
+        # analog addresses at all: the card bridge covered DI/DO only, so
+        # every AI/AO block's Address dropdown was empty in Studio no
+        # matter how many analog channels the cards declared.
+        self.external_analog_points = None
+
     # ---- feat/undo-diff-storage: each stack's memory is proportional to
     # the SIZE OF EACH EDIT, not to the size of the whole project — see
     # AUDIT_REPORT.md §25 / §9.1 for the measured problem this replaces

@@ -170,7 +170,12 @@ class Exporter:
         # ones a block currently references. A point may be defined for the
         # future, or used only by an HMI layer with no logic block behind it
         # at all, so EPW-OS needs the complete list (AUDIT_REPORT.md §1.1).
-        analog_points = [dict(p) for p in self.project.settings.get("analog_points", [])]
+        # Through DeviceModel, not settings directly: in a project
+        # embedded in EPW Studio the analog points are Studio's own
+        # (bridged in as external_analog_points), and reading settings
+        # here would ship EPW-OS an empty registry for a project that
+        # plainly has analog channels.
+        analog_points = [dict(p) for p in DeviceModel.get_analog_points(self.project)]
 
         # Full copy of the internal-signal registry (feat/internal-bits
         # §8.1) — same reasoning as analog_points above: a consumer reading
