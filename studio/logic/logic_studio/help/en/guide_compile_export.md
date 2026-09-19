@@ -1,22 +1,21 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Compiling and exporting the logic to EPW-OS
 
-# Jak skompilować i wyeksportować logikę do EPW-OS
+1. **Compile** (F5, or "Compile" from the Logic menu). The compiler
+   checks the project (errors and warnings go to the results panel) and
+   builds the blocks' execution order.
+2. **Fix the errors.** Red entries in the results panel are errors — the
+   compile has to pass without them before an export means anything.
+   Yellow ones are warnings (an unfinished wire, an internal signal
+   written but never read) — worth reading, but they do not block the
+   export.
+3. **Export the runtime** ("Export Runtime" from the Logic menu) — writes
+   the compiled logic in the format EPW-OS loads and executes on site.
+4. **Export the signal list / a PDF**, if you need them for design
+   documentation or for agreeing an interface with another team —
+   separate commands in the Project menu ("Export signals...", "Export to
+   PDF...").
 
-1. **Skompiluj** (F5, albo "Compile" z menu Logic). Kompilator sprawdza
-   projekt (błędy i ostrzeżenia trafiają do panelu wyników) i buduje
-   kolejność wykonania bloków.
-2. **Napraw błędy.** Czerwone pozycje w panelu wyników to błędy —
-   kompilacja musi przejść bez nich, zanim eksport ma sens. Żółte to
-   ostrzeżenia (np. niedokończony przewód, nieużywany zapis sygnału
-   wewnętrznego) — warto je przejrzeć, ale nie blokują eksportu.
-3. **Eksportuj runtime** ("Export Runtime" z menu Logic) — zapisuje
-   skompilowaną logikę w formacie, który EPW-OS wczytuje i wykonuje na
-   obiekcie.
-4. **Eksportuj listę sygnałów/PDF**, jeśli potrzebne do dokumentacji
-   projektowej albo uzgodnień z innym zespołem — osobne polecenia w
-   menu Project ("Eksportuj sygnały...", "Eksportuj do PDF...").
-
-Eksport runtime'u odzwierciedla DOKŁADNIE to, co widać w edytorze w
-chwili eksportu — w tym wyłączone bloki (patrz [Bloki wyłączone i
-wymuszenia](help:concept_disabled_blocks)) i etykiety punktów
-analogowych/adresów I/O.
+The runtime export reflects EXACTLY what the editor shows at the moment
+of export — including disabled blocks (see [Disabled blocks and
+forces](help:concept_disabled_blocks)) and the labels of analog points
+and I/O addresses.

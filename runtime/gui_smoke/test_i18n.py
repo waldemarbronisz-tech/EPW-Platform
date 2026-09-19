@@ -43,7 +43,8 @@ def test_polish_menu_nav_statusbar_after_rebuild(make_window):
         # Kiosk Mode/Training Mode above) sits between Properties and
         # Recently Opened - see main_window.py's setup_menu().
         assert [a.text() for a in pl_project.actions() if not a.isSeparator()] == \
-            ["Właściwości projektu...", "Wczytaj ekran synoptyczny...", "Ostatnio otwierane"]
+            ["Właściwości projektu...", "Wczytaj ekran synoptyczny...", "Przeładuj program logiki...",
+             "Ostatnio otwierane"]
     finally:
         set_language("en")
 

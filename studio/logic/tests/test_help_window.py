@@ -37,7 +37,7 @@ def _close(window):
 def test_help_window_opens_on_welcome_by_default(qsettings):
     _app()
     win = HelpWindow(settings=qsettings)
-    assert "Witamy" in win.windowTitle()
+    assert "Welcome" in win.windowTitle()
     win.close()
 
 def test_help_window_navigation_updates_title_and_history(qsettings):
@@ -49,7 +49,7 @@ def test_help_window_navigation_updates_title_and_history(qsettings):
     win._go_back()
     assert "AND" in win.windowTitle()
     win._go_forward()
-    assert "Etykiety" in win.windowTitle()
+    assert "Labels" in win.windowTitle()
     win.close()
 
 def test_back_forward_buttons_reflect_history_position(qsettings):
@@ -133,7 +133,7 @@ def test_garbage_geometry_falls_back_to_a_sane_default(qsettings):
 def test_f1_with_no_selection_opens_welcome(qsettings):
     window = _make_window(qsettings)
     window._show_help()
-    assert "Witamy" in window._help_window.windowTitle()
+    assert "Welcome" in window._help_window.windowTitle()
     _close(window)
 
 def test_f1_with_one_block_selected_opens_that_blocks_catalog_page(qsettings):

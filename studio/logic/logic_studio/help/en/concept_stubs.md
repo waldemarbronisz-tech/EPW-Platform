@@ -1,44 +1,42 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Input stub, free wire end, label
 
-# Zaślepka wejścia, wolny koniec przewodu, etykieta
+Three different things that look alike at first glance ("something on the
+diagram is not connected the usual way") — but they mean different things
+and none of them can stand in for another.
 
-Trzy różne rzeczy, które na pierwszy rzut oka wyglądają podobnie
-("coś na schemacie nie jest normalnie podłączone") — ale znaczą co
-innego i nie da się ich zamienić jedną na drugą.
+## Input stub (Pin.disabled)
 
-## Zaślepka wejścia (Pin.disabled)
+Deliberately excluding ONE input of a multi-input gate (AND/OR/NAND/NOR/
+XOR/XNOR, two inputs or more) from that gate's own logic — a stubbed
+input is treated as if it were not there at all, and the gate computes
+its result from the rest. Available only on blocks that allow it
+(multi-input gates) — stubbing an input on a block that does not support
+it is a compile error, not something quietly ignored.
 
-Świadome wyłączenie JEDNEGO wejścia bramki wielowejściowej (AND/OR/
-NAND/NOR/XOR/XNOR, 2 lub więcej wejść) z jej własnej logiki — zaślepione
-wejście jest tak, jakby go w ogóle nie było, bramka liczy wynik z
-pozostałych. Dostępne tylko na blokach, które na to pozwalają (bramki
-wielowejściowe) — próba zaślepienia wejścia bloku, który tego nie
-obsługuje, jest błędem kompilacji, nie jest cicho ignorowana.
+**A stub CANNOT be given a label** — it is not a wire end, it is the
+absence of a wire at that point by definition.
 
-**Zaślepki NIE DA SIĘ oznaczyć etykietą** — to nie jest koniec przewodu,
-to w ogóle brak przewodu w tym miejscu z definicji.
+## Free wire end
 
-## Wolny koniec przewodu
+One end of a wire ([see the free-end section](help:concept_labels)) may
+be left connected to no pin, with an optional text label documenting
+where it was eventually meant to go. It is STILL a wire — its other end
+really is connected to a pin — it is simply one end waiting to be
+finished. Without a label the compiler reports an "Unfinished wire"
+warning.
 
-Jeden koniec przewodu (nowość — [zobacz sekcję wolnych końców](help:concept_labels))
-może pozostać niepodłączony do żadnego pinu, z opcjonalną etykietą
-tekstową dokumentującą, dokąd docelowo miał prowadzić. To WCIĄŻ jest
-przewód — ma realny drugi koniec podłączony do jakiegoś pinu — po prostu
-jeden koniec czeka na dokończenie. Bez etykiety kompilator zgłasza
-ostrzeżenie "Niedokończony przewód".
+## Label
 
-## Etykieta
+A text caption given to a free wire end. **A label joins NODES** (or
+rather: is eventually meant to — see the caveat in [Labels, markers and
+device bits](help:concept_labels)), whereas a stub is the absence of a
+node to join at all. That is why a stub cannot be labelled: there is
+nothing there to label.
 
-Tekstowy podpis nadawany wolnemu końcowi przewodu. **Etykieta łączy
-WĘZŁY** (a raczej: docelowo ma łączyć — patrz zastrzeżenie w
-[Etykiety, znaczniki i bity urządzenia](help:concept_labels)), podczas
-gdy zaślepka to brak węzła do połączenia w ogóle. Dlatego zaślepki nie
-da się oznaczyć etykietą — nie ma czego etykietować.
+## In short
 
-## W skrócie
-
-| | Ma drugi, podłączony koniec? | Ma etykietę? | Co robi kompilator |
+| | Has a second, connected end? | Can it be labelled? | What the compiler does |
 |---|---|---|---|
-| Zaślepka wejścia | Nie dotyczy (to nie przewód) | Nie dotyczy | Nic — wejście po prostu pominięte w logice |
-| Wolny koniec bez etykiety | Tak | Nie | Ostrzeżenie: niedokończony przewód |
-| Wolny koniec z etykietą | Tak | Tak | Brak ostrzeżenia (scalanie w węzeł sieci — planowane, patrz wyżej) |
+| Input stub | Not applicable (it is not a wire) | Not applicable | Nothing — the input is simply left out of the logic |
+| Free end without a label | Yes | No | Warning: unfinished wire |
+| Free end with a label | Yes | Yes | No warning (merging into a network node — planned, see above) |

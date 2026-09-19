@@ -911,6 +911,25 @@ class ProjectManager:
             return True  # an old project.json is not rewritten on every screen change
         return self.save_runtime_state()
 
+    def get_retentive_signals(self) -> dict:
+        """The logic program's retentive internal signals as last stored -
+        {"MR.NAME": value}. Empty for a controller that never ran a
+        program with any."""
+        stored = self.config.get("logic_retentive")
+        return dict(stored) if isinstance(stored, dict) else {}
+
+    def set_retentive_signals(self, values: dict) -> bool:
+        """Stores them, writing the state file only when something
+        actually changed - this is called on a timer while the scan runs,
+        and an unchanged M-bit must not cost an SD-card write."""
+        values = dict(values or {})
+        if self.config.get("logic_retentive") == values:
+            return True
+        self.config["logic_retentive"] = values
+        if not self.is_epw_project():
+            return True  # an old project.json is not rewritten for this
+        return self.save_runtime_state()
+
     def save_runtime_state(self) -> bool:
         """Writes only the state part - runtime_state.json for projekt.epw,
         the whole file for an old project.json."""

@@ -50,7 +50,16 @@ miejsca, które to łamały, zostały naprawione u źródła:
    z `projekt.epw` (plik `.epwlogic.runtime.json` z
    `controller.local.json` zostaje jako zapas dla starszego projektu);
 3. `LogicEngine.start()` uruchamia wątek skanu z `cycle_time_ms`
-   programu.
+   programu — dopiero po starcie sterowników magistrali, żeby pierwszy
+   skan miał czym dojść do sprzętu.
+
+Stan skanu widać bez zaglądania do logu: pasek stanu panelu
+(`LOGIKA: PRACA / ZATRZYMANA / AWARIA / brak`), `GET /api/v1/logic`
+i panel *Sterownik* w Studio. Sam program można podmienić bez restartu:
+*Projekt → Przeładuj program logiki...* albo `POST /api/v1/logic/reload`
+(Engineer, do dziennika) — `EPWCore.reload_logic()` zatrzymuje skan (co
+sprowadza jego wyjścia do stanu bezpiecznego), czyta projekt z dysku i
+startuje na nowo. Reszta projektu nadal wymaga restartu.
 
 Stan podsystemu `LOGIC_RUNTIME`:
 
@@ -102,9 +111,9 @@ rejestru `internal_bits`).
   dziennika, zapis z logiki nie — program piszący swoje wyjście co cykl
   zalałby dziennik.
 
-## 5. Sygnały systemowe — co jest podpięte, a co nie
+## 5. Sygnały systemowe — co jest podpięte
 
-Podpięte do prawdziwego stanu sterownika (`SystemSignalSource`):
+**`SYS.*`** — do prawdziwego stanu sterownika (`SystemSignalSource`):
 `SYS.READY`, `SYS.HEALTH`, `SYS.FAULT`, `SYS.SCAN_TIME`,
 `SYS.CYCLE_COUNT`, `SYS.SCAN_OVERRUN`, `SYS.FIRST_SCAN`,
 `SYS.TRAINING_MODE`, `SYS.COMMS_OK`, `SYS.TIME_SYNC_OK`,
@@ -112,25 +121,55 @@ Podpięte do prawdziwego stanu sterownika (`SystemSignalSource`):
 `SYS.PULSE_*`/`SYS.BLINK_*` (z tej samej wspólnej tablicy okresów, co
 symulacja w Studio — `shared/logic/engine/io_provider.py`).
 
+**`SSWIN.*`** — do alarmówki (`runtime/epw_os/core/sswin_signals.py`).
+Katalog opisuje **jedną centralę**, a runtime ma model **strefowy**, więc
+tłumaczenie jest decyzją i stoi w jednym miejscu:
+
+- `SSWIN.ARMED` = **wszystkie** strefy uzbrojone (i jest co najmniej jedna);
+  `ARMED_PARTIAL` = część uzbrojona, część nie. Celowo ostrzej niż
+  `IntrusionManager.get_system_state()`, które dla wskaźnika stanu uznaje
+  „choć jedna strefa czuwa" za uzbrojenie — dla logiki to za mało: schemat
+  pracujący „gdy obiekt uzbrojony" nie może widzieć ARMED, gdy pół obiektu
+  jest otwarte.
+- Stany „którakolwiek strefa" (`EXIT_DELAY`, `ENTRY_DELAY`, `ALARM_ACTIVE`,
+  `TAMPER`, `FAULT`) — jedna strefa w alarmie **jest** alarmem systemu.
+- `ALARM_LATCHED` to zatrzask, który przeżył przyczynę (pamięć alarmu
+  aktywna, a strefa już nie w ALARM); `ALARM_MEMORY` — pamięć od ostatniego
+  kasowania, także w trakcie alarmu.
+- `DELAY_REMAINING` — najdłuższe trwające odliczanie; `ACTIVE_COUNT` —
+  liczba naruszonych linii; `LAST_TRIGGER` — numer linii z pamięci alarmu.
+- `READY_TO_ARM` — żadna linia naruszona ani w awarii. Linia wykluczona
+  (bypass) **nadal** blokuje gotowość: wykluczenie służy do uzbrojenia
+  mimo wszystko, nie jest powodem, by nazwać system gotowym.
+- **Komendy** (`CMD_ARM`, `CMD_DISARM`, `CMD_RESET`) działają na
+  **wszystkie strefy** — komenda z katalogu nie ma strefy do wskazania.
+  Wykonują się **na zboczu narastającym** (blok trzymający sygnał w
+  jedynce nie powtarza komendy co skan) i dopiero po sprawdzeniu poziomu
+  dostępu, który deklaruje sam blok („Minimalny poziom dostępu" —
+  Logic Studio to tylko zapisuje, egzekucja jest po stronie EPW-OS).
+
+Czego ten sterownik **nie ma** i dlatego nie udaje: dozoru częściowego
+(`ARMED_PARTIAL` jako komenda — `CMD_ARM_PARTIAL`), sygnalizatora
+(`SIREN_*`, `STROBE_*`) i osobnej linii napadowej (`PANIC`). Odczyt daje
+wartość bezpieczną, a **zapis** takiej komendy jest raz zgłaszany do logu.
+
+**Sygnały retencyjne (`MR.`/`MWR.`) przeżywają restart.** Ich wartości
+leżą w `runtime_state.json` (sekcja `logic_retentive`), zapisywane co 30 s
+i przy zatrzymaniu skanu — nie co skan: to stan, który ma przetrwać
+restart, a nie zapis do rejestracji, i karta SD w sterowniku nie jest od
+pisania z częstotliwością skanu. Przy starcie wracają **tylko** te
+identyfikatory, które program faktycznie deklaruje jako retencyjne —
+wartość po programie, który już ich nie zna, nie jest wskrzeszana.
+
 ### Do zrobienia (zgłoszone, nie zrobione w tym zadaniu)
 
-- **`SSWIN.*` nie są podpięte.** Sygnały katalogu są systemowe
-  (cała centrala), a model alarmówki w runtime jest **strefowy**
-  (`IntrusionManager.arm_zone()`/`get_zone_state()`). Odwzorowanie
-  wymaga decyzji, co znaczy „uzbrojona centrala" przy wielu strefach —
-  to decyzja projektowa, nie przepisanie. Do czasu jej podjęcia odczyt
-  daje wartość bezpieczną (`False`/`0.0`), a **zapis** (`SSWIN.CMD_*`
-  z bloku `system.signal_out`) jest zgłaszany do logu raz na sygnał,
-  żeby nie zniknął po cichu.
-- **Sygnały wewnętrzne retencyjne (`MR.`/`MWR.`) nie przeżywają
-  restartu.** Studio tylko przenosi flagę `retentive` (tak mówi jego
-  własna dokumentacja), a trwałość jest zadaniem EPW OS — dziś ich
-  wartości żyją w pamięci procesu, tak samo jak nieretencyjne.
 - **`cycle_delayed_reads`** (diagnostyka „odczyt wyprzedza zapis")
   zostaje po stronie edytora — eksport tego nie niesie, a silnik tego
   nie czyta.
-- **Wgranie nowego programu wymaga restartu sterownika** — tak samo jak
-  reszta projektu (patrz `PROJEKT_EPW_ZADANIA.md`, p. 3).
+- **Sygnalizator alarmówki** (syrena/lampa) nie istnieje w runtime —
+  dopóki nie powstanie, `SSWIN.SIREN_*`/`STROBE_*` nie mają czego mówić.
+- **Dozór częściowy (nocny)** nie istnieje jako tryb — strefa jest
+  uzbrojona albo nie.
 
 ## 6. Gdzie to jest w kodzie
 
@@ -138,7 +177,10 @@ symulacja w Studio — `shared/logic/engine/io_provider.py`).
 |---|---|
 | `shared/logic/program_loader.py` | eksport → `CompiledProgram` |
 | `runtime/epw_os/core/logic_runtime.py` | `TagIOProvider`, `SystemSignalSource` |
+| `runtime/epw_os/core/sswin_signals.py` | `SSWIN.*` — centrala vs strefy, komendy |
 | `runtime/epw_os/core/logic_engine.py` | ładowanie, wątek skanu, fail-safe, blokada komend |
 | `runtime/epw_os/core/epw_core.py` | złożenie tego w start/stop i stan zdrowia |
 | `shared/tests/test_logic_execution_contract.py` | dowód równoważności Studio ↔ sterownik |
 | `runtime/epw_os/tests/test_logic_execution.py` | zachowanie sterownika (skan, granice, odmowy) |
+| `runtime/epw_os/tests/test_logic_visibility.py` | wskaźnik pracy, REST, przeładowanie bez restartu |
+| `runtime/epw_os/tests/test_sswin_and_retentive.py` | mapowanie `SSWIN.*`, komendy, bity retencyjne |

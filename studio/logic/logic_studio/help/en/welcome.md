@@ -1,25 +1,22 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Welcome to EPW Logic Studio {version}
 
-# Witamy w EPW Logic Studio {version}
+EPW Logic Studio is an editor for logic diagrams, for designing and
+simulating control logic that is then exported to run in EPW-OS.
 
-EPW Logic Studio to edytor schematów logicznych do projektowania i
-symulacji logiki sterowania, eksportowanej następnie do uruchomienia w
-EPW-OS.
+Start with [A first diagram](help:guide_first_diagram), or go straight to
+the **Block catalogue** tab in the tree on the left to see what you have
+to work with (the [AND](help:block:logic.and) gate, for instance).
 
-Zacznij od [Pierwszego schematu](help:guide_first_diagram), albo od
-razu przejrzyj zakładkę **Katalog bloków** w drzewie po lewej, żeby
-zobaczyć, co masz do dyspozycji (np. bramkę [AND](help:block:logic.and)).
+If something on a diagram looks familiar but you are not sure exactly
+what it does — select it and press **F1**: the help opens on the right
+description straight away.
 
-Jeśli coś na schemacie wygląda znajomo, ale nie wiesz dokładnie, co
-robi — zaznacz to i naciśnij **F1**: pomoc otworzy się od razu na
-właściwym opisie.
+## Contents
 
-## Spis treści
-
-- **Pojęcia** — rzeczy, które łatwo pomylić (etykiety kontra znaczniki,
-  zaślepka kontra wolny koniec przewodu, opóźnienie o cykl skanu).
-- **Poradniki** — krok po kroku: pierwszy schemat, przenoszenie
-  sygnału, symulacja, eksport, makrobloki.
-- **Katalog bloków** — pełny, zawsze aktualny opis każdego bloku w
-  bibliotece: piny, właściwości, wartości domyślne.
-- **Skróty klawiszowe** — lista aktualnie zarejestrowanych skrótów.
+- **Concepts** — the things that are easy to confuse (labels versus
+  markers, a stub versus a free wire end, the one-scan delay).
+- **Guides** — step by step: a first diagram, moving a signal, running a
+  simulation, exporting, macro blocks.
+- **Block catalogue** — the full, always current description of every
+  block in the library: pins, properties, defaults.
+- **Keyboard shortcuts** — the shortcuts currently registered.

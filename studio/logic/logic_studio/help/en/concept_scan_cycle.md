@@ -1,45 +1,40 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# The scan cycle and the one-scan delay
 
-# Cykl skanu i opóźnienie o jeden cykl
+## Execution order
 
-## Kolejność wykonania
+The engine evaluates every block on the diagram in ONE fixed order per
+scan — not the order they were drawn in, but the order that follows from
+WHO depends on WHOM (topological order): source blocks first (physical
+inputs, markers, constants), then everything that depends on them, in an
+order such that by the time a block is evaluated, every block feeding its
+inputs has already been evaluated in THE SAME scan.
 
-Silnik wykonuje wszystkie bloki schematu w JEDNYM, ustalonym porządku
-na skan — nie w kolejności, w jakiej zostały narysowane, tylko w
-porządku wynikającym z tego, KTO od KOGO zależy (kolejność
-topologiczna): najpierw bloki źródłowe (wejścia fizyczne, znaczniki,
-stałe), potem wszystko, co od nich zależy, w takiej kolejności, że gdy
-blok jest liczony, wszystkie bloki podające mu dane na wejścia zostały
-już policzone w TYM SAMYM skanie.
+## Where z⁻¹ comes from
 
-## Skąd bierze się z⁻¹
+Two things in this program deliberately break that "the input was already
+evaluated this scan" rule:
 
-Dwa miejsca w tym programie celowo łamią powyższą zasadę "wejście już
-policzone w tym skanie":
+1. **A feedback loop through a stateful block** (an SR/RS latch, a timer,
+   a counter, an analog hysteresis...) — by definition it cannot be put
+   in topological order, because the block depends indirectly on itself.
+   The resolution: a stateful block in such a loop presents the value of
+   ITS OWN STATE from before this evaluation, not a result computed on
+   the spot — that is, the value "from the previous scan".
+2. **Markers** (internal bits/registers, M./MR./MW.) — a write is
+   buffered and committed only AFTER every block in the scan has been
+   evaluated (see [Labels, markers and device
+   bits](help:concept_labels)). A block reading a marker written by
+   another block in THE SAME scan always sees the value from before that
+   write.
 
-1. **Pętla sprzężenia zwrotnego przez blok stanowy** (przerzutnik SR/RS,
-   timer, licznik, histereza analogowa...) — z definicji nie da się
-   policzyć w kolejności topologicznej, bo blok zależy pośrednio od
-   samego siebie. Rozwiązanie: blok stanowy w takiej pętli oddaje na
-   wyjściu wartość ZE SWOJEGO WŁASNEGO STANU sprzed obliczenia, nie
-   wynik obliczony na bieżąco — czyli wartość "z poprzedniego skanu".
-2. **Znaczniki** (bity/rejestry wewnętrzne, M./MR./MW.) — zapis jest
-   buforowany i zatwierdzany dopiero PO obliczeniu wszystkich bloków w
-   danym skanie (patrz [Etykiety, znaczniki i bity
-   urządzenia](help:concept_labels)). Blok czytający znacznik zapisany
-   przez inny blok w TYM SAMYM skanie zawsze widzi wartość SPRZED tego
-   zapisu.
+Both cases are called a "one-scan delay" or, in the classic language of
+control engineering, **z⁻¹** — the value something sees corresponds to
+the state one full pass of the engine ago, not to the state "live".
 
-W obu przypadkach mówi się o "opóźnieniu o jeden cykl skanu" albo,
-językiem klasycznej automatyki, **z⁻¹** — wartość, którą coś widzi,
-odpowiada stanowi sprzed jednego pełnego obiegu silnika, nie stanowi
-"na żywo".
+## How to read it on a diagram
 
-## Jak to czytać na schemacie
-
-Nie ma dziś osobnego symbolu z⁻¹ na schemacie — opóźnienie wynika
-wyłącznie z UŻYCIA bloku stanowego albo znacznika w danym miejscu, nie
-z jakiegoś oddzielnego elementu. Jeśli logika zależy od tego, żeby dwie
-wartości były widziane w TYM SAMYM skanie, unikaj przepuszczania jednej
-z nich przez znacznik albo przez blok stanowy w pętli sprzężenia
-zwrotnego.
+There is no separate z⁻¹ symbol on the sheet today — the delay follows
+purely from USING a stateful block or a marker at that point, not from
+some distinct element. If your logic depends on two values being seen in
+THE SAME scan, avoid routing either of them through a marker or through a
+stateful block in a feedback loop.

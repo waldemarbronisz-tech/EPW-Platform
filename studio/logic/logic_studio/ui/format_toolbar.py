@@ -137,8 +137,12 @@ class FormatToolbar(QToolBar):
     def selected_doc_blocks(self):
         """The logic blocks behind every selected documentation block item."""
         from logic_studio.ui.canvas.block_item import BlockItem
+        from logic_studio.ui.qt_lifetime import is_alive
         scene = getattr(self._mw, "scene", None)
-        if scene is None:
+        # None before the window has finished building; not alive while
+        # the scene is being destroyed, which emits selectionChanged one
+        # last time (see qt_lifetime.is_alive()).
+        if scene is None or not is_alive(scene):
             return []
         return [
             item.logic_block for item in scene.selectedItems()

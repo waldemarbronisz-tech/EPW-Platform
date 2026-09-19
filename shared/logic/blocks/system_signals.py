@@ -196,7 +196,7 @@ class ButtonBlock(BaseLogicBlock):
         "Mode": "\"Momentary\" — output active only while pressed. \"Toggle\" — every press flips the output.",
     }
 
-    def __init__(self, type_id="system.button", default_name="Przycisk", category="Buttons", description="Przycisk interfejsu operatora (HMI)."):
+    def __init__(self, type_id="system.button", default_name="Button", category="Buttons", description="Operator interface (HMI) push button."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.outputs.append(Pin("Out", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN))

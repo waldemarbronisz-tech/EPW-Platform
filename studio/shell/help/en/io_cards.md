@@ -19,5 +19,5 @@ regenerates them, keeping any descriptions already typed in.
 At the bottom of the panel: **Modbus Bus** — one shared setting for
 every module: RTU (serial port, baud rate, parity) or TCP (gateway
 address, port). This is how the controller talks to the modules at
-all — saved in the project today, ready for a future runtime Modbus
-driver (not implemented yet).
+all — saved in the project, and EPW-OS's own Modbus driver reads and
+writes the modules over it (`io_driver` in the controller's settings).

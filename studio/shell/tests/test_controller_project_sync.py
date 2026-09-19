@@ -24,12 +24,17 @@ ENGINEER = "engineer-token"
 class FakeController:
     """runtime's /api/v1/project* endpoints, in memory."""
 
-    def __init__(self, project_bytes, revision, modified_by="panel", settings=None, stored_hash=None):
+    def __init__(self, project_bytes, revision, modified_by="panel", settings=None, stored_hash=None,
+                 logic=None):
         self.project_bytes = project_bytes
         self.revision = revision
         self.modified_by = modified_by
         self.settings = settings or {}
         self.settings_hash = stored_hash
+        # What GET /api/v1/logic answers - None means "this controller is
+        # too old to have that endpoint at all" (404), which the panel
+        # must survive rather than treat as an error.
+        self.logic = logic
         self.installed = []          # (bytes, expected_revision, restart)
         self.requests = []
         controller = self
@@ -51,7 +56,14 @@ class FakeController:
 
             def do_GET(self):
                 controller.requests.append(("GET", self.path))
-                if self.path == "/api/v1/project":
+                if self.path == "/api/v1/health":
+                    self._json(200, {"status": "UP", "subsystems": {"LOGIC_RUNTIME": "RUNNING"}})
+                elif self.path == "/api/v1/logic":
+                    if controller.logic is None:
+                        self._json(404, {"detail": "no logic engine"})
+                    else:
+                        self._json(200, controller.logic)
+                elif self.path == "/api/v1/project":
                     self._json(200, {"loaded": True, "revision": controller.revision,
                                      "modified_by": controller.modified_by, "settings_hash": controller.settings_hash})
                 elif self.path == "/api/v1/project/settings":

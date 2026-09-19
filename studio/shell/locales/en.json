@@ -517,7 +517,12 @@
     "reset_confirm": "Reset counter {tag} on the controller? The warning threshold stays. This cannot be undone and is written to the audit log (Engineer token).",
     "reset_all_confirm": "Reset all {count} counters on the controller? This cannot be undone and is written to the audit log (Engineer token).",
     "reset_done": "Counters reset: {count}.",
-    "reset_failed": "Could not reset {tag}: {reason}"
+    "reset_failed": "Could not reset {tag}: {reason}",
+    "logic_unknown": "Logic program: unknown (no answer from the controller).",
+    "logic_none": "Logic program: none - this controller runs without user logic.",
+    "logic_running": "Logic program: RUNNING - {blocks} block(s), {cycle} ms cycle, {scans} scans, longest {longest} ms, {outputs} output(s) driven by logic.",
+    "logic_stopped": "Logic program: loaded but the scan is STOPPED - its interlocks are not being evaluated.",
+    "logic_failed": "Logic program: NOT running - {reason}"
   },
   "modules": {
     "col_name": "Name",

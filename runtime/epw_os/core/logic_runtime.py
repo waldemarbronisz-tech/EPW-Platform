@@ -54,13 +54,14 @@ class SystemSignalSource:
     mid-scan. Anything this class cannot answer comes back False/0.0, the
     same "defined, falsy" rule the catalog itself uses for an unset signal.
 
-    The SSWIN.* half (intrusion state and the SSWIN.CMD_* commands) is NOT
-    served yet: those signals are system-wide, while this controller's
-    intrusion model is per-zone (IntrusionManager.arm_zone()/
-    get_zone_state()), so mapping them is a design decision about
-    multi-zone semantics, not a lookup. Until that is made, a read gets
-    the safe value and a WRITE is logged (see TagIOProvider.
-    write_system_signal) instead of silently vanishing.
+    The SSWIN.* half (intrusion state and the SSWIN.CMD_* commands) is
+    served by core/sswin_signals.py, which is where the decision about
+    what a system-wide signal means on a per-ZONE intrusion model is
+    written down. The handful it deliberately does not answer (partial
+    arming, the sounder, a panic line - none of which exist on this
+    controller) keep the catalog's safe value on a read, and a WRITE to
+    one is reported rather than silently vanishing (see TagIOProvider.
+    write_system_signal).
     """
 
     # SYS.ACCESS_LEVEL is a number, in the catalog's own order: the same
@@ -68,11 +69,16 @@ class SystemSignalSource:
     _ACCESS_LEVEL_VALUES = {"User": 0.0, "Operator": 1.0, "Engineer": 2.0}
 
     def __init__(self, health_manager=None, access_manager=None, training_mode=None,
-                 time_sync_monitor=None):
+                 time_sync_monitor=None, sswin=None):
         self.health_manager = health_manager
         self.access_manager = access_manager
         self.training_mode = training_mode
         self.time_sync_monitor = time_sync_monitor
+        # The SSWIN.* half of the catalog (core/sswin_signals.py), which
+        # maps the system-wide alarm-panel vocabulary onto this
+        # controller's per-zone intrusion model. None -> every SSWIN
+        # signal keeps the catalog's safe value.
+        self.sswin = sswin
 
         # Set by the scan loop itself (LogicEngine) before each scan -
         # this class never measures them.
@@ -86,6 +92,11 @@ class SystemSignalSource:
         pulse = pulse_signal_value(signal_id, now_ms)
         if pulse is not None:
             return pulse
+
+        if self.sswin is not None:
+            value = self.sswin.read(signal_id)
+            if value is not None:
+                return value
 
         handler = self._HANDLERS.get(signal_id)
         if handler is None:
@@ -160,12 +171,29 @@ class TagIOProvider(IOProvider):
     """
 
     def __init__(self, tag_manager, write_digital=None, write_analog=None,
-                 force_manager=None, system_signals=None):
+                 force_manager=None, system_signals=None, access_manager=None):
         self.tag_manager = tag_manager
         self._write_digital = write_digital
         self._write_analog = write_analog
         self.force_manager = force_manager
         self.system_signals = system_signals or SystemSignalSource()
+        # Who is logged in - consulted for a system-signal command whose
+        # own block demands a minimum access level (see command_levels).
+        self.access_manager = access_manager
+
+        # signal_id -> the "Minimalny poziom dostepu" its own
+        # system.signal_out block declares ("Brak"/"User"/"Operator"/
+        # "Engineer"). Filled by LogicEngine from the compiled program:
+        # Logic Studio stores the level on the block and states plainly
+        # that EPW-OS is what enforces it (see blocks/system_signals.py's
+        # own PROPERTY_TOOLTIPS), so this is that enforcement.
+        self.command_levels = {}
+
+        # Last value seen per writable system signal - a command executes
+        # on the RISING edge only. A block holding CMD_ARM true would
+        # otherwise re-issue it every single scan, i.e. dozens of times a
+        # second.
+        self._last_command_value = {}
 
         # Internal signal memory (feat/internal-bits' third address space).
         # Guarded because the scan thread writes it while the REST API/GUI
@@ -241,6 +269,15 @@ class TagIOProvider(IOProvider):
         with self._lock:
             return dict(self._internal)
 
+    def preload_internal(self, values: dict):
+        """Puts stored values into the internal-signal memory before the
+        first scan - how a RETENTIVE signal (MR./MWR.) comes back after a
+        restart. Only ever called with the ids the program itself
+        declares retentive (LogicEngine); everything else starts at its
+        own default, as it always has."""
+        with self._lock:
+            self._internal.update(values or {})
+
     # --- system signals -----------------------------------------------------
 
     def read_system_signal(self, signal_id: str, now_ms: int = 0):
@@ -249,16 +286,48 @@ class TagIOProvider(IOProvider):
         return self.system_signals.read(signal_id, now_ms)
 
     def write_system_signal(self, signal_id: str, value):
-        """The only writable system signals in the catalog today are the
-        SSWIN.CMD_* intrusion commands, which this controller does not
-        execute yet (see SystemSignalSource's docstring). Dropping them
-        silently would leave an engineer watching a command that does
-        nothing with nothing to look at, so each one is reported once."""
-        if signal_id in self._unserved_writes:
+        """Executes a system-signal command (the SSWIN.CMD_* family, the
+        only writable signals the catalog has today).
+
+        Three rules, in this order: on the RISING EDGE only (a block
+        holding the command true would otherwise re-issue it every scan);
+        only if the access level the block itself demands is currently
+        held; and only for a command this controller actually implements -
+        anything else is reported once, rather than vanishing, so a
+        command that does nothing is never a mystery.
+        """
+        rising = bool(value) and not self._last_command_value.get(signal_id, False)
+        self._last_command_value[signal_id] = bool(value)
+        if not rising:
             return
-        self._unserved_writes.add(signal_id)
-        log.warning(f"Logic wrote the system signal {signal_id} = {value!r}, which this "
-                    f"controller does not execute yet - the write was not applied.")
+
+        sswin = getattr(self.system_signals, "sswin", None)
+        if sswin is None or not sswin.serves(signal_id):
+            if signal_id not in self._unserved_writes:
+                self._unserved_writes.add(signal_id)
+                log.warning(f"Logic issued the system command {signal_id}, which this controller does not "
+                            f"execute - it was not applied.")
+            return
+
+        required = self.command_levels.get(signal_id, "Brak")
+        if not self._has_command_access(required):
+            log.warning(f"Logic issued {signal_id}, but its block requires {required} access and the "
+                        f"controller is at a lower level - not applied.")
+            return
+
+        sswin.execute(signal_id, actor="LOGIC")
+
+    def _has_command_access(self, required: str) -> bool:
+        """"Brak" (none) is the default for every non-safety command and
+        means no gate at all. Any other level is checked against whoever
+        is logged in right now - with no access manager to ask, only
+        "Brak" passes, because a controller that cannot tell who is
+        present must not execute a command that asked for someone."""
+        if not required or required == "Brak":
+            return True
+        if self.access_manager is None:
+            return False
+        return bool(self.access_manager.has_access(required))
 
 
 def _as_float(value) -> float:

@@ -1,23 +1,20 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# A first diagram: input, gate, output
 
-# Pierwszy schemat: wejście, bramka, wyjście
+The shortest route to seeing working logic on screen.
 
-Najkrótsza droga do zobaczenia działającej logiki na ekranie.
+1. **Add a digital input.** Find [DI](help:block:input.di) in the block
+   library (the "Inputs / Outputs" category) and drag it onto the canvas.
+2. **Add a logic gate.** Drag, say, [NOT](help:block:logic.not) from the
+   "Logic gates" category next to the input.
+3. **Add a digital output.** Drag [DO](help:block:output.do) in.
+4. **Wire them together.** Click and drag from one block's output pin to
+   the next block's input pin: DI → NOT → DO.
+5. **Set the addresses.** Select the DI and set its `Address` in the
+   property panel (for example "ELA01.DI.1"); do the same for the DO.
+6. **Compile** (F5) — check that there are no errors.
+7. **Run the simulation** and toggle the input — watch the output follow.
+   The details are in [Running a simulation and checking what the logic
+   does](help:guide_simulation).
 
-1. **Dodaj wejście cyfrowe.** Znajdź [DI](help:block:input.di) w
-   bibliotece bloków (kategoria "Wejścia / Wyjścia") i przeciągnij je na
-   kanwę.
-2. **Dodaj bramkę logiczną.** Przeciągnij np. [NOT](help:block:logic.not)
-   z kategorii "Bramki logiczne" obok wejścia.
-3. **Dodaj wyjście cyfrowe.** Przeciągnij [DO](help:block:output.do).
-4. **Połącz je przewodami.** Kliknij i przeciągnij od pinu wyjściowego
-   jednego bloku do pinu wejściowego drugiego: DI → NOT → DO.
-5. **Ustaw adresy.** Zaznacz DI, w panelu właściwości ustaw jego
-   `Address` (np. "ELA01.DI01"); analogicznie dla DO.
-6. **Skompiluj** (F5) — sprawdź, że nie ma błędów.
-7. **Uruchom symulację** i przełącz stan wejścia — zobacz, jak zmienia
-   się wyjście. Szczegóły w [Jak uruchomić symulację i sprawdzić
-   działanie logiki](help:guide_simulation).
-
-Gdy nie wiesz, co robi jakiś blok po drodze — zaznacz go i naciśnij
-**F1**.
+Whenever you are unsure what a block along the way does, select it and
+press **F1**.

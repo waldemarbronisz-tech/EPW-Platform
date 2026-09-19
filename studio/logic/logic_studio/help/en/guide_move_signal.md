@@ -1,33 +1,31 @@
-<!-- TODO: translate to English (feat/help-system §3.4) -->
+# Moving a signal elsewhere on the diagram
 
-# Jak przenieść sygnał w inne miejsce schematu
+Without drawing one long wire across the whole sheet — read [Labels,
+markers and device bits](help:concept_labels) first for the full
+comparison. Below is the way that **works today**:
 
-Bez rysowania jednego, długiego przewodu przez cały schemat — patrz
-najpierw [Etykiety, znaczniki i bity urządzenia](help:concept_labels)
-dla pełnego porównania. Poniżej sposób, który **działa dzisiaj**:
+## Through a marker (an internal bit or register)
 
-## Przez znacznik (bit/rejestr wewnętrzny)
+1. Where the signal is PRODUCED, add a "Bit output (internal)" block (or
+   "Register output (internal)" for an analog value) and wire the result
+   into it.
+2. Click that block's `Bit` property and pick or create a name for the
+   internal signal (for example "M_READY").
+3. Where the signal is NEEDED — however far away on the sheet, or in an
+   entirely different bay — add a "Bit input (internal)" block (or
+   "Register input (internal)") and select THE SAME name in its `Bit`
+   property.
+4. Done — both copies read and write the same internal signal, with no
+   wire between them on the diagram.
 
-1. W miejscu, gdzie sygnał POWSTAJE, dodaj blok "Wyjście bitowe (wewn.)"
-   (albo "Wyjście rejestru (wewn.)" dla wartości analogowej) i podłącz
-   do niego przewód z wynikiem.
-2. Kliknij właściwość `Bit` tego bloku i wybierz/utwórz nazwę
-   wewnętrznego sygnału (np. "M_Gotowosc").
-3. W miejscu, gdzie sygnał jest POTRZEBNY — nawet daleko na schemacie,
-   albo w ogóle w innym polu ekranu — dodaj blok "Wejście bitowe
-   (wewn.)" (albo "Wejście rejestru (wewn.)"), i w jego właściwości
-   `Bit` wybierz TĘ SAMĄ nazwę.
-4. Gotowe — obie kopie czytają/piszą ten sam wewnętrzny sygnał, bez
-   żadnego przewodu między nimi na schemacie.
+Keep in mind the possible one-scan delay between writing and reading the
+same marker within one scan — see [The scan cycle and the one-scan
+delay](help:concept_scan_cycle).
 
-Pamiętaj o możliwym opóźnieniu o jeden cykl skanu między zapisem a
-odczytem tego samego znacznika w tym samym skanie — patrz [Cykl skanu i
-opóźnienie o jeden cykl](help:concept_scan_cycle).
+## Wire labels — not all the way there yet
 
-## Etykiety przewodów — jeszcze nie w pełni
-
-Wolny koniec przewodu z etykietą (patrz [Zaślepka wejścia, wolny koniec
-przewodu, etykieta](help:concept_stubs)) dokumentuje dziś tylko, dokąd
-przewód miał prowadzić — nie przenosi jeszcze sygnału. Gdy scalanie
-etykiet w węzły sieci zostanie ukończone, ten poradnik zostanie
-zaktualizowany o odpowiedni, krótszy sposób.
+A labelled free wire end (see [Input stub, free wire end,
+label](help:concept_stubs)) today only documents where the wire was meant
+to go — it does not carry the signal yet. Once merging labels into
+network nodes is finished, this guide will be updated with the shorter
+way that follows from it.

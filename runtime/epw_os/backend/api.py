@@ -137,6 +137,38 @@ def get_health(core=Depends(get_core)):
     }
 
 
+@app.get("/api/v1/logic")
+def get_logic(core=Depends(get_core)):
+    """What the logic program is doing right now: whether a program is
+    loaded at all, whether the scan is running, its cycle time, how many
+    scans it has run, the longest one, which outputs it drives and why it
+    is not running if it is not.
+
+    /api/v1/health only ever says RUNNING/FAULT/DEGRADED for the whole
+    subsystem - true but not enough to tell "no logic in this project"
+    from "the program was refused". Read-only and unauthenticated, like
+    the other views (forces, alarms): what the controller is executing is
+    deliberately visible to everyone.
+    """
+    engine = getattr(core, "logic_engine", None)
+    if engine is None:
+        raise HTTPException(status_code=404, detail="This controller has no logic engine.")
+    return engine.get_status()
+
+
+@app.post("/api/v1/logic/reload")
+def reload_logic(core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Puts the project's current logic program into the scan without
+    restarting the controller (Engineer token, audited) - see
+    EPWCore.reload_logic()."""
+    result = core.reload_logic(actor=f"API:{level}", level=None)
+    if not result["success"]:
+        raise HTTPException(status_code=409, detail={"error": "logic_reload_failed",
+                                                     "reason": result["reason"],
+                                                     "status": result["status"]})
+    return result
+
+
 @app.get("/api/v1/tags")
 def get_tags(core=Depends(get_core), prefix: Optional[str] = None):
     """Returns current tag values and qualities. BLAD 2 fix: this used

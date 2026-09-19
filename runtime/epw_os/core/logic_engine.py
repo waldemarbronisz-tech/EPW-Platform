@@ -27,6 +27,7 @@ are the controller's and not the editor's:
 """
 import json
 import threading
+import time
 from typing import Tuple, List
 
 from epw_os.core.logging import log
@@ -36,11 +37,24 @@ from epw_os.core.logic_runtime import TagIOProvider  # noqa: F401  (re-exported 
 from shared.logic.blocks import register_builtin_blocks
 from shared.logic.engine.execution import ExecutionEngine, ExecutionState
 from shared.logic.engine.time_provider import SystemTimeProvider
+from shared.logic.internal_bits import internal_bit_id
 from shared.logic.program_loader import ProgramLoadError, load_program
 
 # The block types whose "Address" property names a physical output this
 # program drives - see driven_outputs().
 _OUTPUT_TYPE_IDS = ("output.do", "output.ao")
+
+# The block that WRITES a system signal. Its "Minimalny poziom dostepu"
+# property is the access gate EPW-OS is responsible for enforcing (Logic
+# Studio only stores and exports it - see blocks/system_signals.py).
+_SYSTEM_OUTPUT_TYPE_ID = "system.signal_out"
+
+# How often the retentive internal signals are written to the runtime
+# state while the scan runs. Not every scan: a retentive M-bit is state
+# that must survive a restart, not a recording - and the SD card in a
+# controller is not something to write to at 20 Hz. Also flushed on
+# stop(), so an orderly shutdown always persists the latest values.
+_RETENTIVE_FLUSH_INTERVAL_S = 30.0
 
 
 class LogicEngine:
@@ -74,6 +88,19 @@ class LogicEngine:
         self._first_scan = True
         self.last_error = ""
 
+        # signal_id -> minimum access level, from the program's own
+        # system.signal_out blocks (see _SYSTEM_OUTPUT_TYPE_ID).
+        self._command_levels = {}
+
+        # The internal signals this program declares RETENTIVE (MR./MWR.)
+        # and the two callables that store them across a restart - set by
+        # EPWCore (attach_retentive_store); without them a retentive
+        # signal simply behaves like a plain one, exactly as before.
+        self._retentive_ids = frozenset()
+        self._load_retentive = None
+        self._save_retentive = None
+        self._last_retentive_flush = 0.0
+
     # --- configuration ------------------------------------------------------
 
     def is_configured(self) -> bool:
@@ -92,6 +119,15 @@ class LogicEngine:
         start() refuses to scan: a scan with no way to read an input or
         drive an output would be a program running blind."""
         self._io = io_provider
+
+    def attach_retentive_store(self, load, save):
+        """Where retentive internal signals (MR./MWR.) live between runs -
+        two callables, load() -> dict and save(dict), provided by EPWCore
+        over the controller's own runtime state file. Logic Studio only
+        ever stored and exported the `retentive` flag; making the value
+        actually survive a restart is EPW-OS's job, and this is it."""
+        self._load_retentive = load
+        self._save_retentive = save
 
     def load_program(self, filepath: str) -> bool:
         self._configured = True
@@ -151,6 +187,8 @@ class LogicEngine:
             return False
 
         self._driven_outputs = self._collect_driven_outputs(self._program)
+        self._command_levels = self._collect_command_levels(self._program)
+        self._retentive_ids = self._collect_retentive_ids(data)
         self.last_error = ""
         log.info(f"Logic program loaded: {len(self._program.execution_order)} blocks in the scan, "
                  f"cycle time {self._program.cycle_time_ms} ms, "
@@ -172,6 +210,44 @@ class LogicEngine:
                 addresses.add(address)
         return frozenset(addresses)
 
+    @staticmethod
+    def _collect_command_levels(program) -> dict:
+        """{signal_id: minimum access level} for every system-signal
+        command the program writes. A signal written by two blocks with
+        different levels keeps the STRICTER one - the gate is a floor, so
+        the highest demand wins."""
+        from epw_os.core.access_manager import AccessLevel
+        order = {level: rank for rank, level in enumerate(AccessLevel._ORDER)}
+        levels = {}
+        for uuid in program.execution_order:
+            block = program.get_block(uuid)
+            if block is None or block.type_id != _SYSTEM_OUTPUT_TYPE_ID:
+                continue
+            signal_id = (block.properties.get("Sygnał") or "").strip()
+            if not signal_id:
+                continue
+            level = (block.properties.get("Minimalny poziom dostępu") or "Brak").strip() or "Brak"
+            current = levels.get(signal_id)
+            if current is None or order.get(level, -1) > order.get(current, -1):
+                levels[signal_id] = level
+        return levels
+
+    @staticmethod
+    def _collect_retentive_ids(export) -> frozenset:
+        """The M-ids (MR./MWR.) of every internal signal the exported
+        registry marks retentive. Read from the export rather than from
+        the blocks: `retentive` is a fact about the REGISTRY ENTRY, and
+        the id itself is derived from it (shared/logic/internal_bits.py)."""
+        ids = set()
+        for entry in export.get("internal_bits") or []:
+            if isinstance(entry, dict) and entry.get("retentive"):
+                ids.add(internal_bit_id(entry))
+        return frozenset(ids)
+
+    def retentive_ids(self) -> frozenset:
+        """Which internal signals this program keeps across a restart."""
+        return self._retentive_ids
+
     def driven_outputs(self) -> frozenset:
         """The output addresses the running program owns - see
         validate_command()."""
@@ -191,6 +267,13 @@ class LogicEngine:
             log.error("Logic scan not started: no IOProvider is attached.")
             self.last_error = "No IOProvider attached."
             return False
+
+        # The access gate for this program's own system-signal commands,
+        # and whatever its retentive signals were left holding - both
+        # belong to the IOProvider, which is what the blocks reach.
+        if hasattr(self._io, "command_levels"):
+            self._io.command_levels = dict(self._command_levels)
+        self._restore_retentive()
 
         self._engine = ExecutionEngine(self._program, self._io, SystemTimeProvider())
         self._engine.start()
@@ -223,8 +306,41 @@ class LogicEngine:
             # progress to finish, short enough that shutdown never hangs
             # on a program that misbehaves.
             thread.join(timeout=self._join_timeout_s())
+        self._flush_retentive()
         if self._engine is not None:
             self._engine.stop()
+
+    def _restore_retentive(self):
+        """Puts the stored values back before the first scan. Only the ids
+        THIS program declares retentive: a value left behind by a
+        different program (a signal since renamed, or its retentive flag
+        cleared) is not resurrected into logic that no longer expects
+        it."""
+        if self._load_retentive is None or not self._retentive_ids:
+            return
+        try:
+            stored = self._load_retentive() or {}
+        except Exception as e:  # noqa: BLE001 - a damaged state file must not stop the scan
+            log.warning(f"Could not read the retentive internal signals: {e}")
+            return
+        values = {key: value for key, value in stored.items() if key in self._retentive_ids}
+        if values and hasattr(self._io, "preload_internal"):
+            self._io.preload_internal(values)
+            log.info(f"Restored {len(values)} retentive internal signal(s) from the runtime state.")
+
+    def _flush_retentive(self):
+        """Writes the retentive signals' current values to the runtime
+        state. Never raises into the scan thread: failing to persist an
+        M-bit is worth a log line, never a stopped program."""
+        self._last_retentive_flush = time.monotonic()
+        if self._save_retentive is None or not self._retentive_ids:
+            return
+        snapshot = self._io.internal_snapshot() if hasattr(self._io, "internal_snapshot") else {}
+        values = {key: value for key, value in snapshot.items() if key in self._retentive_ids}
+        try:
+            self._save_retentive(values)
+        except Exception as e:  # noqa: BLE001 - see the docstring
+            log.warning(f"Could not store the retentive internal signals: {e}")
 
     def _join_timeout_s(self) -> float:
         cycle_ms = self._program.cycle_time_ms if self._program else 100
@@ -232,8 +348,11 @@ class LogicEngine:
 
     def _scan_loop(self):
         interval_s = max(0.001, float(self._program.cycle_time_ms) / 1000.0)
+        self._last_retentive_flush = time.monotonic()
         while True:
             self._run_one_scan()
+            if time.monotonic() - self._last_retentive_flush >= _RETENTIVE_FLUSH_INTERVAL_S:
+                self._flush_retentive()
             if self._stop_event.wait(interval_s):
                 return
 
@@ -277,6 +396,7 @@ class LogicEngine:
             "last_scan_ms": round(engine.last_scan_duration_ms, 3) if engine else 0.0,
             "max_scan_ms": round(engine.max_scan_duration_ms, 3) if engine else 0.0,
             "driven_outputs": sorted(self._driven_outputs),
+            "retentive_signals": sorted(self._retentive_ids),
             "last_error": self.last_error,
         }
 

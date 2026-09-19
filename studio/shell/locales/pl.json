@@ -517,7 +517,12 @@
     "reset_confirm": "Wyzerować licznik {tag} na sterowniku? Próg ostrzegawczy zostaje. Operacja jest nieodwracalna i trafia do dziennika audytowego (token Engineer).",
     "reset_all_confirm": "Wyzerować wszystkie {count} liczniki na sterowniku? Operacja jest nieodwracalna i trafia do dziennika audytowego (token Engineer).",
     "reset_done": "Wyzerowano liczników: {count}.",
-    "reset_failed": "Nie udało się wyzerować {tag}: {reason}"
+    "reset_failed": "Nie udało się wyzerować {tag}: {reason}",
+    "logic_unknown": "Program logiki: nieznany (brak odpowiedzi ze sterownika).",
+    "logic_none": "Program logiki: brak - ten sterownik pracuje bez logiki użytkownika.",
+    "logic_running": "Program logiki: PRACUJE - bloków {blocks}, cykl {cycle} ms, skanów {scans}, najdłuższy {longest} ms, wyjść sterowanych logiką {outputs}.",
+    "logic_stopped": "Program logiki: wczytany, ale skan ZATRZYMANY - jego blokady nie są liczone.",
+    "logic_failed": "Program logiki: NIE pracuje - {reason}"
   },
   "modules": {
     "col_name": "Nazwa",

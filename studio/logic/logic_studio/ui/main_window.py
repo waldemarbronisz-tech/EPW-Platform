@@ -14,6 +14,7 @@ from logic_studio.ui.panels.signals import SignalsPanel
 from logic_studio.ui.panels.watch import WatchPanel
 from logic_studio.ui.panels.breadcrumb import BreadcrumbBar
 from logic_studio.ui.icons import action_icon
+from logic_studio.ui.qt_lifetime import is_alive
 
 
 class MainWindow(QMainWindow):
@@ -264,7 +265,7 @@ class MainWindow(QMainWindow):
         # source (AUDIT_REPORT.md §2.1) — see _setup_layout() for the signal wiring
         # and compile_project()/start_simulation()/stop_simulation()/_on_sim_tick()
         # for where each value actually gets pushed in.
-        self.lbl_ready = QLabel("Gotowy")
+        self.lbl_ready = QLabel("Ready")
         self.lbl_grid = QLabel("Grid: ON")
         self.lbl_snap = QLabel("Snap: ON")
         self.lbl_cursor = QLabel("X: 0, Y: 0")
@@ -375,7 +376,7 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.view)
 
         self.output_panel = CompilerOutputPanel()
-        self.output_panel.tabs.addTab(self.watch_panel, "Obserwowane")
+        self.output_panel.tabs.addTab(self.watch_panel, "Watched")
 
         center_splitter.addWidget(canvas_container)
         center_splitter.addWidget(self.output_panel)
@@ -436,9 +437,7 @@ class MainWindow(QMainWindow):
         # feat/signal-crossref §3.3: highlight (never scroll to) whatever
         # row(s) in the signals panel correspond to the current canvas
         # selection.
-        self.scene.selectionChanged.connect(
-            lambda: self.signals_panel.highlight_blocks(self.scene.selectedItems())
-        )
+        self.scene.selectionChanged.connect(self._highlight_selection_in_signals_panel)
         # feat/clipboard-and-align §1.5: Cut/Copy track selection, Paste
         # tracks the clipboard itself.
         self.scene.selectionChanged.connect(self._update_clipboard_actions)
@@ -1006,7 +1005,7 @@ class MainWindow(QMainWindow):
                 f"Compiled {block_count} block(s). execution_order length: {order_len}."
             )
             self.output_panel.log_message("Compilation successful.")
-            self.lbl_ready.setText("Gotowy")
+            self.lbl_ready.setText("Ready")
             if "program" in res:
                 self.engine.load_program(res["program"])
                 self.output_panel.log_runtime(
@@ -1057,7 +1056,7 @@ class MainWindow(QMainWindow):
         self.engine.stop()
         self.sim_timer.stop()
         self.lbl_sim.setText("Simulation: Stopped")
-        self.lbl_ready.setText("Gotowy")
+        self.lbl_ready.setText("Ready")
         self.output_panel.log_runtime("Simulation stopped.")
         # Reset block values
         for block in self.project.blocks:
@@ -1468,7 +1467,20 @@ class MainWindow(QMainWindow):
                     val = block.simulation_state.get("sim_value", False)
                     self.simulation_panel.set_ada_state(idx, val)
 
+    def _highlight_selection_in_signals_panel(self):
+        """feat/signal-crossref §3.3, with the same liveness guard as
+        every other selection handler here - a lambda until the guard
+        made a real method the clearer home for it."""
+        if not is_alive(self.scene):
+            return
+        self.signals_panel.highlight_blocks(self.scene.selectedItems())
+
     def _on_selection_changed(self):
+        # The scene emits this from its own destructor too - see
+        # qt_lifetime.is_alive() for why every selection handler needs
+        # the guard rather than relying on Qt's auto-disconnect.
+        if not is_alive(self.scene):
+            return
         selected = self.scene.selectedItems()
         from logic_studio.ui.canvas.block_item import BlockItem
         if selected and isinstance(selected[0], BlockItem):
@@ -1486,6 +1498,8 @@ class MainWindow(QMainWindow):
 
     def _update_clipboard_actions(self):
         """feat/clipboard-and-align §1.5."""
+        if not is_alive(self.scene):
+            return
         has_selection = len(self.scene.selectedItems()) > 0
         self.act_cut.setEnabled(has_selection)
         self.act_copy.setEnabled(has_selection)
@@ -1501,6 +1515,8 @@ class MainWindow(QMainWindow):
 
     def _selected_block_items(self):
         from logic_studio.ui.canvas.block_item import BlockItem
+        if not is_alive(self.scene):
+            return []
         return [i for i in self.scene.selectedItems() if isinstance(i, BlockItem)]
 
     def _disable_selected_blocks(self):
