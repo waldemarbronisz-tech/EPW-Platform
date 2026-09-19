@@ -46,6 +46,13 @@ _LAYOUT = {
     # can carry several). Separate from "last_screen" above, which is
     # the page of the navigation tree.
     "last_synoptic_screen": (("last_synoptic_screen",), lambda: None),
+    # Retentive internal signals of the logic program (MR./MWR.) - the
+    # ONLY logic state that is meant to survive a restart. Logic Studio
+    # stores the `retentive` flag and says outright that making the value
+    # survive anything is EPW-OS's responsibility (shared/logic/
+    # internal_bits.py) - this is where it survives. Written by the scan
+    # periodically and on stop, never on every scan.
+    "logic_retentive": (("logic_retentive",), dict),
 }
 
 STATE_KEYS = tuple(_LAYOUT)
