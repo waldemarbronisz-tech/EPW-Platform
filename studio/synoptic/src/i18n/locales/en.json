@@ -56,7 +56,8 @@
     "unlock": "Unlock",
     "rotate_left": "Rotate Left",
     "rotate_right": "Rotate Right",
-    "text_box": "Text box"
+    "text_box": "Text box",
+    "applies_to_selection": "(applies to the {count} selected wall(s))"
   },
   "library": {
     "title": "Object Library",
@@ -103,7 +104,8 @@
     "floor_area": "Floor area",
     "not_closed": "not a closed room",
     "move_hint": "Moving the room - by dragging a wall or with X / Y - takes the symbols inside it along.",
-    "select_whole": "Select the whole room"
+    "select_whole": "Select the whole room",
+    "size_hint": "Position and size in metres, to the centimetre. The scale is 1 m = 80 px; one grid cell is 20 cm."
   },
   "format": {
     "text_color": "Text colour",

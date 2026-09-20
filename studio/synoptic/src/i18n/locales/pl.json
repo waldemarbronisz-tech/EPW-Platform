@@ -56,7 +56,8 @@
     "unlock": "Odblokuj",
     "rotate_left": "Obróć w lewo",
     "rotate_right": "Obróć w prawo",
-    "text_box": "Pole tekstowe"
+    "text_box": "Pole tekstowe",
+    "applies_to_selection": "(dotyczy {count} zaznaczonych ścian)"
   },
   "library": {
     "title": "Biblioteka obiektów",
@@ -103,7 +104,8 @@
     "floor_area": "Powierzchnia podłogi",
     "not_closed": "nie jest zamkniętym pomieszczeniem",
     "move_hint": "Przesunięcie pomieszczenia - przeciągnięciem ściany albo polami X / Y - zabiera ze sobą symbole w środku.",
-    "select_whole": "Zaznacz całe pomieszczenie"
+    "select_whole": "Zaznacz całe pomieszczenie",
+    "size_hint": "Położenie i rozmiar w metrach, z dokładnością do centymetra. Skala: 1 m = 80 px; jedna kratka siatki to 20 cm."
   },
   "format": {
     "text_color": "Kolor tekstu",

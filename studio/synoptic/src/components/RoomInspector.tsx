@@ -13,30 +13,56 @@ import { useStore } from '../store';
 import { tr } from '../i18n/tr';
 import { areaContents, roomSummary } from '../project/AreaMove';
 import { GRID_SIZE } from '../theme/ScadaTheme';
+import { PIXELS_PER_METRE } from '../theme/Scale';
 
 const formatNumber = (value: number, digits = 2) => value.toFixed(digits).replace('.', ',');
 
-/** A number box that applies on Enter or when left, like the size box of the format bar. */
-const NumberField: React.FC<{ name: string; label: string; value: number; onCommit: (value: number) => void }> = ({ name, label, value, onCommit }) => {
+/** Pixels as metres, to the centimetre - the precision a room is measured to. */
+const toMetres = (pixels: number) => Math.round((pixels / PIXELS_PER_METRE) * 100) / 100;
+
+/** Metres back to pixels. Not rounded to whole pixels: the drawing keeps the dimension the person typed, and 3,45 m is 276 px exactly at this scale. */
+const toPixels = (metres: number) => metres * PIXELS_PER_METRE;
+
+/**
+ * A dimension in METRES, applied on Enter or when the box is left.
+ *
+ * The canvas works in pixels and always will - a drawing is a drawing.
+ * But a room is measured in metres, and a person laying one out knows
+ * it is six metres across, not four hundred and eighty pixels. So the
+ * box reads and writes metres, to the centimetre, and the conversion
+ * happens here rather than in anybody's head.
+ *
+ * A comma is accepted as the decimal separator: that is how the number
+ * is shown in Polish, and typing back what you are shown has to work.
+ */
+const MetreField: React.FC<{ name: string; label: string; pixels: number; onCommit: (pixels: number) => void }> = ({ name, label, pixels, onCommit }) => {
+  const metres = toMetres(pixels);
   const [draft, setDraft] = useState<string | null>(null);
-  useEffect(() => { setDraft(null); }, [value]);
+  useEffect(() => { setDraft(null); }, [pixels]);
   const commit = () => {
     if (draft === null) return;
     const parsed = Number(draft.replace(',', '.'));
     setDraft(null);
-    if (Number.isFinite(parsed) && parsed !== value) onCommit(parsed);
+    if (Number.isFinite(parsed) && parsed !== metres) onCommit(toPixels(parsed));
   };
   return (
     <div className="property-row">
       <label>{label}</label>
+      {/* NOT type="number": a number input rejects "5,00" outright -
+          the box goes blank and nothing can be typed back. The value is
+          shown with a comma because that is how it is written in
+          Polish, so the box has to accept one. inputMode keeps the
+          numeric keypad on a touch panel. */}
       <input
-        type="number"
+        type="text"
+        inputMode="decimal"
         name={name}
-        value={draft ?? String(Math.round(value))}
+        value={draft ?? formatNumber(metres)}
         onChange={e => setDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') commit(); e.stopPropagation(); }}
         onBlur={commit}
       />
+      <span className="property-unit">m</span>
     </div>
   );
 };
@@ -107,10 +133,11 @@ export const RoomInspector: React.FC<{ wallIds: string[] }> = ({ wallIds }) => {
         {box && (
           <div className="property-group">
             <div className="property-group-title">{tr('room.layout')}</div>
-            <NumberField name="roomX" label="X" value={box.x} onCommit={x => moveTo(x, box.y)} />
-            <NumberField name="roomY" label="Y" value={box.y} onCommit={y => moveTo(box.x, y)} />
-            <NumberField name="roomWidth" label={tr('room.width')} value={box.width} onCommit={w => resizeTo(w, box.height)} />
-            <NumberField name="roomHeight" label={tr('room.height')} value={box.height} onCommit={h => resizeTo(box.width, h)} />
+            <MetreField name="roomX" label="X" pixels={box.x} onCommit={x => moveTo(x, box.y)} />
+            <MetreField name="roomY" label="Y" pixels={box.y} onCommit={y => moveTo(box.x, y)} />
+            <MetreField name="roomWidth" label={tr('room.width')} pixels={box.width} onCommit={w => resizeTo(w, box.height)} />
+            <MetreField name="roomHeight" label={tr('room.height')} pixels={box.height} onCommit={h => resizeTo(box.width, h)} />
+            <div className="property-row" style={{ opacity: 0.75 }}>{tr('room.size_hint')}</div>
           </div>
         )}
 
