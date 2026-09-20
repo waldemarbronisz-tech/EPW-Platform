@@ -616,6 +616,12 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     tool("ROOMS", "frame", "canvas.draw_frame", "draw_frame", "draw_frame")
     tool("ROOMS", "building", "canvas.draw_building", "draw_building", "draw_building")
     separator("ROOMS")
+    # Turning something is part of drawing a room too (owner,
+    # 2026-09-20) - the same two commands the Symbols group sends, so
+    # the canvas needs nothing new to understand them.
+    tool("ROOMS", None, "canvas.rotate_left", "rotate_left", "rotate_left")
+    tool("ROOMS", None, "canvas.rotate_right", "rotate_right", "rotate_right")
+    separator("ROOMS")
 
     # CONNECTIONS - the wire tool, medium, wire style, routing.
     tool("CONNECTIONS", "wire", "canvas.draw_wire", "draw_wire", "draw_wire")

@@ -69,7 +69,12 @@ def test_only_the_active_modes_tools_are_shown_each_group_with_separators():
     assert _visible_labels(window, "ROOMS") == []
     StudioMainWindow._apply_synoptic_mode_checks(window, {"workMode": "ROOMS"})
     assert _visible_labels(window, "SYMBOLS") == []
-    assert _visible_labels(window, "ROOMS") == ["Draw wall", "Draw room (rectangle)", "Draw Frame", "Draw Building"]
+    # Rotation rides along with the room tools (owner, 2026-09-20):
+    # a door or a luminaire is turned while the plan is drawn.
+    assert _visible_labels(window, "ROOMS") == [
+        "Draw wall", "Draw room (rectangle)", "Draw Frame", "Draw Building",
+        "Rotate Left", "Rotate Right",
+    ]
     assert sum(1 for a in window.synoptic_mode_groups["CONNECTIONS"] if a.isSeparator()) == 4
     StudioMainWindow._apply_synoptic_mode_checks(window, {"workMode": "CONNECTIONS"})
     assert "Draw Wire" in _visible_labels(window, "CONNECTIONS")

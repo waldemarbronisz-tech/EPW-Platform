@@ -7,7 +7,7 @@
 // tools that go with it live beside the switch and change with it:
 //
 //   SYMBOLS      front / back | lock / unlock | rotate
-//   ROOMS        wall, room | frame, building outline
+//   ROOMS        wall, room | frame, building outline | rotate
 //   CONNECTIONS  wire | medium | wire style | routing
 //   ANNOTATIONS  text box
 //
@@ -155,6 +155,17 @@ export const Toolbar: React.FC = () => {
               pressed={isDrawingFrame && drawingFrameVariant === 'BUILDING'}
               onClick={e => setDrawingFrameMode(!(isDrawingFrame && drawingFrameVariant === 'BUILDING'), 'BUILDING', e.shiftKey)}
             />
+          </div>
+          <Divider />
+          {/* Rotation belongs to laying out a room as much as to
+              arranging symbols (owner, 2026-09-20): a door, a table or
+              a luminaire is turned WHILE the plan is being drawn, and
+              having to leave the mode to do it was the whole friction.
+              Same rotateSelected, same data-cmd - Studio's toolbar
+              mirrors this pair into its own ROOMS group. */}
+          <div className="toolbar-group">
+            <ToolButton cmd="rotate_left" title={tr('tool.rotate_left')} icon="rotate_left" onClick={() => rotateSelected('ccw')} />
+            <ToolButton cmd="rotate_right" title={tr('tool.rotate_right')} icon="rotate_right" onClick={() => rotateSelected('cw')} />
           </div>
         </>
       )}

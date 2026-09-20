@@ -8,7 +8,8 @@
 // the standard those figures come from, and its common values are
 // offered here as a target to compare against - chosen by the user, not
 // guessed from the drawing, because nothing on a floor plan says whether
-// a room is an office or a corridor.
+// a room is an office or a corridor. Their lux figures are the
+// standard's and do not translate; their names do.
 //
 // The limit is restated, not hidden: the calculation is direct-component
 // only (no inter-reflection), so a real room will measure somewhat
@@ -18,6 +19,7 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { roomIlluminanceStats } from '../project/Illuminance';
+import { tr } from '../i18n/tr';
 import {
   COLOR_ALARM, COLOR_BEVEL_DARK, COLOR_OUTLINE, COLOR_PANEL, COLOR_RUN,
   COLOR_VALUE_FIELD, FONT_SIZE_SMALL, FONT_UI,
@@ -28,13 +30,17 @@ import {
  * table. Offered as a comparison, never applied automatically - the
  * drawing does not know what the room is for.
  */
-const TARGETS: { id: string; label: string; lux: number; uniformity: number }[] = [
-  { id: 'none', label: 'no comparison', lux: 0, uniformity: 0 },
-  { id: 'corridor', label: 'Corridor - 100 lx', lux: 100, uniformity: 0.4 },
-  { id: 'store', label: 'Storage - 150 lx', lux: 150, uniformity: 0.4 },
-  { id: 'workshop', label: 'Workshop, rough work - 200 lx', lux: 200, uniformity: 0.4 },
-  { id: 'office', label: 'Office, screen work - 500 lx', lux: 500, uniformity: 0.6 },
-  { id: 'precision', label: 'Precision work - 750 lx', lux: 750, uniformity: 0.7 },
+// The lux figures and the uniformities are the standard's, so they are
+// data; only the room's NAME is language. The label is therefore looked
+// up at render time rather than baked in here - this array is built
+// once at module load, before a language has been chosen.
+const TARGETS: { id: string; lux: number; uniformity: number }[] = [
+  { id: 'none', lux: 0, uniformity: 0 },
+  { id: 'corridor', lux: 100, uniformity: 0.4 },
+  { id: 'store', lux: 150, uniformity: 0.4 },
+  { id: 'workshop', lux: 200, uniformity: 0.4 },
+  { id: 'office', lux: 500, uniformity: 0.6 },
+  { id: 'precision', lux: 750, uniformity: 0.7 },
 ];
 
 export const LightingPanel: React.FC = () => {
@@ -65,22 +71,22 @@ export const LightingPanel: React.FC = () => {
             checked={showIlluminance}
             onChange={e => setShowIlluminance(e.target.checked)}
           />
-          Illuminance map on the drawing
+          {tr('lighting.map_on_drawing')}
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          Required:
+          {tr('lighting.required')}
           <select value={targetId} onChange={e => setTargetId(e.target.value)}>
-            {TARGETS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            {TARGETS.map(t => <option key={t.id} value={t.id}>{tr(`lighting.target_${t.id}`)}</option>)}
           </select>
         </label>
         <span style={{ flex: 1 }} />
-        <span style={{ opacity: 0.75 }}>Direct component only, no reflections from walls or ceiling.</span>
+        <span style={{ opacity: 0.75 }}>{tr('lighting.direct_only')}</span>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: COLOR_VALUE_FIELD }}>
         {rooms.length === 0 && (
           <div style={{ padding: 10, opacity: 0.8 }}>
-            No closed room - draw walls that form an outline.
+            {tr('lighting.no_room')}
           </div>
         )}
 
@@ -94,20 +100,20 @@ export const LightingPanel: React.FC = () => {
           return (
             <div key={room.index} style={{ padding: '4px 8px', borderBottom: `1px solid ${COLOR_PANEL}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <b>Room {room.index + 1}</b>
+                <b>{tr('lighting.room', { index: room.index + 1 })}</b>
                 {target.lux > 0 && lit && (
                   <span style={{ fontWeight: 'bold', color: pass ? COLOR_RUN : COLOR_ALARM }}>
-                    {pass ? 'PASS' : 'FAIL'}
+                    {pass ? tr('lighting.pass') : tr('lighting.fail')}
                   </span>
                 )}
-                {!lit && <span style={{ opacity: 0.8 }}>no luminaire is on</span>}
+                {!lit && <span style={{ opacity: 0.8 }}>{tr('lighting.unlit')}</span>}
               </div>
 
               {lit && (
                 <div style={{ display: 'flex', gap: 18, marginTop: 2, color: COLOR_OUTLINE }}>
-                  <span>E avg <b style={{ color: passesLux || target.lux === 0 ? COLOR_OUTLINE : COLOR_ALARM }}>{fmt(stats.average)}</b></span>
-                  <span>E min <b>{fmt(stats.min)}</b></span>
-                  <span>E max <b>{fmt(stats.max)}</b></span>
+                  <span>{tr('lighting.e_avg')} <b style={{ color: passesLux || target.lux === 0 ? COLOR_OUTLINE : COLOR_ALARM }}>{fmt(stats.average)}</b></span>
+                  <span>{tr('lighting.e_min')} <b>{fmt(stats.min)}</b></span>
+                  <span>{tr('lighting.e_max')} <b>{fmt(stats.max)}</b></span>
                   <span>
                     Uo <b style={{ color: passesUniformity || target.uniformity === 0 ? COLOR_OUTLINE : COLOR_ALARM }}>
                       {stats.average > 0 ? num(stats.uniformity) : '-'}
@@ -115,7 +121,7 @@ export const LightingPanel: React.FC = () => {
                   </span>
                   {target.lux > 0 && (
                     <span style={{ opacity: 0.8 }}>
-                      required {target.lux} lx, Uo {num(target.uniformity)}
+                      {tr('lighting.requirement', { lux: target.lux, uniformity: num(target.uniformity) })}
                     </span>
                   )}
                 </div>
