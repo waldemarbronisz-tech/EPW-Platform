@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QCompleter,
 )
 from PySide6.QtCore import Qt
+from logic_studio.i18n import tr
 
 # §A3.4: forbidden characters -- a label never reaches the runtime
 # export (compiler/label_merge.py only ever reads it in-process), but
@@ -91,7 +92,7 @@ class LabelNameDialog(QDialog):
         self.setModal(True)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Label name:"))
+        layout.addWidget(QLabel(tr("label.name")))
 
         self.edit = QLineEdit(initial)
         # §A3.4: empty by default, no auto-suggestion of an existing name.
@@ -108,7 +109,7 @@ class LabelNameDialog(QDialog):
 
         button_row = QHBoxLayout()
         button_row.addStretch()
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(tr("common.cancel"))
         cancel_btn.clicked.connect(self.reject)
         ok_btn = QPushButton("OK")
         ok_btn.setDefault(True)

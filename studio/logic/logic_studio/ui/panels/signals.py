@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtGui import QFont, QColor, QBrush, QPixmap, QPainter, QIcon
 
+from logic_studio.i18n import tr
 from logic_studio.ui.qt_lifetime import create_owned_timer
 from logic_studio.ui.window_lookup import logic_main_window
 from logic_studio.core.crossref import (
@@ -148,13 +149,13 @@ class SignalsPanel(QWidget):
         # or has an issue isn't tied to category at all).
         search_row = QHBoxLayout()
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Search signal, label or block id...")
+        self.search_edit.setPlaceholderText(tr("signal.panel_search"))
         search_row.addWidget(self.search_edit)
         layout.addLayout(search_row)
 
         filter_row = QHBoxLayout()
-        self.only_issues_check = QPushButton("Issues")
-        self.only_issues_check.setToolTip("Show only signals with an error or warning.")
+        self.only_issues_check = QPushButton(tr("signal.issues"))
+        self.only_issues_check.setToolTip(tr("signal.issues_tooltip"))
         self.only_issues_check.setCheckable(True)
         filter_row.addWidget(self.only_issues_check)
         filter_row.addStretch()
@@ -178,7 +179,7 @@ class SignalsPanel(QWidget):
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         layout.addWidget(self.tree)
 
-        self.empty_label = QLabel("No signals in the project — add an input or output block and assign an address")
+        self.empty_label = QLabel(tr("signal.empty"))
         self.empty_label.setWordWrap(True)
         self.empty_label.setAlignment(Qt.AlignCenter)
         self.empty_label.setVisible(False)

@@ -3,7 +3,9 @@
     "recent": "Ostatnio używane",
     "macros": "Makra",
     "macro_summary": "Makro użytkownika ({n_in} wej. / {n_out} wyj.)",
-    "search": "Szukaj bloków..."
+    "search": "Szukaj bloków...",
+    "import_macro": "Importuj makro...",
+    "export_macro": "Eksportuj makro..."
   },
   "main": {
     "app_title": "EPW Logic Studio",
@@ -114,5 +116,155 @@
     "col_command": "Polecenie",
     "col_shortcut": "Skrót",
     "f1_note": "Poza tym: **F1** otwiera pomoc (na opisie zaznaczonego bloku, jeśli coś jest zaznaczone)."
+  },
+  "common": {
+    "add": "Dodaj",
+    "remove": "Usuń",
+    "remove_selected": "Usuń zaznaczone",
+    "cancel": "Anuluj",
+    "ok": "OK",
+    "search": "Szukaj...",
+    "import": "Importuj...",
+    "export": "Eksportuj...",
+    "invalid_name": "Nieprawidłowa nazwa",
+    "invalid_value": "Nieprawidłowa wartość",
+    "invalid_file": "Nieprawidłowy plik",
+    "invalid_data": "Nieprawidłowe dane",
+    "import_error": "Błąd importu"
+  },
+  "settings": {
+    "title": "Ustawienia projektu",
+    "analog_points": "Punkty analogowe",
+    "tab_general": "Ogólne",
+    "tab_signals": "Sygnały wewnętrzne",
+    "tab_io_labels": "Etykiety wejść/wyjść",
+    "tab_devices": "Urządzenia",
+    "io_filter": "Szukaj po adresie albo etykiecie...",
+    "only_used": "Pokaż tylko używane",
+    "ela_modules": "Moduły wejść dwustanowych ELA (po {n} kanałów)",
+    "ada_modules": "Moduły wyjść dwustanowych ADA (po {n} kanałów)",
+    "expected_mapping": "Oczekiwano słownika adres -> etykieta.",
+    "invalid_signals": "Nieprawidłowe dane (sygnały wewnętrzne)"
+  },
+  "macro": {
+    "new_parameter": "Nowy parametr",
+    "new_parameter_dots": "Nowy parametr...",
+    "empty_name": "Nazwa parametru nie może być pusta.",
+    "bad_value": "„{raw}” nie jest prawidłową wartością typu {type}.",
+    "pins_title": "Piny i parametry makrobloku",
+    "tab_pins": "Piny",
+    "tab_parameters": "Parametry",
+    "inputs": "Wejścia",
+    "outputs": "Wyjścia",
+    "move_up": "Przesuń w górę",
+    "move_down": "Przesuń w dół",
+    "new_macro_parameter": "Nowy parametr makrobloku",
+    "bind_title": "Powiąż z parametrem",
+    "property_is": "Właściwość: {name}",
+    "pins_button": "Piny makrobloku...",
+    "pins_hint": "Żeby dodać nowy pin, kliknij prawym przyciskiem blok wewnątrz makra i wybierz „Wystaw pin makrobloku”.",
+    "parameters_hint": "Żeby powiązać parametr z właściwością bloku, otwórz panel właściwości tego bloku wewnątrz makra i użyj przycisku „Powiąż z parametrem...” obok wybranej właściwości."
+  },
+  "signal": {
+    "new_title": "Nowy sygnał wewnętrzny",
+    "new_button": "Nowy sygnał wewnętrzny...",
+    "choose_title": "Wybierz sygnał",
+    "col_description": "Opis",
+    "col_name": "Nazwa sygnału",
+    "col_label": "Etykieta",
+    "duplicate": "Powtórzona nazwa",
+    "duplicate_text": "Sygnał „{name}” już istnieje w rejestrze.",
+    "invalid_entry": "Nieprawidłowy wpis",
+    "panel_search": "Szukaj sygnału, etykiety albo id bloku...",
+    "issues": "Problemy",
+    "issues_tooltip": "Pokaż tylko sygnały z błędem albo ostrzeżeniem.",
+    "empty": "Brak sygnałów w projekcie — dodaj blok wejścia albo wyjścia i przypisz adres"
+  },
+  "sim": {
+    "di_used": "Wejścia dwustanowe (DI)",
+    "di_empty": "Żadne wejście nie jest używane — dodaj blok DI i przypisz adres.",
+    "do_used": "Wyjścia dwustanowe (DO)",
+    "do_empty": "Żadne wyjście nie jest używane — dodaj blok DO i przypisz adres.",
+    "di_all": "Wejścia dwustanowe (DI) — wszystkie",
+    "do_all": "Wyjścia dwustanowe (DO) — wszystkie",
+    "ai": "Wejścia analogowe",
+    "ao": "Wyjścia analogowe",
+    "step": "Krok",
+    "step10": "Krok ×10",
+    "all_cards": "Wszystkie karty"
+  },
+  "watch": {
+    "trend_title": "Trend — {signal}",
+    "live": "⏵ Na żywo",
+    "time_range": "Zakres czasu",
+    "auto_scale": "Skala automatyczna",
+    "min": "Min",
+    "max": "Maks",
+    "clear_buffer": "Wyczyść bufor",
+    "add": "Dodaj...",
+    "empty": "Brak obserwowanych sygnałów - kliknij „Dodaj...”."
+  },
+  "help": {
+    "title": "Pomoc — EPW Logic Studio",
+    "topic_title": "Pomoc — {title}",
+    "hide_contents": "Ukryj spis treści",
+    "show_contents": "Pokaż spis treści",
+    "back": "◄ Wstecz",
+    "forward": "Dalej ►",
+    "tab_contents": "Spis treści",
+    "tab_index": "Indeks",
+    "tab_search": "Szukaj"
+  },
+  "format": {
+    "paragraph_style": "Styl akapitu",
+    "font": "Czcionka",
+    "font_size": "Rozmiar czcionki"
+  },
+  "output": {
+    "compiler": "Kompilator",
+    "warnings": "Ostrzeżenia",
+    "errors": "Błędy",
+    "messages": "Komunikaty",
+    "runtime": "Sterownik"
+  },
+  "property": {
+    "no_channel_title": "Brak kanału wejścia/wyjścia do zaadresowania",
+    "no_block": "Nie zaznaczono bloku",
+    "unbind": "Odłącz od parametru",
+    "bind": "Powiąż z parametrem...",
+    "not_selected": "(nie wybrano)"
+  },
+  "device": {
+    "search": "Szukaj adresu, np. DI12 albo ELA01...",
+    "header": "Urządzenia"
+  },
+  "preview": {
+    "more": "Więcej o tym bloku",
+    "element": "Element",
+    "nothing": "Nic nie zaznaczono"
+  },
+  "canvas": {
+    "properties": "Właściwości",
+    "duplicate": "Duplikuj",
+    "delete": "Usuń",
+    "show_uses": "Pokaż użycia sygnału",
+    "create_macro": "Utwórz makro...",
+    "set_label": "Ustaw etykietę...",
+    "remove_label": "Usuń etykietę",
+    "convert_reference": "Zamień na odwołanie",
+    "add_reference": "Dodaj odwołanie...",
+    "similar_label": "Podobna etykieta w projekcie: {similar}",
+    "expose_pin": "Wystaw pin makrobloku",
+    "same_signal": "Inne bloki z tym samym sygnałem",
+    "align": "Wyrównaj"
+  },
+  "diff": {
+    "title": "Porównanie projektów"
+  },
+  "label": {
+    "name": "Nazwa etykiety:"
+  },
+  "labels": {
+    "empty": "Brak etykiet w projekcie - nadaj etykietę przewodowi albo użyj „Dodaj odwołanie...”."
   }
 }

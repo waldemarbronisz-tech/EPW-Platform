@@ -5,6 +5,7 @@ from PySide6.QtGui import QPainter, QPen, QColor, QFont, QCursor, QFontMetricsF
 from PySide6.QtWidgets import QMenu
 from PySide6.QtCore import Qt, QRectF, QPointF
 
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style, shapes
 from logic_studio.ui.window_lookup import logic_main_window
 
@@ -1050,10 +1051,10 @@ class BlockItem(QGraphicsItem):
             QMenu::item:disabled { color: #A0A0A0; }
         """)
 
-        prop_action = menu.addAction("Properties")
+        prop_action = menu.addAction(tr("canvas.properties"))
         menu.addSeparator()
-        dup_action = menu.addAction("Duplicate")
-        del_action = menu.addAction("Delete")
+        dup_action = menu.addAction(tr("canvas.duplicate"))
+        del_action = menu.addAction(tr("canvas.delete"))
 
         # feat/clipboard-and-align §4.1: label reflects THIS block's own
         # current state (a toggle, like a mute button) — Edit menu's
@@ -1070,7 +1071,7 @@ class BlockItem(QGraphicsItem):
         # block that actually has an Address/Bit/Sygnał assigned.
         menu.addSeparator()
         signal_ref = self._current_signal_reference()
-        show_usage_action = menu.addAction("Show signal uses")
+        show_usage_action = menu.addAction(tr("canvas.show_uses"))
         show_usage_action.setEnabled(bool(signal_ref))
 
         # feat/duplicate-address-hyperlink: direct canvas-to-canvas jump
@@ -1087,7 +1088,7 @@ class BlockItem(QGraphicsItem):
         if scene is not None and len(scene.selectedItems()) >= 2:
             menu.addSeparator()
             from logic_studio.ui.canvas.scene import populate_align_menu
-            populate_align_menu(menu.addMenu("Align"), scene)
+            populate_align_menu(menu.addMenu(tr("canvas.align")), scene)
 
         # feat/macro-blocks: group the current selection (1+ blocks) into a
         # new, named, reusable block — LogicScene.create_macro_from_selection()
@@ -1100,7 +1101,7 @@ class BlockItem(QGraphicsItem):
         if scene is not None:
             selected_block_count = len([i for i in scene.selectedItems() if isinstance(i, BlockItem)])
             menu.addSeparator()
-            create_macro_action = menu.addAction("Create macro...")
+            create_macro_action = menu.addAction(tr("canvas.create_macro"))
             create_macro_action.setEnabled(selected_block_count >= 1)
 
         # feat/macro-editable-pins: only ever present while actually
@@ -1144,7 +1145,7 @@ class BlockItem(QGraphicsItem):
     def populate_expose_pin_menu(self, menu):
         """feat/macro-editable-pins: while inside a macro's own breadcrumb
         edit view (MainWindow.current_macro_def_id is not None), adds
-        "Expose macro pin" listing every one of THIS block's own pins
+        tr("canvas.expose_pin") listing every one of THIS block's own pins
         not already exposed as one of the macro's boundary pins — clicking
         one calls MainWindow.expose_macro_pin(). Adds nothing at all
         outside that view (the plain top-level canvas has no "current
@@ -1175,7 +1176,7 @@ class BlockItem(QGraphicsItem):
             if (self.logic_block.uuid, pin.name) not in already_exposed
         ]
 
-        submenu = menu.addMenu("Expose macro pin")
+        submenu = menu.addMenu(tr("canvas.expose_pin"))
         submenu.menuAction().setEnabled(bool(candidates))
         for pin, direction, kind_label in candidates:
             action = submenu.addAction(f"{kind_label}: {pin.name}")
@@ -1265,14 +1266,14 @@ class BlockItem(QGraphicsItem):
         return f"{short_id} — {extra}" if extra else short_id
 
     def populate_duplicate_reference_menu(self, menu):
-        """Adds the "Other blocks with the same signal" submenu to `menu` —
+        """Adds the tr("canvas.same_signal") submenu to `menu` —
         split out from contextMenuEvent() so it's testable without ever
         calling QMenu.exec() (mirrors scene.py's populate_align_menu() /
         SignalsPanel's _build_reader_menu()). Always present (so it's
         discoverable) but disabled with nothing to choose when this block
         has no signal reference at all, or nothing else shares it."""
         others = self._duplicate_reference_blocks()
-        submenu = menu.addMenu("Other blocks with the same signal")
+        submenu = menu.addMenu(tr("canvas.same_signal"))
         submenu.menuAction().setEnabled(bool(others))
         for block_uuid, short_id in others:
             action = submenu.addAction(self._duplicate_reference_label(block_uuid, short_id))

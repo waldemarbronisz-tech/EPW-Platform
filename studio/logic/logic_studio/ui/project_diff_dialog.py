@@ -7,6 +7,7 @@ core/*.py vs. ui/panels/*.py's usual split elsewhere in this app.
 """
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem, QDialogButtonBox
 
+from logic_studio.i18n import tr
 from logic_studio.core.project_diff import summarize, block_label
 
 
@@ -17,7 +18,7 @@ class ProjectDiffDialog(QDialog):
         the two sides being compared (a filename, or "Current state") —
         purely for the header line, never parsed."""
         super().__init__(parent)
-        self.setWindowTitle("Project comparison")
+        self.setWindowTitle(tr("diff.title"))
         self.resize(640, 520)
 
         layout = QVBoxLayout(self)

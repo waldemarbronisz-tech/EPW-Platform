@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QPainter, QPen, QKeySequence
 from PySide6.QtCore import Qt, Signal, QSettings, QPointF, QSize
 
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style as canvas_style
 from logic_studio.core import watch
 from logic_studio.core.crossref import (
@@ -329,7 +330,7 @@ class _TrendDialog(QDialog):
     def __init__(self, kind: str, signal_id: str, description: str,
                  is_boolean: bool, initial_samples: list, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Trend — {signal_id}")
+        self.setWindowTitle(tr("watch.trend_title", signal=signal_id))
         self.setModal(False)
         # A transient popup must actually be destroyed on close(), not just
         # hidden — an orphaned, never-deleted top-level QDialog left behind
@@ -355,7 +356,7 @@ class _TrendDialog(QDialog):
         self.scrollbar = QScrollBar(Qt.Horizontal)
         self.scrollbar.valueChanged.connect(self._on_scrollbar_value_changed)
         scroll_row.addWidget(self.scrollbar, 1)
-        self.live_btn = QPushButton("⏵ Live")
+        self.live_btn = QPushButton(tr("watch.live"))
         self.live_btn.setCheckable(True)
         self.live_btn.setChecked(True)
         self.live_btn.toggled.connect(self._on_live_toggled)
@@ -364,7 +365,7 @@ class _TrendDialog(QDialog):
         self._update_scrollbar_range()
 
         bottom_row = QHBoxLayout()
-        bottom_row.addWidget(QLabel("Time range"))
+        bottom_row.addWidget(QLabel(tr("watch.time_range")))
         self.window_combo = QComboBox()
         for label, ms in _TIME_WINDOWS_MS:
             self.window_combo.addItem(label, ms)
@@ -374,7 +375,7 @@ class _TrendDialog(QDialog):
 
         if not is_boolean:
             bottom_row.addSpacing(16)
-            self.auto_check = QCheckBox("Skala automatyczna")
+            self.auto_check = QCheckBox(tr("watch.auto_scale"))
             self.auto_check.setChecked(True)
             self.auto_check.toggled.connect(self._on_auto_toggled)
             self.min_spin = QDoubleSpinBox()
@@ -387,12 +388,12 @@ class _TrendDialog(QDialog):
             self.min_spin.valueChanged.connect(self._on_manual_range_changed)
             self.max_spin.valueChanged.connect(self._on_manual_range_changed)
             bottom_row.addWidget(self.auto_check)
-            bottom_row.addWidget(QLabel("Min"))
+            bottom_row.addWidget(QLabel(tr("watch.min")))
             bottom_row.addWidget(self.min_spin)
-            bottom_row.addWidget(QLabel("Maks"))
+            bottom_row.addWidget(QLabel(tr("watch.max")))
             bottom_row.addWidget(self.max_spin)
         bottom_row.addStretch()
-        clear_btn = QPushButton("Clear buffer")
+        clear_btn = QPushButton(tr("watch.clear_buffer"))
         clear_btn.clicked.connect(self._on_clear_clicked)
         bottom_row.addWidget(clear_btn)
         layout.addLayout(bottom_row)
@@ -522,9 +523,9 @@ class WatchPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
 
         toolbar = QHBoxLayout()
-        self.add_btn = QPushButton("Add...")
+        self.add_btn = QPushButton(tr("watch.add"))
         self.add_btn.clicked.connect(self._on_add_clicked)
-        self.remove_btn = QPushButton("Remove")
+        self.remove_btn = QPushButton(tr("common.remove"))
         self.remove_btn.setEnabled(False)
         self.remove_btn.clicked.connect(self._on_remove_clicked)
         toolbar.addWidget(self.add_btn)
@@ -557,7 +558,7 @@ class WatchPanel(QWidget):
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         layout.addWidget(self.table)
 
-        self.empty_label = QLabel('No watched signals — click "Add...".')
+        self.empty_label = QLabel(tr("watch.empty"))
         self.empty_label.setStyleSheet(_rgb_style("color", canvas_style.COLOR_COMMENT_TEXT))
         layout.addWidget(self.empty_label)
 

@@ -6,6 +6,7 @@ import pytest
 from PySide6.QtWidgets import QApplication, QPushButton, QLabel
 
 from logic_studio.ui.panels.breadcrumb import BreadcrumbBar
+from logic_studio.i18n import tr
 
 
 def _app():
@@ -88,16 +89,18 @@ def test_set_path_back_to_a_single_entry_hides_again():
     assert _crumb_buttons(bar) == []
 
 
-# ---- "Piny makrobloku..." button (feat/macro-editable-pins) --------------
+# ---- the macro-pins button (feat/macro-editable-pins) --------------------
+# Its label is translated now, so the tests below compare against tr()
+# rather than against one language's text.
 
 def test_pins_button_always_present_and_survives_set_path():
     _app()
     bar = BreadcrumbBar()
-    assert bar._pins_button.text() == "Piny makrobloku..."
+    assert bar._pins_button.text() == tr("macro.pins_button")
     bar.set_path(["Main", "A", "B"])
-    assert bar._pins_button.text() == "Piny makrobloku..."
+    assert bar._pins_button.text() == tr("macro.pins_button")
     bar.set_path(["Main"])
-    assert bar._pins_button.text() == "Piny makrobloku..."
+    assert bar._pins_button.text() == tr("macro.pins_button")
 
 def test_pins_button_click_emits_manage_pins_requested():
     _app()
@@ -118,6 +121,6 @@ def test_pins_button_survives_several_set_path_calls_in_a_row():
     bar.set_path(["Main", "A", "B"])
     bar.set_path(["Main", "X"])
     assert bar._pins_button in bar.findChildren(QPushButton)
-    assert bar._pins_button.text() == "Piny makrobloku..."
+    assert bar._pins_button.text() == tr("macro.pins_button")
     # and the crumb rebuild itself still works correctly alongside it
     assert [b.text() for b in _crumb_buttons(bar)] == ["Main"]

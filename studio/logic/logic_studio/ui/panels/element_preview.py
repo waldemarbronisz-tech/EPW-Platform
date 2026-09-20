@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor, QBrush
 from PySide6.QtCore import Qt, QSettings, Signal
 
+from logic_studio.i18n import tr
 from logic_studio.ui.icons import block_icon
 
 SAFETY_HIGHLIGHT = QColor(255, 235, 205)
@@ -81,7 +82,7 @@ class ElementPreviewPanel(QWidget):
         self.props_table.setEditTriggers(QTableWidget.NoEditTriggers)
         content_layout.addWidget(self.props_table)
 
-        self.more_info_btn = QPushButton("More about this block")
+        self.more_info_btn = QPushButton(tr("preview.more"))
         self.more_info_btn.clicked.connect(
             lambda: self.more_info_requested.emit(self._current_type_id) if self._current_type_id else None
         )
@@ -107,14 +108,14 @@ class ElementPreviewPanel(QWidget):
         self.settings.setValue("preview/expanded", checked)
 
     def _update_toggle_text(self):
-        self.toggle_btn.setText(("▾ " if self.toggle_btn.isChecked() else "▸ ") + "Element")
+        self.toggle_btn.setText(("▾ " if self.toggle_btn.isChecked() else "▸ ") + tr("preview.element"))
 
     # ---- Content ------------------------------------------------------------
 
     def _set_empty_state(self):
         self._current_type_id = None
         self.icon_label.clear()
-        self.name_label.setText("Nothing selected")
+        self.name_label.setText(tr("preview.nothing"))
         self.type_id_label.setText("")
         self.description_label.setText("")
         self.pins_table.setRowCount(0)

@@ -6,6 +6,7 @@ from PySide6.QtGui import QDrag
 from PySide6.QtCore import Qt, QMimeData, QSettings, Signal
 
 from logic_studio import i18n
+from logic_studio.i18n import tr
 from shared.logic import i18n as block_i18n
 from logic_studio.ui.icons import block_icon
 from logic_studio.ui.window_lookup import logic_main_window
@@ -132,7 +133,7 @@ class LibraryPanel(QWidget):
         # one entry point for pulling a `.epwmacro` file another project
         # (or another engineer) produced into THIS project's own
         # "Macros" section.
-        self.import_macro_btn = QPushButton("Import macro...")
+        self.import_macro_btn = QPushButton(tr("library.import_macro"))
         self.import_macro_btn.clicked.connect(self._import_macro)
         layout.addWidget(self.import_macro_btn)
 
@@ -341,7 +342,7 @@ class LibraryPanel(QWidget):
             return
 
         menu = QMenu(self)
-        export_action = menu.addAction("Export macro...")
+        export_action = menu.addAction(tr("library.export_macro"))
         action = self._exec_context_menu(menu, self.tree.viewport().mapToGlobal(pos))
         if action == export_action:
             self._export_macro(def_id)

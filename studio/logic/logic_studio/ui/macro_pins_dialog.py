@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from shared.logic.blocks.pin import Pin
+from logic_studio.i18n import tr
 from logic_studio.core.macros import PARAM_TYPES
 
 INDEX_ROLE = Qt.UserRole
@@ -43,7 +44,7 @@ class _NewParameterDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New parameter")
+        self.setWindowTitle(tr("macro.new_parameter"))
         self.entry = None
 
         layout = QVBoxLayout(self)
@@ -69,7 +70,7 @@ class _NewParameterDialog(QDialog):
     def _on_accept(self):
         name = self.display_name_edit.text().strip()
         if not name:
-            QMessageBox.critical(self, "Invalid name", "The parameter name cannot be empty.")
+            QMessageBox.critical(self, tr("common.invalid_name"), tr("macro.empty_name"))
             return
         param_type = self.type_combo.currentText()
         raw = self.default_edit.text().strip()
@@ -83,7 +84,7 @@ class _NewParameterDialog(QDialog):
             else:
                 default = raw
         except ValueError:
-            QMessageBox.critical(self, "Invalid value", f"'{raw}' is not a valid value of type {param_type}.")
+            QMessageBox.critical(self, tr("common.invalid_value"), tr("macro.bad_value", raw=raw, type=param_type))
             return
         self.entry = {
             "display_name": name, "type": param_type, "default": default,
@@ -110,15 +111,15 @@ class MacroPinsDialog(QDialog):
         super().__init__(parent)
         self._on_remove = on_remove
         self._on_parameter_change = on_parameter_change
-        self.setWindowTitle("Macro pins and parameters")
+        self.setWindowTitle(tr("macro.pins_title"))
         self.resize(520, 420)
 
         layout = QVBoxLayout(self)
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
 
-        self.tabs.addTab(self._build_pins_tab(), "Piny")
-        self.tabs.addTab(self._build_parameters_tab(), "Parameters")
+        self.tabs.addTab(self._build_pins_tab(), tr("macro.tab_pins"))
+        self.tabs.addTab(self._build_parameters_tab(), tr("macro.tab_parameters"))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.accept)
@@ -136,27 +137,24 @@ class MacroPinsDialog(QDialog):
         layout.addLayout(columns)
 
         input_col = QVBoxLayout()
-        input_col.addWidget(QLabel("Inputs"))
+        input_col.addWidget(QLabel(tr("macro.inputs")))
         self.input_list = QListWidget()
         input_col.addWidget(self.input_list)
-        self.remove_input_btn = QPushButton("Remove selected")
+        self.remove_input_btn = QPushButton(tr("common.remove_selected"))
         self.remove_input_btn.clicked.connect(lambda: self._remove_selected(self.input_list, Pin.DIR_INPUT))
         input_col.addWidget(self.remove_input_btn)
         columns.addLayout(input_col)
 
         output_col = QVBoxLayout()
-        output_col.addWidget(QLabel("Outputs"))
+        output_col.addWidget(QLabel(tr("macro.outputs")))
         self.output_list = QListWidget()
         output_col.addWidget(self.output_list)
-        self.remove_output_btn = QPushButton("Remove selected")
+        self.remove_output_btn = QPushButton(tr("common.remove_selected"))
         self.remove_output_btn.clicked.connect(lambda: self._remove_selected(self.output_list, Pin.DIR_OUTPUT))
         output_col.addWidget(self.remove_output_btn)
         columns.addLayout(output_col)
 
-        hint = QLabel(
-            "To add a new pin, right-click a block "
-            "inside the macro and choose “Expose macro pin”."
-        )
+        hint = QLabel(tr("macro.pins_hint"))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         return tab
@@ -174,26 +172,22 @@ class MacroPinsDialog(QDialog):
         layout.addWidget(self.param_table)
 
         row = QHBoxLayout()
-        self.add_param_btn = QPushButton("New parameter...")
+        self.add_param_btn = QPushButton(tr("macro.new_parameter_dots"))
         self.add_param_btn.clicked.connect(self._add_parameter)
         row.addWidget(self.add_param_btn)
-        self.remove_param_btn = QPushButton("Remove selected")
+        self.remove_param_btn = QPushButton(tr("common.remove_selected"))
         self.remove_param_btn.clicked.connect(self._remove_selected_parameter)
         row.addWidget(self.remove_param_btn)
-        self.move_up_btn = QPushButton("Move up")
+        self.move_up_btn = QPushButton(tr("macro.move_up"))
         self.move_up_btn.clicked.connect(lambda: self._move_parameter(-1))
         row.addWidget(self.move_up_btn)
-        self.move_down_btn = QPushButton("Move down")
+        self.move_down_btn = QPushButton(tr("macro.move_down"))
         self.move_down_btn.clicked.connect(lambda: self._move_parameter(1))
         row.addWidget(self.move_down_btn)
         row.addStretch()
         layout.addLayout(row)
 
-        hint = QLabel(
-            "To bind a parameter to a block property, open the "
-            "properties panel of that block inside the macro and use the "
-            "“Bind to parameter...” button next to the chosen property."
-        )
+        hint = QLabel(tr("macro.parameters_hint"))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         return tab

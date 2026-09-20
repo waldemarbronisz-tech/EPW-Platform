@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QMenu
 from PySide6.QtGui import QPainter, QPen, QBrush, QFont, QFontMetricsF, QCursor
 from PySide6.QtCore import Qt, QRectF, QPointF
 
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style
 from logic_studio.ui.window_lookup import logic_main_window
 
@@ -184,7 +185,7 @@ class PortItem(QGraphicsItem):
         if stub_eligible:
             if disable_action is not None:
                 menu.addSeparator()
-            stub_action = menu.addAction("Add reference...")
+            stub_action = menu.addAction(tr("canvas.add_reference"))
 
         chosen = menu.exec(QCursor.pos())
         if chosen == disable_action and blocked_reason is None:
@@ -214,7 +215,7 @@ class PortItem(QGraphicsItem):
         if text:
             wire.label = text
             if similar:
-                window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
+                window.statusBar().showMessage(tr("canvas.similar_label", similar=similar), 5000)
         scene = self.scene()
         if scene is not None:
             scene.clear()
