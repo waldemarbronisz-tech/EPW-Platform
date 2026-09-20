@@ -167,9 +167,11 @@ wartość po programie, który już ich nie zna, nie jest wskrzeszana.
   zostaje po stronie edytora — eksport tego nie niesie, a silnik tego
   nie czyta.
 - **Sygnalizator alarmówki** (syrena/lampa) nie istnieje w runtime —
-  dopóki nie powstanie, `SSWIN.SIREN_*`/`STROBE_*` nie mają czego mówić.
-- **Dozór częściowy (nocny)** nie istnieje jako tryb — strefa jest
-  uzbrojona albo nie.
+  dopóki nie powstanie, `SSWIN.SIREN_*`/`STROBE_*`/`CMD_SILENCE` nie mają
+  czego mówić.
+- **Linia napadowa** nie istnieje jako typ linii — stąd `SSWIN.PANIC`.
+- ~~Dozór częściowy (nocny)~~ — ZROBIONY 2026-09-20 (`ArmMode.NIGHT`,
+  flaga `active_at_night` przy linii; `SSWIN.CMD_ARM_PARTIAL` działa).
 
 ## 6. Gdzie to jest w kodzie
 
