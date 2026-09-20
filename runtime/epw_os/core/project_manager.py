@@ -872,14 +872,35 @@ class ProjectManager:
     def get_intrusion_bypassed_lines(self) -> list:
         return list(self.config.get("intrusion_bypassed_lines", []))
 
-    def set_intrusion_operation_state(self, armed_zones, bypassed_lines) -> bool:
-        """Which zones are armed and which lines bypassed - written to disk
-        before this returns (SPEC_PROJEKT_EPW.md: arming state "musi być
-        natychmiastowy przy każdej zmianie"). Returns False when the write
-        failed; the caller logs it as an error."""
+    def set_intrusion_operation_state(self, armed_zones, bypassed_lines, arm_modes=None) -> bool:
+        """Which zones are armed, HOW they are armed, and which lines are
+        bypassed - written to disk before this returns
+        (SPEC_PROJEKT_EPW.md: arming state "musi być natychmiastowy przy
+        każdej zmianie"). Returns False when the write failed; the caller
+        logs it as an error.
+
+        `arm_modes` is {zone_id: "FULL"|"NIGHT"} for the armed zones;
+        None leaves whatever is stored (an older caller that does not
+        know about night arming)."""
         self.config["intrusion_armed_zones"] = sorted(armed_zones)
         self.config["intrusion_bypassed_lines"] = sorted(bypassed_lines)
+        if arm_modes is not None:
+            self.config["intrusion_arm_modes"] = dict(arm_modes)
         return self.save_runtime_state()
+
+    def get_intrusion_arm_modes(self) -> dict:
+        """How each armed zone was armed, as last stored. A zone missing
+        from it reads as a full arm - what every zone was before night
+        arming existed."""
+        stored = self.config.get("intrusion_arm_modes")
+        return dict(stored) if isinstance(stored, dict) else {}
+
+    def get_intrusion_users(self) -> list:
+        """The people allowed to operate the alarm system, from the
+        project (shared/project_format.py's IntrusionUser). Their codes
+        are NOT here - those live in this controller's own access file,
+        keyed by user id (access_manager.py)."""
+        return [dict(u) for u in self.config.get("intrusion_users", [])]
 
     def get_last_screen(self):
         return self.config.get("last_screen")

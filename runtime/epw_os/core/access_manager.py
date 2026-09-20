@@ -60,6 +60,25 @@ class AccessManager:
         self._pin_hashes = {}
         self._failed_attempts = {}  # level -> consecutive failure count
         self._lockout_until = {}  # level -> time.monotonic() timestamp
+
+        # NAMED USERS (task "alarmówka: stopnie dostępu"). A level answers
+        # "how much may whoever is standing here do"; it cannot answer
+        # "only Kowalski may disarm the warehouse", because two operators
+        # are the same Operator to it.
+        #
+        # The split is deliberate and load-bearing: WHO EXISTS and WHAT
+        # THEY MAY DO come from the project (it travels to Studio, into
+        # git, over REST - where a person's name belongs and their code
+        # does not), while THEIR CODE lives only here, in this
+        # controller's own gitignored access file, keyed by user id. So a
+        # user exists the moment the project lands and can sign in the
+        # moment someone sets their code ON the panel.
+        self._users = {}            # user_id -> {"id", "name", "level", "zones", "enabled"}
+        self._user_pin_hashes = {}  # user_id -> sha256
+        # Who is signed in right now, or None for a plain level login
+        # (the PIN-per-level path, which every installation starts on).
+        self.current_user = None
+
         self._load_or_create_config()
 
     # --- persistence -------------------------------------------------
@@ -74,6 +93,7 @@ class AccessManager:
                 with open(self.config_path, "r") as f:
                     data = json.load(f)
                 self._pin_hashes = data.get("pin_hashes", {})
+                self._user_pin_hashes = data.get("user_pin_hashes", {}) or {}
                 return
             except Exception as e:
                 log.error(f"Failed to read {self.config_path}: {e}. Regenerating defaults.")
@@ -101,7 +121,135 @@ class AccessManager:
     def _save(self):
         os.makedirs(os.path.dirname(self.config_path) or ".", exist_ok=True)
         with open(self.config_path, "w") as f:
-            json.dump({"pin_hashes": self._pin_hashes}, f, indent=2)
+            json.dump({"pin_hashes": self._pin_hashes,
+                       "user_pin_hashes": self._user_pin_hashes}, f, indent=2)
+
+    # --- named users ----------------------------------------------------
+
+    def set_users(self, users) -> int:
+        """Replaces the user registry with the project's own
+        (shared/project_format.py's IntrusionUser). Codes are NOT touched:
+        a user whose code was set on this panel keeps it across a project
+        reinstall, and a user the project no longer has simply stops
+        being able to sign in - their stored hash is dropped here so it
+        cannot authorise anything.
+
+        Returns how many usable records were taken."""
+        registry = {}
+        for raw in users or []:
+            if not isinstance(raw, dict):
+                continue
+            user_id = str(raw.get("id") or "").strip()
+            if not user_id:
+                log.warning(f"Access user without an id ignored: {raw!r}")
+                continue
+            level = raw.get("level") or AccessLevel.OPERATOR
+            if level not in AccessLevel._ORDER:
+                log.warning(f"Access user {user_id!r} has an unrecognized level {level!r} - treated as User.")
+                level = AccessLevel.USER
+            registry[user_id] = {
+                "id": user_id,
+                "name": raw.get("name") or user_id,
+                "level": level,
+                "zones": list(raw.get("zones") or []),
+                "enabled": bool(raw.get("enabled", True)),
+            }
+        self._users = registry
+        orphaned = [uid for uid in self._user_pin_hashes if uid not in registry]
+        for user_id in orphaned:
+            self._user_pin_hashes.pop(user_id, None)
+        if orphaned:
+            log.warning(f"Dropped the stored code of {len(orphaned)} user(s) the project no longer has.")
+            self._save()
+        return len(registry)
+
+    def get_users(self) -> list:
+        """Every configured user, each with whether a code has been set
+        on this panel (never the code itself)."""
+        return [dict(user, has_pin=user["id"] in self._user_pin_hashes) for user in self._users.values()]
+
+    def get_user(self, user_id: str):
+        user = self._users.get(user_id)
+        return dict(user) if user else None
+
+    def set_user_pin(self, user_id: str, pin: str, level: str = None) -> bool:
+        """Sets (or replaces) one user's code. Engineer level, like every
+        other PIN change on this panel. Refused for a user the project
+        does not define - a code with nobody behind it could never be
+        audited to a person."""
+        if level is not None and level != AccessLevel.ENGINEER:
+            log.warning(f"Refused to set the code of user {user_id!r}: level {level!r} is below Engineer.")
+            return False
+        if user_id not in self._users:
+            log.warning(f"Refused to set a code for unknown user {user_id!r}.")
+            return False
+        if not pin:
+            log.warning(f"Refused to set an empty code for user {user_id!r}.")
+            return False
+        self._user_pin_hashes[user_id] = self._hash_pin(pin)
+        self._save()
+        log.info(f"Code set for user {self._users[user_id]['name']!r}.")
+        return True
+
+    def clear_user_pin(self, user_id: str, level: str = None) -> bool:
+        """Takes a user's code away - they stay in the project (the event
+        register still names them in past entries) but can no longer sign
+        in."""
+        if level is not None and level != AccessLevel.ENGINEER:
+            log.warning(f"Refused to clear the code of user {user_id!r}: level {level!r} is below Engineer.")
+            return False
+        existed = self._user_pin_hashes.pop(user_id, None) is not None
+        if existed:
+            self._save()
+        return existed
+
+    def attempt_user_login(self, pin: str):
+        """Signs in by CODE ALONE, the way a real alarm keypad works: the
+        code identifies the person, and the person carries their own
+        level. Returns the user record on success, None otherwise.
+
+        The lockout is shared with that user's own level (the same
+        counter attempt_login() uses), so guessing user codes cannot be
+        used to sidestep it.
+        """
+        if not pin:
+            return None
+        hashed = self._hash_pin(pin)
+        for user_id, expected in self._user_pin_hashes.items():
+            if not secrets.compare_digest(hashed, expected):
+                continue
+            user = self._users.get(user_id)
+            if user is None or not user["enabled"]:
+                log.warning(f"Code accepted for user {user_id!r}, who is disabled or no longer in the project "
+                            f"- refused.")
+                self.event_bus.emit("login_attempt", AccessLevel.USER, False)
+                return None
+            level = user["level"]
+            if self.is_locked_out(level):
+                log.warning(f"Login rejected: {level} is locked out for another "
+                            f"{self.lockout_remaining_seconds(level):.0f}s.")
+                self.event_bus.emit("login_attempt", level, False)
+                return None
+            self.level = level
+            self.current_user = dict(user)
+            self._failed_attempts[level] = 0
+            self.event_bus.emit("access_level_changed", level)
+            self.event_bus.emit("login_attempt", level, True)
+            log.info(f"{user['name']} signed in ({level}).")
+            return dict(user)
+        return None
+
+    def current_user_id(self):
+        """The signed-in person's id, or None when the session came from
+        a plain level PIN. What the intrusion manager is handed as
+        `user=` so that "only Kowalski may disarm the warehouse" can be
+        enforced - and what the event register names."""
+        return self.current_user["id"] if self.current_user else None
+
+    def current_actor(self) -> str:
+        """Who to record in the audit trail: the person if one signed in,
+        otherwise the level that was used."""
+        return self.current_user["name"] if self.current_user else self.level
 
     # --- session state -------------------------------------------------
 
@@ -146,6 +294,9 @@ class AccessManager:
         expected = self._pin_hashes.get(level)
         if expected is not None and secrets.compare_digest(self._hash_pin(pin), expected):
             self.level = level
+            # A level PIN is nobody in particular - whoever was signed in
+            # before is no longer the person at the keypad.
+            self.current_user = None
             self._failed_attempts[level] = 0
             self.event_bus.emit("access_level_changed", level)
             self.event_bus.emit("login_attempt", level, True)
@@ -187,6 +338,10 @@ class AccessManager:
             return False
         if level != self.level:
             self.level = level
+            # Stepping down ends the named session too: whoever signed in
+            # is no longer holding the level they signed in for, and the
+            # event register must not keep crediting them.
+            self.current_user = None
             self.event_bus.emit("access_level_changed", level)
         return True
 

@@ -38,6 +38,14 @@ STATE_SCHEMA_VERSION = 1
 _LAYOUT = {
     "switching_counters": (("switching_counters",), dict),
     "intrusion_armed_zones": (("intrusion_state", "armed_zones"), list),
+    # How each armed zone was armed: {zone_id: "FULL"|"NIGHT"}. A zone
+    # armed at night watches only the lines flagged for it, so coming
+    # back from a power cut as FULL would silently arm more than the
+    # person who left did - and coming back as NIGHT when they armed
+    # fully would silently arm LESS. Absent for a zone (an older state
+    # file) reads as FULL, which is what every zone was before night
+    # arming existed.
+    "intrusion_arm_modes": (("intrusion_state", "arm_modes"), dict),
     "intrusion_bypassed_lines": (("intrusion_state", "bypassed_lines"), list),
     "intrusion_alarm_memory": (("intrusion_state", "alarm_memory"), dict),
     "intrusion_line_supervision": (("intrusion_state", "line_supervision"), dict),
@@ -59,7 +67,7 @@ STATE_KEYS = tuple(_LAYOUT)
 
 # Sections whose loss is harmful (SPEC_PROJEKT_EPW.md: "To jedyny element
 # stanu, którego utrata jest szkodliwa").
-ARMING_KEYS = ("intrusion_armed_zones",)
+ARMING_KEYS = ("intrusion_armed_zones", "intrusion_arm_modes")
 
 
 def default_state() -> dict:

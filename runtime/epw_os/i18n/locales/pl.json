@@ -889,7 +889,17 @@
       "lbl_retention_max_days": "Maksymalny wiek (dni)",
       "tooltip_retention_max_days": "Zdarzenia starsze niż tyle dni są usuwane. 0 = bez limitu.",
       "retention_unlimited": "Bez limitu",
-      "settings_only_note": "Strefy, linie i nadzór zasilania są zdefiniowane w projekcie (Studio). Tutaj zmieniasz ich nastawy: czasy wyjścia i wejścia, filtry fałszywych alarmów i okna wartości."
+      "settings_only_note": "Strefy, linie i nadzór zasilania są zdefiniowane w projekcie (Studio). Tutaj zmieniasz ich nastawy: czasy wyjścia i wejścia, filtry fałszywych alarmów i okna wartości.",
+      "btn_arm_night": "Uzbrój (noc)",
+      "tooltip_arm_night": "Dozór częściowy: strefy pilnują tylko linie oznaczone jako „czuwa w nocy\", więc można poruszać się wewnątrz przy uzbrojonym obwodzie. Linie całodobowe i awarie linii alarmują jak zawsze.",
+      "arm_refused_title": "Uzbrojenie odrzucone",
+      "disarm_refused_title": "Rozbrojenie odrzucone",
+      "disarm_refused": "Nie masz uprawnień do rozbrojenia tej strefy.",
+      "col_night": "Noc",
+      "night_yes": "czuwa",
+      "night_no": "wyłączona",
+      "mode_night": "NOCNY",
+      "mode_full": "PEŁNY"
     }
   },
   "feature_config": {

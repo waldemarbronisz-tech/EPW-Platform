@@ -31,8 +31,9 @@ class FakeIntrusion:
     """Only what SswinSignalSource reads: zones with states, lines with
     violated/fault/state flags, alarm memory, countdowns."""
 
-    def __init__(self, zones=None, lines=None):
+    def __init__(self, zones=None, lines=None, modes=None):
         self.zones = zones or {}          # zone_id -> state
+        self.modes = modes or {}          # zone_id -> ArmMode.*, default FULL
         self.lines = lines or {}          # line_id -> {"violated", "fault", "state"}
         self.memory = {}                  # zone_id -> {"active", "first_cause_line_id"}
         self.countdowns = {}              # zone_id -> seconds
@@ -68,15 +69,20 @@ class FakeIntrusion:
             self.success = success
             self.reason = "" if success else "a line is violated"
 
-    def arm_zone(self, zone_id, actor, level=None):
-        self.calls.append(("arm", zone_id, actor))
+    def get_zone_arm_mode(self, zone_id):
+        return self.modes.get(zone_id, "FULL")
+
+    def arm_zone(self, zone_id, actor, level=None, mode="FULL", user=None):
+        self.calls.append(("arm", zone_id, actor) if mode == "FULL" else ("arm_night", zone_id, actor))
+        if self.arm_succeeds:
+            self.modes[zone_id] = mode
         return self._ArmResult(self.arm_succeeds)
 
-    def disarm_zone(self, zone_id, actor, level=None):
+    def disarm_zone(self, zone_id, actor, level=None, user=None):
         self.calls.append(("disarm", zone_id, actor))
         return True
 
-    def clear_alarm_memory(self, zone_id, actor, level=None):
+    def clear_alarm_memory(self, zone_id, actor, level=None, user=None):
         self.calls.append(("reset", zone_id, actor))
         return True
 

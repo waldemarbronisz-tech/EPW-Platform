@@ -44,7 +44,8 @@ from epw_os.core.feature_config import TOGGLABLE_FEATURES
 PROJECT_KEYS = (
     "format", "schema_version", "project_id", "metadata", "modules", "enabled_features",
     "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points", "analog_outputs",
-    "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_power_supervision",
+    "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_users",
+    "intrusion_power_supervision",
     "process_protections", "electrical_protection_stages", "modbus_bus", "switching_counter_settings",
     "mqtt", "service_notes",
 )
@@ -154,6 +155,10 @@ def build_project_view(project) -> dict:
                          "command_style": d.command_style, "pulse_ms": d.pulse_ms} for d in project.devices],
         "intrusion_zones": [asdict(z) for z in project.zones],
         "intrusion_lines": [asdict(l) for l in project.lines],
+        # Who may operate the alarm system (shared/project_format.py's
+        # IntrusionUser) - identities and permissions only; their codes
+        # live in the controller's own access file.
+        "intrusion_users": [asdict(u) for u in project.intrusion_users],
         "intrusion_power_supervision": _power_supervision_view(project.power_supervision),
         "process_protections": [asdict(p) for p in project.process_protections],
         "electrical_protection_stages": [asdict(s) for s in project.electrical_protection_stages],

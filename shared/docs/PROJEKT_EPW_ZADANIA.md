@@ -247,6 +247,54 @@ przez `project_format.apply_settings_snapshot()`).
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
   - Test weryfikacji zabezpieczeń dostaje id aparatu z listy aparatów projektu mających wyjście i punkt zwrotny.
 - **Wgranie projektu nie przebudowuje działającego sterownika** — potrzebny restart (p. 3).
+- **Main View bez wymyślonych pomiarów** — ZROBIONE 2026-09-20 (polecenie:
+  „main view ma mieć tylko obraz z synoptic - tam umieszczamy wizualizację
+  pomiarów"). Strona głównego widoku była ręcznie narysowaną bramą wjazdową
+  z panelem pomiarowym, którego napięcia, prądy, moc i częstotliwość
+  produkował timer co 250 ms przez `random()`, ze sprzężeniem zwrotnym
+  udającym 95% skuteczności, plus dziewięć wartości `Cabinet.*` (temperatura
+  w szafie, wilgotność, drzwi, grzałka, wentylator…), których nie pisał
+  żaden czujnik. Teraz Main View to **ekran osadzony w projekcie**,
+  rysowany na żywo, z własnym selektorem, gdy projekt niesie kilka ekranów.
+  Pomiar trafia do operatora tą samą drogą co każda inna wartość: narysowany
+  na ekranie w edytorze, związany z realnym punktem. Usunięte razem ze
+  stroną: zestaw rysunkowy (przewód, szyna, wyłącznik, stycznik,
+  transformator, wskaźnik cyfrowy) i cztery okna, których nic poza nią nie
+  używało. Notatki serwisowe i liczniki łączeń są nietknięte — sięga się po
+  nie ze stron WE/WY.
+- **Alarmówka: dozór nocny i użytkownicy** — ZROBIONE 2026-09-20 (polecenie:
+  „alarmy nocne, alarmy częściowe, stopnie dostępu… tylko jakiś jeden
+  użytkownik może rozbroić daną strefę").
+  - **Dozór nocny (częściowy)**: `ArmMode.NIGHT`. Strefa uzbrojona nocą jest
+    pilnowana wyłącznie przez linie z flagą `active_at_night` — zwykle obwód
+    zewnętrzny czuwa, czujki ruchu wewnątrz nie. Flaga stoi **przy linii**
+    (`shared/project_format.py`), nie jako druga lista linii przy strefie:
+    jedno miejsce do sprawdzenia i nie ma jak się rozjechać. Linia
+    całodobowa i awaria linii alarmują niezależnie od trybu. Linia sprzed
+    tej zmiany czuwa nocą — stary projekt uzbrojony nocą chroni dokładnie
+    tyle, co pełny, nigdy mniej. Tryb jest zapisywany razem z uzbrojeniem
+    (`runtime_state.json`), więc po zaniku zasilania strefa wraca w tym
+    trybie, w którym ją zostawiono.
+  - **Użytkownicy** (`intrusion.users` w projekcie): osoba, poziom, który
+    daje jej własny kod, i strefy, które może obsługiwać (pusta lista =
+    wszystkie). Trzy poziomy dostępu nie potrafiły odpowiedzieć „tylko
+    Kowalski rozbroi magazyn", bo dwóch operatorów to dla nich ten sam
+    Operator. **Kod nie jest częścią projektu** — leży w pliku dostępu
+    sterownika (gitignore), pod id użytkownika; użytkownik istnieje, gdy
+    projekt wyląduje, i loguje się, gdy ktoś ustawi mu kod **na panelu**.
+    Kod w kartotece = identyfikacja osoby (jak w prawdziwej centrali), więc
+    dziennik pisze „Kowalski rozbroił strefę", a nie „Panel:Operator".
+    Odmowa (nie ta strefa, konto wyłączone, nieznany kod) też idzie do
+    dziennika i historii alarmowej.
+  - **Gdzie się to konfiguruje**: Studio → Alarmówka → *Użytkownicy* (kto,
+    poziom, strefy, aktywny) i *Linie → Dozór nocny* (czy linia czuwa nocą).
+    Panel: przycisk „Uzbrój (noc)" przy strefie, która ma co wykluczyć, a
+    stan strefy pokazuje tryb.
+  - **SSWIN**: `CMD_ARM_PARTIAL` przestaje być nieobsłużone — uzbraja
+    wszystkie strefy nocą; `ARMED` wymaga teraz uzbrojenia **pełnego**
+    wszystkich stref, a `ARMED_PARTIAL` obejmuje też „uzbrojone, ale nocą".
+    Bez syreny i linii napadowej nadal nie ma czego mapować
+    (`SIREN_*`, `STROBE_*`, `PANIC`).
 - **Brak kart a edytory** — ZROBIONE 2026-09-19 (zgłoszenie: „nie dodano kart DI/DO").
   Blok wymagający fizycznego zacisku, wstawiony w projekcie bez karty, dawał
   pustą listę adresów i żadnego wyjaśnienia — powód pojawiał się dopiero przy

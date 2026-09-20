@@ -200,6 +200,26 @@ class ZoneState:
     _PRIORITY = (ALARM, ENTRY_DELAY, EXIT_DELAY, ARMED, DISARMED)
 
 
+class ArmMode:
+    """How a zone is armed.
+
+    FULL watches every line in the zone. NIGHT ("dozór nocny", the
+    partial arm of a real alarm panel) watches only the lines flagged
+    `active_at_night` - the usual shape being "the perimeter watches,
+    the motion detectors inside do not", so that someone can sleep in a
+    building that is armed. A 24H line is unaffected by either: it
+    alarms whatever the zone is doing, and a line fault likewise.
+
+    The flag lives on the LINE (shared/project_format.py's Line), not as
+    a second list of lines on the zone - one place to look when asking
+    "does this detector watch at night", and no way for the two to
+    disagree.
+    """
+    FULL = "FULL"
+    NIGHT = "NIGHT"
+    _ALL = (FULL, NIGHT)
+
+
 NORMAL_STATE_NC = "NC"  # Normally Closed - secure = tag True, tripped = False
 NORMAL_STATE_NO = "NO"  # Normally Open   - secure = tag False, tripped = True
 
@@ -362,6 +382,11 @@ def _normalize_line_filters(line: dict) -> dict:
     line.setdefault("alarm_hold_seconds", DEFAULT_ALARM_HOLD_SECONDS)
     line.setdefault("silence_threshold_seconds", DEFAULT_SILENCE_THRESHOLD_SECONDS)
     line.setdefault("input_mode", DEFAULT_LINE_INPUT_MODE)
+    # Night arming (this task): a line that predates the flag watches at
+    # night, so an existing configuration armed in NIGHT mode protects
+    # exactly as much as a full arm until someone excludes something -
+    # never less, which is the only safe direction for a default here.
+    line.setdefault("active_at_night", True)
     line.setdefault("parametrization", DEFAULT_PARAMETRIZATION)
     if "value_windows" not in line or not line["value_windows"]:
         line["value_windows"] = default_value_windows(line["parametrization"])
@@ -601,6 +626,16 @@ class IntrusionManager:
         self._line_locked = {}             # line_id -> bool (auto-lock after repeated alarms)
         self._line_alarm_count_cycle = {}  # line_id -> int, alarms raised THIS arm cycle (reset on disarm)
         self._zone_alarm_trigger_line = {}  # zone_id -> line_id that raised the current ALARM, or None
+        # zone_id -> ArmMode.*, meaningful while the zone is armed. A
+        # disarmed zone keeps FULL so that the next arm with no mode
+        # given behaves exactly as it always did.
+        self._zone_arm_mode = {}
+        # The people allowed to operate this system: user_id -> record
+        # (shared/project_format.py's IntrusionUser, as a dict). Empty
+        # means nobody is configured, which - see may_operate() - leaves
+        # every zone operable by whoever holds the access level, exactly
+        # as before this existed.
+        self._users = {}
         self._zone_alarm_hold_timer = {}   # zone_id -> Timer or None (alarm_hold_seconds)
 
         # --- line supervision (this task) - RAW classified state and the
@@ -675,6 +710,7 @@ class IntrusionManager:
             self._zone_walk_test_deadline[zone["id"]] = None
             self._zone_walk_test_timer[zone["id"]] = None
             self._zone_walk_test_observed[zone["id"]] = {}
+            self._zone_arm_mode[zone["id"]] = ArmMode.FULL
         for line in self.project_manager.get_intrusion_lines():
             line = _normalize_line_filters(dict(line))
             self._lines[line["id"]] = line
@@ -691,6 +727,8 @@ class IntrusionManager:
         for line_id, raw in self.project_manager.get_intrusion_line_supervision().items():
             if line_id in self._lines:
                 self._line_life[line_id] = _normalize_line_life_record(raw, line_id=line_id)
+        get_users = getattr(self.project_manager, "get_intrusion_users", None)
+        self.set_users(get_users() if get_users is not None else [])
         self._power_supervision.update(
             _normalize_power_supervision(self.project_manager.get_intrusion_power_supervision())
         )
@@ -759,7 +797,15 @@ class IntrusionManager:
         with self._lock:
             armed = [zone_id for zone_id, state in self._zone_state.items() if state != ZoneState.DISARMED]
             bypassed = [line_id for line_id, value in self._line_bypassed.items() if value]
-        if setter(armed, bypassed) is False:
+            modes = {zone_id: self._zone_arm_mode.get(zone_id, ArmMode.FULL) for zone_id in armed}
+        try:
+            written = setter(armed, bypassed, modes)
+        except TypeError:
+            # A project manager that predates night arming (an old fake
+            # in a test) still gets the arming written, just without the
+            # mode - better than losing the arming state entirely.
+            written = setter(armed, bypassed)
+        if written is False:
             log.error("Could not write the intrusion arming/bypass state to disk - a power loss now would "
                       "bring the previous state back.")
 
@@ -771,10 +817,18 @@ class IntrusionManager:
         log line. Every restored zone and bypass is audited."""
         getter = getattr(self.project_manager, "get_intrusion_armed_zones", None)
         armed = list(getter()) if getter is not None else []
+        mode_getter = getattr(self.project_manager, "get_intrusion_arm_modes", None)
+        stored_modes = mode_getter() if mode_getter is not None else {}
         restored_zones = []
         with self._lock:
             for zone_id in armed:
                 if zone_id in self._zones:
+                    # The MODE comes back with the arming: a zone armed
+                    # at night must not come back from a power cut
+                    # watching more than the person who armed it left
+                    # watching - nor less.
+                    mode = stored_modes.get(zone_id, ArmMode.FULL)
+                    self._zone_arm_mode[zone_id] = mode if mode in ArmMode._ALL else ArmMode.FULL
                     self._set_zone_state(zone_id, ZoneState.ARMED)
                     restored_zones.append(zone_id)
                 else:
@@ -782,7 +836,10 @@ class IntrusionManager:
                                 f"- ignored.")
         for zone_id in restored_zones:
             name = self._zones[zone_id]["name"]
-            detail = f"Zone '{name}' restored ARMED after restart (arming state kept in runtime_state.json)"
+            mode = self._zone_arm_mode.get(zone_id, ArmMode.FULL)
+            how = "" if mode == ArmMode.FULL else f" in {mode} mode"
+            detail = (f"Zone '{name}' restored ARMED{how} after restart "
+                      f"(arming state kept in runtime_state.json)")
             log.warning(detail)
             if self.audit_logger is not None:
                 self.audit_logger.record("INTRUSION_ZONE_ARM_RESTORED", "SYSTEM", detail, success=True)
@@ -798,6 +855,118 @@ class IntrusionManager:
                                         zone_name=zone_name, line_id=line_id, line_name=line["name"])
         if len(restored_zones) != len(armed):
             self._persist_operation_state()
+
+    # --- night (partial) arming -------------------------------------------
+
+    @staticmethod
+    def _line_watches_in(line: dict, mode: str) -> bool:
+        """Whether `line` is watching while its zone is armed in `mode`.
+
+        Everything watches in a FULL arm. In NIGHT, only the lines
+        flagged `active_at_night` - a line record that predates the flag
+        reads as True, so an old project armed at night protects exactly
+        as much as a full arm until someone says otherwise, never less.
+        """
+        if mode != ArmMode.NIGHT:
+            return True
+        return bool(line.get("active_at_night", True))
+
+    def get_zone_arm_mode(self, zone_id: str) -> str:
+        """How this zone is armed right now (ArmMode.*). A disarmed zone
+        reads FULL - the mode the next plain arm will use."""
+        with self._lock:
+            return self._zone_arm_mode.get(zone_id, ArmMode.FULL)
+
+    def is_line_watching(self, line_id: str) -> bool:
+        """Whether this line would alarm right now if it were violated -
+        the question the overview page asks per row. False for a bypassed
+        line, for one excluded from the zone's current night arm, and for
+        any line in a disarmed zone unless it is 24H."""
+        with self._lock:
+            line = self._lines.get(line_id)
+            if line is None or self._line_bypassed.get(line_id, False):
+                return False
+            if line["line_type"] == LineType.SUPERVISORY:
+                return False
+            if line["line_type"] == LineType.TWENTY_FOUR_HOUR:
+                return True
+            zone_id = line["zone_id"]
+            if self._zone_state.get(zone_id) == ZoneState.DISARMED:
+                return False
+            return self._line_watches_in(line, self._zone_arm_mode.get(zone_id, ArmMode.FULL))
+
+    # --- who may operate which zone ---------------------------------------
+
+    def set_users(self, users) -> int:
+        """Replaces the user registry (the project's own
+        `intrusion.users`). Returns how many usable records were taken;
+        a record with no id is dropped with a log line rather than
+        silently ignored."""
+        registry = {}
+        for raw in users or []:
+            if not isinstance(raw, dict):
+                continue
+            user_id = str(raw.get("id") or "").strip()
+            if not user_id:
+                log.warning(f"Intrusion user without an id ignored: {raw!r}")
+                continue
+            registry[user_id] = {
+                "id": user_id,
+                "name": raw.get("name") or user_id,
+                "level": raw.get("level") or AccessLevel.OPERATOR,
+                "zones": list(raw.get("zones") or []),
+                "enabled": bool(raw.get("enabled", True)),
+            }
+        with self._lock:
+            self._users = registry
+        return len(registry)
+
+    def get_users(self) -> list:
+        with self._lock:
+            return [dict(u) for u in self._users.values()]
+
+    def get_user(self, user_id: str):
+        with self._lock:
+            user = self._users.get(user_id)
+            return dict(user) if user else None
+
+    def may_operate(self, user_id, zone_id: str) -> bool:
+        """Whether `user_id` may arm or disarm `zone_id`.
+
+        Three deliberate answers:
+          * no user given (None) -> True. A command with no person behind
+            it is the panel's own access-level path, unchanged: every
+            caller that already gated on Operator keeps working exactly
+            as before, and an installation that configures no users
+            notices nothing.
+          * a user this controller does not know, or one marked disabled
+            -> False. An unknown code must never be more powerful than a
+            known one.
+          * a known user -> their `zones` list, where EMPTY means every
+            zone (the sensible default for a small site).
+        """
+        if user_id is None:
+            return True
+        with self._lock:
+            user = self._users.get(user_id)
+            if user is None or not user["enabled"]:
+                return False
+            return not user["zones"] or zone_id in user["zones"]
+
+    def _refuse_user(self, user_id, zone_id: str, what: str) -> str:
+        """The refusal text, and the audit entry that goes with it - a
+        person turned away at a keypad is exactly the kind of event the
+        register has to carry."""
+        user = self.get_user(user_id)
+        who = user["name"] if user else f"unknown user {user_id!r}"
+        zone = self._zones.get(zone_id)
+        zone_name = zone["name"] if zone else zone_id
+        detail = f"{who} may not {what} zone '{zone_name}'"
+        log.warning(f"Refused: {detail}")
+        if self.audit_logger is not None:
+            self.audit_logger.record("INTRUSION_USER_REFUSED", who, detail, success=False)
+        self._record_alarm_history("INTRUSION_USER_REFUSED", who, detail, zone_id=zone_id, zone_name=zone_name)
+        return detail
 
     def _structure_editable(self) -> bool:
         """False when the project is projekt.epw: zones, lines, their
@@ -1044,6 +1213,7 @@ class IntrusionManager:
             self._zone_walk_test_timer[zone_id] = None
             self._zone_walk_test_observed[zone_id] = {}
             self._zone_alarm_memory[zone_id] = _new_zone_alarm_memory()
+            self._zone_arm_mode[zone_id] = ArmMode.FULL
         self.tag_manager.add_tag(self._zone_tag(zone_id, "State"), ZoneState.DISARMED, TagType.STRING,
                                   description="This zone's current lifecycle state - DISARMED / EXIT_DELAY / "
                                               "ARMED / ENTRY_DELAY / ALARM (see Arming, Disarming, and "
@@ -1155,7 +1325,8 @@ class IntrusionManager:
                  level: str = None, min_violation_seconds: float = None, multiplicity_count: int = None,
                  multiplicity_window_seconds: float = None, lockout_after_count: int = None,
                  alarm_hold_seconds: float = None, silence_threshold_seconds: float = None,
-                 input_mode: str = None, parametrization: str = None, value_windows: dict = None) -> "str | None":
+                 input_mode: str = None, parametrization: str = None, value_windows: dict = None,
+                 active_at_night: bool = None) -> "str | None":
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to add intrusion line {name!r}: level {level!r} is below Engineer.")
             return None
@@ -1185,6 +1356,8 @@ class IntrusionManager:
             # off-equivalent default" - _normalize_line_filters() above
             # already seeded that; only overwrite when the caller
             # actually passed something.
+            if active_at_night is not None:
+                line["active_at_night"] = bool(active_at_night)
             if min_violation_seconds is not None:
                 line["min_violation_seconds"] = float(min_violation_seconds)
             if multiplicity_count is not None:
@@ -1236,7 +1409,8 @@ class IntrusionManager:
                      min_violation_seconds: float = None, multiplicity_count: int = None,
                      multiplicity_window_seconds: float = None, lockout_after_count: int = None,
                      alarm_hold_seconds: float = None, silence_threshold_seconds: float = None,
-                     input_mode: str = None, parametrization: str = None, value_windows: dict = None) -> bool:
+                     input_mode: str = None, parametrization: str = None, value_windows: dict = None,
+                     active_at_night: bool = None) -> bool:
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.ENGINEER):
             log.warning(f"Refused to update intrusion line {line_id!r}: level {level!r} is below Engineer.")
             return False
@@ -1290,6 +1464,8 @@ class IntrusionManager:
                 line["line_type"] = line_type
             if input_mode is not None:
                 line["input_mode"] = input_mode
+            if active_at_night is not None:
+                line["active_at_night"] = bool(active_at_night)
             if min_violation_seconds is not None:
                 line["min_violation_seconds"] = float(min_violation_seconds)
             if multiplicity_count is not None:
@@ -1384,7 +1560,8 @@ class IntrusionManager:
 
     # --- arming (Task 4: "wymaga poziomu Operator lub wyzszy") -----------
 
-    def arm_zone(self, zone_id: str, actor: str, level: str = None, force: bool = False) -> ArmResult:
+    def arm_zone(self, zone_id: str, actor: str, level: str = None, force: bool = False,
+                 mode: str = ArmMode.FULL, user=None) -> ArmResult:
         """force=False (default): if any non-bypassed line in the zone is
         currently violated OR faulted, arming is refused with
         needs_confirmation=True and the offending line ids (split into
@@ -1398,6 +1575,13 @@ class IntrusionManager:
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.OPERATOR):
             log.warning(f"Refused to arm intrusion zone {zone_id!r}: level {level!r} is below Operator.")
             return ArmResult(False, reason="Access denied - Operator level or higher required.")
+        if mode not in ArmMode._ALL:
+            return ArmResult(False, reason=f"Unknown arming mode: {mode}")
+        # WHO, on top of WHAT LEVEL: a named user may be allowed some
+        # zones and not others (see may_operate()). No user given means
+        # the level alone decides, exactly as before.
+        if not self.may_operate(user, zone_id):
+            return ArmResult(False, reason=self._refuse_user(user, zone_id, "arm"))
         with self._lock:
             zone = self._zones.get(zone_id)
             if zone is None:
@@ -1409,6 +1593,12 @@ class IntrusionManager:
             fault_ids = []
             for lid, line in self._lines.items():
                 if line["zone_id"] != zone_id or self._line_bypassed.get(lid, False):
+                    continue
+                # A line that will not watch in this mode cannot block
+                # arming in it either - refusing a night arm because a
+                # motion detector inside sees the person doing the
+                # arming is precisely what night arming exists to avoid.
+                if not self._line_watches_in(line, mode):
                     continue
                 state = self._classify_line_state(line)
                 if state == LineState.VIOLATED:
@@ -1424,6 +1614,7 @@ class IntrusionManager:
                 return ArmResult(False, needs_confirmation=True, violated_line_ids=violated_ids,
                                   fault_line_ids=fault_ids, reason="; ".join(reason).capitalize() + ".")
 
+            self._zone_arm_mode[zone_id] = mode
             exit_delay = zone["exit_delay_seconds"]
             if exit_delay > 0:
                 self._set_zone_state(zone_id, ZoneState.EXIT_DELAY)
@@ -1433,6 +1624,16 @@ class IntrusionManager:
 
         self._persist_operation_state()
         detail = f"Zone '{zone['name']}' armed"
+        if mode != ArmMode.FULL:
+            # The register has to say WHICH arm this was: "armed" and
+            # "armed at night" protect different things.
+            watching = sum(1 for lid, line in self._lines.items()
+                           if line["zone_id"] == zone_id and self._line_watches_in(line, mode))
+            total = sum(1 for line in self._lines.values() if line["zone_id"] == zone_id)
+            detail += f" in NIGHT mode ({watching} of {total} line(s) watching)"
+        if user is not None:
+            person = self.get_user(user)
+            detail += f" by {person['name'] if person else user}"
         if violated_ids:
             names = [self._lines[lid]["name"] for lid in violated_ids]
             detail += f" DESPITE violated line(s): {', '.join(names)} (explicitly confirmed)"
@@ -1448,7 +1649,7 @@ class IntrusionManager:
         self._record_alarm_history("INTRUSION_ZONE_ARMED", actor, detail, zone_id=zone_id, zone_name=zone["name"])
         return ArmResult(True, violated_line_ids=violated_ids, fault_line_ids=fault_ids)
 
-    def disarm_zone(self, zone_id: str, actor: str, level: str = None) -> bool:
+    def disarm_zone(self, zone_id: str, actor: str, level: str = None, user=None) -> bool:
         """Always returns the zone to DISARMED from whatever state it was
         in - including ALARM (disarming is how an operator silences an
         intrusion alarm) - cancelling any pending exit/entry timer.
@@ -1456,6 +1657,12 @@ class IntrusionManager:
         entry (same stance as arm_zone/TrainingModeManager)."""
         if level is not None and _level_rank(level) < _level_rank(AccessLevel.OPERATOR):
             log.warning(f"Refused to disarm intrusion zone {zone_id!r}: level {level!r} is below Operator.")
+            return False
+        # "Only Kowalski may disarm the warehouse" is enforced HERE, on
+        # the same footing as the level check above - not in the page
+        # that happens to have a button.
+        if not self.may_operate(user, zone_id):
+            self._refuse_user(user, zone_id, "disarm")
             return False
         with self._lock:
             zone = self._zones.get(zone_id)
@@ -1467,6 +1674,10 @@ class IntrusionManager:
             self._cancel_zone_alarm_hold_timer(zone_id)
             self._zone_alarm_trigger_line[zone_id] = None
             self._set_zone_state(zone_id, ZoneState.DISARMED)
+            # Back to the default for the next arm: a zone that was
+            # armed at night must not quietly arm at night again when
+            # someone presses plain "arm".
+            self._zone_arm_mode[zone_id] = ArmMode.FULL
             # Task part 2 (lockout_after_count): "do rozbrojenia" - a
             # line auto-locked during this arm cycle unlocks HERE, and
             # every line's per-cycle alarm count starts over, so the
@@ -1483,6 +1694,9 @@ class IntrusionManager:
                     newly_unlocked.append(lid)
         self._persist_operation_state()
         disarm_detail = f"Zone '{zone['name']}' disarmed"
+        if user is not None:
+            person = self.get_user(user)
+            disarm_detail += f" by {person['name'] if person else user}"
         if self.audit_logger is not None:
             self.audit_logger.record("INTRUSION_ZONE_DISARMED", actor, disarm_detail, success=True)
         self._record_alarm_history("INTRUSION_ZONE_DISARMED", actor, disarm_detail, zone_id=zone_id, zone_name=zone["name"])
@@ -1844,7 +2058,16 @@ class IntrusionManager:
 
         if line_type == LineType.TWENTY_FOUR_HOUR:
             return (zone_id, line_id, "24H line violated")
-        elif line_type == LineType.INSTANT:
+
+        # Night arming: a line the operator excluded from this mode is,
+        # for INSTANT and DELAYED purposes, exactly as if the zone were
+        # disarmed - which is what lets someone move around inside a
+        # building whose perimeter is watching. Checked AFTER 24H above,
+        # never before: a 24H line alarms whatever the zone is doing.
+        if not self._line_watches_in(line, self._zone_arm_mode.get(zone_id, ArmMode.FULL)):
+            return None
+
+        if line_type == LineType.INSTANT:
             if state != ZoneState.ARMED:
                 return None
             return (zone_id, line_id, "Instant line violated while armed")

@@ -383,6 +383,54 @@ class Line:
     lockout_after_count: int = 0             # auto-lock after N alarms this arm cycle - 0 = off
     alarm_hold_seconds: float = 0.0          # auto-clear alarm after N seconds - 0 = holds until disarm
     silence_threshold_seconds: float = 0.0   # mark SUSPECT if no violation for this long - 0 = off
+    # Night (partial) arming: whether THIS line still watches while its
+    # zone is armed in NIGHT mode. The usual shape of a night arm is
+    # "the perimeter watches, the motion detectors inside do not", so
+    # this is a flag per line rather than a second list of lines per
+    # zone. Default True: a zone armed at night before anyone configures
+    # anything protects exactly as much as a full arm, never less. A 24H
+    # line ignores it entirely - it alarms whatever the zone is doing.
+    active_at_night: bool = True
+
+
+class ArmMode:
+    """How a zone is armed. FULL watches every line in it; NIGHT watches
+    only the lines flagged `active_at_night` (plus, always, the 24H ones)
+    - the "dozór nocny / częściowy" of a real alarm panel.
+    intrusion_manager.ArmMode._ALL, verbatim."""
+    FULL = "FULL"
+    NIGHT = "NIGHT"
+    ALL = (FULL, NIGHT)
+
+
+@dataclass
+class IntrusionUser:
+    """One named person who may operate the alarm system.
+
+    The panel's three ACCESS LEVELS (User/Operator/Engineer) answer "how
+    much may whoever is standing here do"; they cannot answer "only
+    Kowalski may disarm the warehouse", because two operators are the
+    same Operator to them. This record is that answer: a person, the
+    level their own code grants, and the zones they may arm and disarm.
+
+    `zones` empty means EVERY zone - the sensible default for a small
+    site, and what an installation that never configures this keeps.
+
+    NO PIN LIVES HERE. This record travels in projekt.epw, which goes
+    into Studio, into git and over REST; a code that opens a building
+    does not belong in any of them. The controller keeps the hashes in
+    its own gitignored access file, keyed by this `id` (runtime/epw_os/
+    core/access_manager.py) - so a user exists as soon as the project
+    lands, and can sign in as soon as someone sets their code ON the
+    panel."""
+
+    id: str
+    name: str
+    level: str = "Operator"
+    zones: list[str] = field(default_factory=list)
+    # A user who has left: kept in the project (the event register still
+    # names them in past entries) but refused at the keypad.
+    enabled: bool = True
 
 
 @dataclass
@@ -496,6 +544,7 @@ class Project:
     devices: list[Device] = field(default_factory=list)
     zones: list[Zone] = field(default_factory=list)
     lines: list[Line] = field(default_factory=list)
+    intrusion_users: list[IntrusionUser] = field(default_factory=list)
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
     electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
     process_protections: list[ProcessProtection] = field(default_factory=list)
@@ -589,12 +638,14 @@ def _to_json_dict(project: Project) -> dict:
     # use, just checked across three fields instead of one list).
     ps = project.power_supervision
     power_configured = ps.mains_tag is not None or ps.battery_tag is not None
-    if project.zones or project.lines or power_configured:
+    if project.zones or project.lines or project.intrusion_users or power_configured:
         intrusion = {}
         if project.zones:
             intrusion["zones"] = [asdict(z) for z in project.zones]
         if project.lines:
             intrusion["lines"] = [asdict(l) for l in project.lines]
+        if project.intrusion_users:
+            intrusion["users"] = [asdict(u) for u in project.intrusion_users]
         if power_configured:
             intrusion["power_supervision"] = asdict(ps)
         data["intrusion"] = intrusion
@@ -1014,13 +1065,15 @@ def _parse(path) -> tuple:
     intrusion = _section(data, "intrusion", "intrusion", dict, warnings)
     project.zones = _records(intrusion, "zones", "intrusion.zones", Zone, warnings, id_field="id")
     project.lines = _records(intrusion, "lines", "intrusion.lines", Line, warnings, id_field="id")
+    project.intrusion_users = _records(intrusion, "users", "intrusion.users", IntrusionUser, warnings,
+                                       id_field="id")
     if "power_supervision" in intrusion:
         supervision = _build(PowerSupervision, intrusion["power_supervision"], "intrusion.power_supervision",
                              warnings)
         if supervision is not None:
             project.power_supervision = supervision
     for key in intrusion:
-        if key not in ("zones", "lines", "power_supervision"):
+        if key not in ("zones", "lines", "users", "power_supervision"):
             warnings.append(FormatIssue("unknown_field", {"field": f"intrusion.{key}"}))
 
     protection = _section(data, "protection", "protection", dict, warnings)

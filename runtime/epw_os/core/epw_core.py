@@ -395,6 +395,18 @@ class EPWCore:
         from epw_os.core.apparatus import (MAIN_VIEW_ROLE_DESIGNATIONS, apparatuses_from_records,
                                            bind_roles_from_screens)
         self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
+
+        # Who may operate the alarm system (task "alarmówka: stopnie
+        # dostępu"). The project says who exists and what they may do;
+        # their codes stay in this controller's own access file, so a
+        # user is known the moment the project lands and can sign in the
+        # moment an Engineer sets their code on the panel.
+        users = self.project_manager.get_intrusion_users()
+        if users:
+            count = self.access_manager.set_users(users)
+            log.info(f"Alarm system users from the project: {count}.")
+        else:
+            self.access_manager.set_users([])
         bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
                                 MAIN_VIEW_ROLE_DESIGNATIONS)
         # The simulated plant answers the project's own apparatuses (an

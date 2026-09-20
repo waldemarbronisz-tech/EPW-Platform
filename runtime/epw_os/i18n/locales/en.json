@@ -889,7 +889,17 @@
       "lbl_retention_max_days": "Maximum age (days)",
       "tooltip_retention_max_days": "Events older than this are deleted. 0 = unlimited.",
       "retention_unlimited": "Unlimited",
-      "settings_only_note": "Zones, lines and power supervision are defined in the project (Studio). Here you can change their settings: exit and entry delays, false-alarm filters and value windows."
+      "settings_only_note": "Zones, lines and power supervision are defined in the project (Studio). Here you can change their settings: exit and entry delays, false-alarm filters and value windows.",
+      "btn_arm_night": "Arm (night)",
+      "tooltip_arm_night": "Partial arming: only the lines marked \"watches at night\" supervise this zone, so someone can move inside while the perimeter is armed. 24-hour lines and line faults alarm regardless, as always.",
+      "arm_refused_title": "Arming refused",
+      "disarm_refused_title": "Disarming refused",
+      "disarm_refused": "You are not allowed to disarm this zone.",
+      "col_night": "Night",
+      "night_yes": "watches",
+      "night_no": "excluded",
+      "mode_night": "NIGHT",
+      "mode_full": "FULL"
     }
   },
   "feature_config": {

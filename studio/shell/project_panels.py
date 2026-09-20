@@ -102,7 +102,7 @@ from shared.addressing import format_address, parse_address, try_parse_address
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
-    Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, Line,
+    Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, IntrusionUser, Line,
     LineInputMode, LineParametrization, LineType, Location, MqttConfig, NORMAL_STATE_NC, NORMAL_STATE_NO,
     Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
     apply_settings_snapshot, load_project, settings_diff, settings_hash, settings_snapshot,
@@ -2388,6 +2388,19 @@ class LineConfigDialog(QDialog):
         filter_form.addRow(tr("lines.alarm_hold_seconds"), self.alarm_hold_spin)
         outer.addWidget(filter_box)
 
+        # Night (partial) arming - the one field that decides whether this
+        # line still supervises while its zone is armed at night. Its own
+        # group, not buried among the filters: it changes WHETHER the line
+        # watches, not how it filters what it sees.
+        night_box = QGroupBox(tr("lines.group_night"))
+        night_layout = QVBoxLayout(night_box)
+        self.night_check = QCheckBox(tr("intrusion.col_line_night"))
+        night_layout.addWidget(self.night_check)
+        night_hint = QLabel(tr("intrusion.line_night_hint"))
+        night_hint.setWordWrap(True)
+        night_layout.addWidget(night_hint)
+        outer.addWidget(night_box)
+
         supervision_box = QGroupBox(tr("lines.group_supervision"))
         supervision_form = QFormLayout(supervision_box)
         self.silence_spin = _seconds_spinbox()
@@ -2423,6 +2436,7 @@ class LineConfigDialog(QDialog):
         self.multiplicity_window_spin.setValue(line.multiplicity_window_seconds)
         self.lockout_spin.setValue(line.lockout_after_count)
         self.alarm_hold_spin.setValue(line.alarm_hold_seconds)
+        self.night_check.setChecked(bool(getattr(line, "active_at_night", True)))
         self.silence_spin.setValue(line.silence_threshold_seconds)
         self._on_mode_changed()
 
@@ -2482,6 +2496,7 @@ class LineConfigDialog(QDialog):
         line.multiplicity_window_seconds = self.multiplicity_window_spin.value()
         line.lockout_after_count = self.lockout_spin.value()
         line.alarm_hold_seconds = self.alarm_hold_spin.value()
+        line.active_at_night = self.night_check.isChecked()
         line.silence_threshold_seconds = self.silence_spin.value()
 
 
@@ -2638,6 +2653,187 @@ class LinesPanel(QWidget):
             project.touch()
             self.refresh()
             self._studio_window._on_project_changed()
+
+
+class IntrusionUsersPanel(QWidget):
+    """Who may arm and disarm which zones ("stopnie dostępu" - the alarm
+    system's own users, not the panel's three access LEVELS).
+
+    A level answers "how much may whoever is standing at the keypad do".
+    It cannot answer "only Kowalski may disarm the warehouse", because
+    two operators are the same Operator to it. This panel is that answer:
+    a person, the level their own code grants, and the zones they may
+    operate - empty meaning every zone.
+
+    NO CODE IS EDITED HERE, deliberately. A person's code is set on the
+    controller itself (EPW-OS, Settings), so it never travels in
+    projekt.epw - which goes to Studio, into git and over REST. What
+    travels is who exists and what they may do.
+    """
+
+    _COLS = ["user_id", "user_name", "user_level", "user_zones", "user_enabled"]
+    _LEVELS = ("User", "Operator", "Engineer")
+
+    def __init__(self, studio_window, parent=None):
+        super().__init__(parent)
+        self._studio_window = studio_window
+        self._loading = False
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        heading = QLabel(tr("intrusion.users_heading"))
+        heading.setObjectName("PanelHeading")
+        layout.addWidget(heading)
+        intro = QLabel(tr("intrusion.users_intro"))
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        self.table = QTableWidget(0, len(self._COLS))
+        self.table.setHorizontalHeaderLabels([tr(f"intrusion.col_{c}") for c in self._COLS])
+        _prep_table(self.table)
+        _make_column_resizable(self.table, 1, 200)
+        _make_column_resizable(self.table, 3, 260)
+        self.table.itemChanged.connect(self._on_item_changed)
+        layout.addWidget(self.table)
+
+        self.refresh()
+
+    # -- data ---------------------------------------------------------------
+
+    def _project(self):
+        return self._studio_window._project
+
+    def refresh(self):
+        self._loading = True
+        try:
+            project = self._project()
+            users = list(project.intrusion_users)
+            self.table.setRowCount(len(users))
+            for row, user in enumerate(users):
+                id_item = QTableWidgetItem(user.id)
+                id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(row, 0, id_item)
+                self.table.setItem(row, 1, QTableWidgetItem(user.name))
+
+                level = QComboBox()
+                level.addItems(self._LEVELS)
+                level.setCurrentText(user.level if user.level in self._LEVELS else "Operator")
+                level.currentTextChanged.connect(
+                    lambda text, uid=user.id: self._set_level(uid, text))
+                self.table.setCellWidget(row, 2, level)
+
+                zones = QPushButton(self._zones_label(user))
+                zones.clicked.connect(lambda checked=False, uid=user.id: self._edit_zones(uid))
+                self.table.setCellWidget(row, 3, zones)
+
+                enabled = QCheckBox()
+                enabled.setChecked(bool(user.enabled))
+                enabled.stateChanged.connect(
+                    lambda state, uid=user.id: self._set_enabled(uid, bool(state)))
+                self.table.setCellWidget(row, 4, enabled)
+        finally:
+            self._loading = False
+
+    def _mark_changed(self):
+        """Same two steps every other panel here takes after an edit:
+        bump the project's own revision bookkeeping, then let the window
+        re-render whatever depends on it."""
+        self._project().touch()
+        self._studio_window._on_project_changed()
+
+    def _zones_label(self, user) -> str:
+        if not user.zones:
+            return tr("intrusion.user_zones_all")
+        names = {z.id: z.name for z in self._project().zones}
+        return ", ".join(names.get(zid, zid) for zid in user.zones)
+
+    def _user(self, user_id):
+        return next((u for u in self._project().intrusion_users if u.id == user_id), None)
+
+    # -- editing ------------------------------------------------------------
+
+    def add_user(self):
+        project = self._project()
+        existing = {u.id for u in project.intrusion_users}
+        index = 1
+        while f"U{index}" in existing:
+            index += 1
+        project.intrusion_users.append(IntrusionUser(id=f"U{index}", name=f"U{index}"))
+        self._mark_changed()
+        self.refresh()
+
+    def remove_selected_user(self):
+        row = self.table.currentRow()
+        if row < 0 or row >= self.table.rowCount():
+            return
+        user_id = self.table.item(row, 0).text()
+        project = self._project()
+        project.intrusion_users = [u for u in project.intrusion_users if u.id != user_id]
+        self._mark_changed()
+        self.refresh()
+
+    def _on_item_changed(self, item):
+        if self._loading or item.column() != 1:
+            return
+        user = self._user(self.table.item(item.row(), 0).text())
+        if user is not None:
+            user.name = item.text().strip() or user.id
+            self._mark_changed()
+
+    def _set_level(self, user_id, level):
+        if self._loading:
+            return
+        user = self._user(user_id)
+        if user is not None and user.level != level:
+            user.level = level
+            self._mark_changed()
+
+    def _set_enabled(self, user_id, enabled):
+        if self._loading:
+            return
+        user = self._user(user_id)
+        if user is not None and user.enabled != enabled:
+            user.enabled = enabled
+            self._mark_changed()
+
+    def _edit_zones(self, user_id):
+        user = self._user(user_id)
+        if user is None:
+            return
+        dialog = _IntrusionUserZonesDialog(self._project(), user, self)
+        if dialog.exec():
+            user.zones = dialog.selected_zones()
+            self._mark_changed()
+            self.refresh()
+
+
+class _IntrusionUserZonesDialog(QDialog):
+    """Which zones one user may operate. Nothing ticked means every zone
+    - the sensible default for a small site, and what a user created and
+    never configured keeps."""
+
+    def __init__(self, project, user, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("intrusion.col_user_zones"))
+        layout = QVBoxLayout(self)
+        hint = QLabel(tr("intrusion.user_zones_all"))
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        self._checks = {}
+        for zone in project.zones:
+            check = QCheckBox(f"{zone.id} - {zone.name}")
+            check.setChecked(zone.id in user.zones)
+            layout.addWidget(check)
+            self._checks[zone.id] = check
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def selected_zones(self) -> list:
+        return [zone_id for zone_id, check in self._checks.items() if check.isChecked()]
 
 
 class ElectricalProtectionPanel(QWidget):
