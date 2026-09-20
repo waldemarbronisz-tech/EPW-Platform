@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QHeaderView, QLabel,
 )
 
+from logic_studio.i18n import tr
 from logic_studio.ui.window_lookup import logic_main_window
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QSettings, Signal
@@ -61,9 +62,7 @@ class LabelsPanel(QWidget):
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         layout.addWidget(self.table)
 
-        self.empty_label = QLabel(
-            'No labels in the project — give a wire a label or use "Add reference...".'
-        )
+        self.empty_label = QLabel(tr("labels.empty"))
         self.empty_label.setWordWrap(True)
         self.empty_label.setAlignment(Qt.AlignCenter)
         self.empty_label.setStyleSheet(_rgb_style("color", canvas_style.COLOR_COMMENT_TEXT))
@@ -188,7 +187,7 @@ class LabelsPanel(QWidget):
         if hasattr(window, "set_dirty"):
             window.set_dirty()
         if similar and hasattr(window, "statusBar"):
-            window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
+            window.statusBar().showMessage(tr("canvas.similar_label", similar=similar), 5000)
 
         self._rebuild()
         self.changed.emit()

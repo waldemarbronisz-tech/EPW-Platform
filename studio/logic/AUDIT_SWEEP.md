@@ -1,5 +1,15 @@
 # AUDIT_SWEEP.md — nocny audyt systematyczny (branch `audit/systematic-sweep`)
 
+> ## ⚠️ DOKUMENT HISTORYCZNY
+>
+> Powstał przed scaleniem repozytoriów (2026-09-09) i opisuje Logic
+> Studio jako samodzielny program. Dziś Logika jest **działem EPW
+> Studio**, interfejs jest dwujęzyczny, a biblioteka bloków ma katalog
+> tłumaczeń (`shared/logic/i18n/`).
+>
+> Zostaje jako zapis rozumowania, nie jako opis stanu obecnego. Stan
+> obecny: pomoc wbudowana Studia i `shared/docs/`.
+
 Jednorazowy dokument. Nie jest dopisywany do AUDIT_REPORT.md — to osobny,
 zamknięty przegląd, wykonany 2026-09-09.
 

@@ -51,6 +51,7 @@ import type { WallPoint } from '../elements/WallElement';
 import { PIXELS_PER_METRE } from '../theme/Scale';
 import type { WallElement } from '../elements/WallElement';
 import { findClosedRooms } from './RoomFloors';
+import { effectiveSize, objectCenter } from './WallOpenings';
 
 /** Metres per canvas pixel - every distance in this module is in METRES, because photometry is. */
 const METRES_PER_PIXEL = 1 / PIXELS_PER_METRE;
@@ -91,6 +92,59 @@ export function isLuminaire(type: string): boolean {
   return Object.prototype.hasOwnProperty.call(PHOTOMETRY, type);
 }
 
+/**
+ * The bounds a typed-in figure is held to. Not taste - each one is a
+ * value outside which the model stops meaning anything: zero flux is a
+ * fitting that is not a fitting, an exponent below ~0.1 integrates to
+ * an intensity no lamp has, and a mounting height of zero puts the
+ * source ON the working plane, where the inverse-square law divides by
+ * nothing and the whole grid becomes infinity.
+ */
+export const PHOTOMETRY_LIMITS = {
+  flux: { min: 1, max: 200000 },
+  exponent: { min: 0.1, max: 40 },
+  mountingHeight: { min: 0.05, max: 30 },
+} as const;
+
+function held(value: unknown, fallback: number, limits: { min: number; max: number }): number {
+  const n = typeof value === 'number' ? value : Number.NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(limits.max, Math.max(limits.min, n));
+}
+
+/**
+ * What THIS fitting emits - its type's catalogue entry, with whatever
+ * this particular one overrides (owner: "chce moc definiowac parametry
+ * opraw").
+ *
+ * The catalogue is a starting point, not an answer: PHOTOMETRY holds
+ * one defensible figure per KIND of fitting, and the fitting actually
+ * being installed comes off a manufacturer's page. An override is a
+ * number somebody read off that page, so it wins - but only within
+ * PHOTOMETRY_LIMITS, because a typo must not silently turn the whole
+ * room white.
+ *
+ * Returns null for anything that is not a luminaire at all.
+ */
+export function photometryFor(obj: SynopticObject): Photometry | null {
+  const catalogue = PHOTOMETRY[obj.type];
+  if (!catalogue) return null;
+  const editor = obj.editor || {};
+  return {
+    ...catalogue,
+    flux: held(editor.lighting_flux, catalogue.flux, PHOTOMETRY_LIMITS.flux),
+    exponent: held(editor.lighting_exponent, catalogue.exponent, PHOTOMETRY_LIMITS.exponent),
+    mountingHeight: held(editor.lighting_height, catalogue.mountingHeight, PHOTOMETRY_LIMITS.mountingHeight),
+  };
+}
+
+/** Whether this fitting has been given figures of its own - what an inspector shows a "catalogue / custom" marker from. */
+export function hasCustomPhotometry(obj: SynopticObject): boolean {
+  const editor = obj.editor || {};
+  return [editor.lighting_flux, editor.lighting_exponent, editor.lighting_height]
+    .some(value => typeof value === 'number' && Number.isFinite(value));
+}
+
 /** A point source, resolved from a placed object - already in metres, already split up if the fitting is linear. */
 interface PointSource {
   x: number;
@@ -115,12 +169,21 @@ export function collectSources(objects: SynopticObject[]): PointSource[] {
   const sources: PointSource[] = [];
 
   for (const obj of objects) {
-    const photometry = PHOTOMETRY[obj.type];
+    const photometry = photometryFor(obj);
     if (!photometry) continue;
     if (obj.editor?.preview_state !== 'ON') continue;
 
-    const centreX = (obj.x + obj.width / 2) * METRES_PER_PIXEL;
-    const centreY = (obj.y + obj.height / 2) * METRES_PER_PIXEL;
+    // WHERE IT ACTUALLY IS. Konva turns an object about its ORIGIN -
+    // its top-left - so a rotated fitting's centre is not
+    // (x + w/2, y + h/2): turning a luminaire left the light pool
+    // behind, sitting where the fitting used to be (owner, 2026-09-20:
+    // "obracam oprawe i zmienia sie widmo swietlne"). objectCenter is
+    // the same helper the rotate command and the Rotation field use,
+    // so the picture and the physics now read the position the same
+    // way, which is the only way they can agree.
+    const centre = objectCenter(obj);
+    const centreX = centre.x * METRES_PER_PIXEL;
+    const centreY = centre.y * METRES_PER_PIXEL;
 
     if (!photometry.linear) {
       sources.push({
@@ -137,15 +200,25 @@ export function collectSources(objects: SynopticObject[]): PointSource[] {
     // 1.2 m batten lights a band rather than a spot. Treating it as one
     // point would overstate the peak directly under it by roughly the
     // ratio of its length to the mounting height.
-    const horizontal = obj.width >= obj.height;
-    const lengthPx = horizontal ? obj.width : obj.height;
-    const lengthM = lengthPx * METRES_PER_PIXEL;
+    //
+    // Its LONG AXIS TURNS WITH IT. The batten's own longer side is
+    // decided in the object's local frame (rotation leaves width and
+    // height alone and moves the origin instead), and the rotation
+    // then says which way that side points on the drawing. Reading the
+    // axis off the unrotated box, as this did, lit a band across a
+    // batten hung lengthways.
+    const { width, height } = effectiveSize(obj);
+    const horizontal = width >= height;
+    const lengthM = (horizontal ? width : height) * METRES_PER_PIXEL;
+    const axis = ((obj.rotation || 0) * Math.PI) / 180 + (horizontal ? 0 : Math.PI / 2);
+    const axisX = Math.cos(axis);
+    const axisY = Math.sin(axis);
     const perSampleFlux = photometry.flux / LINEAR_SAMPLES;
     for (let i = 0; i < LINEAR_SAMPLES; i++) {
       const t = (i + 0.5) / LINEAR_SAMPLES - 0.5; // -0.5 .. +0.5
       sources.push({
-        x: centreX + (horizontal ? t * lengthM : 0),
-        y: centreY + (horizontal ? 0 : t * lengthM),
+        x: centreX + t * lengthM * axisX,
+        y: centreY + t * lengthM * axisY,
         intensity: (perSampleFlux * (photometry.exponent + 1)) / (2 * Math.PI),
         exponent: photometry.exponent,
         height: photometry.mountingHeight,

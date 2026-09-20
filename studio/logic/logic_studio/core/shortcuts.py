@@ -30,6 +30,32 @@ def _string_value(node):
     return None
 
 
+def _label_value(node):
+    """An action's LABEL, which since the interface became bilingual is
+    written as `tr("menu.save")` rather than as "Save".
+
+    The KEY is what this returns, not the text: resolving it here would
+    freeze one language into the extracted table, and the table is built
+    fresh every time the help topic is opened - in whatever language is
+    active then. `_label_text()` below does the resolving, at that
+    point."""
+    literal = _string_value(node)
+    if literal is not None:
+        return literal
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+            and node.func.id == "tr" and node.args):
+        return _string_value(node.args[0])
+    return None
+
+
+def _label_text(label):
+    """A key resolved in the active language; anything else unchanged.
+    Imported inside the function so this module stays importable, and
+    testable, without the rest of Logic Studio."""
+    from logic_studio.i18n import tr
+    return tr(label)
+
+
 def _extract_make_action_call(call: ast.Call):
     """Returns (text, shortcut) or None if this isn't a recognizable
     `self._make_action(text, slot, shortcut, ...)` call, or it has no
@@ -39,7 +65,7 @@ def _extract_make_action_call(call: ast.Call):
         return None
     if not call.args:
         return None
-    text = _string_value(call.args[0])
+    text = _label_value(call.args[0])
     if text is None:
         return None
 
@@ -72,16 +98,18 @@ def extract_shortcuts(source_path=None) -> list:
 
 def shortcuts_markdown() -> str:
     """§3.3: the actual help TOPIC content — a table, generated fresh
-    every time this is called."""
+    every time this is called, in the language active at that moment."""
+    from logic_studio.i18n import tr
+
     rows = extract_shortcuts()
-    lines = ["# Keyboard shortcuts", ""]
+    lines = ["# " + tr("shortcuts.heading"), ""]
     if not rows:
-        lines.append("*(No shortcuts registered.)*")
+        lines.append("*(" + tr("shortcuts.none") + ")*")
         return "\n".join(lines) + "\n"
-    lines.append("| Command | Shortcut |")
+    lines.append("| " + tr("shortcuts.col_command") + " | " + tr("shortcuts.col_shortcut") + " |")
     lines.append("|---|---|")
-    for text, shortcut in rows:
-        lines.append(f"| {text} | `{shortcut}` |")
+    for label, shortcut in rows:
+        lines.append("| " + _label_text(label) + " | `" + shortcut + "` |")
     lines.append("")
-    lines.append("Also: **F1** opens help (on the description of the selected block, if something is selected).")
+    lines.append(tr("shortcuts.f1_note"))
     return "\n".join(lines) + "\n"

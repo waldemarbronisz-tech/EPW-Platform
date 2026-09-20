@@ -50,6 +50,7 @@ import logging
 import os
 import tempfile
 import threading
+import time
 
 from epw_os.core.access_manager import AccessLevel
 
@@ -425,6 +426,75 @@ def get_protection_test(test_id: str, core=Depends(get_core)):
     if report is None:
         raise HTTPException(status_code=404, detail=f"No protection test {test_id}.")
     return report
+
+
+@app.get("/api/v1/controller/backup")
+def get_controller_backup(core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """This controller's own backup - everything that exists nowhere
+    else: the switching counters, the arming state, the alarm memory,
+    the retentive logic bits, the audit log, the local settings, and
+    projekt.epw itself so the bundle is self-sufficient.
+
+    It carries NO secret: no PIN hash, no alarm user's keypad code, no
+    remote or API token, no broker password. A bundle is a file that
+    leaves the site, and a four-digit PIN behind a hash is not a secret.
+    What it carries instead is an inventory - who HAD a code, who had a
+    token - so a restore can print exactly what to re-issue, by name.
+    See core/controller_backup.py.
+
+    Engineer token, audited."""
+    actor = f"API:{level}"
+    try:
+        data = core.backup_bundle(actor=actor, level=None)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail={"error": "access_denied", "reason": str(e)})
+    name = f"epw-backup-{int(time.time())}.epwbak"
+    return Response(content=data, media_type="application/gzip",
+                    headers={"content-disposition": f'attachment; filename="{name}"'})
+
+
+@app.post("/api/v1/controller/backup/inspect")
+async def inspect_controller_backup(request: Request, core=Depends(get_core),
+                                     level: str = Depends(_require_engineer)):
+    """What is in a bundle, without applying it. A restore overwrites a
+    running controller, so it has to be possible to look first."""
+    from epw_os.core import controller_backup
+
+    payload = await request.body()
+    if not payload:
+        raise HTTPException(status_code=400, detail={"error": "empty_body"})
+    try:
+        bundle = controller_backup.read_backup(payload)
+    except controller_backup.BackupError as e:
+        raise HTTPException(status_code=400, detail={"error": "bad_backup", "reason": str(e)})
+    return {"summary": controller_backup.describe_backup(bundle),
+            "checklist": controller_backup.reissue_checklist(bundle)}
+
+
+@app.post("/api/v1/controller/restore")
+async def restore_controller(request: Request, restore_audit: bool = False,
+                             core=Depends(get_core), level: str = Depends(_require_engineer)):
+    """Puts a backup onto this controller and takes the restored project
+    into service, without restarting (the same rebuild an install goes
+    through - see EPWCore.reload_project).
+
+    A bundle that cannot be trusted - wrong format, wrong schema
+    version, altered since it was written - is refused before anything
+    is written. A restore is never half-applied.
+
+    The answer carries `checklist`: the secrets nobody can restore for
+    you, by name. Engineer token, audited."""
+    actor = f"API:{level}"
+    payload = await request.body()
+    if not payload:
+        raise HTTPException(status_code=400, detail={"error": "empty_body"})
+    result = core.restore_from_backup(payload, actor=actor, level=None,
+                                       restore_audit=bool(restore_audit))
+    if not result.get("success") and result.get("reason"):
+        raise HTTPException(status_code=400, detail={"error": "restore_failed",
+                                                     "reason": result["reason"],
+                                                     "checklist": result.get("checklist", [])})
+    return result
 
 
 @app.get("/api/v1/controller/settings")

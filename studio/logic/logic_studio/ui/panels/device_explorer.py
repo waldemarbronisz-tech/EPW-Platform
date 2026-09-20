@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QDrag
 from PySide6.QtCore import Qt, QMimeData
 
+from logic_studio.i18n import tr
 from logic_studio.ui.icons import block_icon
 
 TYPE_ID_ROLE = Qt.UserRole
@@ -93,13 +94,13 @@ class DeviceExplorerPanel(QWidget):
         # whatever still has results — results left inside a collapsed
         # branch look like no results at all.
         self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search address, e.g. DI12 or ELA01...")
+        self.search_box.setPlaceholderText(tr("device.search"))
         self.search_box.setClearButtonEnabled(True)
         self.search_box.textChanged.connect(self._filter_tree)
         layout.addWidget(self.search_box)
 
         self.tree = DeviceTree()
-        self.tree.setHeaderLabels(["Devices"])
+        self.tree.setHeaderLabels([tr("device.header")])
         layout.addWidget(self.tree)
 
         self.project = project

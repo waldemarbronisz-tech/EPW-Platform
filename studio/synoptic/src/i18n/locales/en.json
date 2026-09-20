@@ -56,7 +56,8 @@
     "unlock": "Unlock",
     "rotate_left": "Rotate Left",
     "rotate_right": "Rotate Right",
-    "text_box": "Text box"
+    "text_box": "Text box",
+    "applies_to_selection": "(applies to the {count} selected wall(s))"
   },
   "library": {
     "title": "Object Library",
@@ -103,7 +104,34 @@
     "floor_area": "Floor area",
     "not_closed": "not a closed room",
     "move_hint": "Moving the room - by dragging a wall or with X / Y - takes the symbols inside it along.",
-    "select_whole": "Select the whole room"
+    "select_whole": "Select the whole room",
+    "size_hint": "Position and size in metres, to the centimetre. The scale is 1 m = 80 px; one grid cell is 20 cm."
+  },
+  "lighting": {
+    "title": "Luminaire",
+    "flux": "Luminous flux",
+    "spread": "Beam spread",
+    "height": "Height above plane",
+    "hint": "Blank = the catalogue figure for this type. Beam spread: 1 is a wide diffuser, 8 a narrow spot. Height is measured above the WORKING PLANE, not the floor.",
+    "reset": "Back to catalogue",
+    "map_on_drawing": "Illuminance map on the drawing",
+    "required": "Required:",
+    "direct_only": "Direct component only, no reflections from walls or ceiling.",
+    "no_room": "No closed room - draw walls that form an outline.",
+    "room": "Room {index}",
+    "pass": "PASS",
+    "fail": "FAIL",
+    "unlit": "no luminaire is on",
+    "e_avg": "E avg",
+    "e_min": "E min",
+    "e_max": "E max",
+    "requirement": "required {lux} lx, Uo {uniformity}",
+    "target_none": "no comparison",
+    "target_corridor": "Corridor - 100 lx",
+    "target_store": "Storage - 150 lx",
+    "target_workshop": "Workshop, rough work - 200 lx",
+    "target_office": "Office, screen work - 500 lx",
+    "target_precision": "Precision work - 750 lx"
   },
   "format": {
     "text_color": "Text colour",

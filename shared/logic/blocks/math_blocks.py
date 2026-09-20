@@ -26,7 +26,7 @@ class MathBase(BaseLogicBlock):
 
 @BlockRegistry.register
 class AddBlock(MathBase):
-    def __init__(self, type_id="math.add", default_name="ADD", category="Analog", description="Dodawanie — Out = In1 + In2."):
+    def __init__(self, type_id="math.add", default_name="ADD", category="Analog", description="Addition — Out = In1 + In2."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):
@@ -35,7 +35,7 @@ class AddBlock(MathBase):
 
 @BlockRegistry.register
 class SubBlock(MathBase):
-    def __init__(self, type_id="math.sub", default_name="SUB", category="Analog", description="Odejmowanie — Out = In1 - In2."):
+    def __init__(self, type_id="math.sub", default_name="SUB", category="Analog", description="Subtraction — Out = In1 - In2."):
         super().__init__(type_id, default_name, category, description)
 
     def evaluate(self, engine=None):

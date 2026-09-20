@@ -200,7 +200,7 @@ class NotEqualBlock(ComparatorBase):
 @BlockRegistry.register
 class BetweenBlock(BaseLogicBlock, HysteresisDelayMixin):
     PIN_DESCRIPTIONS = {
-        "Min": "Dolna granica zakresu.",
+        "Min": "Lower limit of the range.",
         "Val": "Value checked against the range Min..Max.",
         "Max": "Upper limit of the range.",
         "Out": "True when Val lies within Min..Max (including hysteresis/delay if configured).",

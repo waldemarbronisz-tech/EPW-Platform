@@ -24,6 +24,7 @@ from PySide6.QtCore import Qt, Signal, QSettings
 # Reused deliberately (§0A.3): the same green/black the canvas already uses
 # for a live boolean wire/port, so a DI/DO's state dot here means the same
 # thing at a glance as a highlighted wire on the schematic.
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style as canvas_style
 
 GROUP_SIZE = 8  # §0A.4: DI/DO channels are grouped in banks of 8, mirroring
@@ -244,28 +245,28 @@ class SimulationPanel(QWidget):
         self._do_group_widgets = []
 
         # "tylko użyte" (detailed, flat) sections
-        self.di_used_group = QGroupBox("Digital inputs (DI)")
+        self.di_used_group = QGroupBox(tr("sim.di_used"))
         self.di_used_layout = QVBoxLayout(self.di_used_group)
-        self.di_empty_label = QLabel("No inputs in use — add a DI block and assign an address.")
-        self.do_used_group = QGroupBox("Digital outputs (DO)")
+        self.di_empty_label = QLabel(tr("sim.di_empty"))
+        self.do_used_group = QGroupBox(tr("sim.do_used"))
         self.do_used_layout = QVBoxLayout(self.do_used_group)
-        self.do_empty_label = QLabel("No outputs in use — add a DO block and assign an address.")
+        self.do_empty_label = QLabel(tr("sim.do_empty"))
 
         # "wszystkie" (compact, grouped-by-8) sections
-        self.di_all_group = QGroupBox("Digital inputs (DI) — all")
+        self.di_all_group = QGroupBox(tr("sim.di_all"))
         self.di_all_grid = QGridLayout(self.di_all_group)
-        self.do_all_group = QGroupBox("Digital outputs (DO) — all")
+        self.do_all_group = QGroupBox(tr("sim.do_all"))
         self.do_all_grid = QGridLayout(self.do_all_group)
 
         for w in (self.di_used_group, self.do_used_group, self.di_all_group, self.do_all_group):
             self._content_layout.addWidget(w)
 
         # Analog Inputs / Outputs — fully project-defined, rebuilt in set_project().
-        self.ai_group = QGroupBox("Analog inputs")
+        self.ai_group = QGroupBox(tr("sim.ai"))
         self.ai_layout = QGridLayout(self.ai_group)
         self._content_layout.addWidget(self.ai_group)
 
-        self.ao_group = QGroupBox("Analog outputs")
+        self.ao_group = QGroupBox(tr("sim.ao"))
         self.ao_layout = QGridLayout(self.ao_group)
         self._content_layout.addWidget(self.ao_group)
 
@@ -280,8 +281,8 @@ class SimulationPanel(QWidget):
 
     def _build_step_row(self):
         step_row = QHBoxLayout()
-        self.step_btn = QPushButton("Step")
-        self.step10_btn = QPushButton("Step ×10")
+        self.step_btn = QPushButton(tr("sim.step"))
+        self.step10_btn = QPushButton(tr("sim.step10"))
         step_tip = (
             "Runs one manual engine scan. Available only in the PAUSED or "
             "STOPPED state with a program loaded. With SystemTimeProvider stepping "
@@ -469,7 +470,7 @@ class SimulationPanel(QWidget):
         current = self.card_filter.currentData()
         self.card_filter.blockSignals(True)
         self.card_filter.clear()
-        self.card_filter.addItem("All cards", None)
+        self.card_filter.addItem(tr("sim.all_cards"), None)
         for card in cards:
             self.card_filter.addItem(card, card)
         idx = self.card_filter.findData(current)

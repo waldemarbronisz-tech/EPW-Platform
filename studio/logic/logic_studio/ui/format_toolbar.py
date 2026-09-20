@@ -20,6 +20,7 @@ from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtGui import QAction, QActionGroup, QFont
 from PySide6.QtWidgets import QComboBox, QFontComboBox, QToolBar
 
+from logic_studio.i18n import tr
 from logic_studio.ui.icons import action_icon
 from shared.logic.blocks.documentation import (
     ALIGN_KEY, ALIGNMENTS, BOLD_KEY, FONT_KEY, ITALIC_KEY, TEXT_SIZE_KEY, UNDERLINE_KEY,
@@ -63,7 +64,7 @@ class FormatToolbar(QToolBar):
         self._mw = main_window
 
         self.style_combo = QComboBox(self)
-        self.style_combo.setToolTip("Paragraph style")
+        self.style_combo.setToolTip(tr("format.paragraph_style"))
         self.style_combo.setMinimumContentsLength(9)
         self.style_combo.addItem("")
         for name, _ in TEXT_STYLES:
@@ -72,13 +73,13 @@ class FormatToolbar(QToolBar):
         self.addWidget(self.style_combo)
 
         self.font_combo = QFontComboBox(self)
-        self.font_combo.setToolTip("Font")
+        self.font_combo.setToolTip(tr("format.font"))
         self.font_combo.setMaximumWidth(170)
         self.font_combo.currentFontChanged.connect(self._on_font)
         self.addWidget(self.font_combo)
 
         self.size_combo = QComboBox(self)
-        self.size_combo.setToolTip("Font size")
+        self.size_combo.setToolTip(tr("format.font_size"))
         self.size_combo.setEditable(True)
         self.size_combo.setMinimumContentsLength(3)
         for size in FONT_SIZES:

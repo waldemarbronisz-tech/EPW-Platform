@@ -453,6 +453,24 @@
       ]
     },
     {
+      "id": "backup",
+      "title": "Backup and replacement",
+      "topics": [
+        {
+          "id": "backup_what",
+          "title": "Backing Up This Controller"
+        },
+        {
+          "id": "backup_restore",
+          "title": "Restoring From a Backup"
+        },
+        {
+          "id": "backup_replace",
+          "title": "Replacing a Dead Controller"
+        }
+      ]
+    },
+    {
       "id": "troubleshooting",
       "title": "Troubleshooting",
       "topics": [
@@ -581,6 +599,10 @@
       "topic": "al_timeout"
     },
     {
+      "term": "backup",
+      "topic": "backup_what"
+    },
+    {
       "term": "Bearer token",
       "topic": "api_what"
     },
@@ -623,6 +645,10 @@
     {
       "term": "Database size warning",
       "topic": "set_data_retention"
+    },
+    {
+      "term": "dead card",
+      "topic": "backup_replace"
     },
     {
       "term": "Delayed line (entry/exit)",
@@ -961,6 +987,10 @@
       "topic": "saf_engineer_mode"
     },
     {
+      "term": "re-issue",
+      "topic": "backup_restore"
+    },
+    {
       "term": "Recently opened",
       "topic": "gs_project_menu"
     },
@@ -981,6 +1011,10 @@
       "topic": "intr_users"
     },
     {
+      "term": "replace a controller",
+      "topic": "backup_replace"
+    },
+    {
       "term": "request_tags (reserved)",
       "topic": "tools_export_tag_list"
     },
@@ -999,6 +1033,10 @@
     {
       "term": "REST API",
       "topic": "api_what"
+    },
+    {
+      "term": "restore",
+      "topic": "backup_restore"
     },
     {
       "term": "Retained message (MQTT)",

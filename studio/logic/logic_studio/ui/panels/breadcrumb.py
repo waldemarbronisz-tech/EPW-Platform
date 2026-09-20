@@ -13,6 +13,7 @@ given and reports which entry was clicked (or the button pressed),
 mirroring core/crossref.py vs. ui/panels/signals.py's own split."""
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel
 from PySide6.QtCore import Qt, Signal
+from logic_studio.i18n import tr
 
 
 class BreadcrumbBar(QWidget):
@@ -34,7 +35,7 @@ class BreadcrumbBar(QWidget):
         self._row.setSpacing(4)
         self._row.addStretch(1)
 
-        self._pins_button = QPushButton("Piny makrobloku...")
+        self._pins_button = QPushButton(tr("macro.pins_button"))
         self._pins_button.setFlat(True)
         self._pins_button.clicked.connect(self.manage_pins_requested)
         self._row.addWidget(self._pins_button)

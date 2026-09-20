@@ -78,6 +78,12 @@ export interface SynopticObject {
     format?: string;
     /** An opening (door/window/gate) flipped to the other side of its wall - see project/WallOpenings.ts. */
     opening_flipped?: boolean;
+    /** This fitting's own luminous flux [lm], overriding its type's catalogue figure - see project/Illuminance.ts. */
+    lighting_flux?: number;
+    /** This fitting's own cosine-power exponent: 1 a wide diffuser, 8 a narrow spot. */
+    lighting_exponent?: number;
+    /** This fitting's own height above the WORKING PLANE [m], not above the floor. */
+    lighting_height?: number;
   };
 
   // Runtime Bindings

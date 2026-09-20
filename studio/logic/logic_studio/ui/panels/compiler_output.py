@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTextEdit
+from logic_studio.i18n import tr
 
 class CompilerOutputPanel(QWidget):
     def __init__(self, parent=None):
@@ -16,11 +17,11 @@ class CompilerOutputPanel(QWidget):
         self.messages_log = self._create_text_area()
         self.runtime_log = self._create_text_area()
 
-        self.tabs.addTab(self.compiler_log, "Compiler")
-        self.tabs.addTab(self.warnings_log, "Warnings")
-        self.tabs.addTab(self.errors_log, "Errors")
-        self.tabs.addTab(self.messages_log, "Messages")
-        self.tabs.addTab(self.runtime_log, "Runtime")
+        self.tabs.addTab(self.compiler_log, tr("output.compiler"))
+        self.tabs.addTab(self.warnings_log, tr("output.warnings"))
+        self.tabs.addTab(self.errors_log, tr("output.errors"))
+        self.tabs.addTab(self.messages_log, tr("output.messages"))
+        self.tabs.addTab(self.runtime_log, tr("output.runtime"))
 
         layout.addWidget(self.tabs)
 

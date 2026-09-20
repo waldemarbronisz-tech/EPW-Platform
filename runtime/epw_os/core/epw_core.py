@@ -1177,6 +1177,88 @@ class EPWCore:
         return {"success": success, "reason": reason, "removed_tags": removed_tags,
                 "issues": list(self.startup_issues), "logic": logic}
 
+    # --- backup and restore of THIS controller ------------------------------
+
+    def backup_bundle(self, actor: str = "", level: str = None) -> bytes:
+        """This controller's own backup, as bytes ready to be written to
+        a file or sent over REST.
+
+        Engineer level, audited. Raises PermissionError below Engineer
+        rather than returning an empty bundle - a caller that ignored
+        the refusal would otherwise write a valid-looking file with
+        nothing in it.
+
+        What a bundle is, and why it carries no secrets, is
+        core/controller_backup.py's own docstring.
+        """
+        from epw_os.core import controller_backup
+
+        if level is not None and not self._is_engineer(level):
+            raise PermissionError("Access denied - Engineer level required.")
+        who = actor or "SYSTEM"
+        data = controller_backup.build_backup(
+            self.project_manager, self.access_manager, actor=who,
+            api_auth=getattr(self, "api_auth", None), mqtt_manager=self.mqtt_manager)
+        if self.audit_logger is not None:
+            self.audit_logger.record("CONTROLLER_BACKUP_TAKEN", who,
+                                     f"a backup of this controller was taken ({len(data)} bytes)",
+                                     success=True)
+        return data
+
+    def restore_from_backup(self, data: bytes, actor: str = "", level: str = None,
+                            restore_audit: bool = False) -> dict:
+        """Puts a backup onto this controller and takes the restored
+        project into service.
+
+        Two steps, deliberately separate: controller_backup writes the
+        files, and reload_project() rebuilds the running controller from
+        them - the same one path every project install goes through, so
+        a restore cannot invent a second way to start a project.
+
+        A bundle that cannot be trusted is refused before anything is
+        written (checksum, format, schema version); a restore is never
+        half-applied.
+
+        Returns the write report, the re-issue checklist, and what the
+        reload did.
+        """
+        from epw_os.core import controller_backup
+
+        if level is not None and not self._is_engineer(level):
+            log.warning(f"Refused to restore a backup: level {level!r} is below Engineer.")
+            return {"success": False, "reason": "Access denied - Engineer level required.",
+                    "written": [], "skipped": [], "checklist": [], "reload": {}}
+        who = actor or "SYSTEM"
+        try:
+            payload = controller_backup.read_backup(data)
+        except controller_backup.BackupError as e:
+            if self.audit_logger is not None:
+                self.audit_logger.record("CONTROLLER_RESTORE_REFUSED", who, str(e), success=False)
+            return {"success": False, "reason": str(e),
+                    "written": [], "skipped": [], "checklist": [], "reload": {}}
+
+        summary = controller_backup.describe_backup(payload)
+        report = controller_backup.apply_backup(payload, self.project_manager, actor=who,
+                                                 restore_audit=restore_audit)
+        # The files are in place; this is what makes the controller
+        # actually run them - cards, points, apparatus, the alarm
+        # system's restored arming state, the logic, the panel.
+        reload_result = self.reload_project(actor=who, level=None)
+
+        if self.audit_logger is not None:
+            self.audit_logger.record(
+                "CONTROLLER_RESTORED", who,
+                f"restored from a backup taken {summary.get('created_at')} by "
+                f"{summary.get('created_by')} (project {summary.get('project_name')!r} "
+                f"revision {summary.get('project_revision')}); "
+                f"{len(report['checklist'])} secret(s) must be re-issued by hand",
+                success=bool(reload_result.get("success")))
+        return {"success": bool(reload_result.get("success")),
+                "reason": reload_result.get("reason", ""),
+                "summary": summary, "written": report["written"],
+                "skipped": report["skipped"], "checklist": report["checklist"],
+                "reload": reload_result}
+
     def _is_engineer(self, level) -> bool:
         from epw_os.core.access_manager import AccessLevel
         order = AccessLevel._ORDER

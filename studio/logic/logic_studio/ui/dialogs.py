@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLabel, QMessageBox, QHeaderView, QTabWidget, QWidget, QCheckBox, QFileDialog,
     QListWidget
 )
+from logic_studio.i18n import tr
 
 ORIGINAL_ENTRY_ROLE = Qt.UserRole
 
@@ -36,7 +37,7 @@ class ProjectSettingsDialog(QDialog):
         self.project = project
         self._result_points = None
         self._result_signals = None
-        self.setWindowTitle("Project Settings")
+        self.setWindowTitle(tr("settings.title"))
         self.resize(760, 480)
 
         layout = QVBoxLayout(self)
@@ -59,15 +60,15 @@ class ProjectSettingsDialog(QDialog):
         form.addRow("Cycle Time", self.cycle_spin)
         general_layout.addLayout(form)
 
-        general_layout.addWidget(QLabel("Punkty analogowe"))
+        general_layout.addWidget(QLabel(tr("settings.analog_points")))
         self.table = QTableWidget(0, len(self.COLUMNS))
         self.table.setHorizontalHeaderLabels(self.COLUMNS)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         general_layout.addWidget(self.table)
 
         row_buttons = QHBoxLayout()
-        self.add_btn = QPushButton("Add")
-        self.remove_btn = QPushButton("Remove")
+        self.add_btn = QPushButton(tr("common.add"))
+        self.remove_btn = QPushButton(tr("common.remove"))
         self.add_btn.clicked.connect(lambda: self._add_row())
         self.remove_btn.clicked.connect(self._remove_selected_rows)
         row_buttons.addWidget(self.add_btn)
@@ -76,7 +77,7 @@ class ProjectSettingsDialog(QDialog):
         general_layout.addLayout(row_buttons)
 
         self._load_points(project.settings.get("analog_points", []))
-        tabs.addTab(general_tab, "General")
+        tabs.addTab(general_tab, tr("settings.tab_general"))
 
         # feat/internal-bits §7.1: "Internal signals" tab.
         signals_tab = QWidget()
@@ -88,10 +89,10 @@ class ProjectSettingsDialog(QDialog):
         signals_layout.addWidget(self.signals_table)
 
         signal_buttons = QHBoxLayout()
-        self.add_signal_btn = QPushButton("Add")
-        self.remove_signal_btn = QPushButton("Remove")
-        self.import_signals_btn = QPushButton("Importuj...")
-        self.export_signals_btn = QPushButton("Eksportuj...")
+        self.add_signal_btn = QPushButton(tr("common.add"))
+        self.remove_signal_btn = QPushButton(tr("common.remove"))
+        self.import_signals_btn = QPushButton(tr("common.import"))
+        self.export_signals_btn = QPushButton(tr("common.export"))
         self.add_signal_btn.clicked.connect(lambda: self._add_signal_row())
         self.remove_signal_btn.clicked.connect(self._remove_selected_signal_rows)
         self.import_signals_btn.clicked.connect(self._import_signals)
@@ -110,7 +111,7 @@ class ProjectSettingsDialog(QDialog):
         self._bit_renames = {}
 
         self._load_signals(project.settings.get("internal_bits", []))
-        tabs.addTab(signals_tab, "Internal signals")
+        tabs.addTab(signals_tab, tr("settings.tab_signals"))
 
         # feat/io-labels-and-ids §2.1: "I/O labels" tab.
         io_labels_tab = QWidget()
@@ -118,10 +119,10 @@ class ProjectSettingsDialog(QDialog):
 
         filter_row = QHBoxLayout()
         self.io_labels_filter_edit = QLineEdit()
-        self.io_labels_filter_edit.setPlaceholderText("Search by address or label...")
+        self.io_labels_filter_edit.setPlaceholderText(tr("settings.io_filter"))
         self.io_labels_filter_edit.textChanged.connect(self._apply_io_labels_filter)
         filter_row.addWidget(self.io_labels_filter_edit)
-        self.io_labels_only_used_check = QCheckBox("Show only used")
+        self.io_labels_only_used_check = QCheckBox(tr("settings.only_used"))
         self.io_labels_only_used_check.setChecked(True)  # §2.1: default ON
         self.io_labels_only_used_check.toggled.connect(self._apply_io_labels_filter)
         filter_row.addWidget(self.io_labels_only_used_check)
@@ -133,8 +134,8 @@ class ProjectSettingsDialog(QDialog):
         io_labels_layout.addWidget(self.io_labels_table)
 
         io_labels_buttons = QHBoxLayout()
-        self.import_io_labels_btn = QPushButton("Importuj...")
-        self.export_io_labels_btn = QPushButton("Eksportuj...")
+        self.import_io_labels_btn = QPushButton(tr("common.import"))
+        self.export_io_labels_btn = QPushButton(tr("common.export"))
         self.import_io_labels_btn.clicked.connect(self._import_io_labels)
         self.export_io_labels_btn.clicked.connect(self._export_io_labels)
         io_labels_buttons.addStretch()
@@ -144,7 +145,7 @@ class ProjectSettingsDialog(QDialog):
 
         self._result_io_labels = None
         self._load_io_labels()
-        tabs.addTab(io_labels_tab, "I/O labels")
+        tabs.addTab(io_labels_tab, tr("settings.tab_io_labels"))
 
         # feat/multi-device-io: "Devices" tab — the project's own
         # ELA/ADA module list (previously fixed at one of each for every
@@ -165,14 +166,14 @@ class ProjectSettingsDialog(QDialog):
         self._result_ela_devices = self._original_ela_devices
         self._result_ada_devices = self._original_ada_devices
 
-        devices_layout.addWidget(QLabel(f"ELA digital input modules ({DeviceModel.ELA_CHANNELS} channels each)"))
+        devices_layout.addWidget(QLabel(tr("settings.ela_modules", n=DeviceModel.ELA_CHANNELS)))
         ela_row = QHBoxLayout()
         self.ela_list = QListWidget()
         self.ela_list.addItems(self._original_ela_devices)
         ela_row.addWidget(self.ela_list)
         ela_btns = QVBoxLayout()
-        self.add_ela_btn = QPushButton("Add")
-        self.remove_ela_btn = QPushButton("Remove")
+        self.add_ela_btn = QPushButton(tr("common.add"))
+        self.remove_ela_btn = QPushButton(tr("common.remove"))
         self.add_ela_btn.clicked.connect(lambda: self._add_device(self.ela_list, "ELA"))
         self.remove_ela_btn.clicked.connect(lambda: self._remove_selected_devices(self.ela_list))
         ela_btns.addWidget(self.add_ela_btn)
@@ -181,14 +182,14 @@ class ProjectSettingsDialog(QDialog):
         ela_row.addLayout(ela_btns)
         devices_layout.addLayout(ela_row)
 
-        devices_layout.addWidget(QLabel(f"ADA digital output modules ({DeviceModel.ADA_CHANNELS} channels each)"))
+        devices_layout.addWidget(QLabel(tr("settings.ada_modules", n=DeviceModel.ADA_CHANNELS)))
         ada_row = QHBoxLayout()
         self.ada_list = QListWidget()
         self.ada_list.addItems(self._original_ada_devices)
         ada_row.addWidget(self.ada_list)
         ada_btns = QVBoxLayout()
-        self.add_ada_btn = QPushButton("Add")
-        self.remove_ada_btn = QPushButton("Remove")
+        self.add_ada_btn = QPushButton(tr("common.add"))
+        self.remove_ada_btn = QPushButton(tr("common.remove"))
         self.add_ada_btn.clicked.connect(lambda: self._add_device(self.ada_list, "ADA"))
         self.remove_ada_btn.clicked.connect(lambda: self._remove_selected_devices(self.ada_list))
         ada_btns.addWidget(self.add_ada_btn)
@@ -198,7 +199,7 @@ class ProjectSettingsDialog(QDialog):
         devices_layout.addLayout(ada_row)
 
         devices_layout.addStretch()
-        tabs.addTab(devices_tab, "Devices")
+        tabs.addTab(devices_tab, tr("settings.tab_devices"))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -439,13 +440,13 @@ class ProjectSettingsDialog(QDialog):
                 data = json.load(f)
             entries = data.get("internal_bits", data) if isinstance(data, dict) else data
         except Exception as e:
-            QMessageBox.critical(self, "Import error", str(e))
+            QMessageBox.critical(self, tr("common.import_error"), str(e))
             return
 
         from shared.logic.internal_bits import validate_internal_bits_registry
         errors = validate_internal_bits_registry(entries)
         if errors:
-            QMessageBox.critical(self, "Invalid file", "\n".join(errors))
+            QMessageBox.critical(self, tr("common.invalid_file"), "\n".join(errors))
             return
         self._load_signals(entries)
 
@@ -455,7 +456,7 @@ class ProjectSettingsDialog(QDialog):
         each tool inventing its own registry by hand."""
         entries, error, _ = self._collect_signals()
         if error:
-            QMessageBox.critical(self, "Invalid data", error)
+            QMessageBox.critical(self, tr("common.invalid_data"), error)
             return
         path, _ = QFileDialog.getSaveFileName(self, "Export internal signal registry", "internal_bits.json", "JSON (*.json)")
         if not path:
@@ -555,10 +556,10 @@ class ProjectSettingsDialog(QDialog):
                 data = json.load(f)
             incoming = data.get("io_labels", data) if isinstance(data, dict) else None
         except Exception as e:
-            QMessageBox.critical(self, "Import error", str(e))
+            QMessageBox.critical(self, tr("common.import_error"), str(e))
             return
         if not isinstance(incoming, dict):
-            QMessageBox.critical(self, "Invalid file", "Expected a dictionary of address -> label.")
+            QMessageBox.critical(self, tr("common.invalid_file"), tr("settings.expected_mapping"))
             return
 
         valid_addresses = set(DeviceModel.all_addresses(self.project))
@@ -607,12 +608,12 @@ class ProjectSettingsDialog(QDialog):
     def _on_accept(self):
         points, error = self._collect_points()
         if error:
-            QMessageBox.critical(self, "Invalid data", error)
+            QMessageBox.critical(self, tr("common.invalid_data"), error)
             return
 
         signals, sig_error, renames = self._collect_signals()
         if sig_error:
-            QMessageBox.critical(self, "Invalid data (internal signals)", sig_error)
+            QMessageBox.critical(self, tr("settings.invalid_signals"), sig_error)
             return
 
         # §7.2: deleting a signal that's still used needs confirmation,

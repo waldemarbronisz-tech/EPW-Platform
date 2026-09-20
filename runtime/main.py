@@ -390,7 +390,8 @@ def main():
                                    force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed,
                                    logic_engine=core.logic_engine,
                                    logic_reload_callback=core.reload_logic,
-                                   project_reload_callback=core.reload_project)
+                                   project_reload_callback=core.reload_project,
+                                   controller_backup_core=core)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,

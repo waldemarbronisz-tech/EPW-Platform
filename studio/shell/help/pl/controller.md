@@ -54,6 +54,27 @@ REST, retencje historiana i dziennika, sterownik I/O, ścieżki plików.
 To są ustawienia **egzemplarza**, nie instalacji, więc nie ma ich
 w projekcie — ale nic na sterowniku nie jest niewidoczne ze Studia.
 
+## Kopia zapasowa sterownika
+
+**Pobierz kopię zapasową...** ściąga wszystko, co istnieje tylko na tym
+sterowniku: liczniki łączeń, stan uzbrojenia, pamięć alarmu, bity
+retencyjne logiki, dziennik audytowy, ustawienia lokalne i sam projekt.
+
+Nie niesie **żadnych sekretów** — ani PIN-ów, ani kodów użytkowników
+alarmówki, ani tokenów, ani hasła do brokera. Kopia to plik, który
+opuszcza obiekt, a hasz czterocyfrowego PIN-u nie jest sekretem. Niesie
+zamiast tego inwentarz: kto co MIAŁ, dzięki czemu odtworzenie kończy się
+listą kontrolną z nazwiskami.
+
+**Odtwórz z kopii zapasowej...** najpierw prosi sterownik o opisanie
+kopii, pokazuje, co zostanie nadpisane, i dopiero wtedy ją wysyła.
+Sterownik przebudowuje się według niej bez restartu. Własny adres REST
+i sterownik wejść/wyjść zamiennika zostają nietknięte — opisują sprzęt,
+na którym on pracuje, a nie ten, który padł.
+
+Całą procedurę wymiany opisuje pomoc samego sterownika, rozdział „Kopia
+zapasowa i wymiana".
+
 ## Liczniki łączeń
 
 **Pobierz liczniki** — punkt, liczba załączeń, wyłączeń, czas w stanie

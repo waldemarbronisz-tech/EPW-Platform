@@ -26,6 +26,8 @@ import type { SynopticConnection, SynopticObject } from '../store';
 import { describeObject } from '../utils/ObjectDisplay';
 import { resolveNets } from '../project/NetResolver';
 import { RoomInspector } from './RoomInspector';
+import { LuminaireInspector } from './LuminaireInspector';
+import { isLuminaire } from '../project/Illuminance';
 import { connectedWallIds } from '../project/AreaMove';
 import { tr } from '../i18n/tr';
 
@@ -1270,6 +1272,11 @@ export const PropertyInspector: React.FC = () => {
             </>
           ) : null}
         </div>
+
+        {/* A fitting's own photometry, only for something that emits
+            light at all - the figures the illuminance map and the
+            Lighting panel are computed from (owner, 2026-09-20). */}
+        {isLuminaire(selectedObj.type) && <LuminaireInspector obj={selectedObj} />}
 
         {/* feat/appearance-selection-frames commit 4d: the static
             scada.meter symbol takes its data through its own rows

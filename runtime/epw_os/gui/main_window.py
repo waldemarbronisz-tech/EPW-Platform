@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QStackedWidget, QStatusBar, QLabel, QFrame,
@@ -39,7 +40,8 @@ class MainWindow(QMainWindow):
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
                  startup_issues=None, force_manager=None, forces_changed_signal=None,
-                 logic_engine=None, logic_reload_callback=None, project_reload_callback=None):
+                 logic_engine=None, logic_reload_callback=None, project_reload_callback=None,
+                 controller_backup_core=None):
         super().__init__()
         # EPWCore.reload_logic - the one operation that puts a NEW logic
         # program into the running scan (Project menu). A callback rather
@@ -52,6 +54,13 @@ class MainWindow(QMainWindow):
         # new file in place. None in the isolated widget tests, which
         # build a window without a core.
         self._project_reload_callback = project_reload_callback
+        # EPWCore, for backing this controller up and restoring it.
+        # The whole core rather than two callbacks: a restore rebuilds
+        # the controller through reload_project(), so the panel would
+        # end up holding most of it anyway. None in the isolated widget
+        # tests, which build a window without a core - the two menu
+        # entries then say so instead of failing.
+        self._controller_backup_core = controller_backup_core
         # The scan that executes the user's logic. The status bar shows
         # whether it is running at all (an operator standing at the
         # cabinet has no other way to tell a controller whose interlocks
@@ -817,6 +826,17 @@ class MainWindow(QMainWindow):
         self.access_manager.level_changed.connect(self._refresh_alarm_users_action_visibility)
 
         self._settings_actions["menu.settings_change_pin"] = act_pin
+
+        # Everything that exists only on this controller's card:
+        # counters, arming state, alarm memory, retentive bits, the
+        # audit log. Engineer only - a backup is a file that leaves the
+        # site, and a restore overwrites a running controller.
+        self._act_backup = settings_menu.addAction(tr("menu.settings_backup"))
+        self._act_backup.triggered.connect(self._save_controller_backup)
+        self._settings_actions["menu.settings_backup"] = self._act_backup
+        self._act_restore = settings_menu.addAction(tr("menu.settings_restore"))
+        self._act_restore.triggered.connect(self._restore_controller_backup)
+        self._settings_actions["menu.settings_restore"] = self._act_restore
         act_sleep = settings_menu.addAction(tr("menu.settings_screen_sleep"))
         act_sleep.triggered.connect(self._open_screen_sleep_dialog)
         self._settings_actions["menu.settings_screen_sleep"] = act_sleep
@@ -1948,6 +1968,80 @@ class MainWindow(QMainWindow):
         self._refresh_project_label()
         self._info(tr("dialog.saved"))
 
+    # --- backup and restore of this controller ------------------------------
+
+    def _save_controller_backup(self):
+        """Writes a bundle of everything that exists only here. Engineer
+        only, audited. It carries no secret - see
+        core/controller_backup.py and the message below, which says so
+        to the person taking it rather than leaving them to assume."""
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Back up the controller")
+            return
+        core = getattr(self, "_controller_backup_core", None)
+        if core is None:
+            self._warn(tr("dialog.backup_unavailable"))
+            return
+        suggested = f"epw-backup-{time.strftime('%Y%m%d-%H%M')}.epwbak"
+        path, _ = QFileDialog.getSaveFileName(self, tr("dialog.backup_title"), suggested,
+                                              tr("dialog.backup_filter"))
+        if not path:
+            return
+        try:
+            data = core.backup_bundle(actor=f"Panel:{self.access_manager.level}",
+                                      level=self.access_manager.level)
+            Path(path).write_bytes(data)
+        except (PermissionError, OSError) as e:
+            self._warn(tr("dialog.backup_failed", reason=str(e)))
+            return
+        self._info(tr("dialog.backup_done", path=path))
+
+    def _restore_controller_backup(self):
+        """Puts a bundle back and rebuilds the controller from it.
+
+        Shows what is in the bundle BEFORE anything is written - a
+        restore overwrites a running controller - and afterwards the
+        list of secrets nobody can restore for you."""
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Restore the controller")
+            return
+        core = getattr(self, "_controller_backup_core", None)
+        if core is None:
+            self._warn(tr("dialog.backup_unavailable"))
+            return
+        path, _ = QFileDialog.getOpenFileName(self, tr("dialog.restore_title"), "",
+                                              tr("dialog.backup_filter"))
+        if not path:
+            return
+        from epw_os.core import controller_backup
+
+        try:
+            payload = controller_backup.read_backup(Path(path).read_bytes())
+        except (controller_backup.BackupError, OSError) as e:
+            self._warn(tr("dialog.restore_refused", reason=str(e)))
+            return
+
+        summary = controller_backup.describe_backup(payload)
+        answer = QMessageBox.question(
+            self, tr("dialog.restore_title"),
+            tr("dialog.restore_confirm",
+               project=summary.get("project_name") or "?",
+               revision=summary.get("revision_text") or summary.get("project_revision"),
+               counters=summary.get("counters", 0),
+               zones=", ".join(summary.get("armed_zones") or []) or tr("dialog.restore_no_zones")),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer != QMessageBox.Yes:
+            return
+
+        result = core.restore_from_backup(Path(path).read_bytes(),
+                                          actor=f"Panel:{self.access_manager.level}",
+                                          level=self.access_manager.level)
+        if not result.get("success"):
+            self._warn(tr("dialog.restore_refused", reason=result.get("reason", "")))
+            return
+        self._info(tr("dialog.restore_done", items="\n".join(
+            _checklist_lines(result.get("checklist") or []))))
+
     def _install_project_file(self):
         """projekt.epw: File > Open copies a project file prepared in Studio
         over this controller's own, after the shared reader accepted it
@@ -2716,3 +2810,24 @@ class MainWindow(QMainWindow):
         else:
             q_color = theme_colors["state_alarm"]
         self.lbl_comm_quality.setStyleSheet(f"color: {q_color}; font-weight: bold;")
+
+
+def _checklist_lines(checklist) -> list:
+    """The re-issue checklist as lines a person reads. One renderer -
+    the panel, Studio and the REST answer all show the same list rather
+    than each inventing its own wording."""
+    lines = []
+    for item in checklist:
+        kind = item.get("kind")
+        if kind == "level_pins":
+            lines.append(tr("dialog.reissue_level_pins", levels=item.get("detail", "")))
+        elif kind == "user":
+            needs = item.get("needs") or []
+            what = tr("dialog.reissue_both") if len(needs) > 1 else (
+                tr("dialog.reissue_code") if needs == ["code"] else tr("dialog.reissue_token"))
+            lines.append(tr("dialog.reissue_user", name=item.get("detail", ""), what=what))
+        elif kind == "api_tokens":
+            lines.append(tr("dialog.reissue_api_tokens"))
+        elif kind == "mqtt_password":
+            lines.append(tr("dialog.reissue_mqtt", broker=item.get("detail", "")))
+    return lines

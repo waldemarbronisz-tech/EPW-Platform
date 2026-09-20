@@ -166,7 +166,12 @@ describe('the toolbar', () => {
     expect(cmds()).toContain('draw_wall');
     expect(cmds()).toContain('draw_room');
     expect(cmds()).not.toContain('draw_wire');
-    expect(cmds()).not.toContain('rotate_left');
+    // Rotation is offered here too (owner, 2026-09-20): a door or a
+    // luminaire is turned while the plan is being drawn, and leaving
+    // the mode to do it was the friction. See rotate-in-rooms.test.tsx.
+    expect(cmds()).toContain('rotate_left');
+    // What ROOMS still does not offer is another mode's DRAWING tools.
+    expect(cmds()).not.toContain('text_box');
 
     act(() => { fireEvent.click(screen.getByRole('radio', { name: 'Connections' })); });
     expect(cmds()).toEqual(expect.arrayContaining(['draw_wire', 'medium:WATER', 'style:BUS', 'routing:AVOID']));

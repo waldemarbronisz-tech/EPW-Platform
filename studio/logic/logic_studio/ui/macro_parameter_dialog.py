@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QDialogButtonBox, QFormLayout, QMessageBox, QLabel,
 )
 from PySide6.QtCore import Qt
+from logic_studio.i18n import tr
 
 PARAM_NAME_ROLE = Qt.UserRole
 
@@ -51,7 +52,7 @@ def infer_param_type(value) -> str:
 class _NewMacroParameterDialog(QDialog):
     def __init__(self, property_name: str, current_value, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New macro parameter")
+        self.setWindowTitle(tr("macro.new_macro_parameter"))
         self.entry = None
 
         base_name, unit = _split_property_unit(property_name)
@@ -78,7 +79,7 @@ class _NewMacroParameterDialog(QDialog):
     def _on_accept(self):
         name = self.display_name_edit.text().strip()
         if not name:
-            QMessageBox.critical(self, "Invalid name", "The parameter name cannot be empty.")
+            QMessageBox.critical(self, tr("common.invalid_name"), tr("macro.empty_name"))
             return
         self.entry = {
             "display_name": name,
@@ -98,11 +99,11 @@ class BindParameterDialog(QDialog):
         self.current_value = current_value
         self._chosen_existing_name = None
         self._new_entry = None
-        self.setWindowTitle("Bind to parameter")
+        self.setWindowTitle(tr("macro.bind_title"))
         self.resize(360, 320)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"Property: {property_name}"))
+        layout.addWidget(QLabel(tr("macro.property_is", name=property_name)))
 
         self.list = QListWidget()
         for param in definition.get("parameters", []):
@@ -113,7 +114,7 @@ class BindParameterDialog(QDialog):
         layout.addWidget(self.list)
 
         new_row = QHBoxLayout()
-        self.new_param_btn = QPushButton("New parameter...")
+        self.new_param_btn = QPushButton(tr("macro.new_parameter_dots"))
         self.new_param_btn.clicked.connect(self._create_new_parameter)
         new_row.addWidget(self.new_param_btn)
         new_row.addStretch()

@@ -106,21 +106,45 @@ def test_shortcuts_extractor_finds_the_known_shortcuts():
     # A representative sample of shortcuts genuinely wired in
     # ui/main_window.py -- if one of these is ever rebound, this test
     # fails with a clear diff instead of silently going stale.
-    assert as_dict.get("Save") == "Ctrl+S"
-    assert as_dict.get("Compile") == "F5"
-    assert as_dict.get("Start") == "F6"
+    #
+    # The label is the translation KEY now, not the English text: the
+    # table is built in whatever language is active when the help topic
+    # is opened, so extracting resolved text would freeze one language
+    # into it (see shortcuts._label_value).
+    assert as_dict.get("menu.save") == "Ctrl+S"
+    assert as_dict.get("menu.compile") == "F5"
+    assert as_dict.get("menu.start") == "F6"
 
 def test_shortcuts_extractor_ignores_actions_without_a_shortcut():
     rows = shortcuts.extract_shortcuts()
-    texts = [text for text, _ in rows]
+    labels = [label for label, _ in rows]
     # "Pause" (ui/main_window.py's act_sim_pause) has no shortcut at all.
-    assert "Pause" not in texts
+    assert "menu.pause" not in labels
 
 def test_shortcuts_markdown_contains_every_extracted_shortcut():
+    from logic_studio.i18n import tr
+
     md = shortcuts.shortcuts_markdown()
-    for text, shortcut in shortcuts.extract_shortcuts():
-        assert text in md
+    for label, shortcut in shortcuts.extract_shortcuts():
+        assert tr(label) in md
         assert shortcut in md
+
+def test_the_shortcut_table_follows_the_language():
+    """The whole reason the extractor returns keys."""
+    from logic_studio import i18n
+
+    try:
+        i18n.set_language("en")
+        assert "Keyboard shortcuts" in shortcuts.shortcuts_markdown()
+        assert "| Save |" in shortcuts.shortcuts_markdown()
+
+        i18n.set_language("pl")
+        polish = shortcuts.shortcuts_markdown()
+        assert "Skróty klawiszowe" in polish
+        assert "| Zapisz |" in polish
+        assert "Ctrl+S" in polish, "the shortcut itself never changes"
+    finally:
+        i18n.set_language("en")
 
 def test_shortcuts_extractor_reflects_a_changed_source_file(tmp_path):
     """§7.5's own core claim: a shortcut changed in the CODE changes in
@@ -137,3 +161,19 @@ def test_shortcuts_extractor_reflects_a_changed_source_file(tmp_path):
     )
     rows = shortcuts.extract_shortcuts(fake_source)
     assert rows == [("New", "Ctrl+N"), ("Weird", "Ctrl+Shift+W")]
+
+
+def test_a_label_written_as_a_translation_key_is_extracted_as_that_key(tmp_path):
+    """Both forms have to work: the real file writes tr("menu.save"),
+    and a plain string must still be picked up (nothing forces every
+    action label through tr, and one that is not is still a shortcut
+    worth listing)."""
+    fake_source = tmp_path / "fake_translated.py"
+    fake_source.write_text(
+        'class X:\n'
+        '    def setup(self):\n'
+        '        self.a = self._make_action(tr("menu.save"), self._save, "Ctrl+S")\n'
+        '        self.b = self._make_action("Plain", self._plain, "Ctrl+P")\n',
+        encoding="utf-8",
+    )
+    assert shortcuts.extract_shortcuts(fake_source) == [("menu.save", "Ctrl+S"), ("Plain", "Ctrl+P")]

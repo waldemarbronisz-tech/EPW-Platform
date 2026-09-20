@@ -28,11 +28,32 @@ const RoomOptions: React.FC = () => {
   const setWallDrawHeight = useStore(s => s.setWallDrawHeight);
   const wallDrawMaterial = useStore(s => s.wallDrawMaterial);
   const setWallDrawMaterial = useStore(s => s.setWallDrawMaterial);
+  const selectedWallIds = useStore(s => s.selectedWallIds);
   const floorMaterial = useStore(s => s.canvasConfig.floorMaterial);
   const setFloorMaterial = useStore(s => s.setFloorMaterial);
   const showIlluminance = useStore(s => s.showIlluminance);
   const setShowIlluminance = useStore(s => s.setShowIlluminance);
   const [showTakeoff, setShowTakeoff] = useState(false);
+
+  // These three set what the NEXT wall is drawn with - and, when walls
+  // are selected, change those too.
+  //
+  // Only setting the default was the surprising half: with a room
+  // selected, picking a wall material did nothing visible, because the
+  // room's walls each carry their own (WallElement.material) and were
+  // drawn with whatever was chosen at the time. Every other bar in this
+  // editor that sits above a selection acts on it.
+  const applyToSelection = (patch: Partial<{ thickness: number; height: number; material: WallMaterialId }>) => {
+    if (selectedWallIds.length === 0) return;
+    const store = useStore.getState();
+    store.updateWalls(selectedWallIds.map(id => ({ id, updates: patch })));
+    store.saveHistory();
+  };
+
+  const selectionCount = selectedWallIds.length;
+  const appliesToSelection = selectionCount > 0
+    ? ` ${tr('tool.applies_to_selection', { count: String(selectionCount) })}`
+    : '';
 
   return (
     <div className="format-bar mode-options-bar" data-mode-options="ROOMS">
@@ -45,7 +66,11 @@ const RoomOptions: React.FC = () => {
             min={WALL_MIN_THICKNESS}
             max={WALL_MAX_THICKNESS}
             value={wallDrawThickness}
-            onChange={e => setWallDrawThickness(Number(e.target.value))}
+            onChange={e => {
+              const value = Number(e.target.value);
+              setWallDrawThickness(value);
+              applyToSelection({ thickness: value });
+            }}
             style={{ width: 90, verticalAlign: 'middle' }}
           />
         </label>
@@ -58,13 +83,24 @@ const RoomOptions: React.FC = () => {
             min={WALL_MIN_HEIGHT}
             max={WALL_MAX_HEIGHT}
             value={wallDrawHeight}
-            onChange={e => setWallDrawHeight(Number(e.target.value))}
+            onChange={e => {
+              const value = Number(e.target.value);
+              setWallDrawHeight(value);
+              applyToSelection({ height: value });
+            }}
             style={{ width: 90, verticalAlign: 'middle' }}
           />
         </label>
-        <label>
+        <label title={`${tr('tool.wall_material')}${appliesToSelection}`}>
           {tr('tool.wall_material')}{' '}
-          <select value={wallDrawMaterial} onChange={e => setWallDrawMaterial(e.target.value as WallMaterialId)}>
+          <select
+            value={wallDrawMaterial}
+            onChange={e => {
+              const value = e.target.value as WallMaterialId;
+              setWallDrawMaterial(value);
+              applyToSelection({ material: value });
+            }}
+          >
             {Object.entries(WALL_MATERIALS).map(([id, m]) => (
               <option key={id} value={id}>{m.label}</option>
             ))}

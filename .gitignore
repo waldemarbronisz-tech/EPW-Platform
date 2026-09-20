@@ -78,6 +78,21 @@ runtime/runtime_state.json.corrupt
 runtime/controller.local.json
 *.epw.bak
 
+# ---------- Kopie zapasowe sterownika ----------
+# Pakiet .epwbak niesie dziennik audytowy, liczniki i stan uzbrojenia
+# konkretnej instalacji. Sekretów nie niesie (patrz
+# runtime/epw_os/core/controller_backup.py), ale to i tak są dane
+# obiektu, a nie kod - nigdy w repozytorium.
+*.epwbak
+
+# ---------- Projekty zapisane przy ręcznym sprawdzaniu ----------
+# Studio zapisuje projekt/obiekt tam, gdzie wskaże człowiek - a przy
+# uruchamianiu go z repozytorium domyślnym miejscem bywa samo
+# repozytorium. To dane obiektu, nie kod.
+/studio/*.epw
+/studio/*.epwsite
+/studio/*/projekt.epw
+
 # one-off migration backups of the live project file (2026-09-18)
 runtime/projekt.epw.bak-*
 # protection test reports written by the controller (core/protection_test.py)

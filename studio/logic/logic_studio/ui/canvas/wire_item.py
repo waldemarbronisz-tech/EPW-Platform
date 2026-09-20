@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QGraphicsPathItem, QMenu
 from PySide6.QtGui import QPainterPath, QPen, QCursor, QFont
 from PySide6.QtCore import Qt, QPointF, QRectF
 
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style
 from logic_studio.ui.canvas import routing
 from logic_studio.ui.window_lookup import logic_main_window
@@ -479,11 +480,11 @@ class WireItem(QGraphicsPathItem):
             QMenu::item:selected { background-color: #0078D7; color: white; }
             QMenu::item:disabled { color: #A0A0A0; }
         """)
-        set_label_action = menu.addAction("Set label...")
-        remove_label_action = menu.addAction("Remove label")
+        set_label_action = menu.addAction(tr("canvas.set_label"))
+        remove_label_action = menu.addAction(tr("canvas.remove_label"))
         remove_label_action.setEnabled(has_label)
         menu.addSeparator()
-        convert_action = menu.addAction("Convert to reference")
+        convert_action = menu.addAction(tr("canvas.convert_reference"))
 
         chosen = menu.exec(QCursor.pos())
         if chosen == set_label_action:
@@ -519,7 +520,7 @@ class WireItem(QGraphicsPathItem):
         wire = get_or_create_wire_for_pins(project, self.source_port.pin.uuid, self.dest_port.pin.uuid)
         wire.label = text
         if similar and window is not None:
-            window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
+            window.statusBar().showMessage(tr("canvas.similar_label", similar=similar), 5000)
         self._refresh_scene(window)
 
     def _remove_label(self, project, existing_wire):
@@ -544,5 +545,5 @@ class WireItem(QGraphicsPathItem):
             wire_at_source.label = text
             wire_at_dest.label = text
             if similar and window is not None:
-                window.statusBar().showMessage(f"Similar label in the project: {similar}", 5000)
+                window.statusBar().showMessage(tr("canvas.similar_label", similar=similar), 5000)
         self._refresh_scene(window)

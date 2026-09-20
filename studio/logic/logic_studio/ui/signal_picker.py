@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QMessageBox
 )
 from PySide6.QtCore import Qt
+from logic_studio.i18n import tr
 
 SIGNAL_ID_ROLE = Qt.UserRole
 KIND_ROLE = Qt.UserRole + 1  # "physical" | "internal" | "system" — for filtering/accept logic
@@ -20,7 +21,7 @@ class _NewInternalSignalDialog(QDialog):
 
     def __init__(self, value_type: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New internal signal")
+        self.setWindowTitle(tr("signal.new_title"))
         self.entry = None
 
         layout = QVBoxLayout(self)
@@ -51,7 +52,7 @@ class _NewInternalSignalDialog(QDialog):
         name = self.name_edit.text().strip()
         error = validate_internal_bit_name(name)
         if error:
-            QMessageBox.critical(self, "Invalid name", error)
+            QMessageBox.critical(self, tr("common.invalid_name"), error)
             return
         self.entry = {
             "name": name,
@@ -85,13 +86,13 @@ class SignalPickerDialog(QDialog):
         self.system_source_filter = system_source_filter
         self._chosen_id = None
         self._chosen_kind = None
-        self.setWindowTitle("Choose signal")
+        self.setWindowTitle(tr("signal.choose_title"))
         self.resize(640, 480)
 
         layout = QVBoxLayout(self)
 
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Search...")
+        self.search_edit.setPlaceholderText(tr("common.search"))
         self.search_edit.textChanged.connect(self._apply_filter)
         layout.addWidget(self.search_edit)
 
@@ -99,14 +100,14 @@ class SignalPickerDialog(QDialog):
         # column, per eTango), technical id in the middle, label on the
         # right.
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Description", "Signal name", "Label"])
+        self.tree.setHeaderLabels([tr("signal.col_description"), tr("signal.col_name"), tr("signal.col_label")])
         self.tree.setColumnWidth(0, 280)
         self.tree.setColumnWidth(1, 180)
         self.tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self.tree)
 
         new_signal_row = QHBoxLayout()
-        self.new_signal_btn = QPushButton("New internal signal...")
+        self.new_signal_btn = QPushButton(tr("signal.new_button"))
         self.new_signal_btn.clicked.connect(self._create_new_signal)
         new_signal_row.addWidget(self.new_signal_btn)
         new_signal_row.addStretch()
@@ -281,13 +282,13 @@ class SignalPickerDialog(QDialog):
         entries = list(self.project.settings.get("internal_bits", []))
         new_lname = sub.entry["name"].lower()
         if any(e.get("name", "").lower() == new_lname for e in entries):
-            QMessageBox.critical(self, "Duplicate name", f"Signal '{sub.entry['name']}' already exists in the registry.")
+            QMessageBox.critical(self, tr("signal.duplicate"), tr("signal.duplicate_text", name=sub.entry["name"]))
             return
 
         entries.append(sub.entry)
         errors = validate_internal_bits_registry(entries)
         if errors:
-            QMessageBox.critical(self, "Invalid entry", "\n".join(errors))
+            QMessageBox.critical(self, tr("signal.invalid_entry"), "\n".join(errors))
             return
 
         self.project.settings["internal_bits"] = entries

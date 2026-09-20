@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QGraphicsScene
 from PySide6.QtGui import QPen, QCursor, QColor
 from PySide6.QtCore import Qt, QLineF, QPointF, Signal
 
+from logic_studio.i18n import tr
 from logic_studio.ui.canvas import style
 from logic_studio.ui.window_lookup import logic_main_window
 
@@ -1078,16 +1079,19 @@ class LogicScene(QGraphicsScene):
 # Edit menu ("Align" submenu, main_window.py) and the canvas/block
 # context menu (block_item.py) so the list — and each operation's minimum
 # selection size — lives in exactly one place.
+# The label is a translation KEY, resolved when the menu is built -
+# not at import time, when the language may not be set yet and would in
+# any case be frozen into the table for the rest of the session.
 ALIGN_OPERATIONS = [
-    ("Align left", "align_left", 2),
-    ("Align right", "align_right", 2),
-    ("Align top", "align_top", 2),
-    ("Align bottom", "align_bottom", 2),
-    ("Center vertically", "align_center_vertical", 2),
-    ("Center horizontally", "align_center_horizontal", 2),
+    ("align.left", "align_left", 2),
+    ("align.right", "align_right", 2),
+    ("align.top", "align_top", 2),
+    ("align.bottom", "align_bottom", 2),
+    ("align.center_v", "align_center_vertical", 2),
+    ("align.center_h", "align_center_horizontal", 2),
     (None, None, None),  # separator marker
-    ("Distribute horizontally", "distribute_horizontal", 3),
-    ("Distribute vertically", "distribute_vertical", 3),
+    ("align.distribute_h", "distribute_horizontal", 3),
+    ("align.distribute_v", "distribute_vertical", 3),
 ]
 
 
@@ -1108,11 +1112,11 @@ def populate_align_menu(menu, scene: "LogicScene"):
     current selection is large enough, wired straight to `scene`'s own
     methods."""
     selected_count = len(scene.selectedItems())
-    for label, method_name, min_count in ALIGN_OPERATIONS:
-        if label is None:
+    for label_key, method_name, min_count in ALIGN_OPERATIONS:
+        if label_key is None:
             menu.addSeparator()
             continue
-        action = menu.addAction(label)
+        action = menu.addAction(tr(label_key))
         action.setEnabled(selected_count >= min_count)
         action.triggered.connect(getattr(scene, method_name))
     return menu

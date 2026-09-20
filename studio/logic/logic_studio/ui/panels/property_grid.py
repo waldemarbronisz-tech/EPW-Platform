@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QDoubleSpinBox, QComboBox, QMessageBox, QPushButton, QPlainTextEdit
 )
 from PySide6.QtCore import QSettings
+from logic_studio.i18n import tr
 from logic_studio.ui.display_names import enum_label, property_label, unit_label
 from logic_studio.core.device_model import DeviceModel
 from logic_studio.core import io_availability
@@ -91,7 +92,7 @@ class _MissingIOCombo(QComboBox):
         self.setToolTip(message or placeholder)
 
     def showPopup(self):
-        QMessageBox.information(self, "No I/O channel to address", self._message or self.currentText())
+        QMessageBox.information(self, tr("property.no_channel_title"), self._message or self.currentText())
 
 
 def _split_unit(key: str):
@@ -259,7 +260,7 @@ class PropertyGridPanel(QWidget):
         # A single, unmissable placeholder — not an empty panel that could
         # be mistaken for "still loading" or a bug.
         layout = self.layout()
-        placeholder = QLabel("No block selected")
+        placeholder = QLabel(tr("property.no_block"))
         placeholder.setObjectName("property_panel_empty_label")
         # Remove any previous placeholder before adding a new one.
         for i in reversed(range(layout.count())):
@@ -439,12 +440,12 @@ class PropertyGridPanel(QWidget):
             display = QLineEdit(f"↦ {label_text}")
             display.setReadOnly(True)
             row_layout.addWidget(display)
-            unbind_btn = QPushButton("Unbind from parameter")
+            unbind_btn = QPushButton(tr("property.unbind"))
             unbind_btn.clicked.connect(lambda checked=False, b=block, k=key: self._unbind_parameter(def_id, b, k))
             row_layout.addWidget(unbind_btn)
         else:
             row_layout.addWidget(editor)
-            bind_btn = QPushButton("Bind to parameter...")
+            bind_btn = QPushButton(tr("property.bind"))
             bind_btn.clicked.connect(lambda checked=False, b=block, k=key, v=block.properties.get(key): self._open_bind_parameter_dialog(def_id, b, k, v))
             row_layout.addWidget(bind_btn)
 
@@ -571,7 +572,7 @@ class PropertyGridPanel(QWidget):
             combo.currentTextChanged.connect(lambda text, k=key: self._commit_property(k, text))
             return combo
         if (block.type_id, key) in _SIGNAL_PICKER_TARGETS:
-            btn = QPushButton(str(value) or "(not selected)")
+            btn = QPushButton(str(value) or tr("property.not_selected"))
             btn.clicked.connect(lambda checked=False, k=key, b=btn: self._open_signal_picker(k, b))
             return btn
         # Address on a block type not covered above (shouldn't normally
