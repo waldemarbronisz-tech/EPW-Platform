@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QApplication
 
 app = QApplication(sys.argv)
 
-from studio.shell.logic_panel import _ensure_logic_studio_importable
+from studio.shell.logic_path import ensure_importable as _ensure_logic_studio_importable
 _ensure_logic_studio_importable()
 from logic_studio.app import apply_classic_style
 apply_classic_style(app)

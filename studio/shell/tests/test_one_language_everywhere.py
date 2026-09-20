@@ -163,38 +163,60 @@ def test_the_reload_reaches_the_panel_that_is_open(tmp_path, app):
         _close(window)
 
 
+class _Loads:
+    """Records what the editor was asked to load."""
+
+    def __init__(self):
+        self.urls = []
+
+    def load(self, url):
+        self.urls.append(url.toString())
+
+
+def _panel_without_a_browser(port):
+    """The real SynopticPanel.reload_language(), without constructing a
+    real panel.
+
+    Every other test in this suite uses a fake SynopticPanel, and for a
+    good reason: the real one builds a QWebEngineView, which needs a
+    browser process and does not survive `offscreen` in a CI container.
+    Two tests here once built the real thing and turned the whole Shell
+    job red.
+
+    So the METHOD is exercised - it is the code under test - on an
+    instance that was never __init__'d, with only the two attributes it
+    touches.
+    """
+    from studio.shell.synoptic_panel import SynopticPanel
+
+    panel = SynopticPanel.__new__(SynopticPanel)
+    panel._served_port = port
+    panel._view = _Loads()
+    return panel
+
+
 def test_the_screen_editor_reloads_itself_in_the_current_language(app):
     """The editor reads ?lang= once, at load. Reloading is how its
     language changes - and it has to be the language chosen NOW."""
-    from studio.shell.synoptic_panel import SynopticPanel
+    panel = _panel_without_a_browser(port=3456)
 
-    panel = SynopticPanel()
-    loaded = []
-    try:
-        panel._view.load = lambda url: loaded.append(url.toString())
-        shell_i18n.set_language("pl")
-        panel.reload_language()
-        assert loaded and loaded[-1].endswith("?lang=pl"), loaded
+    shell_i18n.set_language("pl")
+    panel.reload_language()
+    assert panel._view.urls[-1].endswith("?lang=pl"), panel._view.urls
 
-        shell_i18n.set_language("en")
-        panel.reload_language()
-        assert loaded[-1].endswith("?lang=en"), loaded
-    finally:
-        panel.deleteLater()
+    shell_i18n.set_language("en")
+    panel.reload_language()
+    assert panel._view.urls[-1].endswith("?lang=en"), panel._view.urls
 
 
 def test_a_screen_editor_whose_build_failed_is_not_reloaded(app):
     """Nothing is being served, so there is nothing to reload - and the
     language change must not turn that into a second error."""
-    from studio.shell.synoptic_panel import SynopticPanel
+    panel = _panel_without_a_browser(port=None)
 
-    panel = SynopticPanel()
-    try:
-        panel._served_port = None
-        panel._view.load = lambda url: pytest.fail("reloaded with nothing served")
-        panel.reload_language()
-    finally:
-        panel.deleteLater()
+    panel.reload_language()
+
+    assert panel._view.urls == [], "reloaded with nothing served"
 
 
 def test_no_screen_editor_open_is_not_an_error(tmp_path, app):
