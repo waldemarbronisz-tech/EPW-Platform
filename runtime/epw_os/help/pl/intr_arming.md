@@ -35,3 +35,16 @@ taka decyzja trafia do dziennika audytowego osobno, jako uzbrojenie
 Pozostałe sekundy odliczania widać na stronie Podgląd dla
 każdej strefy w stanie ODLICZANIE WYJŚCIA/WEJŚCIA, a zbiorczy stan
 systemu zawsze widać na pasku statusu.
+
+## Dozór nocny i kto ma prawo
+
+Strefę można też uzbroić **nocą**, dozorując tylko linie oznaczone do
+tego — patrz [Dozór nocny](help://intr_night).
+
+Uzbrajanie i rozbrajanie da się dodatkowo ograniczyć **do konkretnych
+osób**, a nie tylko do poziomu dostępu: patrz [Użytkownicy
+alarmówki](help://intr_users). Odmowa („nie Twoja strefa") trafia do
+dziennika audytowego jak wszystko inne.
+
+Rozbrojenie zatrzymuje [sygnalizator](help://intr_sounder), ale zostawia
+pamięć alarmu i lampę, dopóki ktoś ich nie skasuje.

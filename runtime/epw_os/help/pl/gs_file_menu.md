@@ -35,3 +35,14 @@ pokazany wyszarzony i oznaczony, nie po cichu pomijany. **Wyczyść**
 opróżnia listę.
 
 Zobacz też: [Menu Projekt](help://gs_project_menu).
+
+## Wgranie projekt.epw
+
+Sterownik pracujący na **`projekt.epw`** zaprojektowanym w EPW Studio
+zachowuje się inaczej: jego struktura należy do projektu, więc nie ma
+tu czego edytować i zapisywać po kawałku. **Plik → Otwórz** wtedy
+*wgrywa* wskazany plik i proponuje przebudowę sterownika według niego,
+bez restartu — patrz [Wgranie projektu](help://proj_install).
+
+Pozycje powyżej to starsza droga, dla projektu edytowalnego — zostaje
+dla sterownika, który nie pracuje na `projekt.epw`.

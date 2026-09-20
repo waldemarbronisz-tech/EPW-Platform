@@ -32,3 +32,16 @@ the audit log distinctly, as arming *despite* a fault.
 The countdown seconds remaining show on the Overview page for
 any zone currently in EXIT DELAY or ENTRY DELAY, and the aggregate
 system state always shows in the status bar.
+
+## Night arming, and who is allowed
+
+A zone can also be armed **at night**, watching only the lines flagged
+for it — see [Night Arming](help://intr_night).
+
+Arming and disarming can additionally be restricted **to named people**,
+not just to an access level: see [Alarm System
+Users](help://intr_users). A refusal ("not your zone") is written to the
+audit log like everything else.
+
+Disarming stops the [sounder](help://intr_sounder) but leaves the alarm
+memory and the strobe until somebody clears them.

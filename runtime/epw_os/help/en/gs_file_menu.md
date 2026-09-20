@@ -32,3 +32,14 @@ file that no longer exists at its saved location is shown grayed out
 and marked, not silently skipped. **Clear** empties the list.
 
 See also: [The Project Menu](help://gs_project_menu).
+
+## Installing a projekt.epw
+
+A controller running a **`projekt.epw`** designed in EPW Studio works
+differently: its structure is the project's, so there is nothing here to
+edit and save piecemeal. **File → Open** then *installs* the file you
+pick, and offers to rebuild the controller from it without restarting —
+see [Installing a Project](help://proj_install).
+
+The items above are the older, editable-project path, kept for a
+controller that is not running a `projekt.epw`.
