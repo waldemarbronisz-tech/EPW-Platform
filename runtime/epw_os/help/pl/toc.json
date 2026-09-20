@@ -453,6 +453,24 @@
       ]
     },
     {
+      "id": "backup",
+      "title": "Kopia zapasowa i wymiana",
+      "topics": [
+        {
+          "id": "backup_what",
+          "title": "Kopia zapasowa tego sterownika"
+        },
+        {
+          "id": "backup_restore",
+          "title": "Odtworzenie z kopii zapasowej"
+        },
+        {
+          "id": "backup_replace",
+          "title": "Wymiana padniętego sterownika"
+        }
+      ]
+    },
+    {
       "id": "troubleshooting",
       "title": "Rozwiązywanie problemów",
       "topics": [
@@ -717,6 +735,10 @@
       "topic": "set_feature_config"
     },
     {
+      "term": "kopia zapasowa",
+      "topic": "backup_what"
+    },
+    {
       "term": "Krotność (liczba naruszeń)",
       "topic": "intr_filters"
     },
@@ -805,6 +827,10 @@
       "topic": "mqtt_what"
     },
     {
+      "term": "nadanie na nowo",
+      "topic": "backup_restore"
+    },
+    {
       "term": "Nadzór zasilania (sieć/akumulator)",
       "topic": "intr_power_supervision"
     },
@@ -825,6 +851,10 @@
       "topic": "ap_note"
     },
     {
+      "term": "odtworzenie",
+      "topic": "backup_restore"
+    },
+    {
       "term": "Okna wartości (stany linii analogowej)",
       "topic": "intr_input_modes"
     },
@@ -843,6 +873,10 @@
     {
       "term": "Ostrzeżenie o rozmiarze bazy danych",
       "topic": "set_data_retention"
+    },
+    {
+      "term": "padnięta karta",
+      "topic": "backup_replace"
     },
     {
       "term": "Pamięć alarmu",
@@ -1167,6 +1201,10 @@
     {
       "term": "Wygaszanie ekranu",
       "topic": "set_screen_sleep"
+    },
+    {
+      "term": "wymiana sterownika",
+      "topic": "backup_replace"
     },
     {
       "term": "Właściwości projektu",

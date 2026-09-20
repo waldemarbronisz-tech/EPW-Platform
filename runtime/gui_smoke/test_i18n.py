@@ -34,8 +34,10 @@ def test_polish_menu_nav_statusbar_after_rebuild(make_window):
         # present in the menu - only its *visibility* is Engineer-gated.
         # Same for Training Mode's own entry/separator just before it.
         assert [a.text() for a in pl_settings.actions()] == \
-            ["Język...", "Zmień PIN...", "Użytkownicy alarmówki...", "Wygaszanie ekranu...",
-             "Klawiatura ekranowa", "Motyw...", "Konfiguracja funkcji...", "MQTT...", "Retencja danych...",
+            ["Język...", "Zmień PIN...", "Użytkownicy alarmówki...",
+             "Kopia zapasowa sterownika...", "Odtwórz z kopii zapasowej...",
+             "Wygaszanie ekranu...", "Klawiatura ekranowa", "Motyw...",
+             "Konfiguracja funkcji...", "MQTT...", "Retencja danych...",
              "", "Tryb ćwiczebny", "", "Tryb kiosku..."]
         pl_project = [a.menu() for a in w_pl.menuBar().actions() if a.text() == "Projekt"][0]
         # "Wczytaj ekran synoptyczny..." (Engineer-gated, same

@@ -55,6 +55,28 @@ historian's and audit log's retention, the I/O driver, file paths. These
 describe **this one controller**, not the installation, so they are not
 in the project — but nothing on the controller is invisible from Studio.
 
+## Controller backup
+
+**Take a backup...** pulls everything that exists only on that
+controller: the switching counters, the arming state, the alarm memory,
+the retentive logic bits, the audit log, the local settings and the
+project itself.
+
+It carries **no secrets** — no PINs, no alarm users' codes, no tokens,
+no broker password. A backup is a file that leaves the site, and a
+four-digit PIN behind a hash is not a secret. What it carries instead is
+an inventory of who HAD what, so a restore ends with a checklist naming
+exactly what to set by hand.
+
+**Restore from a backup...** asks the controller to describe the bundle
+first, shows you what it is about to overwrite, and only then sends it.
+The controller rebuilds itself from it without restarting. The
+replacement's own REST address and I/O driver are left alone — they
+describe the hardware it is running on, not the hardware that died.
+
+The whole replacement procedure is on the controller's own help, under
+"Backup and replacement".
+
 ## Switching counters
 
 **Fetch Counters** — the point, closes, opens, closed time, the warning

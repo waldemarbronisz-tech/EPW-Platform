@@ -46,7 +46,9 @@
     "settings_training_mode": "Tryb ćwiczebny",
     "settings_feature_config": "Konfiguracja funkcji...",
     "settings_mqtt": "MQTT...",
-    "settings_data_retention": "Retencja danych..."
+    "settings_data_retention": "Retencja danych...",
+    "settings_backup": "Kopia zapasowa sterownika...",
+    "settings_restore": "Odtwórz z kopii zapasowej..."
   },
   "nav": {
     "main_view": "WIDOK GŁÓWNY",
@@ -194,7 +196,24 @@
     "reload_logic_confirm": "Wczytać program logiki z projektu na dysku i wstawić go do skanu?\n\nDziałający skan zostanie najpierw zatrzymany, co sprowadzi każde sterowane przez niego wyjście do stanu bezpiecznego (cyfrowe wyłączone, analogowe 0) do pierwszego skanu nowego programu. Reszta projektu nie jest czytana ponownie - żeby wprowadzić do pracy cały nowy projekt, użyj Plik > Otwórz, które przebudowuje sterownik w miejscu.",
     "reload_logic_done": "Program logiki pracuje: bloków w skanie {blocks}, cykl {cycle} ms.",
     "reload_logic_failed": "Program logiki NIE został przeładowany: {reason}",
-    "reload_logic_unavailable": "Ten sterownik nie potrafi przeładować programu logiki w trakcie pracy."
+    "reload_logic_unavailable": "Ten sterownik nie potrafi przeładować programu logiki w trakcie pracy.",
+    "backup_title": "Zapisz kopię zapasową tego sterownika",
+    "backup_filter": "Kopia zapasowa sterownika EPW (*.epwbak)",
+    "backup_unavailable": "Ten panel nie jest połączony ze sterownikiem, więc nie ma czego kopiować.",
+    "backup_failed": "Nie udało się zapisać kopii: {reason}",
+    "backup_done": "Kopia zapisana do {path}.\\n\\nNiesie liczniki, stan uzbrojenia, pamięć alarmu, dziennik audytowy i projekt - ale ŻADNYCH PIN-ów, kodów, tokenów ani haseł. Te nigdy nie opuszczają sterownika.",
+    "restore_title": "Odtwórz ten sterownik z kopii zapasowej",
+    "restore_refused": "Kopia nie została zastosowana: {reason}",
+    "restore_no_zones": "żadna",
+    "restore_confirm": "Odtworzyć ten sterownik z kopii zapasowej?\\n\\nProjekt: {project} (rewizja {revision})\\nLiczniki łączeń: {counters}\\nStrefy uzbrojone w tamtej chwili: {zones}\\n\\nProjekt, stan i ustawienia tego sterownika zostaną nadpisane, a sterownik przebuduje się według kopii. Nie restartuje się.",
+    "restore_done": "Sterownik pracuje już według odtworzonej instalacji.\\n\\nCzego nikt nie odtworzy za Ciebie - ustaw ręcznie:\\n{items}",
+    "reissue_level_pins": "- PIN-y dostępu ({levels}) - Ustawienia > Zmień PIN",
+    "reissue_user": "- {name}: {what} - Ustawienia > Użytkownicy alarmówki",
+    "reissue_code": "kod na klawiaturę",
+    "reissue_token": "token zdalny",
+    "reissue_both": "kod na klawiaturę i token zdalny",
+    "reissue_api_tokens": "- tokeny REST API",
+    "reissue_mqtt": "- hasło do brokera MQTT ({broker}) - Ustawienia > MQTT"
   },
   "settings": {
     "language_section": "JĘZYK",

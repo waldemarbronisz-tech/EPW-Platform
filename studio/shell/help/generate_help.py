@@ -2197,6 +2197,27 @@ REST, retencje historiana i dziennika, sterownik I/O, ścieżki plików.
 To są ustawienia **egzemplarza**, nie instalacji, więc nie ma ich
 w projekcie — ale nic na sterowniku nie jest niewidoczne ze Studia.
 
+## Kopia zapasowa sterownika
+
+**Pobierz kopię zapasową...** ściąga wszystko, co istnieje tylko na tym
+sterowniku: liczniki łączeń, stan uzbrojenia, pamięć alarmu, bity
+retencyjne logiki, dziennik audytowy, ustawienia lokalne i sam projekt.
+
+Nie niesie **żadnych sekretów** — ani PIN-ów, ani kodów użytkowników
+alarmówki, ani tokenów, ani hasła do brokera. Kopia to plik, który
+opuszcza obiekt, a hasz czterocyfrowego PIN-u nie jest sekretem. Niesie
+zamiast tego inwentarz: kto co MIAŁ, dzięki czemu odtworzenie kończy się
+listą kontrolną z nazwiskami.
+
+**Odtwórz z kopii zapasowej...** najpierw prosi sterownik o opisanie
+kopii, pokazuje, co zostanie nadpisane, i dopiero wtedy ją wysyła.
+Sterownik przebudowuje się według niej bez restartu. Własny adres REST
+i sterownik wejść/wyjść zamiennika zostają nietknięte — opisują sprzęt,
+na którym on pracuje, a nie ten, który padł.
+
+Całą procedurę wymiany opisuje pomoc samego sterownika, rozdział „Kopia
+zapasowa i wymiana".
+
 ## Liczniki łączeń
 
 **Pobierz liczniki** — punkt, liczba załączeń, wyłączeń, czas w stanie
@@ -2276,6 +2297,28 @@ cabinet. Save the project afterwards to keep them.
 historian's and audit log's retention, the I/O driver, file paths. These
 describe **this one controller**, not the installation, so they are not
 in the project — but nothing on the controller is invisible from Studio.
+
+## Controller backup
+
+**Take a backup...** pulls everything that exists only on that
+controller: the switching counters, the arming state, the alarm memory,
+the retentive logic bits, the audit log, the local settings and the
+project itself.
+
+It carries **no secrets** — no PINs, no alarm users' codes, no tokens,
+no broker password. A backup is a file that leaves the site, and a
+four-digit PIN behind a hash is not a secret. What it carries instead is
+an inventory of who HAD what, so a restore ends with a checklist naming
+exactly what to set by hand.
+
+**Restore from a backup...** asks the controller to describe the bundle
+first, shows you what it is about to overwrite, and only then sends it.
+The controller rebuilds itself from it without restarting. The
+replacement's own REST address and I/O driver are left alone — they
+describe the hardware it is running on, not the hardware that died.
+
+The whole replacement procedure is on the controller's own help, under
+"Backup and replacement".
 
 ## Switching counters
 

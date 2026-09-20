@@ -46,7 +46,9 @@
     "settings_training_mode": "Training Mode",
     "settings_feature_config": "Feature Configuration...",
     "settings_mqtt": "MQTT...",
-    "settings_data_retention": "Data Retention..."
+    "settings_data_retention": "Data Retention...",
+    "settings_backup": "Back up this controller...",
+    "settings_restore": "Restore from a backup..."
   },
   "nav": {
     "main_view": "MAIN VIEW",
@@ -194,7 +196,24 @@
     "reload_logic_confirm": "Read the logic program from the project on disk and put it into the scan?\n\nThe running scan is stopped first, which drives every output it controls to its safe state (digital off, analog 0) until the new program's first scan. Nothing else in the project is re-read - to put a whole new project into service, use File > Open, which rebuilds the controller in place.",
     "reload_logic_done": "The logic program is running: {blocks} block(s) in the scan, {cycle} ms cycle.",
     "reload_logic_failed": "The logic program was NOT reloaded: {reason}",
-    "reload_logic_unavailable": "This controller cannot reload the logic program while running."
+    "reload_logic_unavailable": "This controller cannot reload the logic program while running.",
+    "backup_title": "Save a backup of this controller",
+    "backup_filter": "EPW controller backup (*.epwbak)",
+    "backup_unavailable": "This panel is not connected to a controller, so there is nothing to back up.",
+    "backup_failed": "The backup could not be written: {reason}",
+    "backup_done": "Backup written to {path}.\\n\\nIt carries the counters, the arming state, the alarm memory, the audit log and the project - but NO PINs, codes, tokens or passwords. Those never leave the controller.",
+    "restore_title": "Restore this controller from a backup",
+    "restore_refused": "The backup was not applied: {reason}",
+    "restore_no_zones": "none",
+    "restore_confirm": "Restore this controller from the backup?\\n\\nProject: {project} (revision {revision})\\nSwitching counters: {counters}\\nZones armed at the time: {zones}\\n\\nThis controller's project, state and settings are overwritten and it rebuilds itself from the backup. It does not restart.",
+    "restore_done": "The controller now runs the restored installation.\\n\\nWhat nobody can restore for you - set these by hand:\\n{items}",
+    "reissue_level_pins": "- the access PINs ({levels}) - Settings > Change PIN",
+    "reissue_user": "- {name}: {what} - Settings > Alarm system users",
+    "reissue_code": "keypad code",
+    "reissue_token": "remote token",
+    "reissue_both": "keypad code and remote token",
+    "reissue_api_tokens": "- the REST API tokens",
+    "reissue_mqtt": "- the MQTT broker password ({broker}) - Settings > MQTT"
   },
   "settings": {
     "language_section": "LANGUAGE",

@@ -4187,6 +4187,30 @@ class ControllerPanel(QWidget):
         # after a device was replaced (POST /api/v1/counters/<tag>/reset,
         # Engineer token) - the same reset the panel's own Engineer menu
         # does, audited the same way.
+        # Everything that exists ONLY on the controller's own card:
+        # counters, arming state, alarm memory, retentive bits, the
+        # audit log. A bundle carries no secret - see
+        # runtime/epw_os/core/controller_backup.py - so a restore ends
+        # with a list of what has to be re-issued by hand.
+        backup_box = QGroupBox(tr("controller.backup_heading"))
+        backup_layout = QVBoxLayout(backup_box)
+        backup_hint = QLabel(tr("controller.backup_hint"))
+        backup_hint.setWordWrap(True)
+        backup_layout.addWidget(backup_hint)
+        backup_row = QHBoxLayout()
+        self.backup_button = QPushButton(tr("controller.take_backup"))
+        self.backup_button.clicked.connect(self._take_backup)
+        backup_row.addWidget(self.backup_button)
+        self.restore_button = QPushButton(tr("controller.restore_backup"))
+        self.restore_button.clicked.connect(self._restore_backup)
+        backup_row.addWidget(self.restore_button)
+        backup_row.addStretch(1)
+        backup_layout.addLayout(backup_row)
+        self.backup_status_label = QLabel(tr("controller.backup_status_none"))
+        self.backup_status_label.setWordWrap(True)
+        backup_layout.addWidget(self.backup_status_label)
+        layout.addWidget(backup_box)
+
         counters_box = QGroupBox(tr("controller.counters_heading"))
         counters_layout = QVBoxLayout(counters_box)
         counters_row = QHBoxLayout()
@@ -4263,6 +4287,82 @@ class ControllerPanel(QWidget):
         result = link.request(path, timeout=timeout, method=method, data=data, raw=raw, content_type=content_type)
         self.last_error_detail = link.last_error_detail
         return result
+
+    # --- backup and restore of the controller -------------------------------
+
+    def _take_backup(self):
+        """Pulls a bundle from the controller and writes it where the
+        engineer says. Engineer token - the controller enforces that;
+        this panel does not second-guess it."""
+        ok, data = self._request("/api/v1/controller/backup", timeout=30.0, raw=True)
+        if not ok:
+            self.backup_status_label.setText(tr("controller.backup_failed", reason=str(data)))
+            return
+        from datetime import datetime
+
+        suggested = f"epw-backup-{datetime.now().strftime('%Y%m%d-%H%M')}.epwbak"
+        path, _ = QFileDialog.getSaveFileName(self, tr("controller.take_backup"), suggested,
+                                              tr("controller.backup_filter"))
+        if not path:
+            return
+        try:
+            Path(path).write_bytes(data)
+        except OSError as e:
+            self.backup_status_label.setText(tr("controller.backup_failed", reason=str(e)))
+            return
+        self.backup_status_label.setText(tr("controller.backup_done", path=path, size=len(data)))
+
+    def _restore_backup(self):
+        """Sends a bundle to the controller, after showing what is in it.
+
+        The controller is asked to describe the bundle first
+        (/backup/inspect) rather than this panel parsing it: the
+        controller is the one that will apply it, and a bundle it cannot
+        read must be refused before anybody is asked to confirm
+        anything."""
+        path, _ = QFileDialog.getOpenFileName(self, tr("controller.restore_backup"), "",
+                                              tr("controller.backup_filter"))
+        if not path:
+            return
+        try:
+            payload = Path(path).read_bytes()
+        except OSError as e:
+            self.backup_status_label.setText(tr("controller.restore_failed", reason=str(e)))
+            return
+
+        ok, described = self._request("/api/v1/controller/backup/inspect", method="POST",
+                                      data=payload, content_type="application/gzip", timeout=30.0)
+        if not ok:
+            detail = self.last_error_detail
+            reason = detail.get("reason") if isinstance(detail, dict) else str(described)
+            self.backup_status_label.setText(tr("controller.restore_failed", reason=reason))
+            return
+
+        summary = (described or {}).get("summary") or {}
+        answer = QMessageBox.question(
+            self, tr("controller.restore_backup"),
+            tr("controller.restore_confirm",
+               project=summary.get("project_name") or "?",
+               revision=summary.get("project_revision"),
+               counters=summary.get("counters", 0),
+               zones=", ".join(summary.get("armed_zones") or []) or tr("controller.restore_no_zones")),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer != QMessageBox.Yes:
+            return
+
+        ok, result = self._request("/api/v1/controller/restore", method="POST", data=payload,
+                                   content_type="application/gzip", timeout=60.0)
+        if not ok:
+            detail = self.last_error_detail
+            reason = detail.get("reason") if isinstance(detail, dict) else str(result)
+            self.backup_status_label.setText(tr("controller.restore_failed", reason=reason))
+            return
+        checklist = (result or {}).get("checklist") or []
+        self.backup_status_label.setText(tr("controller.restore_done", count=len(checklist)))
+        if checklist:
+            QMessageBox.information(self, tr("controller.restore_backup"),
+                                    tr("controller.restore_checklist",
+                                       items="\n".join(_reissue_lines(checklist))))
 
     def _test_connection(self):
         self.status_label.setText(tr("controller.status_testing"))
@@ -5205,3 +5305,25 @@ def _parse_int(text):
         return int(text)
     except ValueError:
         return None
+
+
+def _reissue_lines(checklist) -> list:
+    """The re-issue checklist as lines a person works through. The
+    controller sends plain data and each interface renders it - the
+    panel does the same, in its own language."""
+    lines = []
+    for item in checklist:
+        kind = item.get("kind")
+        if kind == "level_pins":
+            lines.append(tr("controller.reissue_level_pins", levels=item.get("detail", "")))
+        elif kind == "user":
+            needs = item.get("needs") or []
+            what = (tr("controller.reissue_both") if len(needs) > 1
+                    else tr("controller.reissue_code") if needs == ["code"]
+                    else tr("controller.reissue_token"))
+            lines.append(tr("controller.reissue_user", name=item.get("detail", ""), what=what))
+        elif kind == "api_tokens":
+            lines.append(tr("controller.reissue_api_tokens"))
+        elif kind == "mqtt_password":
+            lines.append(tr("controller.reissue_mqtt", broker=item.get("detail", "")))
+    return lines

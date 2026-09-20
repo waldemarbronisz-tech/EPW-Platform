@@ -127,6 +127,72 @@ Dowód: `runtime/epw_os/tests/test_project_hot_reload.py`.
 
 ---
 
+## 3b. Kopia zapasowa sterownika i wymiana egzemplarza — ZROBIONE 2026-09-20
+
+Projekt był bezpieczny (Studio, git, REST). Wszystko, co należy do
+**egzemplarza**, istniało wyłącznie na jego karcie: liczniki łączeń,
+stan uzbrojenia i tryby, wykluczenia, pamięć alarmu, nadzór linii, bity
+retencyjne logiki, dziennik audytowy, ustawienia lokalne. Padnięta karta
+= odtwarzanie tego z pamięci, bez procedury.
+
+**Pakiet** (`.epwbak`, gzip+JSON, marker formatu, wersja schematu, suma
+kontrolna) niesie: projekt (żeby był samowystarczalny), `runtime_state.json`,
+`controller.local.json`, dziennik audytowy i **inwentarz sekretów**.
+
+**Sekretów nie niesie — nigdy.** Ani haszy PIN-ów, ani kodów
+użytkowników alarmówki, ani tokenów zdalnych i API, ani hasła brokera.
+Uzasadnienie, bo to jest rozstrzygnięcie, a nie skrót: pakiet to plik,
+który opuszcza obiekt — laptop, mail, pendrive w samochodzie. PIN ma
+cztery cyfry, więc jego hasz jest o jedną tablicę od bycia PIN-em.
+Szyfrowanie pakietu odpowiedziałoby na to, ale sterownik nie ma
+biblioteki kryptograficznej, a dokładanie jej po to, żeby rozwiązać
+problem, którego można uniknąć, jest złym kompromisem. Więc się go
+unika.
+
+Zamiast sekretów jedzie **inwentarz**: kto miał kod, kto miał token, czy
+tokeny API i hasło brokera były ustawione. Odtworzenie zamienia to na
+**listę kontrolną z nazwiskami**. Nadanie pięciu kodów z listy to
+dziesięć minut; odzyskanie czterech lat liczników jest niemożliwe — i to
+jest cały argument.
+
+**Historii trendów też nie niesie** (pomiary, nie konfiguracja,
+potencjalnie ogromne). Sterownik bez trendów pracuje; sterownik bez
+stanu uzbrojenia kłamie o budynku.
+
+**Odtworzenie**: pakiet niewiarygodny (format, wersja schematu, suma
+kontrolna) jest odrzucany, **zanim cokolwiek zostanie zapisane** — nigdy
+do połowy. Pliki zapisuje `controller_backup`, a do pracy wprowadza je
+`reload_project()` — ta sama jedyna droga, którą idzie każde wgranie
+projektu, więc odtworzenie nie wymyśla drugiego sposobu uruchamiania
+projektu. Bez restartu.
+
+**Ustawienia lokalne są scalane, nie nadpisywane**: adres REST, sterownik
+wejść/wyjść i ścieżki plików opisują sprzęt, na którym zamiennik
+pracuje, a nie ten, który padł.
+
+**Stan uzbrojenia wraca taki, jaki był** — ta sama zasada, co przy
+restarcie sterownika („uzbrojona wstaje uzbrojona"), z wpisem do
+dziennika.
+
+| Droga | Gdzie |
+|---|---|
+| Panel | Ustawienia → Kopia zapasowa sterownika... / Odtwórz z kopii zapasowej... |
+| Studio | Sterownik → Kopia zapasowa sterownika |
+| REST | `GET /api/v1/controller/backup`, `POST /api/v1/controller/backup/inspect`, `POST /api/v1/controller/restore` |
+
+Wszystko na poziomie Engineer, wszystko w dzienniku.
+
+Dowód: `runtime/epw_os/tests/test_controller_backup.py` (co pakiet
+niesie i czego nie niesie), `test_controller_backup_api.py` (pełna
+wymiana egzemplarza przez REST, z dowodem, że kod z oryginału **nie**
+działa na zamienniku, a stan uzbrojenia **wraca**),
+`runtime/gui_smoke/test_controller_backup_panel.py` (panel przy szafie).
+
+Procedura wymiany krok po kroku: pomoc sterownika, rozdział „Kopia
+zapasowa i wymiana".
+
+---
+
 ## 4. „Studio osadza ekrany, logikę i settings_hash w projekt.epw" — ZROBIONE
 
 > **Stan 2026-09-15:** sekcje `screens` / `logic` / `logic_runtime` — ZROBIONE
