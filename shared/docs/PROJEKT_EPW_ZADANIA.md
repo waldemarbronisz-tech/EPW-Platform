@@ -30,16 +30,15 @@ Zapis z panelu:
 
 ## 2. Kontrola składu urządzenia — NA CZYM SIĘ DZIŚ OPIERA
 
-⚠️ **Do przepięcia przy osadzaniu ekranów i logiki w projekcie.**
+Kontrola z SPEC („logika albo ekrany odwołują się do sygnałów modułu,
+którego nie ma w składzie") czyta **ekrany i logikę osadzone w
+`projekt.epw`** (sekcje `screens` i `logic_runtime`). Pliki
+`logic_project` / `synoptic_project` z `controller.local.json` zostały
+jako zapas dla projektu zapisanego, zanim osadzanie powstało — osadzony
+dokument zawsze wygrywa z plikiem tego samego rodzaju.
 
-`projekt.epw` nie zawiera jeszcze ekranów ani logiki. Kontrola z SPEC („logika albo ekrany odwołują się do sygnałów modułu, którego nie ma w składzie") czyta więc **dwa pliki, które runtime wczytuje dziś**. Ich ścieżki są w `controller.local.json`:
-
-- `logic_project` — skompilowana logika (`EPW_RUNTIME_LOGIC`, eksport `.epwlogic`), którą `LogicEngine` ładuje przy starcie;
-- `synoptic_project` — plik ekranu `.epwsyn`.
-
-Kod: `runtime/epw_os/core/composition_check.py`.
-- Źródła wskazuje jedna funkcja `_sources()`. Przy osadzaniu wystarczy podmienić ją na sekcje `screens` i `logic` z projektu.
-- Reguły przypisania sygnałów do modułów zostają bez zmian:
+Kod: `runtime/epw_os/core/composition_check.py`, funkcja `_sources()`.
+- Reguły przypisania sygnałów do modułów:
 
 | Moduł | Sygnały |
 |---|---|
@@ -128,7 +127,7 @@ Dowód: `runtime/epw_os/tests/test_project_hot_reload.py`.
 
 ---
 
-## 4. ZADANIE DO ZGŁOSZENIA: „Studio osadza ekrany, logikę i settings_hash w projekt.epw"
+## 4. „Studio osadza ekrany, logikę i settings_hash w projekt.epw" — ZROBIONE
 
 > **Stan 2026-09-15:** sekcje `screens` / `logic` / `logic_runtime` — ZROBIONE
 > (zapis/odczyt w Studio, runtime czyta je z projektu, `composition_check._sources()`
@@ -295,7 +294,8 @@ przez `project_format.apply_settings_snapshot()`).
   aparaty projektu w trybie symulatora (MAINTAINED, PULSE, PULSE_TOGGLE);
   `test_software_commissioning.py` przechodzi całą pętlę: magistrala → strona
   Synoptyka → kliknięcie → cewka → potwierdzenie → wysyłka projektu ze Studio
-  przez prawdziwy REST → żądanie restartu. Na sprzęcie zostaje tylko potwierdzenie
+  przez prawdziwy REST → **przebudowa sterownika w miejscu** (p. 3a; jeden wątek
+  odpytujący magistralę, żadnego restartu). Na sprzęcie zostaje tylko potwierdzenie
   mapowania (`modbus_probe.py`).
 - **Zabezpieczenia elektryczne w runtime** nie mają trwałości poza projektem.
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
@@ -377,8 +377,8 @@ przez `project_format.apply_settings_snapshot()`).
   - **SSWIN**: `CMD_ARM_PARTIAL` przestaje być nieobsłużone — uzbraja
     wszystkie strefy nocą; `ARMED` wymaga teraz uzbrojenia **pełnego**
     wszystkich stref, a `ARMED_PARTIAL` obejmuje też „uzbrojone, ale nocą".
-    Bez syreny i linii napadowej nadal nie ma czego mapować
-    (`SIREN_*`, `STROBE_*`, `PANIC`).
+    `SIREN_*`, `STROBE_*` i `PANIC` są obsłużone od 2026-09-20 (p. 3a
+    tego samego dnia — sygnalizator jako stan, linia napadowa).
 - **Brak kart a edytory** — ZROBIONE 2026-09-19 (zgłoszenie: „nie dodano kart DI/DO").
   Blok wymagający fizycznego zacisku, wstawiony w projekcie bez karty, dawał
   pustą listę adresów i żadnego wyjaśnienia — powód pojawiał się dopiero przy
