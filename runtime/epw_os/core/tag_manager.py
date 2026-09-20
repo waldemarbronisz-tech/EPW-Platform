@@ -358,40 +358,18 @@ class TagManager:
         default TAG SET" (implying DI/DO among them); this name says
         what's actually left."""
 
-        # Cabinet Tags (Task: uzupelnienie opisow tagow - B3) - these are
-        # display-only on Main View's device status panel
-        # (page_entry_gate.py's init_cabinet_tags()); no physical sensor
-        # currently writes any of the first 9 (SystemHealth..Fault) -
-        # they hold their seeded default until something (a driver, a
-        # logic program) writes them, exactly like EMERGENCY_STOP below.
+        # The Main View used to carry a cabinet panel - health, inside and
+        # outside temperature, humidity, door, heater, fan, alarm, fault -
+        # whose nine values no sensor ever wrote: seeded defaults sitting
+        # there looking like readings (24.8 C, "CLOSED", "RUNNING"). The
+        # page is gone and so are they. A real cabinet measurement now
+        # arrives as a real point on a real card and is drawn on the
+        # Synoptic screen like any other value.
+        #
+        # What stays below is genuinely written by something: the
+        # Device.*.Status tags (DeviceManager's poll-cycle watchdog) and
+        # EMERGENCY_STOP.
         cabinet_tags = {
-            "Cabinet.SystemHealth": ("HEALTHY", TagType.STRING,
-                                     "Overall cabinet health summary shown on Main View - "
-                                     "no physical sensor writes this today; a placeholder for a future aggregate."),
-            "Cabinet.TempInside": (24.8, TagType.REAL,
-                                    "Cabinet internal temperature, degrees C, shown on Main View - "
-                                    "no physical sensor writes this today (static/simulated default)."),
-            "Cabinet.TempOutside": (18.3, TagType.REAL,
-                                     "Ambient temperature outside the cabinet, degrees C, shown on Main View - "
-                                     "no physical sensor writes this today (static/simulated default)."),
-            "Cabinet.Humidity": (43.0, TagType.REAL,
-                                  "Cabinet internal relative humidity, percent, shown on Main View - "
-                                  "no physical sensor writes this today (static/simulated default)."),
-            "Cabinet.Door": ("CLOSED", TagType.STRING,
-                              "Cabinet door contact state (OPEN/CLOSED) shown on Main View - "
-                              "no physical sensor writes this today (static/simulated default)."),
-            "Cabinet.Heater": ("OFF", TagType.STRING,
-                                "Cabinet anti-condensation heater run state (ON/OFF) shown on Main View - "
-                                "no physical output drives this today (static/simulated default)."),
-            "Cabinet.Fan": ("RUNNING", TagType.STRING,
-                             "Cabinet cooling fan run state shown on Main View - "
-                             "no physical output drives this today (static/simulated default)."),
-            "Cabinet.Alarm": ("NONE", TagType.STRING,
-                               "Cabinet-level alarm summary (e.g. door open, overtemperature) shown on Main "
-                               "View - no physical sensor writes this today (static/simulated default)."),
-            "Cabinet.Fault": ("NONE", TagType.STRING,
-                               "Cabinet-level fault summary shown on Main View - no physical sensor writes "
-                               "this today (static/simulated default)."),
             # Seeded OFFLINE (not a hopeful "ONLINE" default): these flip to
             # ONLINE for real once DriverManager/DeviceManager report an
             # actual comm heartbeat (see EPWCore._on_device_status_changed).

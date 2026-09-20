@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
 from studio.shell.menus import (
+    build_intrusion_users_toolbar,
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
     build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
@@ -98,6 +99,10 @@ _TREE_ITEM_MODULES = "devices"
 # same way io_cards/point_registry/apparatus_registry already were.
 _TREE_ITEM_ZONES = "security_zones"
 _TREE_ITEM_LINES = "security_lines"
+# "Alarmówka: stopnie dostępu" - who may arm and disarm which zones. A
+# sibling of zones/lines because it is the same kind of thing: alarm
+# system structure, designed here and carried in projekt.epw.
+_TREE_ITEM_INTRUSION_USERS = "security_users"
 # "Zabezpieczenia: podział elektryczne/procesowe" - promoted the same
 # way, replacing the single "Nastawy" placeholder with the two real
 # domains runtime itself keeps separate (protection_manager.py vs
@@ -132,6 +137,7 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
     _TREE_ITEM_ZONES: "breadcrumb.security_zones",
     _TREE_ITEM_LINES: "breadcrumb.security_lines",
+    _TREE_ITEM_INTRUSION_USERS: "breadcrumb.security_users",
     _TREE_ITEM_ELECTRICAL_PROTECTION: "breadcrumb.protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "breadcrumb.protection_process",
     _TREE_ITEM_CONTROLLER: "breadcrumb.controller_connection",
@@ -172,6 +178,7 @@ _HELP_TOPIC_BY_TREE_KEY = {
     _TREE_ITEM_LOGIC: "logic",
     _TREE_ITEM_ZONES: "zones",
     _TREE_ITEM_LINES: "lines",
+    _TREE_ITEM_INTRUSION_USERS: "intrusion_users",
     _TREE_ITEM_ELECTRICAL_PROTECTION: "protection_electrical",
     _TREE_ITEM_PROCESS_PROTECTION: "protection_process",
     _TREE_ITEM_CONTROLLER: "controller",
@@ -441,6 +448,7 @@ class StudioMainWindow(QMainWindow):
         self._devices_panel = None
         self._zones_panel = None
         self._lines_panel = None
+        self._intrusion_users_panel = None
         self._electrical_protection_panel = None
         self._process_protection_panel = None
         self._controller_panel = None
@@ -743,6 +751,9 @@ class StudioMainWindow(QMainWindow):
         )
         self._item_lines = add_active_leaf(
             self._group_alarm, _TREE_ITEM_LINES, "tree.security_lines", icon_lines
+        )
+        self._item_intrusion_users = add_active_leaf(
+            self._group_alarm, _TREE_ITEM_INTRUSION_USERS, "tree.security_users", icon_zones
         )
 
         self._group_protection = add_group(root, "tree.group_protection")
@@ -1307,6 +1318,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_zones()
             elif key == _TREE_ITEM_LINES:
                 self._open_lines()
+            elif key == _TREE_ITEM_INTRUSION_USERS:
+                self._open_intrusion_users()
             elif key == _TREE_ITEM_ELECTRICAL_PROTECTION:
                 self._open_electrical_protection()
             elif key == _TREE_ITEM_PROCESS_PROTECTION:
@@ -1649,6 +1662,21 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_LINES
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_intrusion_users(self):
+        if self._intrusion_users_panel is None:
+            from studio.shell.project_panels import IntrusionUsersPanel
+            self._intrusion_users_panel = IntrusionUsersPanel(self)
+        else:
+            self._intrusion_users_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_INTRUSION_USERS, self._intrusion_users_panel, build_intrusion_users_toolbar,
+            self._intrusion_users_panel,
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_INTRUSION_USERS
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 
@@ -2437,6 +2465,7 @@ class StudioMainWindow(QMainWindow):
         _sync_group(self._group_alarm, [
             ("intrusion", self._item_zones),
             ("intrusion", self._item_lines),
+            ("intrusion", self._item_intrusion_users),
         ])
         _sync_group(self._group_protection, [
             ("protection_settings", self._item_electrical_protection),
@@ -2451,6 +2480,7 @@ class StudioMainWindow(QMainWindow):
         active_item = {
             _TREE_ITEM_ZONES: self._item_zones,
             _TREE_ITEM_LINES: self._item_lines,
+            _TREE_ITEM_INTRUSION_USERS: self._item_intrusion_users,
             _TREE_ITEM_ELECTRICAL_PROTECTION: self._item_electrical_protection,
             _TREE_ITEM_PROCESS_PROTECTION: self._item_process_protection,
         }.get(self._active)

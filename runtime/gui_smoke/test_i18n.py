@@ -69,7 +69,6 @@ def test_polish_translation_reaches_every_page_and_dialog():
         from epw_os.gui.pages.page_control_outputs import PageControlOutputs
         from epw_os.gui.pages.page_digital_inputs import PageDigitalInputs
         from epw_os.gui.pages.page_engineer_mode import PageEngineerMode
-        from epw_os.gui.pages.page_entry_gate import PageEntryGate
         from epw_os.gui.pages.page_event_recorder import PageEventRecorder
         from epw_os.gui.pages.page_intrusion import (
             PageIntrusionConfiguration, PageIntrusionHistory, PageIntrusionOverview,
@@ -93,16 +92,13 @@ def test_polish_translation_reaches_every_page_and_dialog():
         p = PageAuditLog(None, PageMockAccessManager()); pl_pages.append(p)
         assert _header_text(p) == "DZIENNIK AUDYTOWY", _header_text(p)
 
-        p = PageEntryGate(PageMockTagManager()); pl_pages.append(p)  # constructs OK, no page title of its own
-        p.sim_timer.stop()  # never shown/run through a Qt event loop here, so it just needs to be stopped
-
         p = PageSystemTopology(PageMockTagManager()); pl_pages.append(p)
         assert _header_text(p) == "TOPOLOGIA SYSTEMU", _header_text(p)
 
         from epw_os.gui.synoptic.page_synoptic import PageSynoptic
         p = PageSynoptic(PageMockTagManager(), project_manager=None, access_manager=PageMockAccessManager())
         pl_pages.append(p)
-        assert _header_text(p) == "SYNOPTYKA", _header_text(p)
+        assert _header_text(p) == "SCHEMAT GŁÓWNY", _header_text(p)  # it IS the Main View now
         assert "ekranu" in p.status_label.text()  # no project -> says so, in Polish
         p.shutdown()
 
@@ -194,7 +190,7 @@ def test_polish_translation_reaches_every_page_and_dialog():
         ppd = ProjectPropertiesDialog(MockProjectManager(), MockTagManager(), PageMockAccessManager(), None)
         assert ppd.windowTitle() == "Właściwości projektu", ppd.windowTitle()
 
-        assert len(pl_pages) == 18, \
+        assert len(pl_pages) == 17, \
             "the exact page/dialog count this sweep exercises - preserved from the original " \
             "test_gui_smoke.py so a future accidental deletion here is caught"
     finally:

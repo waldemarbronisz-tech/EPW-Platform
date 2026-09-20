@@ -43,7 +43,7 @@ def _stub_dialog_execs():
     returns before ever constructing one of these, so the stub is simply
     unused on that path."""
     from epw_os.gui.pages.page_analog_inputs import AnalogChannelConfigDialog
-    from epw_os.gui.widgets.popups import CommandFailedPopup, ConfirmationPopup, DeviceControlPopup, SettingChangePopup
+    from epw_os.gui.widgets.popups import ConfirmationPopup, SettingChangePopup
     from epw_os.gui.widgets.settings_popups import LanguageDialog, ScreenSleepDialog
 
     # CommandFailedPopup: found while working on task "migracja
@@ -63,8 +63,8 @@ def _stub_dialog_execs():
     # Latent since this dialog/timer pairing was written; only actually
     # hit while stress-testing this task's own new tests against many
     # random seeds - reported and fixed here, not swept under the rug.
-    stubbed = [DeviceControlPopup, ConfirmationPopup, SettingChangePopup, AnalogChannelConfigDialog,
-               LanguageDialog, ScreenSleepDialog, CommandFailedPopup]
+    stubbed = [ConfirmationPopup, SettingChangePopup, AnalogChannelConfigDialog,
+               LanguageDialog, ScreenSleepDialog]
     origs = {cls: cls.exec for cls in stubbed}
     for cls in stubbed:
         cls.exec = lambda self: 1
@@ -77,63 +77,61 @@ def _unstub_dialog_execs(origs):
 
 
 def test_device_control_from_synoptic_matrix(make_window, qapp):
-    # page_entry_gate.py: device control from synoptic (matrix: User NO,
-    # Operator/Engineer YES).
-    #
-    # Task "migracja adresacji": q1 needs a real apparatus configured
-    # (apparatus_registry, ROLE_MAIN_BREAKER) - this test is about the
-    # ACCESS-LEVEL gate, not the separate "is q1 configured at all"
-    # gate page_entry_gate.py now also has (see
-    # test_main_view_apparatus_not_configured in
-    # test_permissions_features.py for THAT one) - an unconfigured q1
-    # would refuse every level identically via a real QMessageBox.
-    # information() call, hanging this test waiting for a click that
-    # never comes (not stubbed below - it wasn't reachable before this
-    # task).
-    from epw_os.core.apparatus import Apparatus, ApparatusRegistry
-    from epw_os.gui.pages.page_entry_gate import PageEntryGate
-    registry = ApparatusRegistry()
-    registry.set_apparatuses([Apparatus(id="Q1", command=["ADA1.DO.1"], feedback=["ELA1.DI.1"])])
-    registry.set_role_binding(PageEntryGate.ROLE_MAIN_BREAKER, "Q1")
+    """Device control from the Main View screen (matrix: User NO,
+    Operator/Engineer YES).
 
-    origs = _stub_dialog_execs()
-    try:
-        for level, allowed in (("User", False), ("Operator", True), ("Engineer", True)):
-            access, audit, cmd = _access_at(level), MockAuditLogger(), CountingCommandManager()
-            w = make_window(MockTagManager(), cmd, access, MockProjectManager(), audit,
-                             apparatus_registry=registry)
-            # Bug 3 fix: handle_control_request() used to reference an
-            # undefined `delay` variable right after the
-            # command_manager.request_command() call this test cares
-            # about, so every permitted command raised a NameError right
-            # here. `delay` is now a defined placeholder constant, so
-            # this must complete with no exception at all - letting it
-            # propagate uncaught is itself the DOWÓD proof.
-            w.page_entry_gate.handle_control_request((w.page_entry_gate.q1, w.pos()))
-            if allowed:
-                assert not _denied(audit), (level, audit.entries)
-                assert cmd.calls, f"{level} should have reached command_manager"
-                # Task "migracja adresacji" (found, not caused, while
-                # stress-testing this task's own fix against many
-                # random seeds): an allowed command schedules
-                # simulate_hardware_feedback() via QTimer.singleShot()
-                # up to 1000ms out - drained HERE, before this test's
-                # own `finally` unstubs CommandFailedPopup below,
-                # rather than left pending. A pending timer that fires
-                # AFTER unstub, during some unrelated LATER test, would
-                # hit CommandFailedPopup's REAL .exec() - a genuine
-                # blocking modal with nothing left to stub it - and
-                # hang that later test instead of failing this one
-                # (empirically confirmed: --randomly-seed=42).
-                deadline = time.time() + 1.2
-                while time.time() < deadline:
-                    qapp.processEvents()
-                    time.sleep(0.02)
-            else:
-                assert _denied(audit, "synoptic"), (level, audit.entries)
-                assert not cmd.calls, "a denied level must never reach command_manager"
-    finally:
-        _unstub_dialog_execs(origs)
+    This used to drive the hand-built entry-gate page and its q1 symbol.
+    That page is gone - the Main View IS the embedded Synoptic screen now
+    - so the same gate is exercised where it actually lives:
+    PageSynoptic._on_object_clicked(), which checks Operator access
+    before a confirmation is even offered.
+    """
+    from epw_os.core.apparatus import Apparatus
+    from epw_os.gui.synoptic.screen_state import ObjectPresentation
+
+    apparatus = Apparatus(id="Q1", behavior="SWITCHED", command=["ADA1.DO.1"], feedback=["ELA1.DI.1"])
+    presentation = ObjectPresentation(state=None, fields={}, apparatus=apparatus,
+                                      commandable=True, bound=True, live=True)
+
+    for level, allowed in (("User", False), ("Operator", True), ("Engineer", True)):
+        access, audit, cmd = _access_at(level), MockAuditLogger(), CountingCommandManager()
+        w = make_window(MockTagManager(), cmd, access, MockProjectManager(), audit)
+        page = w.page_synoptic
+        # The two things a real click would do that this test is not
+        # about: deciding CLOSE vs OPEN from the live feedback tag, and
+        # the confirmation dialog (a real modal would hang here).
+        page.confirm_command = lambda *args, **kwargs: True
+        import epw_os.gui.synoptic.page_synoptic as page_module
+        original = page_module.command_for_toggle
+        page_module.command_for_toggle = lambda *args, **kwargs: "CLOSE"
+        try:
+            page._on_object_clicked(object(), presentation, None)
+        finally:
+            page_module.command_for_toggle = original
+
+        if allowed:
+            assert not _denied(audit), (level, audit.entries)
+            assert cmd.calls, f"{level} should have reached command_manager"
+        else:
+            assert _denied(audit, "Synoptic"), (level, audit.entries)
+            assert not cmd.calls, "a denied level must never reach command_manager"
+
+
+def test_a_symbol_bound_to_nothing_is_not_commandable(make_window):
+    """The successor to the old "Main View apparatus not configured"
+    check: a screen symbol that no apparatus stands behind cannot be
+    commanded at all - the click is dropped before access, confirmation
+    or the command manager are ever involved."""
+    from epw_os.gui.synoptic.screen_state import ObjectPresentation
+
+    access, cmd = _access_at("Engineer"), CountingCommandManager()
+    w = make_window(MockTagManager(), cmd, access, MockProjectManager(), MockAuditLogger())
+    unbound = ObjectPresentation(state=None, fields={}, apparatus=None, commandable=False, bound=False)
+
+    w.page_synoptic._on_object_clicked(object(), unbound, None)
+    w.page_synoptic._on_object_clicked(object(), None, None)
+
+    assert not cmd.calls
 
 
 def test_control_outputs_description_edit_engineer_only(make_window):

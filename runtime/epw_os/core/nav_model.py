@@ -67,11 +67,15 @@ its own.
 # project.json needs no migration for either group.
 NAV_STRUCTURE = [
     ("main_view_group", "nav.main_view", True, [
+        # THE screen Studio embedded in projekt.epw, rendered live
+        # (gui/synoptic/page_synoptic.py), with its own selector when the
+        # project carries several. There used to be a second entry here -
+        # a hand-built "entry gate" drawing with invented voltages and
+        # currents next to it - removed on the owner's instruction: the
+        # Main View shows the picture from Synoptic and nothing else, and
+        # measurements are visualised ON that picture, drawn in the
+        # editor. The page itself says when the project has no screen.
         ("main_view", "nav.main_diagram", None),
-        # Punkt 2 / luka 5: the screen Studio embedded in projekt.epw,
-        # rendered live (gui/synoptic/page_synoptic.py). Always listed -
-        # the page itself says when the project has no screen.
-        ("synoptic", "nav.synoptic", None),
     ]),
     ("control_group", "nav.group_control", False, [
         ("digital_inputs", "nav.digital_inputs", None),

@@ -82,76 +82,13 @@ def test_switching_counter_increments_and_shown_in_di_table(make_window):
     assert restored["closed_seconds"] >= 0.15
 
 
-def test_main_view_shows_switching_counter_for_a_configured_apparatus(make_window):
-    """Task "migracja adresacji" point 1.2: page_entry_gate.py's own
-    apparatus wiring (device_map/counter_tag), proven with a REAL,
-    EXPLICIT apparatus configuration - not an inherited DI1-4/DO01-04
-    literal. Only the main-breaker role is bound here; the other three
-    symbols are deliberately left unconfigured (see
-    test_main_view_apparatus_not_configured below)."""
-    from epw_os.core.apparatus import Apparatus, ApparatusRegistry
-    from epw_os.core.events import EventBus
-    from epw_os.core.switching_counters import SwitchingCounterManager
-    from epw_os.gui.pages.page_entry_gate import PageEntryGate
-
-    DO_TAG, DI_TAG = "ADA1.DO.1", "ELA1.DI.1"
-    registry = ApparatusRegistry()
-    registry.set_apparatuses([Apparatus(id="Q1", command=[DO_TAG], feedback=[DI_TAG])])
-    registry.set_role_binding(PageEntryGate.ROLE_MAIN_BREAKER, "Q1")
-
-    sw_bus = EventBus()
-    sw_pm = MockProjectManager()
-    sw_mgr = SwitchingCounterManager(sw_bus, sw_pm)
-    sw_tm = DICapableTagManager(sw_bus, tags={DI_TAG: False})
-    w = make_window(sw_tm, MockCommandManager(), MockControllableAccessManager(), sw_pm,
-                     MockAuditLogger(), switching_counters=sw_mgr, apparatus_registry=registry)
-
-    assert w.page_entry_gate.q1.is_configured is True
-    assert w.page_entry_gate.q1.tag_name == DO_TAG
-    assert w.page_entry_gate.q1.counter_tag == DI_TAG
-
-    sw_tm.update_tag(DI_TAG, False)  # seed
-    sw_tm.update_tag(DI_TAG, True)   # -> 1 close
-
-    from epw_os.gui.widgets.popups import DeviceControlPopup, DevicePropertiesPopup
-    from epw_os.i18n import tr
-    from PySide6.QtWidgets import QLabel
-
-    popup = DeviceControlPopup(w.page_entry_gate.q1, w.page_entry_gate, switching_counters=sw_mgr)
-    popup_labels = " | ".join(l.text() for l in popup.findChildren(QLabel))
-    assert "1" in popup_labels and "0" in popup_labels, popup_labels  # 1 close, 0 opens so far
-    popup.deleteLater()
-
-    props = DevicePropertiesPopup(w.page_entry_gate.q1, w.page_entry_gate, switching_counters=sw_mgr)
-    props_labels = " | ".join(l.text() for l in props.findChildren(QLabel))
-    assert tr("pages.popups.lbl_switching_closes") in props_labels, props_labels
-    props.deleteLater()
-
-
-def test_main_view_apparatus_not_configured(make_window):
-    """Task "migracja adresacji" point 1.2 (Waldek's own explicit
-    requirement): with no apparatus_registry at all (today's real
-    default, until "runtime czyta projekt.epw" exists), Main View's
-    symbols say so plainly and refuse to be controlled - never a
-    silently-guessed DO01/DI1."""
-    from epw_os.core.events import EventBus
-
-    access = MockControllableAccessManager()
-    assert access.attempt_login("Operator", MockControllableAccessManager.CORRECT_PIN)
-    w = make_window(DICapableTagManager(EventBus()), MockCommandManager(),
-                     access, MockProjectManager(), MockAuditLogger())
-
-    assert w.page_entry_gate.q1.is_configured is False
-    assert not hasattr(w.page_entry_gate, "device_map") or w.page_entry_gate.device_map == {}
-
-    orig_qmb_info = QMessageBox.information
-    calls = []
-    QMessageBox.information = staticmethod(lambda *a, **k: calls.append(a))
-    try:
-        w.page_entry_gate.handle_control_request((w.page_entry_gate.q1, w.page_entry_gate.pos()))
-    finally:
-        QMessageBox.information = orig_qmb_info
-    assert calls, "an unconfigured apparatus must refuse the control request, not silently dispatch it"
+# The two Main View tests that stood here - a switching counter shown in
+# the apparatus popup, and an unconfigured symbol refusing control - went
+# with the page they tested. The Main View is the embedded Synoptic
+# screen now; a symbol bound to nothing is covered by
+# test_a_symbol_bound_to_nothing_is_not_commandable (test_permissions_
+# core.py), and the switching counters themselves by the Digital Inputs
+# table above and test_switching_counters.py.
 
 
 def test_switching_counter_no_disk_write_on_every_state_change(make_window):

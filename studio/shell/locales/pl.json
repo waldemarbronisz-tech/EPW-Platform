@@ -38,7 +38,8 @@
     "mqtt": "Integracja MQTT",
     "service_notes": "Notatki serwisowe",
     "object_links": "Powiązania obiektu",
-    "protection_tests": "Test zabezpieczeń"
+    "protection_tests": "Test zabezpieczeń",
+    "security_users": "Użytkownicy"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -58,7 +59,8 @@
     "mqtt": "Projekt → Konfiguracja → Integracja MQTT",
     "service_notes": "Projekt → Konfiguracja → Notatki serwisowe",
     "object_links": "Projekt → Konfiguracja → Powiązania obiektu",
-    "protection_tests": "Projekt → Sterownik → Test zabezpieczeń"
+    "protection_tests": "Projekt → Sterownik → Test zabezpieczeń",
+    "security_users": "Użytkownicy alarmówki"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -415,7 +417,8 @@
     "alarm_hold_seconds": "Podtrzymanie alarmu:",
     "off": "wyłączone",
     "group_supervision": "Nadzór linii",
-    "silence_threshold_seconds": "Czas ciszy do podejrzenia awarii:"
+    "silence_threshold_seconds": "Czas ciszy do podejrzenia awarii:",
+    "group_night": "Dozór nocny"
   },
   "electrical": {
     "col_tree": "Funkcja / stopień",
@@ -749,5 +752,19 @@
     "state_disabled": "wyłączone",
     "state_exceeded": "zadziałane - najpierw skasuj",
     "steps_title": "Kroki testu {subject}"
+  },
+  "intrusion": {
+    "users_heading": "Użytkownicy alarmówki",
+    "users_intro": "Kto może uzbrajać i rozbrajać które strefy. KOD użytkownika nigdy nie jest częścią projektu - ustawia się go na sterowniku, więc nie trafia do Studia, do gita ani do sieci. Użytkownik bez zaznaczonych stref obsługuje wszystkie.",
+    "col_user_id": "Id",
+    "col_user_name": "Nazwisko",
+    "col_user_level": "Poziom",
+    "col_user_zones": "Strefy",
+    "col_user_enabled": "Aktywny",
+    "btn_add_user": "Dodaj użytkownika",
+    "btn_remove_user": "Usuń użytkownika",
+    "user_zones_all": "(wszystkie strefy)",
+    "col_line_night": "Czuwa w nocy",
+    "line_night_hint": "Odznaczona linia przestaje pilnować, gdy strefa jest uzbrojona w trybie nocnym - zwykle tak ustawia się czujki ruchu wewnątrz. Linia całodobowa alarmuje niezależnie od tego."
   }
 }

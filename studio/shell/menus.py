@@ -441,6 +441,14 @@ def build_lines_toolbar(toolbar, panel, _studio_window):
     _add(toolbar, tr("lines.remove_line"), panel.remove_selected_line, icon_name="remove_row")
 
 
+def build_intrusion_users_toolbar(toolbar, panel, _studio_window):
+    """"Alarmówka: stopnie dostępu" - add/remove a person. Their CODE is
+    set on the controller, never here (see IntrusionUsersPanel)."""
+    toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+    _add(toolbar, tr("intrusion.btn_add_user"), panel.add_user, icon_name="add_row")
+    _add(toolbar, tr("intrusion.btn_remove_user"), panel.remove_selected_user, icon_name="remove_row")
+
+
 def build_electrical_protection_toolbar(toolbar, _panel, _studio_window):
     """No add/remove - the catalog (which functions/stages exist) is
     fixed (ADA01 hardware), same "no add/remove" stance

@@ -2,7 +2,7 @@
 
 Without drawing one long wire across the whole sheet — read [Labels,
 markers and device bits](help:concept_labels) first for the full
-comparison. Below is the way that **works today**:
+comparison. Below are the two ways, both of which work:
 
 ## Through a marker (an internal bit or register)
 
@@ -22,10 +22,17 @@ Keep in mind the possible one-scan delay between writing and reading the
 same marker within one scan — see [The scan cycle and the one-scan
 delay](help:concept_scan_cycle).
 
-## Wire labels — not all the way there yet
+## Through a wire label (no delay)
 
-A labelled free wire end (see [Input stub, free wire end,
-label](help:concept_stubs)) today only documents where the wire was meant
-to go — it does not carry the signal yet. Once merging labels into
-network nodes is finished, this guide will be updated with the shorter
-way that follows from it.
+1. Draw a short wire from the pin that produces the signal and leave its
+   other end **free**.
+2. Give it a label (for example "READY").
+3. Where the signal is needed, draw a second short wire into the
+   receiving pin, also with a free end, and give it **the same** label
+   (case does not matter).
+4. Done — the compiler joins the two into one node, exactly as if they
+   had been drawn as a single wire. No scan delay.
+
+A label group must have exactly one source; it may have many receivers.
+For when to choose a label and when a marker, see [Labels, markers and
+device bits](help:concept_labels).

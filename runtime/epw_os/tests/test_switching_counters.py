@@ -104,9 +104,9 @@ def test_counters_are_independent_per_tag(bus, mgr):
 def test_non_digital_input_tags_are_ignored(bus, mgr):
     bus.emit("tag_changed", "ADA01.DO.1", False, "GOOD")
     bus.emit("tag_changed", "ADA01.DO.1", True, "GOOD")
-    bus.emit("tag_changed", "Cabinet.Door", "CLOSED", "GOOD")
+    bus.emit("tag_changed", "Device.ELA01.Status", "ONLINE", "GOOD")
     assert mgr.get_snapshot("ADA01.DO.1") == new_record()
-    assert mgr.get_snapshot("Cabinet.Door") == new_record()
+    assert mgr.get_snapshot("Device.ELA01.Status") == new_record()
 
 
 def test_non_boolean_int_values_on_a_di_tag_are_ignored(bus, mgr):

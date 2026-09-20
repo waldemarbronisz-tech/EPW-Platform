@@ -25,15 +25,19 @@ The decision, taken here and visible in one place:
     no zone to name. Per-zone control stays where it already is (the
     Intrusion page, the REST API).
 
-What this controller does NOT have, and therefore does not pretend to
-serve: partial/night arming (there is no such mode - a zone is armed or
-it is not), a sounder (no siren/strobe output exists yet, so SIREN_*/
-STROBE_* would be inventions), and a dedicated panic line type.
+Partial arming is real now (ArmMode.NIGHT - "dozór nocny"): ARMED means
+every zone armed FULLY, ARMED_PARTIAL covers both "some zones armed" and
+"armed, but only at night", and CMD_ARM_PARTIAL arms every zone in NIGHT
+mode. A schematic that must know the difference gets it.
+
+What this controller still does NOT have, and therefore does not pretend
+to serve: a sounder (no siren/strobe output exists yet, so SIREN_*/
+STROBE_* would be inventions) and a dedicated panic line type.
 UNSERVED_SIGNALS below is that list, and a read of one gets the catalog's
 own safe value while a WRITE to one is reported instead of vanishing
 (see logic_runtime.py's TagIOProvider.write_system_signal).
 """
-from epw_os.core.intrusion_manager import LineState, ZoneState
+from epw_os.core.intrusion_manager import ArmMode, LineState, ZoneState
 from epw_os.core.logging import log
 
 # Signals this controller cannot answer honestly yet - see the module
@@ -44,7 +48,6 @@ UNSERVED_SIGNALS = frozenset({
     "SSWIN.SIREN_ACTIVE",     # no sounder output exists
     "SSWIN.STROBE_ACTIVE",
     "SSWIN.SIREN_TIME_LEFT",
-    "SSWIN.CMD_ARM_PARTIAL",  # no partial/night arming mode exists
     "SSWIN.CMD_SILENCE",      # nothing to silence without a sounder
 })
 
@@ -141,15 +144,35 @@ def _zone_states(manager) -> list:
     return [manager.get_zone_state(zone["id"]) for zone in manager.get_zones()]
 
 
+def _zone_modes(manager) -> list:
+    return [manager.get_zone_arm_mode(zone["id"]) for zone in manager.get_zones()]
+
+
 def _armed(manager) -> bool:
-    states = _zone_states(manager)
-    return bool(states) and all(state == ZoneState.ARMED for state in states)
+    """Every zone armed, and every one of them armed FULLY. A site whose
+    perimeter watches while the people inside move around is NOT "armed"
+    to a schematic that energizes something on it - that is exactly what
+    ARMED_PARTIAL is for."""
+    zones = manager.get_zones()
+    if not zones:
+        return False
+    return all(manager.get_zone_state(zone["id"]) == ZoneState.ARMED
+               and manager.get_zone_arm_mode(zone["id"]) == ArmMode.FULL for zone in zones)
 
 
 def _armed_partial(manager) -> bool:
-    states = _zone_states(manager)
-    armed = [state for state in states if state == ZoneState.ARMED]
-    return bool(armed) and len(armed) != len(states)
+    """Something is watching, but not everything: either some zones are
+    armed and some are not, or a zone is armed at night (watching only
+    the lines flagged for it)."""
+    zones = manager.get_zones()
+    if not zones:
+        return False
+    armed = [z for z in zones if manager.get_zone_state(z["id"]) == ZoneState.ARMED]
+    if not armed:
+        return False
+    if len(armed) != len(zones):
+        return True
+    return any(manager.get_zone_arm_mode(z["id"]) == ArmMode.NIGHT for z in armed)
 
 
 def _disarmed(manager) -> bool:
@@ -246,8 +269,8 @@ _REAL_SIGNALS = frozenset({"SSWIN.DELAY_REMAINING", "SSWIN.LAST_TRIGGER", "SSWIN
 
 # --- the commands -----------------------------------------------------------
 
-def _arm(manager, zone_id: str, actor: str) -> bool:
-    result = manager.arm_zone(zone_id, actor=actor)
+def _arm(manager, zone_id: str, actor: str, mode: str = ArmMode.FULL) -> bool:
+    result = manager.arm_zone(zone_id, actor=actor, mode=mode)
     if not getattr(result, "success", False):
         # A zone that will not arm (a violated line, a fault) is the
         # normal reason - logged so a command that quietly did nothing is
@@ -264,8 +287,15 @@ def _reset(manager, zone_id: str, actor: str) -> bool:
     return bool(manager.clear_alarm_memory(zone_id, actor=actor))
 
 
+def _arm_night(manager, zone_id: str, actor: str) -> bool:
+    """"Załącz dozór częściowy" - every zone armed in NIGHT mode, where
+    only the lines flagged `active_at_night` watch."""
+    return _arm(manager, zone_id, actor, mode=ArmMode.NIGHT)
+
+
 _COMMANDS = {
     "SSWIN.CMD_ARM": _arm,
+    "SSWIN.CMD_ARM_PARTIAL": _arm_night,
     "SSWIN.CMD_DISARM": _disarm,
     "SSWIN.CMD_RESET": _reset,
 }

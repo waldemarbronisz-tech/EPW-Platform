@@ -16,7 +16,7 @@ from epw_os.gui.table_helpers import (
 from epw_os.gui.widgets.crud_dialog import run_crud_dialog
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.intrusion_manager import (
-    LineType, ZoneState, NORMAL_STATE_NC, NORMAL_STATE_NO,
+    ArmMode, LineType, ZoneState, NORMAL_STATE_NC, NORMAL_STATE_NO,
     DEFAULT_MIN_VIOLATION_SECONDS, DEFAULT_MULTIPLICITY_COUNT, DEFAULT_MULTIPLICITY_WINDOW_SECONDS,
     DEFAULT_LOCKOUT_AFTER_COUNT, DEFAULT_ALARM_HOLD_SECONDS, DEFAULT_SILENCE_THRESHOLD_SECONDS,
     LineInputMode, DEFAULT_LINE_INPUT_MODE, LineParametrization, DEFAULT_PARAMETRIZATION,
@@ -971,6 +971,12 @@ class PageIntrusionOverview(QWidget):
 
     def _zone_state_text(self, zone_id: str, state: str) -> str:
         text = _zone_state_name(state)
+        # A night arm protects less than a full one, so the state cell
+        # has to say which this is - "ARMED" alone would read as "the
+        # whole zone is watching" to someone glancing at the row.
+        getter = getattr(self.intrusion_manager, "get_zone_arm_mode", None)
+        if state != ZoneState.DISARMED and callable(getter) and getter(zone_id) == ArmMode.NIGHT:
+            text += f" ({tr('pages.intrusion.mode_night')})"
         if self.intrusion_manager.is_walk_test_active(zone_id):
             remaining = self.intrusion_manager.get_walk_test_remaining(zone_id)
             text += f" ({tr('pages.intrusion.walk_test_suffix', seconds=remaining)})"
@@ -1195,13 +1201,37 @@ class PageIntrusionOverview(QWidget):
         if state == ZoneState.DISARMED:
             btn = QPushButton(tr("pages.intrusion.btn_arm"))
             btn.clicked.connect(lambda checked=False, zid=zone_id: self._arm(zid))
+            btn.setEnabled(can_arm)
+            apply_table_button_style(btn)
+            btn_layout.addWidget(btn)
+            # Night arming ("dozór częściowy"): only the lines marked for
+            # it watch, so somebody can sleep in a building that is
+            # armed. Offered only where it would differ from a full arm -
+            # a zone whose every line watches at night has nothing to
+            # choose between.
+            if self._zone_has_night_lines(zone_id):
+                night = QPushButton(tr("pages.intrusion.btn_arm_night"))
+                night.setToolTip(tr("pages.intrusion.tooltip_arm_night"))
+                night.clicked.connect(lambda checked=False, zid=zone_id: self._arm(zid, night=True))
+                night.setEnabled(can_arm)
+                apply_table_button_style(night)
+                btn_layout.addWidget(night)
         else:
             btn = QPushButton(tr("pages.intrusion.btn_disarm"))
             btn.clicked.connect(lambda checked=False, zid=zone_id: self._disarm(zid))
-        btn.setEnabled(can_arm)
-        apply_table_button_style(btn)
-        btn_layout.addWidget(btn)
+            btn.setEnabled(can_arm)
+            apply_table_button_style(btn)
+            btn_layout.addWidget(btn)
         return container
+
+    def _zone_has_night_lines(self, zone_id) -> bool:
+        """True when this zone has at least one line that does NOT watch
+        at night - i.e. when a night arm would actually differ from a
+        full one."""
+        if self.intrusion_manager is None:
+            return False
+        return any(line["zone_id"] == zone_id and not line.get("active_at_night", True)
+                   for line in self.intrusion_manager.get_lines())
 
     def _build_line_bypass_container(self, line_id, bypassed: bool, can_configure: bool, selected: bool) -> QWidget:
         container = self._build_action_container(selected)
@@ -1278,13 +1308,33 @@ class PageIntrusionOverview(QWidget):
 
     # --- actions ---------------------------------------------------------
 
-    def _arm(self, zone_id):
+    def _current_user_id(self):
+        """The signed-in person, if the session came from a personal code
+        rather than a level PIN - what lets the intrusion manager refuse
+        a zone this particular user may not touch."""
+        getter = getattr(self.access_manager, "current_user_id", None)
+        return getter() if callable(getter) else None
+
+    def _actor(self) -> str:
+        """Who the event register names: the person if one signed in,
+        otherwise the access level, exactly as before."""
+        getter = getattr(self.access_manager, "current_actor", None)
+        return getter() if callable(getter) else self.access_manager.level
+
+    def _arm(self, zone_id, night: bool = False):
         if self.intrusion_manager is None:  # can't actually happen - no rows/buttons without one
             return
         if not self.window().request_access(AccessLevel.OPERATOR):
             return
-        result = self.intrusion_manager.arm_zone(zone_id, actor=self.access_manager.level,
-                                                  level=self.access_manager.level)
+        mode = ArmMode.NIGHT if night else ArmMode.FULL
+        result = self.intrusion_manager.arm_zone(zone_id, actor=self._actor(),
+                                                  level=self.access_manager.level,
+                                                  mode=mode, user=self._current_user_id())
+        if not result.success and not result.needs_confirmation and result.reason:
+            # A refusal that is not "confirm this" is one the operator has
+            # to be told about - most often "you may not operate this
+            # zone", which is invisible otherwise.
+            QMessageBox.warning(self, tr("pages.intrusion.arm_refused_title"), result.reason)
         if result.needs_confirmation:
             zone = next((z for z in self.intrusion_manager.get_zones() if z["id"] == zone_id), None)
             lines_by_id = {l["id"]: l for l in self.intrusion_manager.get_lines()}
@@ -1292,8 +1342,9 @@ class PageIntrusionOverview(QWidget):
             fault_names = [lines_by_id[lid]["name"] for lid in result.fault_line_ids if lid in lines_by_id]
             popup = ArmConfirmPopup(zone["name"] if zone else zone_id, violated_names, fault_names, self)
             if popup.exec():
-                self.intrusion_manager.arm_zone(zone_id, actor=self.access_manager.level,
-                                                 level=self.access_manager.level, force=True)
+                self.intrusion_manager.arm_zone(zone_id, actor=self._actor(),
+                                                 level=self.access_manager.level, force=True,
+                                                 mode=mode, user=self._current_user_id())
         self.refresh()
 
     def _disarm(self, zone_id):
@@ -1301,7 +1352,12 @@ class PageIntrusionOverview(QWidget):
             return
         if not self.window().request_access(AccessLevel.OPERATOR):
             return
-        self.intrusion_manager.disarm_zone(zone_id, actor=self.access_manager.level, level=self.access_manager.level)
+        done = self.intrusion_manager.disarm_zone(zone_id, actor=self._actor(),
+                                                   level=self.access_manager.level,
+                                                   user=self._current_user_id())
+        if not done and self._current_user_id() is not None:
+            QMessageBox.warning(self, tr("pages.intrusion.disarm_refused_title"),
+                                tr("pages.intrusion.disarm_refused"))
         self.refresh()
 
     def _bypass(self, line_id, bypassed):

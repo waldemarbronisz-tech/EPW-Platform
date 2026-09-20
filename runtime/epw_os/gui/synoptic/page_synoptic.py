@@ -1,12 +1,22 @@
-"""The "Synoptic" page: the screen Studio embedded in projekt.epw, live
-(punkt 2 / luka 5). Same nav-level place as Main View; shows why when
-there is nothing to draw (no screens in the project, a refused document,
-the symbol geometry file missing) instead of a blank canvas.
+"""THE Main View: the screen Studio embedded in projekt.epw, live.
 
-A click on a symbol bound to a SWITCHED apparatus goes the same way as
-on the Main View (page_entry_gate.py): Operator access, a confirmation
-popup, then CommandManager.request_command(<apparatus id>, CLOSE|OPEN)
-- the apparatus's own command definitions (apparatus.py's
+This page used to sit next to a second one - a hand-built drawing of one
+particular entry gate, with a measurement panel whose voltages, currents
+and power were invented by a 250 ms timer and a device-feedback path that
+succeeded 95% of the time by random(). That page is gone (owner's
+instruction: "main view ma mieć tylko obraz z synoptic - tam umieszczamy
+wizualizację pomiarów"), and this is what the operator sees instead. A
+real measurement reaches them the way every other value does: drawn on
+the screen in the Synoptic editor, bound to a real point.
+
+Shows why when there is nothing to draw (no screens in the project, a
+refused document, the symbol geometry file missing) instead of a blank
+canvas, and offers a selector when the project carries several screens.
+
+A click on a symbol bound to a SWITCHED apparatus takes the ordinary
+command path: Operator access, a confirmation popup, then
+CommandManager.request_command(<apparatus id>, CLOSE|OPEN) - the
+apparatus's own command definitions (apparatus.py's
 apparatus_command_definitions()) decide what that does on the outputs.
 """
 from PySide6.QtCore import Qt
@@ -32,7 +42,7 @@ class PageSynoptic(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
-        title = QLabel(tr("nav.synoptic"))
+        title = QLabel(tr("nav.main_diagram"))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setObjectName("PageHeader")
         layout.addWidget(title)
@@ -173,6 +183,6 @@ class PageSynoptic(QWidget):
             return False
         permitted, reasons = command_manager.request_command(apparatus_id, action)
         if not permitted:
-            QMessageBox.warning(self, tr("pages.entry_gate.command_rejected_title"),
-                                tr("pages.entry_gate.command_rejected_text", reason=(reasons or ["?"])[0]))
+            QMessageBox.warning(self, tr("pages.synoptic.command_rejected_title"),
+                                tr("pages.synoptic.command_rejected_text", reason=(reasons or ["?"])[0]))
         return bool(permitted)

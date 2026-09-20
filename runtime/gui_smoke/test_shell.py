@@ -14,7 +14,7 @@ feature. See gui_smoke/README.md for the full split rationale.
 import os
 
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QFont, QFontMetrics, QMouseEvent
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 
@@ -213,7 +213,9 @@ def test_settings_popups_construct(make_window):
 
 def test_nav_pages_keyed_by_stable_page_id(make_window):
     window = _window(make_window)
-    expected_nav = {"main_view", "synoptic", "power_quality", "digital_inputs", "analog_inputs",
+    # "synoptic" is gone as a page id of its own: the Main View IS the
+    # embedded screen now (nav_model.py), so one slot, not two.
+    expected_nav = {"main_view", "power_quality", "digital_inputs", "analog_inputs",
                      "control_outputs", "protection_electrical", "protection_process", "events", "alarms",
                      "system_topology", "audit_log", "trends", "bus_diagnostics",
                      "intrusion_overview", "intrusion_history", "intrusion_config", "engineer_mode"}
@@ -335,16 +337,6 @@ def test_window_is_resizable_not_fixed(make_window):
     assert window.minimumWidth() > 0, "no minimum size set"
 
 
-def test_breaker_contactor_description_wraps_not_truncates(make_window):
-    # Part 5 of an earlier follow-up task: "Digital Output C..." on Main
-    # View under DO01-04's synoptic symbols used to truncate instead of
-    # wrapping to a second line.
-    from epw_os.gui.widgets.synoptic_objects import _wrap_to_two_lines
-
-    window = _window(make_window)
-    q1_width = window.page_entry_gate.q1.width()
-    fm = QFontMetrics(QFont("Tahoma", 7))
-    for n in (1, 2, 3, 4):
-        lines = _wrap_to_two_lines(f"Digital Output Channel {n}", fm, q1_width - 44)
-        assert len(lines) <= 2 and all(not l.endswith("…") for l in lines), \
-            (f"Digital Output Channel {n}", lines)
+# The two-line description wrapper this file used to test went with the
+# breaker/contactor symbols whose labels it wrapped - see
+# widgets/synoptic_objects.py's own header for what else went with them.

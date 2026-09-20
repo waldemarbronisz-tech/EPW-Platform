@@ -395,6 +395,18 @@ class EPWCore:
         from epw_os.core.apparatus import (MAIN_VIEW_ROLE_DESIGNATIONS, apparatuses_from_records,
                                            bind_roles_from_screens)
         self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
+
+        # Who may operate the alarm system (task "alarmówka: stopnie
+        # dostępu"). The project says who exists and what they may do;
+        # their codes stay in this controller's own access file, so a
+        # user is known the moment the project lands and can sign in the
+        # moment an Engineer sets their code on the panel.
+        users = self.project_manager.get_intrusion_users()
+        if users:
+            count = self.access_manager.set_users(users)
+            log.info(f"Alarm system users from the project: {count}.")
+        else:
+            self.access_manager.set_users([])
         bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
                                 MAIN_VIEW_ROLE_DESIGNATIONS)
         # The simulated plant answers the project's own apparatuses (an
@@ -455,7 +467,7 @@ class EPWCore:
                           if self._driver_id_for_card(dev.get("id"), dev) == "SIM_DRIVER"]
 
         # Main View's cabinet-status panel and electricity-simulation
-        # tags (Cabinet.*, Device.*.Status, Sim.*, Meas.*) - unconditional,
+        # tags (Device.*.Status, Sim.*, Meas.*) - unconditional,
         # same as before this task (previously bundled into
         # init_default_tags(), which only ran in the "no devices" branch
         # this if/else used to have - see tag_manager.py's own docstring
@@ -1198,14 +1210,18 @@ class EPWCore:
         """Best-effort check for the Task's own required warning ("jesli
         logika uzytkownika uzywa tagow tej funkcji"): True if any tag
         `feature` owns appears anywhere in the currently-loaded logic
-        project. LogicEngine (Task's own placeholder engine - see its
-        module docstring) exposes no dedicated "which tags does this
-        program reference" API, so this reads its raw loaded JSON
-        directly rather than adding one just for this - logic_engine.py
-        itself is untouched. A tag name appearing as a substring of some
-        unrelated JSON value would be a false positive; there are no
-        false negatives, which is the direction that actually matters
-        for a warning."""
+        document - read as raw JSON, so it also covers a document that
+        was REFUSED (a bad checksum, an unknown block type): a warning
+        about a feature the logic references must not go quiet just
+        because that logic is currently unrunnable. A tag name appearing
+        as a substring of some unrelated JSON value would be a false
+        positive; there are no false negatives, which is the direction
+        that actually matters for a warning.
+
+        (The engine is no longer a placeholder - it executes the program,
+        so the RUNNING program's own blocks could answer this precisely.
+        Deliberately not used here for the refused-document reason
+        above.)"""
         tag_names = self.get_feature_tag_names(feature)
         if not tag_names:
             return False

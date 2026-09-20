@@ -38,7 +38,8 @@
     "mqtt": "MQTT Integration",
     "service_notes": "Service Notes",
     "object_links": "Object Links",
-    "protection_tests": "Protection Tests"
+    "protection_tests": "Protection Tests",
+    "security_users": "Users"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -58,7 +59,8 @@
     "mqtt": "Project → Configuration → MQTT Integration",
     "service_notes": "Project → Configuration → Service Notes",
     "object_links": "Project → Configuration → Object Links",
-    "protection_tests": "Project → Controller → Protection Tests"
+    "protection_tests": "Project → Controller → Protection Tests",
+    "security_users": "Alarm system users"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -415,7 +417,8 @@
     "alarm_hold_seconds": "Alarm Hold Time:",
     "off": "off",
     "group_supervision": "Line Supervision",
-    "silence_threshold_seconds": "Silence Time Before Suspect:"
+    "silence_threshold_seconds": "Silence Time Before Suspect:",
+    "group_night": "Night arming"
   },
   "electrical": {
     "col_tree": "Function / Stage",
@@ -749,5 +752,19 @@
     "state_disabled": "disabled",
     "state_exceeded": "tripped - clear it first",
     "steps_title": "Steps of test {subject}"
+  },
+  "intrusion": {
+    "users_heading": "Alarm system users",
+    "users_intro": "Who may arm and disarm which zones. A person's CODE is never part of the project - it is set on the controller itself, so it never travels to Studio, into git or over the network. A user with no zones ticked may operate every zone.",
+    "col_user_id": "Id",
+    "col_user_name": "Name",
+    "col_user_level": "Level",
+    "col_user_zones": "Zones",
+    "col_user_enabled": "Active",
+    "btn_add_user": "Add user",
+    "btn_remove_user": "Remove user",
+    "user_zones_all": "(every zone)",
+    "col_line_night": "Watches at night",
+    "line_night_hint": "Unticked, this line stops supervising while its zone is armed in night mode - the usual choice for motion detectors inside. A 24-hour line alarms regardless."
   }
 }

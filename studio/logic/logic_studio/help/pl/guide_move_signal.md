@@ -2,7 +2,7 @@
 
 Bez rysowania jednego, długiego przewodu przez cały schemat — patrz
 najpierw [Etykiety, znaczniki i bity urządzenia](help:concept_labels)
-dla pełnego porównania. Poniżej sposób, który **działa dzisiaj**:
+dla pełnego porównania. Poniżej dwa sposoby, oba działające:
 
 ## Przez znacznik (bit/rejestr wewnętrzny)
 
@@ -22,10 +22,17 @@ Pamiętaj o możliwym opóźnieniu o jeden cykl skanu między zapisem a
 odczytem tego samego znacznika w tym samym skanie — patrz [Cykl skanu i
 opóźnienie o jeden cykl](help:concept_scan_cycle).
 
-## Etykiety przewodów — jeszcze nie w pełni
+## Przez etykietę przewodu (bez opóźnienia)
 
-Wolny koniec przewodu z etykietą (patrz [Zaślepka wejścia, wolny koniec
-przewodu, etykieta](help:concept_stubs)) dokumentuje dziś tylko, dokąd
-przewód miał prowadzić — nie przenosi jeszcze sygnału. Gdy scalanie
-etykiet w węzły sieci zostanie ukończone, ten poradnik zostanie
-zaktualizowany o odpowiedni, krótszy sposób.
+1. Narysuj krótki przewód od pinu, który daje sygnał, i zostaw jego drugi
+   koniec **wolny**.
+2. Nadaj mu etykietę (np. "GOTOWOSC").
+3. Tam, gdzie sygnał jest potrzebny, narysuj drugi krótki przewód do pinu
+   odbierającego, też z wolnym końcem, i nadaj mu **tę samą** etykietę
+   (wielkość liter nie ma znaczenia).
+4. Gotowe — kompilator łączy oba przewody w jeden węzeł, dokładnie tak,
+   jakby były narysowane jednym przewodem. Bez opóźnienia o cykl skanu.
+
+W grupie o danej etykiecie musi być dokładnie jedno źródło; odbiorników
+może być wiele. Kiedy wybrać etykietę, a kiedy znacznik — patrz
+[Etykiety, znaczniki i bity urządzenia](help:concept_labels).
