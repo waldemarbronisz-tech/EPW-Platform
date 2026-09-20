@@ -766,6 +766,26 @@ class EPWCore:
         # no-op call when disabled/unavailable - see its own module
         # docstring (A2/A6: "brak biblioteki albo brak brokera NIE MOZE
         # uniemozliwic uruchomienia programu").
+        # Commands from Home Assistant, over the same MQTT link that
+        # already publishes state (owner's decision). The GATEWAY is what
+        # decides whether a message is real, who sent it and whether they
+        # may do it (core/remote_commands.py); MqttManager only carries
+        # it there and publishes the answer back. Built before start() so
+        # the command topic is subscribed to on the very first connect.
+        #
+        # Forcing is deliberately absent from the gateway's own action
+        # table - a force is a tool for somebody standing at the cabinet.
+        from epw_os.core.remote_commands import RemoteCommandGateway
+        self.remote_commands = RemoteCommandGateway(
+            access_manager=self.access_manager,
+            intrusion_manager=self.intrusion_manager,
+            command_manager=self.command_manager,
+            project_manager=self.project_manager,
+            process_protection_manager=self.process_protection_manager,
+            alarm_manager=self.alarm_manager,
+            audit_logger=self.audit_logger,
+        )
+        self.mqtt_manager.set_command_handler(self.remote_commands.handle)
         self.mqtt_manager.start()
 
         self.is_running = True

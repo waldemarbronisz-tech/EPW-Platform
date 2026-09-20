@@ -74,7 +74,14 @@ class AccessManager:
         # user exists the moment the project lands and can sign in the
         # moment someone sets their code ON the panel.
         self._users = {}            # user_id -> {"id", "name", "level", "zones", "enabled"}
-        self._user_pin_hashes = {}  # user_id -> sha256
+        self._user_pin_hashes = {}  # user_id -> sha256 of the keypad code
+        # user_id -> sha256 of that person's REMOTE token. A separate
+        # secret from their keypad code on purpose: the token lives in a
+        # Home Assistant automation on another machine, so a leak there
+        # must not hand anyone the code that opens the panel standing in
+        # front of the cabinet. High-entropy and machine-generated
+        # (issue_remote_token()), never typed by a person.
+        self._remote_token_hashes = {}
         # Who is signed in right now, or None for a plain level login
         # (the PIN-per-level path, which every installation starts on).
         self.current_user = None
@@ -94,6 +101,7 @@ class AccessManager:
                     data = json.load(f)
                 self._pin_hashes = data.get("pin_hashes", {})
                 self._user_pin_hashes = data.get("user_pin_hashes", {}) or {}
+                self._remote_token_hashes = data.get("remote_token_hashes", {}) or {}
                 return
             except Exception as e:
                 log.error(f"Failed to read {self.config_path}: {e}. Regenerating defaults.")
@@ -122,7 +130,8 @@ class AccessManager:
         os.makedirs(os.path.dirname(self.config_path) or ".", exist_ok=True)
         with open(self.config_path, "w") as f:
             json.dump({"pin_hashes": self._pin_hashes,
-                       "user_pin_hashes": self._user_pin_hashes}, f, indent=2)
+                       "user_pin_hashes": self._user_pin_hashes,
+                       "remote_token_hashes": self._remote_token_hashes}, f, indent=2)
 
     # --- named users ----------------------------------------------------
 
@@ -155,9 +164,11 @@ class AccessManager:
                 "enabled": bool(raw.get("enabled", True)),
             }
         self._users = registry
-        orphaned = [uid for uid in self._user_pin_hashes if uid not in registry]
+        orphaned = [uid for uid in set(self._user_pin_hashes) | set(self._remote_token_hashes)
+                    if uid not in registry]
         for user_id in orphaned:
             self._user_pin_hashes.pop(user_id, None)
+            self._remote_token_hashes.pop(user_id, None)
         if orphaned:
             log.warning(f"Dropped the stored code of {len(orphaned)} user(s) the project no longer has.")
             self._save()
@@ -166,7 +177,10 @@ class AccessManager:
     def get_users(self) -> list:
         """Every configured user, each with whether a code has been set
         on this panel (never the code itself)."""
-        return [dict(user, has_pin=user["id"] in self._user_pin_hashes) for user in self._users.values()]
+        return [dict(user,
+                     has_pin=user["id"] in self._user_pin_hashes,
+                     has_remote_token=user["id"] in self._remote_token_hashes)
+                for user in self._users.values()]
 
     def get_user(self, user_id: str):
         user = self._users.get(user_id)
@@ -202,6 +216,66 @@ class AccessManager:
         if existed:
             self._save()
         return existed
+
+    def issue_remote_token(self, user_id: str, level: str = None):
+        """Generates this person's REMOTE token and returns it ONCE.
+
+        Only the hash is kept, so it can never be read back off the
+        controller - the same one-way storage as every PIN here, and the
+        same "shown exactly once" rule the REST API tokens follow. The
+        caller shows it to the Engineer, who types it into that person's
+        Home Assistant automation.
+
+        Issuing again replaces the previous one: that is how a token
+        that leaked is revoked - the old one stops working the moment
+        the new one is generated.
+        """
+        if level is not None and level != AccessLevel.ENGINEER:
+            log.warning(f"Refused to issue a remote token for {user_id!r}: level {level!r} is below Engineer.")
+            return None
+        if user_id not in self._users:
+            log.warning(f"Refused to issue a remote token for unknown user {user_id!r}.")
+            return None
+        token = secrets.token_urlsafe(24)
+        self._remote_token_hashes[user_id] = self._hash_pin(token)
+        self._save()
+        log.warning(f"Remote token issued for {self._users[user_id]['name']!r} - shown once, stored hashed.")
+        return token
+
+    def revoke_remote_token(self, user_id: str, level: str = None) -> bool:
+        """Takes a person's remote access away without touching their
+        keypad code - they keep working at the cabinet, they stop working
+        from Home Assistant."""
+        if level is not None and level != AccessLevel.ENGINEER:
+            log.warning(f"Refused to revoke the remote token of {user_id!r}: level {level!r} is below Engineer.")
+            return False
+        existed = self._remote_token_hashes.pop(user_id, None) is not None
+        if existed:
+            self._save()
+            log.warning(f"Remote token revoked for user {user_id!r}.")
+        return existed
+
+    def resolve_remote_token(self, token: str):
+        """The person a remote token belongs to, or None.
+
+        Pure lookup: NO session state changes, nothing is emitted, the
+        panel's own access level is untouched. A command arriving over
+        MQTT must not silently log anybody in at the cabinet - it carries
+        its own identity for that one command and nothing more. Returns
+        the user record (with their level and zones) so the caller can
+        apply exactly the same rules the panel applies to that person.
+        """
+        if not token:
+            return None
+        hashed = self._hash_pin(token)
+        for user_id, expected in self._remote_token_hashes.items():
+            if not secrets.compare_digest(hashed, expected):
+                continue
+            user = self._users.get(user_id)
+            if user is None or not user["enabled"]:
+                return None
+            return dict(user)
+        return None
 
     def attempt_user_login(self, pin: str):
         """Signs in by CODE ALONE, the way a real alarm keypad works: the

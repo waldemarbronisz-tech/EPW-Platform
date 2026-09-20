@@ -30,6 +30,7 @@
     "project_recent_missing_suffix": " (file not found)",
     "settings_language": "Language...",
     "settings_change_pin": "Change PIN...",
+    "settings_alarm_users": "Alarm system users...",
     "help_topics": "Help Topics...",
     "help_index": "Index...",
     "help_about": "About EPW OS...",
@@ -1016,5 +1017,36 @@
     "settings": "Controller settings moved: {keys}",
     "left_to_studio": "Left for Studio (structure, not imported): {keys}",
     "source_kept": "{source} was not changed and stays as a copy."
+  },
+  "users": {
+    "title": "Alarm system users",
+    "info": "Who may operate this controller comes from the project (Studio). Their SECRETS are set here: a keypad code for this panel, and a remote token for commands from Home Assistant. Two separate secrets on purpose - a token that leaks on another machine must not open the panel. Neither can be read back; a token is shown once, when it is generated.",
+    "col_name": "Person",
+    "col_level": "Level",
+    "col_zones": "Zones",
+    "col_code": "Keypad code",
+    "col_token": "Remote token",
+    "zones_all": "(every zone)",
+    "disabled_name": "{name} (inactive)",
+    "set": "set",
+    "not_set": "-",
+    "btn_set_code": "Set code...",
+    "btn_clear_code": "Clear code",
+    "btn_issue_token": "Issue remote token",
+    "btn_revoke_token": "Revoke token",
+    "select_first": "Select a person first.",
+    "engineer_required": "Engineer level is required to change a person's secrets.",
+    "code_title": "Keypad code",
+    "code_prompt": "New code for this person:",
+    "code_repeat": "Repeat the code:",
+    "code_mismatch": "The two codes are not the same - nothing changed.",
+    "code_refused": "The code was not set.",
+    "token_confirm": "Generate a remote token for this person? Any token they had stops working immediately, and the new one is shown only once.",
+    "token_refused": "The token was not issued.",
+    "token_shown_once": "Copy the token into that person's Home Assistant automation now - it cannot be shown again. Generate a new one if it is lost.",
+    "token_placeholder": "A generated token appears here, once"
+  },
+  "common": {
+    "close": "Close"
   }
 }

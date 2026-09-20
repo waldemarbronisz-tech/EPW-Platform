@@ -20,13 +20,14 @@ the proposal to design MQTT control as its own, separate task):
     or a topic that happens to collide with anything else, is dropped
     silently. There is no generic "topic -> tag" table beyond that
     mapping, and no "topic -> command" table anywhere in this file.
-  - Accepting arm/disarm/setpoint/force commands over MQTT was
-    deliberately NOT built - it needs its own authentication/
-    authorization design (this codebase already learned that lesson
-    once, the hard way - see api_auth.py's own docstring on the REST
-    API command-bypass vulnerability it was built to close). Proposed
-    as a separate future task in SESSION_REPORT.md, not implemented
-    here.
+  - Commands (arming, settings, apparatus) ARE accepted now, on the
+    owner's decision - but NOT by this module. A message on the command
+    topic is handed, raw, to a callback (`set_command_handler()`);
+    everything about who sent it and whether they may do it lives in
+    core/remote_commands.py, which this file never imports and knows
+    nothing about. The rule above therefore still holds literally: the
+    complete set of writes THIS module performs is its own Link.* tags.
+    Forcing stays out entirely - see remote_commands.py's own docstring.
 
 Dependency (A2): paho-mqtt - see requirements.txt/SESSION_REPORT.md for
 the license/maintenance/transitive-dependency justification. Imported
@@ -325,6 +326,11 @@ class MqttManager:
             pass
         self._device_id = _sanitize_for_id(self.cfg.get("client_id") or project_id or "epw_os")
         self._prefix = (self.cfg.get("topic_prefix") or f"epw/{self._device_id}").rstrip("/")
+        # Set by EPWCore to core/remote_commands.py's gateway. A plain
+        # callable, deliberately: this module hands over the raw message
+        # and learns nothing about identity, permissions or what the
+        # command reaches - see the GRANICE section above.
+        self._command_handler = None
 
         self._client = self._client_factory(self._device_id)
         self._configure_client(self._client)
@@ -443,6 +449,7 @@ class MqttManager:
             self._discovered_tags.clear()  # re-publish HA discovery in case the broker doesn't remember it
             self._publish_controller_status()
             self._resubscribe_link_topics()
+            self._subscribe_command_topic()
             return
 
         self.stats["errors"] += 1
@@ -468,9 +475,14 @@ class MqttManager:
         self._set_state(MqttConnectionState.DISCONNECTED)
 
     def _on_message(self, client, userdata, message):
-        """A5's ONLY inbound path - see this module's own GRANICE
-        section at the top for the hard boundary this enforces."""
+        """The ONLY inbound path - see this module's own GRANICE section
+        at the top. Two kinds of message reach it: a configured Link.*
+        mapping (a value, written to that one tag) and the command topic
+        (handed whole to the gateway, which decides everything else)."""
         self.stats["received"] += 1
+        if message.topic == self.command_topic():
+            self._deliver_command(message)
+            return
         mapping = self._link_topic_index.get(message.topic)
         if mapping is None:
             return  # not a configured Link.* topic - dropped silently
@@ -484,6 +496,47 @@ class MqttManager:
             log.warning(f"MQTT: could not decode payload on Link.* topic {message.topic!r} as UTF-8 - dropped.")
             return
         self._apply_link_message(mapping, payload)
+
+    # --- commands: transport only -----------------------------------------
+
+    def set_command_handler(self, handler):
+        """Where an inbound command goes. `handler(topic, payload,
+        retained)` returns the result dict this module publishes back.
+        None (the default) means commands are not accepted at all: the
+        topic is not even subscribed to."""
+        self._command_handler = handler
+        if self._connected:
+            self._subscribe_command_topic()
+
+    def command_topic(self) -> str:
+        return self._topic("cmd")
+
+    def command_result_topic(self) -> str:
+        return self._topic("cmd/result")
+
+    def _subscribe_command_topic(self):
+        if self._command_handler is None or self._client is None:
+            return
+        try:
+            self._client.subscribe(self.command_topic(), qos=1)
+            log.info(f"MQTT: accepting commands on {self.command_topic()}")
+        except Exception as e:  # noqa: BLE001 - a broker that refuses the subscription must not stop the rest
+            log.warning(f"MQTT: could not subscribe to the command topic: {e}")
+
+    def _deliver_command(self, message):
+        """Hands the message over exactly as it arrived - including
+        whether the broker marked it RETAINED, which is the one thing
+        only the transport can know and the gateway must be told (a
+        retained command is a replay, see remote_commands.py)."""
+        if self._command_handler is None:
+            log.warning(f"MQTT: a message arrived on {self.command_topic()} but commands are not enabled - dropped.")
+            return
+        result = self._command_handler(message.topic, message.payload, bool(getattr(message, "retain", False)))
+        if result is not None:
+            # QoS 1, never retained: an answer that stayed on the board
+            # would be handed to every future subscriber as if it had
+            # just happened.
+            self._enqueue(self.command_result_topic(), json.dumps(result, ensure_ascii=False), False)
 
     # --- topic helpers -------------------------------------------------
 

@@ -62,6 +62,23 @@ def main():
         log.warning("Set api_host back to 127.0.0.1 in project.json unless this is intentional.")
         log.warning("=" * 70)
 
+    # The MQTT link now carries COMMANDS as well as state (see
+    # core/remote_commands.py), so where the broker lives is a security
+    # fact worth saying out loud at startup - the same treatment the REST
+    # API's own bind address already gets just above. A broker on another
+    # machine is perfectly normal (HAOS on a mini PC in the cabinet); a
+    # broker reached over the open internet, without TLS, is not.
+    _mqtt = core.project_manager.get_mqtt_config()
+    if _mqtt.get("enabled") and _mqtt.get("host"):
+        if not is_local_host(_mqtt["host"]):
+            log.warning("=" * 70)
+            log.warning(f"MQTT broker is {_mqtt['host']}:{_mqtt.get('port')} - NOT on this machine. "
+                        f"Commands from Home Assistant arrive over this link.")
+            if not _mqtt.get("tls"):
+                log.warning("TLS is OFF for that broker: the remote tokens travel in clear text. "
+                            "Turn TLS on, or keep the broker on a trusted local network only.")
+            log.warning("=" * 70)
+
     # 2. Start API Backend Thread
     #
     # The FastAPI app is imported HERE, in the main thread, and handed to

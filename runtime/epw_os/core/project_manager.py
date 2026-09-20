@@ -932,6 +932,40 @@ class ProjectManager:
             return True  # an old project.json is not rewritten on every screen change
         return self.save_runtime_state()
 
+    def set_electrical_stage(self, function_id: str, stage_name: str, level: str = None, **fields) -> bool:
+        """One electrical protection stage's settings (enabled/setting/
+        hysteresis/delay_ms/action), written back to the project.
+
+        Engineer level, like every other setting change. Lives here, next
+        to the stage list itself, so the panel page and a remote command
+        change a protection stage through the SAME gated call instead of
+        each assembling the record on its own - the shape of bug the REST
+        API once had (api_auth.py) was exactly a second path to a change
+        that skipped the first path's checks."""
+        from epw_os.core.access_manager import AccessLevel
+        if level is not None and level != AccessLevel.ENGINEER:
+            log.warning(f"Refused to change protection stage {function_id}/{stage_name}: "
+                        f"level {level!r} is below Engineer.")
+            return False
+        allowed = {"enabled", "setting", "hysteresis", "delay_ms", "action"}
+        unknown = set(fields) - allowed
+        if unknown:
+            log.warning(f"Refused to change protection stage {function_id}/{stage_name}: "
+                        f"unknown field(s) {', '.join(sorted(unknown))}.")
+            return False
+        if not fields:
+            return False
+        stages = self.get_electrical_protection_stages()
+        for index, existing in enumerate(stages):
+            if existing.get("function_id") == function_id and existing.get("stage_name") == stage_name:
+                stages[index] = {**existing, **fields}
+                break
+        else:
+            log.warning(f"Refused to change protection stage {function_id}/{stage_name}: no such stage.")
+            return False
+        self.set_electrical_protection_stages(stages)
+        return self.save_project() is not False
+
     def get_retentive_signals(self) -> dict:
         """The logic program's retentive internal signals as last stored -
         {"MR.NAME": value}. Empty for a controller that never ran a

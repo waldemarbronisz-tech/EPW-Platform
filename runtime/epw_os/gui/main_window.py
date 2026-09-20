@@ -802,6 +802,15 @@ class MainWindow(QMainWindow):
         self._settings_actions["menu.settings_language"] = act_lang
         act_pin = settings_menu.addAction(tr("menu.settings_change_pin"))
         act_pin.triggered.connect(self._open_change_pin_dialog)
+        # Who may operate this controller, and with what secret: the
+        # keypad code and the remote (MQTT) token, both set here at the
+        # cabinet. The PEOPLE come from the project - Studio decides who
+        # exists and what they may do.
+        self._act_alarm_users = settings_menu.addAction(tr("menu.settings_alarm_users"))
+        self._act_alarm_users.triggered.connect(self._open_alarm_users_dialog)
+        self._refresh_alarm_users_action_visibility()
+        self.access_manager.level_changed.connect(self._refresh_alarm_users_action_visibility)
+
         self._settings_actions["menu.settings_change_pin"] = act_pin
         act_sleep = settings_menu.addAction(tr("menu.settings_screen_sleep"))
         act_sleep.triggered.connect(self._open_screen_sleep_dialog)
@@ -1707,6 +1716,22 @@ class MainWindow(QMainWindow):
         is_engineer = self.access_manager.has_access(AccessLevel.ENGINEER)
         self._act_load_synoptic.setVisible(is_engineer)
         self._act_load_synoptic.setEnabled(is_engineer)
+
+    def _refresh_alarm_users_action_visibility(self, *_):
+        """Engineer-only, hidden AND disabled below it - the same
+        treatment as every other Engineer-gated entry here."""
+        is_engineer = self.access_manager.has_access(AccessLevel.ENGINEER)
+        self._act_alarm_users.setVisible(is_engineer)
+        self._act_alarm_users.setEnabled(is_engineer)
+
+    def _open_alarm_users_dialog(self):
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Alarm system users")
+            return
+        from epw_os.gui.widgets.alarm_users_dialog import AlarmUsersDialog
+        dialog = AlarmUsersDialog(self.access_manager, self)
+        dialog.exec()
+        dialog.deleteLater()
 
     def _refresh_reload_logic_action_visibility(self, *_):
         """Engineer-only, same hidden AND disabled treatment as every

@@ -247,6 +247,34 @@ przez `project_format.apply_settings_snapshot()`).
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
   - Test weryfikacji zabezpieczeń dostaje id aparatu z listy aparatów projektu mających wyjście i punkt zwrotny.
 - **Wgranie projektu nie przebudowuje działającego sterownika** — potrzebny restart (p. 3).
+- **Sterowanie z Home Assistanta przez MQTT** — ZROBIONE 2026-09-20.
+  Łącze MQTT przestało być tylko podglądem: HAOS może uzbrajać alarmówkę
+  (pełny i nocny dozór), rozbrajać, kasować alarm, zmieniać nastawy
+  zabezpieczeń i wydawać komendy aparatom. Wymuszenia **celowo** zostają
+  poza tym kanałem. Rozstrzygnięcia i format wiadomości opisuje
+  `MQTT_STEROWANIE.md`; w skrócie:
+  - komendy sprawdza **osobna bramka** (`core/remote_commands.py`), a
+    `mqtt_manager.py` nadal nie zna żadnej ścieżki sterowania — dostaje
+    callback i tyle;
+  - **tożsamość jedzie w wiadomości**, bo Home Assistant ma jedno konto
+    MQTT i broker nie odróżni dwóch osób; token per osoba, hash w pliku
+    sterownika, wydawany na panelu (Ustawienia → Użytkownicy alarmówki),
+    pokazywany raz;
+  - **token to nie kod na klawiaturę** — wyciek z HA nie może otwierać
+    panelu przy szafie; unieważnienie tokenu nie rusza kodu;
+  - odrzucane: retained (odtwarzane po każdym restarcie), starsze niż
+    120 s, duplikaty `id` (wykonanie pomijane, odpowiedź powtórzona),
+    obcy token, podszycie się pod kogoś innego, za niski poziom, nie
+    swoja strefa. Każda odmowa wygląda jak włam → **cichy alarm**
+    `REMOTE_COMMAND_REFUSED`, który przez MQTT staje się powiadomieniem
+    w HA;
+  - uprawnienia i wykonanie idą przez **te same managery co panel**
+    (alarmówka, CommandManager), więc safety kernel, blokady logiki,
+    wymuszenia i tryb szkoleniowy działają bez zmian;
+  - granica, która zostaje: kto przejmie HAOS, wyśle komendę tokenem,
+    który tam leży. Dlatego z zewnątrz łączysz się z HAOS (VPN/Nabu
+    Casa), a broker zostaje w LAN — sterownik ostrzega przy starcie, gdy
+    broker nie jest lokalny, i osobno gdy przy tym nie ma TLS.
 - **Main View bez wymyślonych pomiarów** — ZROBIONE 2026-09-20 (polecenie:
   „main view ma mieć tylko obraz z synoptic - tam umieszczamy wizualizację
   pomiarów"). Strona głównego widoku była ręcznie narysowaną bramą wjazdową

@@ -337,6 +337,7 @@ def test_codes_never_reach_the_project(access):
 
     # has_pin (a bool: "is a code set on this panel") is the ONLY thing
     # said about codes - never the code, never its hash.
-    assert all(set(user) == {"id", "name", "level", "zones", "enabled", "has_pin"} for user in listed)
+    assert all(set(user) == {"id", "name", "level", "zones", "enabled", "has_pin", "has_remote_token"}
+               for user in listed)
     assert next(u for u in listed if u["id"] == "U1")["has_pin"] is True
     assert next(u for u in listed if u["id"] == "U2")["has_pin"] is False

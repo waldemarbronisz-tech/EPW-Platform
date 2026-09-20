@@ -30,6 +30,7 @@
     "project_recent_missing_suffix": " (brak pliku)",
     "settings_language": "Język...",
     "settings_change_pin": "Zmień PIN...",
+    "settings_alarm_users": "Użytkownicy alarmówki...",
     "help_topics": "Tematy pomocy...",
     "help_index": "Indeks...",
     "help_about": "O programie EPW OS...",
@@ -1016,5 +1017,36 @@
     "settings": "Przeniesione ustawienia sterownika: {keys}",
     "left_to_studio": "Pozostawione dla Studio (struktura, nie importowana): {keys}",
     "source_kept": "{source} nie został zmieniony i zostaje jako kopia."
+  },
+  "users": {
+    "title": "Użytkownicy alarmówki",
+    "info": "Kto może obsługiwać ten sterownik, wynika z projektu (Studio). Tutaj ustawia się ich SEKRETY: kod na klawiaturę tego panelu i token zdalny do komend z Home Assistanta. Dwa osobne sekrety celowo - token, który wycieknie na innej maszynie, nie może otwierać panelu. Żadnego nie da się odczytać ponownie; token pokazuje się raz, przy generowaniu.",
+    "col_name": "Osoba",
+    "col_level": "Poziom",
+    "col_zones": "Strefy",
+    "col_code": "Kod na klawiaturę",
+    "col_token": "Token zdalny",
+    "zones_all": "(wszystkie strefy)",
+    "disabled_name": "{name} (nieaktywny)",
+    "set": "ustawiony",
+    "not_set": "-",
+    "btn_set_code": "Ustaw kod...",
+    "btn_clear_code": "Usuń kod",
+    "btn_issue_token": "Wydaj token zdalny",
+    "btn_revoke_token": "Unieważnij token",
+    "select_first": "Najpierw wybierz osobę.",
+    "engineer_required": "Zmiana sekretów osoby wymaga poziomu Engineer.",
+    "code_title": "Kod na klawiaturę",
+    "code_prompt": "Nowy kod tej osoby:",
+    "code_repeat": "Powtórz kod:",
+    "code_mismatch": "Kody nie są takie same - nic nie zmieniono.",
+    "code_refused": "Kod nie został ustawiony.",
+    "token_confirm": "Wygenerować token zdalny dla tej osoby? Poprzedni przestanie działać natychmiast, a nowy zobaczysz tylko raz.",
+    "token_refused": "Token nie został wydany.",
+    "token_shown_once": "Skopiuj token do automatyzacji Home Assistanta tej osoby teraz - nie pokaże się drugi raz. Zgubiony token zastępuje się nowym.",
+    "token_placeholder": "Tu pojawi się wygenerowany token, jeden raz"
+  },
+  "common": {
+    "close": "Zamknij"
   }
 }
