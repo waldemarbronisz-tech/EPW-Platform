@@ -85,6 +85,14 @@ runtime/controller.local.json
 # obiektu, a nie kod - nigdy w repozytorium.
 *.epwbak
 
+# ---------- Projekty zapisane przy ręcznym sprawdzaniu ----------
+# Studio zapisuje projekt/obiekt tam, gdzie wskaże człowiek - a przy
+# uruchamianiu go z repozytorium domyślnym miejscem bywa samo
+# repozytorium. To dane obiektu, nie kod.
+/studio/*.epw
+/studio/*.epwsite
+/studio/*/projekt.epw
+
 # one-off migration backups of the live project file (2026-09-18)
 runtime/projekt.epw.bak-*
 # protection test reports written by the controller (core/protection_test.py)
