@@ -3,6 +3,8 @@
 
 import json
 import os
+import re
+from pathlib import Path
 
 import pytest
 
@@ -225,3 +227,65 @@ def test_version_token_is_substituted_when_requested(pl_store):
 def test_version_token_left_alone_when_not_requested(pl_store):
     text = pl_store.load_topic_markdown("welcome")
     assert "{version}" in text
+
+
+# --- Cross-references and orphans (2026-09-20, with the new Logic,
+# project-install, night-arming, users, sounder and MQTT-command topics).
+# Help rots quietly: a [text](help://key) pointing at a topic that was
+# renamed away still LOOKS like a link, and a topic dropped from the TOC
+# leaves its .md file behind where nothing reaches it. -------------------
+
+_HELP_LINK = re.compile(r"\]\(help://([a-z0-9_]+)\)")
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_every_cross_reference_points_at_a_real_topic(language):
+    store = HelpContentStore(language)
+    valid_ids = {topic_id for topic_id, _t, _c in store.all_topics()} | _NOT_IN_TOC
+    for topic_id in sorted(valid_ids):
+        for target in _HELP_LINK.findall(store.load_topic_markdown(topic_id)):
+            assert target in valid_ids, f"{language}/{topic_id}.md links to a missing topic: {target}"
+
+
+# Reached from the program rather than from a chapter: the Help
+# window's own landing page and the About dialog's text.
+_NOT_IN_TOC = {"welcome", "about"}
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_no_markdown_file_is_left_unreachable_by_the_toc(language):
+    store = HelpContentStore(language)
+    reachable = {topic_id for topic_id, _t, _c in store.all_topics()} | _NOT_IN_TOC
+    on_disk = {path.stem for path in Path(HELP_ROOT, language).glob("*.md")}
+    orphans = sorted(on_disk - reachable)
+    assert orphans == [], f"{language}: file(s) nothing reaches: {orphans}"
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_both_languages_carry_the_same_topics(language):
+    """A topic added in one language and forgotten in the other reads as
+    a complete manual right up until somebody switches language."""
+    ours = {t for t, _ti, _c in HelpContentStore(language).all_topics()}
+    theirs = {t for t, _ti, _c in HelpContentStore("en" if language == "pl" else "pl").all_topics()}
+    assert ours == theirs, f"only in {language}: {sorted(ours - theirs)}"
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_the_features_this_controller_grew_are_documented(language):
+    """Each of these is a real capability of the running controller that
+    had no help page at all until it was written. A feature whose page
+    disappears is a feature nobody will find."""
+    ids = {topic_id for topic_id, _t, _c in HelpContentStore(language).all_topics()}
+    for topic_id in ("logic_what", "logic_state", "logic_reload", "logic_signals",
+                     "proj_install", "proj_settings", "gs_first_steps",
+                     "intr_night", "intr_users", "intr_sounder", "mqtt_commands"):
+        assert topic_id in ids, f"{language}: {topic_id} is not in the table of contents"
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_the_step_by_step_page_reaches_the_things_it_promises(language):
+    store = HelpContentStore(language)
+    linked = set(_HELP_LINK.findall(store.load_topic_markdown("gs_first_steps")))
+    for topic_id in ("proj_install", "al_change_pin", "intr_users", "intr_walk_test",
+                     "intr_sounder", "logic_signals", "mqtt_commands", "intr_arming"):
+        assert topic_id in linked, f"{language}: the first-steps page never sends you to {topic_id}"

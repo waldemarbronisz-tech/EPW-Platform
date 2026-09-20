@@ -1,26 +1,59 @@
 # Rejestr punktów
 
-**Na żywo i wymuszanie.** Przycisk „Na żywo ze sterownika" na pasku
-głównym dopisuje kolumnę z wartością każdego punktu odczytaną ze
-sterownika (jakość inna niż GOOD w nawiasie, tło pomarańczowe). Tryb
-wymuszania (ikona kłódki w pasku rejestru, po dialogu z zasadami, token
-Engineer) pozwala z menu wiersza wymusić wartość albo zdjąć wymuszenie;
-wymuszony punkt jest czerwony z „F →". „Zdejmij wszystkie wymuszenia"
-albo wyłączenie trybu zdejmuje wszystko; sterownik zdejmuje sam po
-utracie łączności ze Studio i po restarcie. Tor zabezpieczeniowy nie
-podlega wymuszaniu.
+Wszystkie kanały wszystkich kart, w jednej tabeli. Punktów **nie dodaje
+się tutaj** — rodzą się z [kart](help://io_cards). Tutaj im się nadaje
+znaczenie.
 
-Każdy kanał każdej karty ma tu swój wiersz — pusty, dopóki go nie
-nazwiesz. Kolumny:
+Filtr **Karta** u góry zawęża widok do jednego modułu.
 
-- **Adres** — kartowy, tylko do odczytu (`ELA1.DI.1`).
-- **Opis** — nazwa punktu, np. "Wyłącznik główny — załączony".
-- **Lokalizacja** — z listy Lokalizacji.
-- **Notatka techniczna** — wolny tekst dla serwisanta (zacisk, przewód).
-- **Typ sygnału / Raw min/max / Eng min/max / Jednostka / Miejsca
-  dziesiętne** — skalowanie, tylko dla punktów analogowych (AI/AO);
-  wyszarzone i chowane dla DI/DO przefiltrowanych do jednej karty.
-- **Aparat** — tylko do odczytu: który aparat (z Rejestru aparatów)
-  już zajął ten punkt, jeśli którykolwiek.
+## Kolumny wspólne
 
-Filtr **Karta** u góry ogranicza widok do jednej karty naraz.
+| Kolumna | Co wpisać |
+|---|---|
+| **Adres** | `id.RODZAJ.numer` — tylko do odczytu, pochodzi z karty |
+| **Opis** | co jest podłączone do tego zacisku; to czyta operator |
+| **Lokalizacja** | pusta = dziedziczona z karty; można nadpisać |
+| **Notatka techniczna** | dla serwisanta: numer żyły, listwa, typ czujki |
+| **Aparat** | tylko do odczytu: który aparat zajął ten punkt |
+
+**Ustaw lokalizację dla zaznaczonych…** nadaje lokalizację wielu punktom
+naraz.
+
+## Kolumny punktów analogowych (AI/AO)
+
+| Kolumna | Znaczenie |
+|---|---|
+| **Typ sygnału** | `4-20mA`, `0-10V`, `0-3.3V ADC (raw)` albo „wartość gotowa" (bez przeliczania) |
+| **Surowe min / max** | zakres wartości z karty |
+| **Inż. min / max** | na co się to przelicza |
+| **Jednostka** | `°C`, `bar`, `A`, `%` |
+| **Miejsca dz.** | ile cyfr po przecinku pokazywać |
+
+Przeliczenie jest liniowe. „Wartość gotowa" znaczy, że karta podaje już
+wielkość inżynierską i nic nie trzeba skalować.
+
+## Kolumna punktów DI
+
+**Ostrzeżenie licznika przy** — po ilu łączeniach aparat na tym punkcie
+ma się zgłosić do przeglądu. Liczy je moduł Liczników łączeń; stan
+liczników podejrzysz w [Połączeniu ze
+sterownikiem](help://controller).
+
+## Tryb „Na żywo" i wymuszenia
+
+Gdy Studio jest połączone ze sterownikiem, kolumna **Na żywo** pokazuje
+bieżącą wartość każdego punktu. To samo działa w Kartach („Odpowiada")
+i w edytorze ekranów.
+
+**Tryb wymuszania (Engineer)** włącza operowanie wartością:
+
+- **Wymuś wartość…** — przypina wybrany punkt do podanej wartości;
+- **Zdejmij wymuszenie** / **Zdejmij wszystkie wymuszenia**;
+- wymuszony punkt pokazuje `F → wartość` i kto go wymusił.
+
+Wymuszenie jest narzędziem serwisanta: wymaga tokenu Engineer, jest
+zapisywane w dzienniku sterownika, **utrzymuje się tylko dopóki Studio
+potwierdza obecność** (heartbeat) i jest zdejmowane przy zamknięciu
+połączenia, przy restarcie sterownika i przy [przeładowaniu
+projektu](help://controller) — wymuszenie przypina tag, którego nowy
+projekt może w ogóle nie mieć.

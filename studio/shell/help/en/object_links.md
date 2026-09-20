@@ -1,23 +1,36 @@
 # Object Links
 
-An object is several controllers, and one sometimes needs a state from
-another: the entry gate wants to know the house is armed, the boiler
-room that the garage reports a flood. A link is a pair: a **source
-point** on one controller and a **`Link.<Id>.In<n>` tag** on another.
+One controller's point, available on another. Over MQTT: the source
+publishes its tags, the target subscribes to them.
 
-The mechanism is the MQTT both controllers have anyway: the source
-publishes its tags at `<prefix>/tag/<path>/state`, the target has an
-incoming mapping in MQTT Integration that turns that topic into a
-local `Link.*` tag. Studio writes those mappings itself (grey in MQTT
-Integration, with their origin; manual mappings are never touched),
-enables MQTT and sets a topic prefix where there was none. The broker
-is shared — its address goes into each controller's MQTT Integration.
+You need a saved [object with at least two
+controllers](help://site).
 
-The `Link.*` tag on the target is **information, never a command**:
-logic may read it, a screen may show a symbol bound to it, but nothing
-controls the other controller through it. When the source falls silent
-for longer than "stale after", the tag on the target goes STALE.
+| Column | Meaning |
+|---|---|
+| **Source** | the controller that has the value |
+| **Source point** | its point |
+| **Target** | the controller that should see it |
+| **`Link.*` tag on the target** | what it will be called there: `Link.<Id>.In<name>` |
+| **Type** | the value's type |
+| **Stale after** | how long without a refresh before it counts as stale |
 
-Links belong to the object file; "Save Object" saves them together with
-the projects whose MQTT Integration Studio changed. Removing a
-controller from the object removes its links both ways.
+## What Studio does for you
+
+It writes the incoming mapping into the target controller's
+[MQTT](help://mqtt) settings and, if needed, enables MQTT there and
+gives it a topic prefix. Removing a controller from the object takes its
+links with it.
+
+Mappings entered by hand are **never** touched.
+
+## What a `Link.*` tag is, and what it is not
+
+A `Link.*` tag works in the target's [logic](help://logic) and
+[screens](help://screens) like any other tag — but it is **a value to
+read, only**. It is never a command: you cannot operate another
+controller's apparatus through it.
+
+There is no cross-project addressing on screens either — the target's
+screen binds a symbol to a `Link.*` tag exactly as it would to any
+other.

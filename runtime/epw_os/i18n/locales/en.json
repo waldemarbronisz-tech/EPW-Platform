@@ -191,7 +191,7 @@
     "project_installed_restart": "The project file has been installed. Restart EPW OS to run the controller with it.",
     "project_install_refused": "The project file was not installed: {reason}",
     "reload_logic_title": "Reload logic program",
-    "reload_logic_confirm": "Read the logic program from the project on disk and put it into the scan?\n\nThe running scan is stopped first, which drives every output it controls to its safe state (digital off, analog 0) until the new program's first scan. Nothing else in the project is re-read - cards, points and pages still need a restart.",
+    "reload_logic_confirm": "Read the logic program from the project on disk and put it into the scan?\n\nThe running scan is stopped first, which drives every output it controls to its safe state (digital off, analog 0) until the new program's first scan. Nothing else in the project is re-read - to put a whole new project into service, use File > Open, which rebuilds the controller in place.",
     "reload_logic_done": "The logic program is running: {blocks} block(s) in the scan, {cycle} ms cycle.",
     "reload_logic_failed": "The logic program was NOT reloaded: {reason}",
     "reload_logic_unavailable": "This controller cannot reload the logic program while running."

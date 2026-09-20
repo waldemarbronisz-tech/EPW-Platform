@@ -1,23 +1,50 @@
 # Integracja MQTT
 
-Połączenie sterownika z brokerem MQTT (Home Assistant): adres, port,
-użytkownik, TLS, identyfikator klienta, prefiks tematów, okres
-publikacji, strefy nieczułości i mapowania przychodzące (zdalny temat →
-lokalny tag `Link.<id>.In<n>`).
+Połączenie sterownika z brokerem MQTT (zwykle Home Assistant). To jest
+**nastawa projektu**: jedzie z projektem na sterownik, panel może ją
+zmienić (Engineer, z wpisem do dziennika), a różnice widać w
+[Nastawach sterownika na żywo](help://controller).
 
-**To nastawa projektu, nie ustawienie jednego sterownika.** Broker i
-tematy należą do instalacji - po wymianie sterownika nowy dostaje je z
-projektem. Panel może je zmienić (Engineer, wpis do dziennika, rewizja
-+1 „panel”), a różnica między projektem a sterownikiem jest widoczna w
-Sterownik → Nastawy sterownika (na żywo) i można ją przyjąć jednym
-przyciskiem, tak jak próg zabezpieczenia.
+## Broker
 
-**Hasła do brokera nie ma w projekcie.** Wpisuje się je raz na panelu
-(Ustawienia → MQTT) i zostaje w lokalnym pliku sterownika - ta sama
-zasada, co dla PIN-ów i tokenów API.
+| Pole | Znaczenie |
+|---|---|
+| **Integracja MQTT włączona** | główny włącznik |
+| **Adres brokera / Port** | gdzie się łączyć |
+| **Użytkownik** | konto na brokerze |
+| **TLS** | połączenie szyfrowane |
+| **Client id** | identyfikator klienta na brokerze |
+| **Prefiks tematów** | początek wszystkich tematów, domyślnie `epw/<id sterownika>` |
+| **Interwał publikacji** | jak często wystawiać stan |
+| **Domyślna strefa nieczułości** | o ile wartość musi się zmienić, żeby warto było ją publikować |
+| **Limit kolejki** | ile wiadomości trzymać, gdy brokera nie ma |
 
-Ustawienia, które ZOSTAJĄ lokalne (nie wchodzą do projektu, bo opisują
-egzemplarz sterownika, nie instalację): język interfejsu, adres i port
-REST, retencje historiana, dziennika i historii alarmów, ostrzeżenie o
-rozmiarze bazy, sterownik I/O. Widać je w panelu Sterownik → Ustawienia
-lokalne sterownika, tylko do odczytu.
+**Hasła tu nie ma.** Wpisuje się je raz, na panelu sterownika
+(Ustawienia → MQTT) i tam zostaje.
+
+## Mapowania przychodzące (temat → tag `Link.*`)
+
+Zdalny temat zasila lokalny tag `Link.<id>.In<n>` podanego typu.
+Wartość starsza niż **„nieaktualna po"** jest oznaczana jako
+nieaktualna, zamiast udawać świeżą.
+
+Wiersze pochodzące z [Powiązań obiektu](help://object_links) są
+oznaczone i **usuwa się je tam**, nie tutaj — Studio nigdy nie rusza
+mapowań wpisanych ręcznie.
+
+## Strefy nieczułości per tag
+
+Osobna tabela dla punktów, które mają mieć inną czułość niż domyślna —
+np. temperatura co 0,1°C, a ciśnienie co 0,01 bara.
+
+## Sterowanie z Home Assistanta
+
+Łącze nie jest już tylko podglądem: HAOS może uzbrajać i rozbrajać
+alarmówkę, kasować alarm, wyciszać sygnalizator, zmieniać nastawy
+zabezpieczeń i wydawać komendy aparatom. **Wymuszenia celowo zostają
+poza tym kanałem** — to narzędzie kogoś stojącego przy szafie.
+
+Tożsamość jedzie w wiadomości (token per osoba, wydawany na panelu —
+patrz [Użytkownicy alarmówki](help://intrusion_users)), bo Home
+Assistant ma jedno konto MQTT i broker nie odróżniłby dwóch osób.
+Odrzucona komenda wygląda jak włam i podnosi **cichy alarm**.

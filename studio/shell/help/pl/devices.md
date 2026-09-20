@@ -1,29 +1,40 @@
 # Skład urządzenia
 
-Lista funkcjonalnych modułów tego sterownika - Alarmówka, Zabezpieczenia
-elektryczne, Trendy i tak dalej - PRZEPISANA z realnego mechanizmu
-runtime (`epw_os/core/feature_config.py`), nie wymyślona na potrzeby
-Studio.
+Z jakich **modułów** składa się ten sterownik. Nie karty — funkcje.
 
-**To nie jest lista przełączników "włącz/wyłącz funkcję tymczasowo".**
-To skład urządzenia, ustalany raz, przy zakładaniu projektu - sterownik
-podlewania **nie ma** alarmówki, tak samo jak nie ma jej termostat, nie
-jako "wyłączona", tylko jako fakt o tym, z czego to urządzenie się
-składa.
+Zaznaczenie decyduje o dwóch rzeczach naraz:
 
-Każdy wiersz: nazwa, opis jednym zdaniem, i przełącznik dwustanowy
-[0][I] ze słownym stanem TAK/NIE obok (żeby stan było widać, nie tylko
-domyślać się z ikony).
+- **w Studiu** — czy gałąź tego modułu w ogóle pojawia się w drzewie;
+- **w sterowniku** — czy moduł jest tworzony. Moduł spoza składu nie ma
+  obiektu, nie ma wątku, nie ma tagów. Nie jest „wyłączony" — go nie ma.
 
-**Moduł spoza składu znika z drzewa projektu CAŁKOWICIE** - gałąź
-Alarmówki czy Zabezpieczeń elektrycznych po prostu nie istnieje,
-dopóki nie zaznaczysz tego modułu tutaj. Wyłączenie modułu, który ma
-już dane (np. skonfigurowane strefy), pyta wprost o potwierdzenie -
-dane nigdy nie są kasowane, tylko chowane; ponowne włączenie modułu
-przywraca je bez zmian.
+## Kolumny
 
-Kilka pozycji na liście (Trendy, Jakość zasilania, Diagnostyka
-magistrali...) odpowiada realnym funkcjom runtime, dla których Studio
-nie ma jeszcze własnego panelu konfiguracji - zaznaczenie ich zapisuje
-się w projekcie uczciwie, po prostu jeszcze bez widocznego efektu w
-drzewie.
+**Nazwa**, **Opis**, **Aktywny** (TAK/NIE — kliknięcie przełącza).
+
+## Moduły
+
+| Moduł | Co wnosi |
+|---|---|
+| Alarmówka | strefy, linie dozorowe, uzbrajanie |
+| Zabezpieczenia elektryczne | nastawy ANSI realizowane przez ADA01 |
+| Zabezpieczenia procesowe | progi na punktach analogowych |
+| Trendy | historia wartości (Historian) |
+| Jakość zasilania | parametry sieci: napięcie, THD, asymetria |
+| Diagnostyka magistrali | liczniki ramek i błędów |
+| Topologia systemu | widok faktycznego składu instalacji |
+| Tryb inżynierski | dodatkowe narzędzia na poziomie Engineer |
+| Wejścia analogowe | czy sterownik w ogóle obsługuje punkty AI |
+| Liczniki łączeń | zliczanie załączeń i czasu pracy aparatów |
+| Notatki serwisowe | dziennik serwisanta przy punktach |
+| Historia alarmów | dziennik zdarzeń alarmówki |
+| Podgląd alarmówki | żywy podgląd stref i linii na panelu |
+
+## Wyłączenie nigdy nie kasuje danych
+
+Jeśli moduł ma już dane w projekcie, Studio ostrzega wprost: gałąź
+zniknie z drzewa, ale **dane zostają**. Ponowne włączenie przywraca je
+w całości. Tak samo w sterowniku.
+
+Moduł z danymi, ale poza składem, zgłasza [Sprawdź
+projekt](help://validation) jako ostrzeżenie — nie błąd.

@@ -191,7 +191,7 @@
     "project_installed_restart": "Plik projektu został wgrany. Uruchom EPW OS ponownie, żeby sterownik zaczął według niego działać.",
     "project_install_refused": "Plik projektu nie został wgrany: {reason}",
     "reload_logic_title": "Przeładowanie programu logiki",
-    "reload_logic_confirm": "Wczytać program logiki z projektu na dysku i wstawić go do skanu?\n\nDziałający skan zostanie najpierw zatrzymany, co sprowadzi każde sterowane przez niego wyjście do stanu bezpiecznego (cyfrowe wyłączone, analogowe 0) do pierwszego skanu nowego programu. Reszta projektu nie jest czytana ponownie - karty, punkty i strony nadal wymagają restartu.",
+    "reload_logic_confirm": "Wczytać program logiki z projektu na dysku i wstawić go do skanu?\n\nDziałający skan zostanie najpierw zatrzymany, co sprowadzi każde sterowane przez niego wyjście do stanu bezpiecznego (cyfrowe wyłączone, analogowe 0) do pierwszego skanu nowego programu. Reszta projektu nie jest czytana ponownie - żeby wprowadzić do pracy cały nowy projekt, użyj Plik > Otwórz, które przebudowuje sterownik w miejscu.",
     "reload_logic_done": "Program logiki pracuje: bloków w skanie {blocks}, cykl {cycle} ms.",
     "reload_logic_failed": "Program logiki NIE został przeładowany: {reason}",
     "reload_logic_unavailable": "Ten sterownik nie potrafi przeładować programu logiki w trakcie pracy."

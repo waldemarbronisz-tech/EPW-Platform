@@ -1,16 +1,20 @@
 # Informacje o projekcie
 
-Nazwa, autor, opis i wersja bieżącego projektu. Tu też żyje cykl życia
-całego pliku `projekt.epw`, oddzielony celowo od stałego paska
-Nowy/Otwórz/Zapisz (ten wciąż dotyczy dokumentu aktywnego edytora —
-diagramu Logiki albo ekranu Synoptic):
+Metryczka projektu i miejsce, z którego widać jego tożsamość.
 
-- **Nowy projekt** — zakłada pusty projekt (potwierdzenie, jeśli
-  bieżący ma niezapisane zmiany).
-- **Otwórz projekt...** / **Zapisz projekt** / **Zapisz projekt jako...**
-  — operują na całym pliku `projekt.epw` (karty, punkty, aparaty,
-  alarmówka, zabezpieczenia, magistrala Modbus).
+| Pole | Do czego służy |
+|---|---|
+| **Plik** | ścieżka na dysku; „(niezapisany)", dopóki projekt nie ma pliku |
+| **Nazwa** | to, czym projekt się przedstawia — sterownik podaje ją przez REST i pokazuje na panelu |
+| **Autor** | kto go zaprojektował; zostaje w pliku |
+| **Opis** | wolny tekst: co to za obiekt, co tu jest nietypowe |
+| **Rewizja** | licznik zapisów — patrz [Zapis, rewizja i nastawy](help://save_versioning) |
 
-Pole **Wersja** rośnie przy każdym zapisie — to ta sama liczba, którą
-Studio powinno porównać z rewizją na sterowniku przed wgraniem projektu
-(zobacz temat "Połączenie ze sterownikiem").
+**Nazwa jest też nazwą korzenia drzewa** — możesz ją zmienić dwuklikiem
+tam albo tutaj, to jedno i to samo pole.
+
+## Rewizji nie ustawia się ręcznie
+
+Rośnie sama przy każdym zapisie i to po niej Studio i sterownik poznają,
+że projekt się rozjechał. Przy wysyłce na sterownik jest porównywana —
+patrz [Połączenie ze sterownikiem](help://controller).

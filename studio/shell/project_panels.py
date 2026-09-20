@@ -4672,46 +4672,90 @@ class HelpPanel(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        self.topic_list = QListWidget()
-        self.topic_list.setFixedWidth(240)
-        self.topic_list.currentRowChanged.connect(self._on_topic_selected)
-        splitter.addWidget(self.topic_list)
+        # A tree, not a flat list: with 27 topics a single column of
+        # titles stops being navigable, and the chapters ("Start",
+        # "Projekt", "Sterownik"...) are also the order somebody reads
+        # them in for the first time.
+        self.topic_tree = QTreeWidget()
+        self.topic_tree.setHeaderHidden(True)
+        self.topic_tree.setFixedWidth(260)
+        self.topic_tree.currentItemChanged.connect(self._on_tree_item_changed)
+        splitter.addWidget(self.topic_tree)
 
         self.viewer = QTextBrowser()
         self.viewer.setOpenExternalLinks(False)
+        # help://key cross-references between topics, resolved here -
+        # this help is offline and has no business reaching the network
+        # (the same scheme, and the same reason, as EPW-OS's own
+        # help_window.py).
+        self.viewer.anchorClicked.connect(self._on_anchor_clicked)
         splitter.addWidget(self.viewer)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         layout.addWidget(splitter)
 
         self._topics = []
+        self._items = {}
         self.refresh()
 
     def refresh(self):
         from studio.shell.i18n import get_language
-        from studio.shell.help._manifest import TOPICS
+        from studio.shell.help._manifest import CHAPTERS, TOPICS
 
-        current_key = self._topics[self.topic_list.currentRow()][0] if self._topics else None
+        current_key = self._current_key()
         self._topics = TOPICS
         self._lang = get_language()
+        title_index = 1 if self._lang == "pl" else 2
 
-        self.topic_list.blockSignals(True)
-        self.topic_list.clear()
-        select_row = 0
-        for i, (key, title_pl, title_en) in enumerate(self._topics):
-            self.topic_list.addItem(title_pl if self._lang == "pl" else title_en)
-            if key == current_key:
-                select_row = i
-        self.topic_list.blockSignals(False)
-        self.topic_list.setCurrentRow(select_row)
-        self._on_topic_selected(select_row)
+        self.topic_tree.blockSignals(True)
+        self.topic_tree.clear()
+        self._items = {}
+        chapter_items = {}
+        for chapter_key, chapter_pl, chapter_en in CHAPTERS:
+            item = QTreeWidgetItem([chapter_pl if self._lang == "pl" else chapter_en])
+            font = item.font(0)
+            font.setBold(True)
+            item.setFont(0, font)
+            # A chapter is a heading, not a destination - selecting one
+            # would leave the viewer with nothing to show.
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            chapter_items[chapter_key] = item
+        for entry in self._topics:
+            key, chapter = entry[0], entry[3]
+            leaf = QTreeWidgetItem([entry[title_index]])
+            leaf.setData(0, Qt.ItemDataRole.UserRole, key)
+            chapter_items[chapter].addChild(leaf)
+            self._items[key] = leaf
+        for chapter_key, _pl, _en in CHAPTERS:
+            item = chapter_items[chapter_key]
+            if item.childCount():
+                self.topic_tree.addTopLevelItem(item)
+        self.topic_tree.expandAll()
+        self.topic_tree.blockSignals(False)
 
-    def _on_topic_selected(self, row):
-        if row < 0 or row >= len(self._topics):
-            self.viewer.setMarkdown("")
+        self._show(current_key if current_key in self._items else self._topics[0][0])
+
+    def _current_key(self):
+        item = self.topic_tree.currentItem() if self._items else None
+        return item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
+
+    def _on_tree_item_changed(self, current, _previous):
+        key = current.data(0, Qt.ItemDataRole.UserRole) if current is not None else None
+        if key is not None:
+            self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+
+    def _show(self, key: str):
+        item = self._items.get(key)
+        if item is None:
             return
-        key, _title_pl, _title_en = self._topics[row]
+        self.topic_tree.setCurrentItem(item)
+        # setCurrentItem() on an already-current item emits nothing, so
+        # the viewer is filled here rather than relying on the signal.
         self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+
+    def _on_anchor_clicked(self, url):
+        if url.scheme() == "help":
+            self.select_topic(url.host() or url.path().lstrip("/"))
 
     def select_topic(self, key: str):
         """Task 5.3 (pomoc kontekstowa, F1) - jumps straight to `key`
@@ -4721,10 +4765,7 @@ class HelpPanel(QWidget):
         already has for a missing .md file) rather than raising -
         _HELP_TOPIC_BY_TREE_KEY in main_window.py is a hand-maintained
         map that could in principle name a topic not in TOPICS."""
-        for row, (topic_key, _pl, _en) in enumerate(self._topics):
-            if topic_key == key:
-                self.topic_list.setCurrentRow(row)
-                return
+        self._show(key)
 
 
 def load_help_topic_markdown(key: str, lang: str) -> str:
