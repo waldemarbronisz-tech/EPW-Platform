@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QMainWindow, QSplitter, QWidget, QVBoxLayout, QTab
 from PySide6.QtGui import QAction, QKeySequence, QActionGroup
 from PySide6.QtCore import Qt, QSettings, QPointF
 
+from logic_studio.i18n import block_language, tr
+from shared.logic.i18n import block_label
 from logic_studio.ui.canvas.scene import LogicScene
 from logic_studio.ui.canvas.view import LogicView
 from logic_studio.ui.panels.library import LibraryPanel
@@ -20,7 +22,7 @@ from logic_studio.ui.qt_lifetime import is_alive
 class MainWindow(QMainWindow):
     def __init__(self, settings=None):
         super().__init__()
-        self.setWindowTitle("EPW Logic Studio")
+        self.setWindowTitle(tr("main.app_title"))
         self.resize(1920, 1080)
 
         # Injectable so tests (and any headless/CI construction) don't write
@@ -56,16 +58,16 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         # --- File ---
-        self.act_new = self._make_action("New", self._new_project, "Ctrl+N", icon_name="new")
-        self.act_open = self._make_action("Open...", self._open_project, "Ctrl+O", icon_name="open")
-        self.act_save = self._make_action("Save", self._save_project, "Ctrl+S", icon_name="save")
-        self.act_save_as = self._make_action("Save As...", self._save_as_project, "Ctrl+Shift+S")
+        self.act_new = self._make_action(tr("menu.new"), self._new_project, "Ctrl+N", icon_name="new")
+        self.act_open = self._make_action(tr("menu.open"), self._open_project, "Ctrl+O", icon_name="open")
+        self.act_save = self._make_action(tr("menu.save"), self._save_project, "Ctrl+S", icon_name="save")
+        self.act_save_as = self._make_action(tr("menu.save_as"), self._save_as_project, "Ctrl+Shift+S")
         # feat/project-diff
-        self.act_compare_saved = self._make_action("Compare with saved file...", self._compare_with_saved_file)
-        self.act_compare_files = self._make_action("Compare two projects...", self._compare_two_projects)
-        self.act_exit = self._make_action("Exit", self.close)
+        self.act_compare_saved = self._make_action(tr("menu.compare_saved"), self._compare_with_saved_file)
+        self.act_compare_files = self._make_action(tr("menu.compare_files"), self._compare_two_projects)
+        self.act_exit = self._make_action(tr("menu.exit"), self.close)
 
-        file_menu = menubar.addMenu("File")
+        file_menu = menubar.addMenu(tr("menu.file"))
         file_menu.addAction(self.act_new)
         file_menu.addAction(self.act_open)
         file_menu.addAction(self.act_save)
@@ -77,15 +79,15 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.act_exit)
 
         # --- Edit ---
-        self.act_undo = self._make_action("Undo", self._undo, "Ctrl+Z", icon_name="undo")
-        self.act_redo = self._make_action("Redo", self._redo, "Ctrl+Y", icon_name="redo")
-        self.act_delete = self._make_action("Delete", self._delete_selected, "Del", icon_name="delete")
+        self.act_undo = self._make_action(tr("menu.undo"), self._undo, "Ctrl+Z", icon_name="undo")
+        self.act_redo = self._make_action(tr("menu.redo"), self._redo, "Ctrl+Y", icon_name="redo")
+        self.act_delete = self._make_action(tr("menu.delete"), self._delete_selected, "Del", icon_name="delete")
 
         # feat/clipboard-and-align §1: an in-app clipboard (LogicScene.
         # clipboard_data), not QClipboard — see scene.py's own docstring.
-        self.act_cut = self._make_action("Cut", lambda: self.scene.cut_selected_items(), "Ctrl+X", icon_name="cut")
-        self.act_copy = self._make_action("Copy", lambda: self.scene.copy_selected_items(), "Ctrl+C", icon_name="copy")
-        self.act_paste = self._make_action("Paste", lambda: self.scene.paste_clipboard(), "Ctrl+V", icon_name="paste")
+        self.act_cut = self._make_action(tr("menu.cut"), lambda: self.scene.cut_selected_items(), "Ctrl+X", icon_name="cut")
+        self.act_copy = self._make_action(tr("menu.copy"), lambda: self.scene.copy_selected_items(), "Ctrl+C", icon_name="copy")
+        self.act_paste = self._make_action(tr("menu.paste"), lambda: self.scene.paste_clipboard(), "Ctrl+V", icon_name="paste")
         # §1.5: Cut/Copy need a selection, Paste needs a non-empty
         # clipboard — both start disabled and stay in sync via
         # _update_clipboard_actions()/_update_paste_action() below.
@@ -93,7 +95,7 @@ class MainWindow(QMainWindow):
         self.act_copy.setEnabled(False)
         self.act_paste.setEnabled(False)
 
-        edit_menu = menubar.addMenu("Edit")
+        edit_menu = menubar.addMenu(tr("menu.edit"))
         edit_menu.addAction(self.act_undo)
         edit_menu.addAction(self.act_redo)
         edit_menu.addSeparator()
@@ -107,7 +109,7 @@ class MainWindow(QMainWindow):
         # enabled state of all 8 operations depends on the CURRENT
         # selection size, and populate_align_menu() (scene.py, shared with
         # the block/canvas context menu) already does exactly that.
-        self.align_menu = edit_menu.addMenu("Align")
+        self.align_menu = edit_menu.addMenu(tr("menu.align"))
         self.align_menu.aboutToShow.connect(self._rebuild_align_menu)
 
         # feat/clipboard-and-align §4.1: "the same action" as the block's
@@ -117,21 +119,21 @@ class MainWindow(QMainWindow):
         # obvious "opposite". Both call LogicScene.set_blocks_enabled()
         # as exactly one undo entry regardless of how many blocks.
         edit_menu.addSeparator()
-        self.act_disable_selected = self._make_action("Disable selected blocks", self._disable_selected_blocks)
-        self.act_enable_selected = self._make_action("Enable selected blocks", self._enable_selected_blocks)
+        self.act_disable_selected = self._make_action(tr("menu.disable_selected"), self._disable_selected_blocks)
+        self.act_enable_selected = self._make_action(tr("menu.enable_selected"), self._enable_selected_blocks)
         self.act_disable_selected.setEnabled(False)
         self.act_enable_selected.setEnabled(False)
         edit_menu.addAction(self.act_disable_selected)
         edit_menu.addAction(self.act_enable_selected)
 
         # --- View ---
-        self.act_zoom_in = self._make_action("Zoom In", self._zoom_in, icon_name="zoom_in")
-        self.act_zoom_out = self._make_action("Zoom Out", self._zoom_out, icon_name="zoom_out")
-        self.act_reset_zoom = self._make_action("Reset Zoom", self._reset_zoom)
-        self.act_grid = self._make_action("Grid", self._toggle_grid, checkable=True, checked=True, icon_name="grid")
-        self.act_snap = self._make_action("Snap", self._toggle_snap, checkable=True, checked=True, icon_name="snap")
+        self.act_zoom_in = self._make_action(tr("menu.zoom_in"), self._zoom_in, icon_name="zoom_in")
+        self.act_zoom_out = self._make_action(tr("menu.zoom_out"), self._zoom_out, icon_name="zoom_out")
+        self.act_reset_zoom = self._make_action(tr("menu.reset_zoom"), self._reset_zoom)
+        self.act_grid = self._make_action(tr("menu.grid"), self._toggle_grid, checkable=True, checked=True, icon_name="grid")
+        self.act_snap = self._make_action(tr("menu.snap"), self._toggle_snap, checkable=True, checked=True, icon_name="snap")
 
-        view_menu = menubar.addMenu("View")
+        view_menu = menubar.addMenu(tr("menu.view"))
         view_menu.addAction(self.act_zoom_in)
         view_menu.addAction(self.act_zoom_out)
         view_menu.addAction(self.act_reset_zoom)
@@ -141,13 +143,13 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
 
         # Toolbar display mode (§5.4): icons / icons+text / text, persisted.
-        toolbar_menu = view_menu.addMenu("Toolbar")
+        toolbar_menu = view_menu.addMenu(tr("menu.toolbar"))
         toolbar_style_group = QActionGroup(self)
         toolbar_style_group.setExclusive(True)
 
-        self.act_toolbar_icons = self._make_action("Icons", lambda: self._set_toolbar_style("icons"), checkable=True)
-        self.act_toolbar_icons_text = self._make_action("Icons and text", lambda: self._set_toolbar_style("icons_text"), checkable=True)
-        self.act_toolbar_text = self._make_action("Text", lambda: self._set_toolbar_style("text"), checkable=True)
+        self.act_toolbar_icons = self._make_action(tr("menu.toolbar_icons"), lambda: self._set_toolbar_style("icons"), checkable=True)
+        self.act_toolbar_icons_text = self._make_action(tr("menu.toolbar_icons_text"), lambda: self._set_toolbar_style("icons_text"), checkable=True)
+        self.act_toolbar_text = self._make_action(tr("menu.toolbar_text"), lambda: self._set_toolbar_style("text"), checkable=True)
 
         for act in (self.act_toolbar_icons, self.act_toolbar_icons_text, self.act_toolbar_text):
             toolbar_style_group.addAction(act)
@@ -157,7 +159,7 @@ class MainWindow(QMainWindow):
         # "Recent Projects" had no backing mechanism and was removed rather than
         # left as a dead menu item (AUDIT_REPORT.md §2.3) — a real MRU list is a
         # separate feature, not part of this fix pass.
-        self.act_project_settings = self._make_action("Project Settings", self._open_project_settings)
+        self.act_project_settings = self._make_action(tr("menu.project_settings"), self._open_project_settings)
         # feat/signal-crossref §5.1: exports exactly what's currently
         # visible in the Sygnały panel's table (filters included) to CSV.
         self.act_export_signals = self._make_action(
@@ -166,27 +168,27 @@ class MainWindow(QMainWindow):
         # feat/pdf-export: as-built documentation — the current schematic
         # plus (optionally) the same signal list Eksportuj listę
         # sygnałów... already exports as CSV, laid out on paper instead.
-        self.act_export_pdf = self._make_action("Eksportuj do PDF...", self._export_pdf)
+        self.act_export_pdf = self._make_action(tr("menu.export_pdf"), self._export_pdf)
 
-        project_menu = menubar.addMenu("Project")
+        project_menu = menubar.addMenu(tr("menu.project"))
         project_menu.addAction(self.act_project_settings)
         project_menu.addAction(self.act_export_signals)
         project_menu.addAction(self.act_export_pdf)
 
         # --- Logic ---
-        self.act_compile = self._make_action("Compile", self.compile_project, "F5", icon_name="compile")
-        self.act_export_runtime = self._make_action("Export Runtime", self._export_runtime)
+        self.act_compile = self._make_action(tr("menu.compile"), self.compile_project, "F5", icon_name="compile")
+        self.act_export_runtime = self._make_action(tr("menu.export_runtime"), self._export_runtime)
 
-        logic_menu = menubar.addMenu("Logic")
+        logic_menu = menubar.addMenu(tr("menu.logic"))
         logic_menu.addAction(self.act_compile)
         logic_menu.addAction(self.act_export_runtime)
 
         # --- Simulation ---
-        self.act_sim_start = self._make_action("Start", self.start_simulation, "F6", icon_name="start")
-        self.act_sim_pause = self._make_action("Pause", self._pause_simulation, icon_name="pause")
-        self.act_sim_stop = self._make_action("Stop", self.stop_simulation, "F7", icon_name="stop")
+        self.act_sim_start = self._make_action(tr("menu.start"), self.start_simulation, "F6", icon_name="start")
+        self.act_sim_pause = self._make_action(tr("menu.pause"), self._pause_simulation, icon_name="pause")
+        self.act_sim_stop = self._make_action(tr("menu.stop"), self.stop_simulation, "F7", icon_name="stop")
 
-        sim_menu = menubar.addMenu("Simulation")
+        sim_menu = menubar.addMenu(tr("menu.simulation"))
         sim_menu.addAction(self.act_sim_start)
         sim_menu.addAction(self.act_sim_pause)
         sim_menu.addAction(self.act_sim_stop)
@@ -195,12 +197,12 @@ class MainWindow(QMainWindow):
         # (AUDIT_REPORT.md §2.3) rather than kept as empty menus.
         # feat/help-system §6: every item here has an action wired to it
         # — nothing kept "for later" with no handler.
-        self.act_help = self._make_action("Help", self._show_help, "F1")
-        self.act_help_catalog = self._make_action("Block catalog", self._show_block_catalog)
-        self.act_help_shortcuts = self._make_action("Keyboard shortcuts", self._show_shortcuts_help)
-        self.act_export_block_catalog = self._make_action("Export block catalog...", self._export_block_catalog)
-        self.act_about = self._make_action("O programie", self._show_about)
-        help_menu = menubar.addMenu("Help")
+        self.act_help = self._make_action(tr("menu.help"), self._show_help, "F1")
+        self.act_help_catalog = self._make_action(tr("menu.block_catalog"), self._show_block_catalog)
+        self.act_help_shortcuts = self._make_action(tr("menu.shortcuts"), self._show_shortcuts_help)
+        self.act_export_block_catalog = self._make_action(tr("menu.export_catalog"), self._export_block_catalog)
+        self.act_about = self._make_action(tr("menu.about"), self._show_about)
+        help_menu = menubar.addMenu(tr("menu.help"))
         help_menu.addAction(self.act_help)
         help_menu.addAction(self.act_help_catalog)
         help_menu.addAction(self.act_help_shortcuts)
@@ -265,16 +267,16 @@ class MainWindow(QMainWindow):
         # source (AUDIT_REPORT.md §2.1) — see _setup_layout() for the signal wiring
         # and compile_project()/start_simulation()/stop_simulation()/_on_sim_tick()
         # for where each value actually gets pushed in.
-        self.lbl_ready = QLabel("Ready")
-        self.lbl_grid = QLabel("Grid: ON")
-        self.lbl_snap = QLabel("Snap: ON")
-        self.lbl_cursor = QLabel("X: 0, Y: 0")
-        self.lbl_zoom = QLabel("Zoom: 100%")
-        self.lbl_sim = QLabel("Simulation: Stopped")
+        self.lbl_ready = QLabel(tr("main.status.ready"))
+        self.lbl_grid = QLabel(tr("main.status.grid", state=tr("main.status.on")))
+        self.lbl_snap = QLabel(tr("main.status.snap", state=tr("main.status.on")))
+        self.lbl_cursor = QLabel(tr("main.status.cursor", x=0, y=0))
+        self.lbl_zoom = QLabel(tr("main.status.zoom", percent=100))
+        self.lbl_sim = QLabel(tr("main.status.sim_stopped"))
 
-        self.lbl_selected = QLabel("Selected: None")
+        self.lbl_selected = QLabel(tr("main.status.selected_none"))
         self.lbl_modified = QLabel("")
-        self.lbl_scan = QLabel("Scan: -")
+        self.lbl_scan = QLabel(tr("main.status.scan"))
         # feat/clipboard-and-align §4.3: hidden (empty text, same pattern
         # as lbl_modified above) whenever there are none — kept updated by
         # _update_disabled_blocks_status(), called from set_dirty() (every
@@ -328,10 +330,10 @@ class MainWindow(QMainWindow):
         # one table.
         from logic_studio.ui.panels.labels import LabelsPanel
         self.labels_panel = LabelsPanel(settings=self.settings)
-        left_tabs.addTab(library_splitter, "Library")
-        left_tabs.addTab(self.device_panel, "Device Explorer")
-        left_tabs.addTab(self.signals_panel, "Signals")
-        left_tabs.addTab(self.labels_panel, "Labels")
+        left_tabs.addTab(library_splitter, tr("main.tabs.library"))
+        left_tabs.addTab(self.device_panel, tr("main.tabs.device_explorer"))
+        left_tabs.addTab(self.signals_panel, tr("main.tabs.signals"))
+        left_tabs.addTab(self.labels_panel, tr("main.tabs.labels"))
         self.left_tabs = left_tabs
 
         # feat/signal-watch: pinned signals for continuous monitoring during
@@ -376,7 +378,7 @@ class MainWindow(QMainWindow):
         canvas_layout.addWidget(self.view)
 
         self.output_panel = CompilerOutputPanel()
-        self.output_panel.tabs.addTab(self.watch_panel, "Watched")
+        self.output_panel.tabs.addTab(self.watch_panel, tr("main.tabs.watched"))
 
         center_splitter.addWidget(canvas_container)
         center_splitter.addWidget(self.output_panel)
@@ -545,7 +547,7 @@ class MainWindow(QMainWindow):
             return
         definition = macros_module.get_definition(self.project, def_id)
         if definition is None:
-            self.statusBar().showMessage("The macro definition does not exist (deleted?).", 5000)
+            self.statusBar().showMessage(tr("main.status.macro_missing"), 5000)
             return
 
         blocks, unknown_type_ids = macros_module.instantiate_definition_blocks(definition)
@@ -772,7 +774,7 @@ class MainWindow(QMainWindow):
         safety logic is a real hazard, so this has to be visible without
         having to go looking for it."""
         n = sum(1 for b in self.project.blocks if not b.enabled)
-        self.lbl_disabled_blocks.setText(f"Disabled blocks: {n}" if n > 0 else "")
+        self.lbl_disabled_blocks.setText(tr("main.status.disabled_blocks", n=n) if n > 0 else "")
 
     def _update_step_buttons(self):
         """Manual step (§6.3) is only meaningful when the engine is not
@@ -788,10 +790,10 @@ class MainWindow(QMainWindow):
     # ---- View: zoom / cursor / grid / snap ----------------------------------
 
     def _on_cursor_moved(self, x, y):
-        self.lbl_cursor.setText(f"X: {int(x)}, Y: {int(y)}")
+        self.lbl_cursor.setText(tr("main.status.cursor", x=int(x), y=int(y)))
 
     def _on_zoom_changed(self, factor):
-        self.lbl_zoom.setText(f"Zoom: {round(factor * 100)}%")
+        self.lbl_zoom.setText(tr("main.status.zoom", percent=round(factor * 100)))
 
     def _zoom_in(self):
         self.view.zoom_in()
@@ -804,12 +806,12 @@ class MainWindow(QMainWindow):
 
     def _toggle_grid(self):
         self.scene.grid_visible = self.act_grid.isChecked()
-        self.lbl_grid.setText(f"Grid: {'ON' if self.scene.grid_visible else 'OFF'}")
+        self.lbl_grid.setText(tr("main.status.grid", state=tr("main.status.on" if self.scene.grid_visible else "main.status.off")))
         self.scene.update()
 
     def _toggle_snap(self):
         self.scene.snap_enabled = self.act_snap.isChecked()
-        self.lbl_snap.setText(f"Snap: {'ON' if self.scene.snap_enabled else 'OFF'}")
+        self.lbl_snap.setText(tr("main.status.snap", state=tr("main.status.on" if self.scene.snap_enabled else "main.status.off")))
 
     def _delete_selected(self):
         self.scene.delete_selected_items()
@@ -895,7 +897,7 @@ class MainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as f:
                 f.write(block_catalog.export_catalog_markdown())
         except OSError as exc:
-            QMessageBox.critical(self, "Export failed", str(exc))
+            QMessageBox.critical(self, tr("main.dialog.export_failed"), str(exc))
 
     def show_help_for_block_type(self, type_id: str):
         """Called from ElementPreviewPanel's "More about this block" link
@@ -963,10 +965,10 @@ class MainWindow(QMainWindow):
         try:
             export_schematic_to_pdf(self.scene, self.project, path)
         except Exception as e:
-            QMessageBox.critical(self, "PDF export error", f"Could not export the PDF:\n{str(e)}")
+            QMessageBox.critical(self, tr("main.dialog.pdf_error_title"), tr("main.dialog.pdf_error_text", error=e))
             return
 
-        self.statusBar().showMessage(f"Wyeksportowano do {path}", 5000)
+        self.statusBar().showMessage(tr("main.status.exported_to", path=path), 5000)
 
     def compile_project(self):
         # feat/macro-blocks: Compile/Run always act on the TRUE top-level
@@ -977,7 +979,7 @@ class MainWindow(QMainWindow):
         if self.engine:
             self.engine.stop()
 
-        self.lbl_ready.setText("Compiling...")
+        self.lbl_ready.setText(tr("main.status.compiling"))
 
         from logic_studio.compiler.core import Compiler
         comp = Compiler(self.project)
@@ -997,7 +999,7 @@ class MainWindow(QMainWindow):
             for e in comp.errors:
                 self.output_panel.log_error(e)
             self.output_panel.log_message("Compilation failed.")
-            self.lbl_ready.setText("Compilation failed")
+            self.lbl_ready.setText(tr("main.status.compile_failed"))
         else:
             block_count = len(self.project.blocks)
             order_len = len(comp.last_execution_order)
@@ -1005,7 +1007,7 @@ class MainWindow(QMainWindow):
                 f"Compiled {block_count} block(s). execution_order length: {order_len}."
             )
             self.output_panel.log_message("Compilation successful.")
-            self.lbl_ready.setText("Ready")
+            self.lbl_ready.setText(tr("main.status.ready"))
             if "program" in res:
                 self.engine.load_program(res["program"])
                 self.output_panel.log_runtime(
@@ -1026,7 +1028,7 @@ class MainWindow(QMainWindow):
 
         if not self.engine.program or not self.engine.program.execution_order:
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.critical(self, "Simulation Error", "Cannot start simulation. Project compilation failed.")
+            QMessageBox.critical(self, tr("main.dialog.sim_error_title"), tr("main.dialog.sim_error_text"))
             return
 
         self.engine.start()
@@ -1034,29 +1036,29 @@ class MainWindow(QMainWindow):
         from shared.logic.engine.execution import ExecutionState
         if self.engine.state == ExecutionState.FAULT:
             self.output_panel.log_runtime("Engine transitioned to FAULT on start.")
-            self.lbl_ready.setText("Simulation: engine error")
+            self.lbl_ready.setText(tr("main.status.sim_error"))
             self._update_step_buttons()
             return
 
         cycle_time_ms = self.project.settings.get("cycle_time_ms", 100)
         self.sim_timer.start(cycle_time_ms)
 
-        self.lbl_sim.setText("Simulation: Running")
-        self.lbl_ready.setText("Simulation running")
+        self.lbl_sim.setText(tr("main.status.sim_running"))
+        self.lbl_ready.setText(tr("main.status.sim_running_msg"))
         self.output_panel.log_runtime("Simulation started.")
         self._update_step_buttons()
 
     def _pause_simulation(self):
         self.engine.pause()
-        self.lbl_sim.setText("Simulation: Paused")
+        self.lbl_sim.setText(tr("main.status.sim_paused"))
         self.output_panel.log_runtime("Simulation paused.")
         self._update_step_buttons()
 
     def stop_simulation(self):
         self.engine.stop()
         self.sim_timer.stop()
-        self.lbl_sim.setText("Simulation: Stopped")
-        self.lbl_ready.setText("Ready")
+        self.lbl_sim.setText(tr("main.status.sim_stopped"))
+        self.lbl_ready.setText(tr("main.status.ready"))
         self.output_panel.log_runtime("Simulation stopped.")
         # Reset block values
         for block in self.project.blocks:
@@ -1072,8 +1074,8 @@ class MainWindow(QMainWindow):
 
         from PySide6.QtWidgets import QMessageBox
         msg = QMessageBox(self)
-        msg.setWindowTitle("Unsaved Changes")
-        msg.setText("Do you want to save your changes?")
+        msg.setWindowTitle(tr("main.dialog.unsaved_title"))
+        msg.setText(tr("main.dialog.unsaved_text"))
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
         ret = msg.exec()
 
@@ -1247,7 +1249,7 @@ class MainWindow(QMainWindow):
             try:
                 new_proj = Project.load_from_file(path)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to open project:\n{str(e)}")
+                QMessageBox.critical(self, tr("main.dialog.error"), tr("main.dialog.open_failed", error=e))
                 return
             self._install_project(new_proj, path)
 
@@ -1341,13 +1343,13 @@ class MainWindow(QMainWindow):
         macro's own edit view happens to be showing."""
         from PySide6.QtWidgets import QMessageBox
         if not self.current_file:
-            QMessageBox.information(self, "Comparison", "The project has not been saved to a file yet.")
+            QMessageBox.information(self, tr("main.dialog.compare_title"), tr("main.dialog.compare_unsaved"))
             return
         self._exit_all_macro_levels()
         try:
             saved = self._load_and_normalize(self.current_file)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not read the saved file:\n{e}")
+            QMessageBox.critical(self, tr("main.dialog.error"), tr("main.dialog.read_saved_failed", error=e))
             return
         current = self.project.serialize()
         import os
@@ -1369,7 +1371,7 @@ class MainWindow(QMainWindow):
             data_a = self._load_and_normalize(path_a)
             data_b = self._load_and_normalize(path_b)
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not read the file:\n{e}")
+            QMessageBox.critical(self, tr("main.dialog.error"), tr("main.dialog.read_failed", error=e))
             return
         import os
         self._show_project_diff(data_a, data_b, os.path.basename(path_a), os.path.basename(path_b))
@@ -1442,7 +1444,7 @@ class MainWindow(QMainWindow):
             self._run_scan()
 
         if is_dry_run:
-            self.statusBar().showMessage("Step (outputs not written)", 5000)
+            self.statusBar().showMessage(tr("main.status.step_no_outputs"), 5000)
             self.output_panel.log_runtime(f"Manual step x{count} executed (dry-run, STOPPED — no outputs written).")
         else:
             self.output_panel.log_runtime(f"Manual step x{count} executed.")
@@ -1489,11 +1491,12 @@ class MainWindow(QMainWindow):
             # None at the top level, which is every existing call site's
             # unchanged behavior (a default parameter, not a new one).
             self.property_panel.load_block_properties(selected[0].logic_block, self.project, self.current_macro_def_id)
-            self.lbl_selected.setText(f"Selected: {selected[0].logic_block.display_name}")
+            self.lbl_selected.setText(tr("main.status.selected", name=block_label(
+                selected[0].logic_block.display_name, block_language())))
             self.element_preview.show_block_instance(selected[0].logic_block)
         else:
             self.property_panel._set_empty_state()
-            self.lbl_selected.setText("Selected: None")
+            self.lbl_selected.setText(tr("main.status.selected_none"))
             self.element_preview.clear_canvas_selection()
 
     def _update_clipboard_actions(self):
