@@ -3,10 +3,10 @@ points 4.4 (splash screen) and 8.3 (version visible in the status bar/
 title) both need the SAME number, so it lives in exactly one place
 rather than being typed twice and drifting.
 
-No formal release process exists yet for Studio itself (unlike EPW-OS's
-own runtime/epw_os, which this module does NOT read from - GRANICE,
-and the two are versioned independently anyway, one program embedding
-two editors is not "the same release" as the controller OS). Bumped by
-hand until/unless a real release process exists.
+Versioned independently of EPW-OS on purpose - one program embedding
+two editors is not "the same release" as the controller OS, and this
+module deliberately does NOT read runtime/epw_os/version.py. They reach
+1.0 together because the platform does, not because they share a
+number. Bumped by hand; there is no release process to do it.
 """
-STUDIO_VERSION = "0.1.0"
+STUDIO_VERSION = "1.0.0"

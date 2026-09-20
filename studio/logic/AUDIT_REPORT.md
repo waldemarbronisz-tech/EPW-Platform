@@ -1,5 +1,15 @@
 # EPW Logic Studio — Pełny raport audytowy (dla Claude.ai)
 
+> ## ⚠️ DOKUMENT HISTORYCZNY
+>
+> Powstał przed scaleniem repozytoriów (2026-09-09) i opisuje Logic
+> Studio jako samodzielny program. Dziś Logika jest **działem EPW
+> Studio**, interfejs jest dwujęzyczny, a biblioteka bloków ma katalog
+> tłumaczeń (`shared/logic/i18n/`).
+>
+> Zostaje jako zapis rozumowania, nie jako opis stanu obecnego. Stan
+> obecny: pomoc wbudowana Studia i `shared/docs/`.
+
 **Data:** 2026-09-09 — scalenie kilku równoległych gałęzi na raz
 (`fix/wire-labels-and-project-integrity`, `audit/systematic-sweep`,
 `feat/sswin-signals`), TYLKO liczby-nagłówki w §2 odświeżone do stanu

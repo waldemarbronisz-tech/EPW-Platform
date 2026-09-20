@@ -1,5 +1,16 @@
 # EPW Logic Studio - Milestone Report
 
+> ## ⚠️ HISTORICAL DOCUMENT
+>
+> Written before the repositories were merged (2026-09-09), and it
+> describes Logic Studio as a standalone program. Logic is a
+> **department of EPW Studio** today, its interface is bilingual, and
+> the block library has a translation catalogue
+> (`shared/logic/i18n/`).
+>
+> Kept as a record of the reasoning, not as a description of what is
+> there now. For that: Studio's built-in help and `shared/docs/`.
+
 ## PHASE 1 - REFERENCE-DRIVEN REBUILD
 
 ### VISUAL REWORK

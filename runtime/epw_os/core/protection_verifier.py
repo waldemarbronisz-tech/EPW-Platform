@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.logging import log
 from epw_os.core.tag_manager import TagType
+from epw_os.version import APP_NAME, __version__
 
 # Absolute, anchored to the repo root - see project_manager.DEFAULT_PROJECT_FILE
 # for why a relative path here is a real bug, not just a style nit.
@@ -451,7 +452,9 @@ class ProtectionVerifier(QObject):
             time=now.strftime("%H:%M:%S"),
             protection=prot_name,
             operator="Engineer",
-            sw_version="EPW OS v1.0",
+            # From version.py, not a literal: a report that names the
+            # software which produced it has to name the real one.
+            sw_version=f"{APP_NAME} v{__version__}",
             fw_version="1.0.3",
             conf_pickup=conf_p,
             meas_pickup=meas_p,
