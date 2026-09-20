@@ -39,6 +39,14 @@ from PySide6.QtWidgets import (
 
 from studio.shell import icons
 from studio.shell.i18n import get_language, set_language, tr
+from studio.shell.logic_path import ensure_importable as _ensure_logic_studio_importable
+
+_ensure_logic_studio_importable()
+from logic_studio import i18n as logic_i18n
+
+# Where the interface language is remembered between sessions. One key,
+# named here rather than spelled out at each use.
+LANGUAGE_SETTING = "ui/language"
 from studio.shell.menus import (
     build_intrusion_users_toolbar,
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
@@ -418,6 +426,13 @@ class StudioMainWindow(QMainWindow):
         # logic_studio.ui.main_window.MainWindow already uses (see
         # [[logic-studio-tests-must-inject-qsettings]]).
         self.settings = settings if settings is not None else QSettings("BroniszLabs", "EPW Studio")
+        # Before ANY widget is built: everything below reads tr() at
+        # construction time, so restoring the language afterwards would
+        # leave the first window half-translated until something
+        # rebuilt it.
+        _restored = self.settings.value(LANGUAGE_SETTING, get_language())
+        set_language(_restored if _restored in ("en", "pl") else get_language())
+        logic_i18n.set_language(get_language())
 
         self._synoptic_panel = None
         self._logic_panel = None
@@ -1253,8 +1268,36 @@ class StudioMainWindow(QMainWindow):
         self.statusBar().showMessage(tr("export.done", path=path), 5000)
 
     def _set_language(self, code):
+        """One language for the whole application, remembered.
+
+        Three things used to be wrong here and are fixed together,
+        because separately each one looks like a small oddity and
+        together they are the reason the product was half Polish
+        (owner: "jeżeli polski to wszędzie ma być polski zarówno w
+        logice synoptyce itp"):
+
+        * the choice was not saved, so every restart went back to
+          English;
+        * Logic Studio has its own translation layer (it is a dependency
+          of this shell and still runs standalone) and nothing told it;
+        * the embedded Synoptic editor takes its language from the
+          address it was opened with, so it stayed in whatever it was
+          opened in.
+        """
         set_language(code)
+        self.settings.setValue(LANGUAGE_SETTING, code)
+        logic_i18n.set_language(code)
+        self._reload_synoptic_language()
         self._retranslate()
+
+    def _reload_synoptic_language(self):
+        """The screen editor is a web view opened with ?lang=... - it
+        has to be reloaded to change language. Only when one exists;
+        opening it later picks the new language up by itself."""
+        panel = getattr(self, "_synoptic_panel", None)
+        reload_language = getattr(panel, "reload_language", None)
+        if reload_language is not None:
+            reload_language()
 
     def _retranslate(self):
         self.setWindowTitle(tr("app.title"))

@@ -1,0 +1,8 @@
+{
+  "library": {
+    "recent": "Recently used",
+    "macros": "Macros",
+    "macro_summary": "User macro ({n_in} in / {n_out} out)",
+    "search": "Search blocks..."
+  }
+}

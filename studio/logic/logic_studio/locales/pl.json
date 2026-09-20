@@ -1,0 +1,8 @@
+{
+  "library": {
+    "recent": "Ostatnio używane",
+    "macros": "Makra",
+    "macro_summary": "Makro użytkownika ({n_in} wej. / {n_out} wyj.)",
+    "search": "Szukaj bloków..."
+  }
+}

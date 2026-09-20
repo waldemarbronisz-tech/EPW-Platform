@@ -224,6 +224,9 @@ class SynopticPanel(QWidget):
         self._error_label.setWordWrap(True)
         self._pages.addWidget(self._error_label)      # index _PAGE_ERROR
 
+        # Set once the dist is actually being served - reload_language()
+        # uses it to tell "not opened yet" from "opened, reload it".
+        self._served_port = None
         self._view = QWebEngineView(self)
         self._pages.addWidget(self._view)              # index _PAGE_VIEW
 
@@ -267,6 +270,19 @@ class SynopticPanel(QWidget):
         launcher.serve_dist(port)
         self._view.loadFinished.connect(self._on_load_finished)
         # The editor's interface follows Studio's own language.
+        self._served_port = port
+        self._view.load(QUrl(f"http://127.0.0.1:{port}/?lang={get_language()}"))
+
+    def reload_language(self):
+        """Studio changed language; this editor takes its own from the
+        address it was opened with, so it has to be reloaded.
+
+        A no-op before the editor has been opened at all (there is no
+        page yet, and opening it later reads the language then) and
+        after a failed build (there is nothing served to reload)."""
+        port = getattr(self, "_served_port", None)
+        if port is None:
+            return
         self._view.load(QUrl(f"http://127.0.0.1:{port}/?lang={get_language()}"))
 
     def _on_download_requested(self, download):

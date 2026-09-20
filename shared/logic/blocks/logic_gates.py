@@ -15,7 +15,7 @@ class LogicGateBase(BaseLogicBlock):
         "In2": "Second logic input of the gate.",
         "In3": "Third logic input of the gate.",
         "In4": "Fourth logic input of the gate.",
-        "Out": "Wynik operacji logicznej tej bramki.",
+        "Out": "Result of this gate's logic operation.",
     }
 
     def __init__(self, type_id, default_name, category, description, default_inputs=2):

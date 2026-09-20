@@ -29,7 +29,7 @@ from pathlib import Path
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-LOGIC_DIR = Path(__file__).resolve().parents[1] / "logic"
+from studio.shell.logic_path import LOGIC_DIR, ensure_importable
 
 _blocks_registered = False
 
@@ -60,16 +60,6 @@ def _save_canvas_background(hex_color: str) -> None:
     settings.setValue(_SETTINGS_KEY, hex_color)
 
 
-def _ensure_logic_studio_importable():
-    """logic_studio is a real package (has __init__.py) but studio/logic/
-    - the directory containing it - is not on sys.path by default, since
-    nothing put it there (the shell lives in studio/, a sibling
-    directory, not a parent of studio/logic/)."""
-    path_str = str(LOGIC_DIR)
-    if path_str not in sys.path:
-        sys.path.insert(0, path_str)
-
-
 def _point_kind(address: str):
     """"ELA1.AI.3" -> "AI"; None for anything that is not a well-formed
     point address. Goes through the platform's one address grammar
@@ -86,7 +76,7 @@ class LogicPanel(QWidget):
 
     def __init__(self, parent=None, settings=None):
         super().__init__(parent)
-        _ensure_logic_studio_importable()
+        ensure_importable()
 
         global _blocks_registered
         from shared.logic.blocks import register_builtin_blocks

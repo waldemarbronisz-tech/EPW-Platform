@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QDrag
 from PySide6.QtCore import Qt, QMimeData, QSettings, Signal
 
+from logic_studio import i18n
+from shared.logic import i18n as block_i18n
 from logic_studio.ui.icons import block_icon
 from logic_studio.ui.window_lookup import logic_main_window
 
@@ -28,6 +30,9 @@ from logic_studio.ui.window_lookup import logic_main_window
 #   "Zabezpieczenia Technologiczne", "Łączniki", "Banki Nastaw",
 #   "Zabezpieczenia silnikowe"
 
+# The settings key for this root's expanded state - deliberately NOT
+# the displayed text, which is translated: keying the setting off the
+# label would lose the tree's expanded state on every language switch.
 RECENT_LABEL = "Recently used"
 RECENT_MAX = 10
 
@@ -104,7 +109,7 @@ class LibraryPanel(QWidget):
         # entirely - it looks like a caption. Saying what it searches, and
         # giving it the clear button every search field has, makes it read
         # as a control rather than as a label.
-        self.search_box.setPlaceholderText("Search blocks, e.g. AND or timer...")
+        self.search_box.setPlaceholderText(i18n.tr("library.search"))
         self.search_box.setClearButtonEnabled(True)
         self.search_box.textChanged.connect(self._filter_tree)
         layout.addWidget(self.search_box)
@@ -162,14 +167,14 @@ class LibraryPanel(QWidget):
         self.tree.clear()
         self._category_roots = {}
 
-        self._recent_root = QTreeWidgetItem(self.tree, [RECENT_LABEL])
+        self._recent_root = QTreeWidgetItem(self.tree, [i18n.tr("library.recent")])
         self._recent_root.setExpanded(self._is_expanded(RECENT_LABEL, default=True))
         self._rebuild_recent_section()
 
         # feat/macro-blocks: right after "Recently used" — a stable,
         # predictable spot, since (unlike every category below) it isn't
         # sorted alongside the rest by `sort_key()` at all.
-        self._macro_root = QTreeWidgetItem(self.tree, [MACRO_LABEL])
+        self._macro_root = QTreeWidgetItem(self.tree, [i18n.tr("library.macros")])
         self._macro_root.setExpanded(self._is_expanded(MACRO_LABEL, default=True))
         self._rebuild_macro_section()
 
@@ -200,7 +205,7 @@ class LibraryPanel(QWidget):
             if not type_ids:
                 continue
 
-            root = QTreeWidgetItem(self.tree, [cat])
+            root = QTreeWidgetItem(self.tree, [block_i18n.category_label(cat, i18n.block_language())])
             root.setExpanded(self._is_expanded(cat, default=True))
             self._category_roots[cat] = root
 
@@ -228,7 +233,7 @@ class LibraryPanel(QWidget):
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             return type_id
-        return block_class().display_name
+        return block_i18n.block_label(block_class().display_name, i18n.block_language())
 
     def _description(self, type_id):
         from logic_studio.core.macros import macro_def_id, get_definition
@@ -239,12 +244,12 @@ class LibraryPanel(QWidget):
                 return ""
             n_in = len(definition.get("input_pins", []))
             n_out = len(definition.get("output_pins", []))
-            return f"User macro ({n_in} in / {n_out} out)"
+            return i18n.tr("library.macro_summary", n_in=n_in, n_out=n_out)
         from shared.logic.blocks.registry import BlockRegistry
         block_class = BlockRegistry.get_block_class(type_id)
         if not block_class:
             return ""
-        return block_class().description
+        return block_i18n.text(block_class().description, i18n.block_language())
 
     def _macro_definition_name(self, type_id):
         """The actual macro definition's own "name" for `type_id`
@@ -476,5 +481,10 @@ class LibraryPanel(QWidget):
         if not block_class:
             return text in type_id.lower()
         dummy = block_class()
-        haystacks = [dummy.display_name, type_id, dummy.description] + list(getattr(dummy, 'aliases', []))
+        language = i18n.block_language()
+        haystacks = [dummy.display_name, type_id, dummy.description,
+                     block_i18n.block_label(dummy.display_name, language),
+                     block_i18n.text(dummy.description, language),
+                     block_i18n.category_label(dummy.category, language)]
+        haystacks += list(getattr(dummy, 'aliases', []))
         return any(text in h.lower() for h in haystacks if h)

@@ -118,7 +118,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
         "Minimalny poziom dostępu": "Minimum operator access level needed to execute this command (enforced by EPW-OS).",
     }
 
-    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="System Signal Output"):
+    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="Writes a system signal (SYS.*/SSWIN.* command) from the logic."):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple family — same as system.signal
@@ -232,7 +232,7 @@ class ButtonBlock(BaseLogicBlock):
 class LedBlock(BaseLogicBlock):
     PIN_DESCRIPTIONS = {"In": "State shown by the indicator LED."}
 
-    def __init__(self, type_id="system.led", default_name="LED", category="LED", description="Indicator LED"):
+    def __init__(self, type_id="system.led", default_name="LED", category="LED", description="Indicator LED on the operator interface (HMI)."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.inputs.append(Pin("In", Pin.DIR_INPUT, Pin.TYPE_BOOLEAN))
@@ -251,7 +251,7 @@ class UserMessageBlock(BaseLogicBlock):
         "Message 1": "Text shown when input In is true.",
     }
 
-    def __init__(self, type_id="system.message", default_name="User message", category="Telemetry", description="Text message for the operator"):
+    def __init__(self, type_id="system.message", default_name="User message", category="Telemetry", description="Text message for the operator — shows one of two texts depending on the input."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.width = 120
@@ -273,7 +273,7 @@ class SignalGeneratorBlock(BaseLogicBlock):
     PROPERTY_DESCRIPTIONS = {"Period (s)": "Square wave period in seconds."}
     PROPERTY_UNITS = {"Period (s)": "s"}
 
-    def __init__(self, type_id="system.generator", default_name="Signal generator", category="Other", description="Square wave generator"):
+    def __init__(self, type_id="system.generator", default_name="Signal generator", category="Other", description="Square wave generator — a 50% duty-cycle pulse train of the configured period."):
         super().__init__(type_id, default_name, category, description)
         self.color = "#000000"
         self.outputs.append(Pin("Out", Pin.DIR_OUTPUT, Pin.TYPE_BOOLEAN))
