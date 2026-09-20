@@ -1,20 +1,23 @@
 # Service Notes
 
-The devices' service logbook: "what was done" entries (contact set
-replaced, pitting visible), typed on the controller's panel by an
-Operator or higher. They complement the switching counters, which say
-"how many times / how long".
+The devices' service logbook, written **on the controller's panel**
+(Operator level or higher). Here it is **read-only**.
 
-**Entries are never edited or deleted** - a logbook, not a notepad; a
-mistake is corrected with another entry. Studio only shows them.
+| Column | Meaning |
+|---|---|
+| **Device / point** | what the entry is about |
+| **Description** | that device's description from the project |
+| **Date** | when the entry was made |
+| **Level** | the access level it was written at |
+| **Entry** | the text |
 
-Since 2026-09-18 the notes are part of the project: every entry added
-on the panel is written to `projekt.epw` (revision +1 "panel"), so the
-installation's history travels with the project. They reach Studio
-through "Receive from Device" or "Take Controller Values" (Controller →
-Controller Settings (live) lists them as a `service_notes/<device>/notes`
-difference).
+## Entries are never edited or deleted
 
-Note: sending a project with fewer entries than the controller has
-overwrites its logbook - the Controller panel shows that difference
-before sending.
+Neither on the panel nor here. A logbook that can be corrected stops
+being a logbook.
+
+## How they reach Studio
+
+Through **Receive from Device** or **Take controller values into
+project** in [Controller Connection](help://controller). The notes are
+part of the project, so they travel with it.

@@ -1,33 +1,37 @@
 # Test zabezpieczeń
 
-„Wewnętrzny Omicron": test zabezpieczenia to wymuszenie stanu, pomiar
-czasu zadziałania i raport — na tej samej mechanice, co wymuszanie
-w rejestrze punktów. Test wykonuje **sterownik**, nie Studio: Studio
-tylko go uruchamia, śledzi i pokazuje raporty, które sterownik trzyma
-u siebie (`protection_test_reports.json`).
+Wewnętrzny Omicron: sterownik sam wymusza stan, mierzy czas reakcji
+i zostawia raport. Bez walizki pomiarowej i bez rozbierania instalacji.
 
-**Zabezpieczenie procesowe.** Sterownik wymusza punkt analogowy ponad
-górny próg, mierzy czas do zadziałania (`Process.<id>.Exceeded`)
-i porównuje go z nastawioną zwłoką: zadziałanie przed zwłoką albo
-wyraźnie po niej to FAIL. Potem wymusza wartość z powrotem w pasmo
-i mierzy czas skasowania; na koniec zdejmuje wymuszenie. Zabezpieczenie
-wyłączone albo już zadziałane nie jest testowane (BLOCKED).
+Wymaga tokenu Engineer; każdy test trafia do dziennika, a raporty
+zostają **na sterowniku**.
 
-**Aparat.** Sterownik wydaje komendę zmieniającą stan (OTWÓRZ, gdy
-sprzężenie mówi „zamknięty", inaczej ZAMKNIJ) tą samą drogą, co
-z panelu — z blokadami logiki i kontrolą bezpieczeństwa, więc
-odrzucona komenda to BLOCKED, nie obejście. Mierzy czas do zmiany
-sprzężenia, po czym komendą przeciwną przywraca stan i mierzy go
-ponownie.
+## Co da się przetestować
 
-**Zasady.** Token Engineer; jeden test naraz; start, wynik i każde
-wymuszenie w dzienniku audytowym (`PROTECTION_TEST_*`, `FORCE_*`).
-Tor zabezpieczeniowy — wyłączniki, aparaty z oznaczeniem Q, wszystko,
-co nie jest punktem projektu — nie podlega wymuszaniu, więc i temu
-testowi. Stopnie zabezpieczeń elektrycznych ADA01 sprawdza się przy
-szafce, weryfikatorem panelu (rampa pomiaru), nie stąd.
+**Zabezpieczenie procesowe** — punkt analogowy jest wymuszany ponad
+próg, czas zadziałania mierzony względem skonfigurowanej zwłoki, potem
+wartość wraca w zakres i mierzony jest czas skasowania.
 
-**Raporty.** Tabela pokazuje nastawy, pomiar (czas zadziałania,
-skasowania, sprzężenia) i uzasadnienie wyniku; dwuklik otwiera kroki
-testu z czasem. „Zapisz raporty CSV" zapisuje wszystkie raporty ze
-sterownika do pliku — dowód do protokołu uruchomienia.
+**Aparat** — komenda idzie **tą samą drogą co z panelu**: blokady
+logiki, safety kernel, tryb szkoleniowy i wymuszenia działają bez zmian.
+Mierzony jest czas sprzężenia zwrotnego, potem stan jest przywracany.
+
+Lista **Co można przetestować** pokazuje rodzaj, id, nazwę, nastawy
+i stan: `gotowe`, `wyłączone`, `zadziałane — najpierw skasuj`.
+
+## Czego ten test nie obejmuje
+
+**Ścieżki zabezpieczeń elektrycznych (ADA01).** Funkcje ANSI wykonuje
+karta, a nie program sterownika — tego nie da się sprawdzić wymuszeniem
+tagu.
+
+## Raporty
+
+Tabela: start, rodzaj, obiekt, wynik, nastawy, **zmierzone**, powód.
+Dwuklik otwiera kroki pojedynczego testu — co po kolei zrobił i co
+zmierzył.
+
+**Zapisz raporty jako CSV** eksportuje je do pliku, do dokumentacji
+odbiorowej.
+
+Starszy EPW-OS bez tej funkcji jest rozpoznawany i mówi to wprost.

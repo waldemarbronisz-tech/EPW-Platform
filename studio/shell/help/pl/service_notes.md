@@ -1,18 +1,23 @@
 # Notatki serwisowe
 
-Dziennik serwisowy aparatów: wpisy „co zrobiono” (wymiana zestawu
-styków, widoczne wżery), pisane ręcznie na panelu sterownika przez
-Operatora lub wyżej. Uzupełniają liczniki łączeń, które mówią „ile
-razy / jak długo”.
+Dziennik serwisowy urządzeń, pisany **na panelu sterownika** (poziom
+Operator lub wyższy). Tutaj jest **tylko do odczytu**.
 
-**Wpisy są nieusuwalne i nieedytowalne** - to dziennik, nie notatnik;
-pomyłkę poprawia się kolejnym wpisem. Studio tylko je pokazuje.
+| Kolumna | Znaczenie |
+|---|---|
+| **Urządzenie / punkt** | czego wpis dotyczy |
+| **Opis** | opis tego urządzenia z projektu |
+| **Data** | kiedy wpis powstał |
+| **Poziom** | na jakim poziomie dostępu go napisano |
+| **Wpis** | treść |
 
-Od 2026-09-18 notatki są częścią projektu: każdy wpis dodany na panelu
-zapisuje się do `projekt.epw` (rewizja +1 „panel”), więc historia
-instalacji jedzie z projektem. Do Studio trafiają przez „Zgraj z
-urządzenia” albo „Przyjmij nastawy ze sterownika” (Sterownik → Nastawy
-sterownika na żywo pokazuje je jako różnicę `service_notes/<aparat>/notes`).
+## Wpisów się nie edytuje ani nie kasuje
 
-Uwaga: wysłanie projektu, który ma mniej wpisów niż sterownik, nadpisze
-jego dziennik - panel Sterownik pokaże tę różnicę przed wysłaniem.
+Ani na panelu, ani tutaj. Dziennik, który da się poprawić, przestaje być
+dziennikiem.
+
+## Jak trafiają do Studia
+
+Przez **Odbierz z urządzenia** albo **Przyjmij nastawy sterownika do
+projektu** w [Połączeniu ze sterownikiem](help://controller). Notatki są
+częścią projektu, więc jadą razem z nim.

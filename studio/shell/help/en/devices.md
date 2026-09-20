@@ -1,27 +1,42 @@
 # Device Composition
 
-The list of this controller's functional modules - Intrusion Alarm,
-Electrical Protection, Trends and so on - COPIED from the real runtime
-mechanism (`epw_os/core/feature_config.py`), not invented for Studio.
+Which **modules** this controller is made of. Not cards — functions.
 
-**This is NOT a "temporarily enable/disable a feature" switch list.**
-It is the device's composition, decided once, when the project is
-created - a watering controller **does not have** an intrusion alarm,
-the same way a thermostat doesn't, not as "disabled" but as a fact
-about what the device consists of.
+A tick decides two things at once:
 
-Each row: a name, a one-sentence description, and a two-state [0][I]
-switch with its state also spelled out in words (TAK/NIE) next to it -
-so the state is visible, not just implied by an icon.
+- **in Studio** — whether that module's branch appears in the tree at
+  all;
+- **on the controller** — whether the module is constructed. A module
+  outside the composition has no object, no thread and no tags. It is
+  not "disabled" — it is not there.
 
-**A module outside the composition disappears from the project tree
-ENTIRELY** - the Intrusion Alarm or Electrical Protection branch simply
-does not exist until you check that module here. Disabling a module
-that already has data (e.g. configured zones) asks for confirmation
-first - data is never deleted, only hidden; re-enabling the module
-restores it unchanged.
+## Columns
 
-A few entries (Trends, Power Quality, Bus Diagnostics...) correspond to
-real runtime functions Studio doesn't have its own configuration panel
-for yet - checking them is saved honestly in the project, simply
-without a visible effect in the tree yet.
+**Name**, **Description**, **Active** (YES/NO — click to toggle).
+
+## The modules
+
+| Module | What it brings |
+|---|---|
+| Intrusion Alarm | zones, supervised lines, arming |
+| Electrical Protection | ANSI settings executed by the ADA01 |
+| Process Protection | thresholds on analog points |
+| Trends | value history (the Historian) |
+| Power Quality | mains parameters: voltage, THD, imbalance |
+| Bus Diagnostics | frame and error counters |
+| System Topology | a view of what the installation really consists of |
+| Engineer Mode | extra verification tools at Engineer level |
+| Analog Inputs | whether the controller handles AI points at all |
+| Switching Counters | operation counts and running time for apparatus |
+| Service Notes | the technician's logbook on points |
+| Alarm History | the intrusion alarm's own event log |
+| Alarm Live View | a live view of zones and lines on the panel |
+
+## Disabling never deletes data
+
+If a module already has data in the project, Studio says so outright:
+the branch disappears from the tree, but **the data stays**. Re-enabling
+brings it all back. The same on the controller.
+
+A module with data but outside the composition is reported by [Check
+Project](help://validation) as a warning — not an error.

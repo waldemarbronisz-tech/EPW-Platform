@@ -1,23 +1,34 @@
 # Powiązania obiektu
 
-Obiekt składa się z kilku sterowników, a jeden czasem potrzebuje stanu
-z drugiego: brama wjazdowa ma wiedzieć, że dom jest uzbrojony, kotłownia
-— że garaż zgłasza zalanie. Powiązanie to para: **punkt źródła** na
-jednym sterowniku i **tag `Link.<Id>.In<n>`** na drugim.
+Punkt jednego sterownika, dostępny u drugiego. Przez MQTT: źródło
+publikuje swoje tagi, cel je subskrybuje.
 
-Mechanizm to MQTT, który oba sterowniki i tak mają: źródło publikuje
-swoje tagi pod `<prefiks>/tag/<ścieżka>/state`, a cel ma w Integracji
-MQTT mapowanie przychodzące, które taki temat zamienia w lokalny tag
-`Link.*`. Studio wpisuje te mapowania samo (w Integracji MQTT są szare,
-z opisem skąd pochodzą; ręcznych mapowań nie dotyka), włącza MQTT i
-nadaje prefiks tematów tam, gdzie ich nie było. Broker jest wspólny —
-adres wpisujesz w Integracji MQTT każdego sterownika.
+Potrzebny jest zapisany [obiekt z co najmniej dwoma
+sterownikami](help://site).
 
-Tag `Link.*` u celu jest **informacją, nigdy komendą**: logika może go
-czytać, ekran może pokazać symbol związany z nim, ale nic przez niego
-nie steruje drugim sterownikiem. Gdy źródło milknie dłużej niż
-„ważność", tag u celu dostaje jakość STALE.
+| Kolumna | Znaczenie |
+|---|---|
+| **Źródło** | sterownik, który ma tę wartość |
+| **Punkt źródłowy** | jego punkt |
+| **Cel** | sterownik, który ma ją widzieć |
+| **Tag `Link.*` na celu** | jak się będzie nazywać u celu: `Link.<Id>.In<nazwa>` |
+| **Typ** | typ wartości |
+| **Nieaktualna po** | po jakim czasie bez odświeżenia uznać ją za nieaktualną |
 
-Powiązania należą do pliku obiektu; „Zapisz obiekt" zapisuje je razem
-z projektami, w których Studio zmieniło Integrację MQTT. Usunięcie
-sterownika z obiektu usuwa jego powiązania w obie strony.
+## Co Studio robi za Ciebie
+
+Wpisuje mapowanie przychodzące do [MQTT](help://mqtt) sterownika
+docelowego, a jeśli trzeba — włącza tam MQTT i nadaje prefiks tematów.
+Usunięcie sterownika z obiektu zabiera jego powiązania.
+
+Mapowań wpisanych ręcznie Studio **nigdy nie rusza**.
+
+## Czym `Link.*` jest, a czym nie
+
+Tag `Link.*` działa w [logice](help://logic) i na
+[ekranach](help://screens) celu jak każdy inny tag — ale jest
+**wyłącznie wartością do odczytu**. Nigdy nie jest komendą: nie da się
+przez to sterować aparatem drugiego sterownika.
+
+Nie ma też adresowania między projektami na ekranach — ekran celu wiąże
+symbol z tagiem `Link.*` tak jak z każdym innym.

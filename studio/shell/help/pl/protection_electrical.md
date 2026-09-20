@@ -1,15 +1,42 @@
 # Zabezpieczenia elektryczne
 
-Katalog 12 funkcji zabezpieczeniowych w konwencji ANSI (27, 59, 59N,
-47, 81U, 81O, 50, 51, 46, 49, 50N, 51N), w 4 kategoriach: Napięcie,
-Częstotliwość, Prąd, Zasilanie. Katalog jest **stały** — to sprzęt
-(ADA01) go realizuje, projekt nie wymyśla nowych funkcji.
+Nastawy funkcji przekaźnikowych ANSI. **Wykonuje je karta ADA01**, nie
+program sterownika — tutaj ustala się wartości, z którymi ma pracować.
 
-Drzewo po lewej: zaznacz/odznacz checkbox przy stopniu, żeby go
-włączyć/wyłączyć — **to jest przełącznik aktywności**. Kliknięcie
-stopnia pokazuje po prawej pełną konfigurację: Nastawę, Histerezę,
-Zwłokę i **Typ działania** (Disabled / Information / Warning / Trip /
-Custom Logic).
+Po lewej drzewo: kategoria → funkcja → etap. Po prawej konfiguracja
+zaznaczonego etapu.
 
-Te nastawy trafiają docelowo do ADA01 — runtime jest tu tylko
-narzędziem nastawczym ("ekran informuje, sprzęt chroni").
+## Kategorie i funkcje
+
+| Kategoria | Funkcje |
+|---|---|
+| **Napięcie** | 27 podnapięciowe, 59 nadnapięciowe, 59N nadnapięciowe składowej zerowej, 47 kolejność / zanik faz |
+| **Częstotliwość** | 81U podczęstotliwościowe, 81O nadczęstotliwościowe |
+| **Prąd** | 50 nadprądowe bezzwłoczne, 51 nadprądowe zwłoczne, 46 składowa przeciwna, 49 przeciążenie cieplne, 50N/51N doziemne |
+| **Zasilanie** | zanik napięcia sterowania, zanik zasilania technicznego |
+
+Większość funkcji ma **dwa etapy** — zwykle pierwszy jako ostrzeżenie,
+drugi jako wyłączenie.
+
+## Pola etapu
+
+| Pole | Znaczenie |
+|---|---|
+| **Włączony** | czy etap w ogóle pracuje |
+| **Wielkość** | co jest mierzone (napięcie, prąd, częstotliwość…) — z katalogu |
+| **Nastawa** | próg zadziałania, w jednostce funkcji |
+| **Histereza** | o ile musi wrócić, żeby przestało być przekroczone |
+| **Zwłoka** | po jakim czasie przekroczenia etap działa (ms) |
+| **Akcja** | `Warning` (ostrzeżenie) albo `Trip` (wyłączenie) |
+
+## Skąd biorą się wartości początkowe
+
+Z katalogu ADA01. **Etap, którego projekt nie wymienia, ma wartość
+domyślną z katalogu** — brak wpisu nie znaczy „wyłączone", znaczy
+„domyślne". Po wysłaniu projektu warto porównać je z rzeczywistością
+przez **Nastawy sterownika (na żywo)** w [Połączeniu ze
+sterownikiem](help://controller).
+
+Nastawy etapów są **nastawami**, nie strukturą: panel może je zmienić
+(z wpisem do dziennika), a Studio zobaczy różnicę — patrz [Zapis,
+rewizja i nastawy](help://save_versioning).
