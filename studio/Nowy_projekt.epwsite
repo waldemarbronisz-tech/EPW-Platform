@@ -1,0 +1,13 @@
+{
+  "format": "EPW_SITE",
+  "schema_version": 1,
+  "name": "Nowy projekt",
+  "projects": [
+    {
+      "path": "e.epw"
+    },
+    {
+      "path": "Sterownik_1/projekt.epw"
+    }
+  ]
+}

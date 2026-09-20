@@ -714,7 +714,9 @@
     "remove_last_text": "Obiekt musi mieć przynajmniej jeden sterownik.",
     "discard_device_text": "{name} ma niezapisane zmiany. Usunąć z obiektu mimo to (zmiany przepadną)?",
     "device_unsaved_text": "{name} nie ma jeszcze pliku - zapisz go najpierw.",
-    "switch_failed": "Nie udało się przełączyć sterownika: edytor nie oddał dokumentu."
+    "switch_failed": "Nie udało się przełączyć sterownika: edytor nie oddał dokumentu.",
+    "add_device_tooltip": "Dodaj sterownik do obiektu - nic nie trafia na dysk, dopóki nie zapiszesz",
+    "device_name_base": "Sterownik"
   },
   "live": {
     "enabled": "Na żywo: odczyt ze sterownika {host} co 2 s.",

@@ -714,7 +714,9 @@
     "remove_last_text": "An object needs at least one controller.",
     "discard_device_text": "{name} has unsaved changes. Remove it from the object anyway (the changes are lost)?",
     "device_unsaved_text": "{name} has no file yet - save it first.",
-    "switch_failed": "Could not switch controller: the editor did not hand over its document."
+    "switch_failed": "Could not switch controller: the editor did not hand over its document.",
+    "add_device_tooltip": "Add a controller to the object - nothing is written to disk until you save",
+    "device_name_base": "Controller"
   },
   "live": {
     "enabled": "Live: reading the controller at {host} every 2 s.",

@@ -34,7 +34,7 @@ from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShort
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle,
     QStyledItemDelegate, QToolBar, QTreeWidget, QTreeWidgetItem, QStackedWidget, QLabel, QWidget,
-    QVBoxLayout,
+    QVBoxLayout, QHBoxLayout, QPushButton,
 )
 
 from studio.shell import icons
@@ -535,10 +535,26 @@ class StudioMainWindow(QMainWindow):
         devices_layout = QVBoxLayout(devices_container)
         devices_layout.setContentsMargins(0, 0, 0, 0)
         devices_layout.setSpacing(0)
+        # The header carries the plus: adding a controller is the one
+        # thing done from this list often enough to deserve a button
+        # rather than a menu three levels down (owner: "powinno się
+        # dodawać plusikiem").
+        header_row = QWidget()
+        header_layout = QHBoxLayout(header_row)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
         self._devices_header = QLabel(tr("site.devices_header"))
         self._devices_header.setObjectName("TreeHeader")
         self._devices_header.setStyleSheet(_TREE_HEADER_QSS)
-        devices_layout.addWidget(self._devices_header)
+        header_layout.addWidget(self._devices_header, 1)
+        self._add_device_button = QPushButton("+")
+        self._add_device_button.setObjectName("TreeHeaderButton")
+        self._add_device_button.setFixedWidth(22)
+        self._add_device_button.setToolTip(tr("site.add_device_tooltip"))
+        self._add_device_button.setStyleSheet(_TREE_HEADER_QSS)
+        self._add_device_button.clicked.connect(self._add_device_quickly)
+        header_layout.addWidget(self._add_device_button, 0)
+        devices_layout.addWidget(header_row)
         self.device_tree = QTreeWidget()
         self.device_tree.setObjectName("ProjectTree")
         self.device_tree.setHeaderHidden(True)
@@ -546,6 +562,10 @@ class StudioMainWindow(QMainWindow):
         self.device_tree.setItemDelegate(_TreeRowHeightDelegate(self.device_tree))
         self.device_tree.currentItemChanged.connect(self._on_device_selection_changed)
         self.device_tree.itemChanged.connect(self._on_device_item_changed)
+        self.device_tree.itemClicked.connect(self._on_device_item_clicked)
+        # Which row the last click landed on - a second click on the
+        # SAME row is the rename gesture (see _on_device_item_clicked).
+        self._last_device_click = None
         devices_layout.addWidget(self.device_tree, 1)
 
         tree_container = QWidget()
@@ -722,6 +742,11 @@ class StudioMainWindow(QMainWindow):
         self._item_modules = add_active_leaf(root, _TREE_ITEM_MODULES, "tree.devices", icon_modules)
 
         config = add_group(root, "tree.group_config")
+        # Cards before locations: a card is the thing you have in your
+        # hand, and it is what gives birth to the points. A location is
+        # a property OF a card, so being asked for it first reads as
+        # paperwork before work (owner, 2026-09-20: "logiczne jest że
+        # najpierw dodajemy karty").
         self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
         self._item_locations = add_active_leaf(config, _TREE_ITEM_LOCATIONS, "tree.locations", icon_locations)
         self._item_point_registry = add_active_leaf(
@@ -1971,6 +1996,11 @@ class StudioMainWindow(QMainWindow):
                 item = QTreeWidgetItem([label])
                 item.setIcon(0, icons.icon("device_list"))
                 item.setData(0, Qt.ItemDataRole.UserRole, index)
+                # Renameable in place, like the object's own name above
+                # it - a controller's name IS its project's name, and
+                # having to open Project Information to change it was
+                # the long way round.
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
                 if dirty:
                     item.setForeground(0, QColor(_EDITED_MARK_COLOR))
                     item_font = item.font(0)
@@ -1999,8 +2029,12 @@ class StudioMainWindow(QMainWindow):
             self._in_device_signal = False
 
     def _on_device_item_changed(self, item, _column):
-        """The object's name edited in place at the device list's root."""
-        if self._devices_updating or item is not getattr(self, "_device_root_item", None):
+        """A name edited in place in the device list - the object's at
+        the root, or a controller's below it."""
+        if self._devices_updating:
+            return
+        if item is not getattr(self, "_device_root_item", None):
+            self._rename_device_item(item)
             return
         name = item.text(0).strip()
         if self._site is None:
@@ -2009,6 +2043,87 @@ class StudioMainWindow(QMainWindow):
             self._site.name = name
             self._site.is_dirty = True
         self._refresh_device_list()
+
+    def _rename_device_item(self, item):
+        """A controller's name is its project's name. The row shows a
+        "*" for unsaved changes, so that has to come off what was typed
+        - otherwise renaming a dirty controller would bake the marker
+        into its name."""
+        index = item.data(0, Qt.ItemDataRole.UserRole)
+        if index is None or not (0 <= index < len(self._slots)):
+            return
+        name = item.text(0).strip().rstrip("*").strip()
+        if not name:
+            self._refresh_device_list()   # a blank name is not a rename
+            return
+        project = self._project if index == self._active_slot else self._slots[index].project
+        if name == (project.metadata.name or "").strip():
+            self._refresh_device_list()   # only the "*" was retyped
+            return
+        project.metadata.name = name
+        project.touch()
+        if index == self._active_slot:
+            self._on_project_changed()
+        else:
+            self._refresh_device_list()
+
+    def _on_device_item_clicked(self, item, _column):
+        """Windows' rename gesture: a click on the row that is ALREADY
+        selected starts editing it. A click on another row only selects
+        it - otherwise switching controllers would put you in a text
+        box every time."""
+        if self._devices_updating or item is None:
+            return
+        if item is self._last_device_click and (item.flags() & Qt.ItemFlag.ItemIsEditable):
+            self.device_tree.editItem(item, 0)
+        self._last_device_click = item
+
+    def _add_device_quickly(self):
+        """The plus above the device list: a new controller, now.
+
+        Nothing is written to disk and nothing is asked. The slot has no
+        path until somebody saves it, which is what "Save" is for - and
+        an object with no file of its own is simply saved later too
+        (_ensure_site_file, on the paths that genuinely need one).
+
+        The new row goes straight into rename, because a controller
+        called "Controller 2" is a placeholder, not a decision.
+        """
+        if not self._park_active_slot():
+            self.statusBar().showMessage(tr("site.switch_failed"), 8000)
+            return
+        # Numbered by position, so the second controller of an object is
+        # "Controller 2" rather than "Controller 1" sitting next to
+        # something else.
+        taken = {self._slot_name(i) for i in range(len(self._slots))}
+        base = tr("site.device_name_base")
+        suffix = len(self._slots) + 1
+        name = f"{base} {suffix}"
+        while name in taken:
+            suffix += 1
+            name = f"{base} {suffix}"
+        project = new_project(name)
+        self._slots.append(_ProjectSlot(project, None))
+        self._enter_slot(len(self._slots) - 1)
+        item = self._device_item_for(len(self._slots) - 1)
+        if item is not None:
+            self.device_tree.setCurrentItem(item)
+            self.device_tree.editItem(item, 0)
+            # Deliberately NOT recorded as a click: the editor is
+            # already open. Remembering it would make the first click
+            # AFTER finishing the name reopen the editor, which is not
+            # what a click on a freshly named row should do.
+            self._last_device_click = None
+
+    def _device_item_for(self, index: int):
+        root = getattr(self, "_device_root_item", None)
+        if root is None:
+            return None
+        for row in range(root.childCount()):
+            child = root.child(row)
+            if child.data(0, Qt.ItemDataRole.UserRole) == index:
+                return child
+        return None
 
     def _activate_slot(self, index: int) -> bool:
         """Switches the active device: the editors' documents are parked

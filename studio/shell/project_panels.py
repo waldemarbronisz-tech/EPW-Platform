@@ -1379,6 +1379,14 @@ class PointRegistryPanel(QWidget):
         self.table.resizeColumnsToContents()
         _make_column_resizable(self.table, 1, 260)
         self.table.setColumnWidth(0, 90)
+        # Wide enough for "(inherited: KOT)" to be readable. Narrow, it
+        # read as an empty field waiting for input - which is the
+        # opposite of what it says (owner, 2026-09-20: "jak raz wpiszę
+        # lokalizację przy dodawaniu karty to w tabeli rejestr punktów
+        # nie widzę sensu już tego wpisywać"). Nobody has to fill this
+        # in; it is the override for the one sensor that is not where
+        # its card is.
+        self.table.setColumnWidth(2, 180)
         self.table.setColumnWidth(3, 160)
         # SPEC "Studio - sterownik": live values next to the points, and
         # the force table (Engineer, force mode on) from the row's menu.

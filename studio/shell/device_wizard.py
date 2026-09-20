@@ -130,11 +130,26 @@ class _ModulesPage(QWizardPage):
         return [feature_id for feature_id, check in self.checks.items() if check.isChecked()]
 
 
+def _combo_code(combo: QComboBox) -> str:
+    """A location code out of an editable combo: the picked item's data
+    if one was picked, otherwise what was typed - upper-cased and
+    stripped, the same normalisation every other location field
+    applies. The placeholder item carries "" as its data, so picking it
+    means "no location" rather than the placeholder's own text."""
+    if combo is None:
+        return ""
+    index = combo.findText(combo.currentText())
+    if index >= 0 and combo.itemData(index) is not None:
+        return (combo.itemData(index) or "").strip().upper()
+    return (combo.currentText() or "").strip().upper()
+
+
 class _LocationsPage(QWizardPage):
     _COL_CODE, _COL_DESCRIPTION = 0, 1
 
-    def __init__(self, project):
+    def __init__(self, project, cards_page=None):
         super().__init__()
+        self._cards_page = cards_page
         self.setTitle(tr("wizard.locations_title"))
         self.setSubTitle(tr("wizard.locations_subtitle"))
         layout = QVBoxLayout(self)
@@ -155,6 +170,22 @@ class _LocationsPage(QWizardPage):
         self._existing_codes = {loc.code for loc in project.locations}
         for loc in project.locations:
             self.add_row(loc.code, loc.description)
+
+    def initializePage(self):
+        """Seeds a row for every place the cards named, so this page is
+        about DESCRIBING them rather than typing them a second time."""
+        if self._cards_page is None:
+            return
+        known = {self.code_at(row) for row in range(self.table.rowCount())}
+        for card in self._cards_page.entries():
+            code = (card.location or "").strip().upper()
+            if code and code not in known:
+                self.add_row(code, "")
+                known.add(code)
+
+    def code_at(self, row: int) -> str:
+        item = self.table.item(row, self._COL_CODE)
+        return (item.text() or "").strip().upper() if item else ""
 
     def add_row(self, code: str = "", description: str = ""):
         row = self.table.rowCount()
@@ -203,12 +234,12 @@ class _LocationsPage(QWizardPage):
 class _CardsPage(QWizardPage):
     _COL_ID, _COL_MODEL, _COL_KINDS, _COL_MODBUS, _COL_LOCATION = range(5)
 
-    def __init__(self, project, locations_page: _LocationsPage):
+    def __init__(self, project):
         super().__init__()
         self.setTitle(tr("wizard.cards_title"))
         self.setSubTitle(tr("wizard.cards_subtitle"))
         self._project = project
-        self._locations_page = locations_page
+        self._locations_page = None
         layout = QVBoxLayout(self)
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels([
@@ -235,24 +266,49 @@ class _CardsPage(QWizardPage):
         for card in project.cards:
             self.add_row(card)
 
+    def set_locations_page(self, page):
+        """Told after construction: this page comes FIRST now, so the
+        locations page does not exist yet when this one is built."""
+        self._locations_page = page
+
     def initializePage(self):
-        # The location choices come from the page before - refreshed
-        # every time this page is entered, since Back/Next can change them.
-        codes = [code for code, _d in self._locations_page.entries() if code]
+        # Whatever is known so far - the project's own locations, plus
+        # anything typed on the locations page if the user has already
+        # been there and come Back. The combo is editable either way:
+        # on a new project this list is empty, and being unable to say
+        # where a card is until some other page exists is the ordering
+        # this change removed.
         for row in range(self.table.rowCount()):
             combo = self.table.cellWidget(row, self._COL_LOCATION)
-            current = combo.currentData()
-            self._fill_location_combo(combo, codes, current)
+            self._fill_location_combo(combo, self._known_codes(), self.location_at(row))
+
+    def _known_codes(self) -> list:
+        codes = [loc.code for loc in self._project.locations]
+        if self._locations_page is not None:
+            for code, _description in self._locations_page.entries():
+                if code and code not in codes:
+                    codes.append(code)
+        return codes
+
+    def location_at(self, row: int) -> str:
+        combo = self.table.cellWidget(row, self._COL_LOCATION)
+        return _combo_code(combo) if combo else ""
 
     @staticmethod
     def _fill_location_combo(combo: QComboBox, codes, current):
         combo.blockSignals(True)
+        combo.setEditable(True)
         combo.clear()
         combo.addItem(tr("cards.location_blank"), "")
         for code in codes:
             combo.addItem(code, code)
         idx = combo.findData(current or "")
-        combo.setCurrentIndex(idx if idx >= 0 else 0)
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
+        else:
+            combo.setCurrentIndex(0)
+            if current:
+                combo.setEditText(current)
         combo.blockSignals(False)
 
     def _used_modbus_ids(self) -> set:
@@ -286,8 +342,9 @@ class _CardsPage(QWizardPage):
         modbus_spin.setValue(modbus)
         self.table.setCellWidget(row, self._COL_MODBUS, modbus_spin)
         location_combo = QComboBox()
-        codes = [code for code, _d in self._locations_page.entries() if code]
-        self._fill_location_combo(location_combo, codes, card.location)
+        # _known_codes() copes with the locations page not existing yet:
+        # this page is built first now.
+        self._fill_location_combo(location_combo, self._known_codes(), card.location)
         self.table.setCellWidget(row, self._COL_LOCATION, location_combo)
         self.table.resizeRowToContents(row)
 
@@ -308,7 +365,7 @@ class _CardsPage(QWizardPage):
                 model=(self.table.item(row, self._COL_MODEL).text() or "").strip(),
                 channel_kinds=self.table.cellWidget(row, self._COL_KINDS).channel_kinds(),
                 modbus_unit_id=self.table.cellWidget(row, self._COL_MODBUS).value(),
-                location=self.table.cellWidget(row, self._COL_LOCATION).currentData() or "",
+                location=_combo_code(self.table.cellWidget(row, self._COL_LOCATION)),
             ))
         return result
 
@@ -380,11 +437,17 @@ class DeviceWizard(QWizard):
         self.intro_page = _IntroPage()
         self.info_page = _InfoPage(project)
         self.modules_page = _ModulesPage(project)
-        self.locations_page = _LocationsPage(project)
-        self.cards_page = _CardsPage(project, self.locations_page)
+        # Cards before locations (owner, 2026-09-20): a card is the
+        # thing you have in your hand and it is what gives birth to the
+        # points; a location is a property OF a card. Each page now
+        # reads the other, so the order is the only thing that changed
+        # for whoever fills them in.
+        self.cards_page = _CardsPage(project)
+        self.locations_page = _LocationsPage(project, self.cards_page)
+        self.cards_page.set_locations_page(self.locations_page)
         self.summary_page = _SummaryPage(self)
-        for page in (self.intro_page, self.info_page, self.modules_page, self.locations_page,
-                     self.cards_page, self.summary_page):
+        for page in (self.intro_page, self.info_page, self.modules_page, self.cards_page,
+                     self.locations_page, self.summary_page):
             self.addPage(page)
 
     def apply_to_project(self, project=None) -> dict:
