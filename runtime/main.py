@@ -62,6 +62,23 @@ def main():
         log.warning("Set api_host back to 127.0.0.1 in project.json unless this is intentional.")
         log.warning("=" * 70)
 
+    # The MQTT link now carries COMMANDS as well as state (see
+    # core/remote_commands.py), so where the broker lives is a security
+    # fact worth saying out loud at startup - the same treatment the REST
+    # API's own bind address already gets just above. A broker on another
+    # machine is perfectly normal (HAOS on a mini PC in the cabinet); a
+    # broker reached over the open internet, without TLS, is not.
+    _mqtt = core.project_manager.get_mqtt_config()
+    if _mqtt.get("enabled") and _mqtt.get("host"):
+        if not is_local_host(_mqtt["host"]):
+            log.warning("=" * 70)
+            log.warning(f"MQTT broker is {_mqtt['host']}:{_mqtt.get('port')} - NOT on this machine. "
+                        f"Commands from Home Assistant arrive over this link.")
+            if not _mqtt.get("tls"):
+                log.warning("TLS is OFF for that broker: the remote tokens travel in clear text. "
+                            "Turn TLS on, or keep the broker on a trusted local network only.")
+            log.warning("=" * 70)
+
     # 2. Start API Backend Thread
     #
     # The FastAPI app is imported HERE, in the main thread, and handed to
@@ -151,6 +168,13 @@ def main():
                 mqtt_status_changed = Signal(str)
                 restart_requested = Signal(str)
                 forces_changed = Signal(int)
+                # A project reinstalled while the controller runs
+                # (EPWCore.reload_project). Emitted from whichever
+                # thread asked - the REST worker for an install over the
+                # network, the Qt thread for File > Open - so the GUI
+                # rebuild it triggers has to cross back through a signal
+                # like every other off-thread event here.
+                project_reloaded = Signal(bool)
 
             bridge = QtEventBridge()
             
@@ -365,7 +389,8 @@ def main():
                                    startup_issues=core.startup_issues,
                                    force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed,
                                    logic_engine=core.logic_engine,
-                                   logic_reload_callback=core.reload_logic)
+                                   logic_reload_callback=core.reload_logic,
+                                   project_reload_callback=core.reload_project)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,
@@ -474,6 +499,20 @@ def main():
                 bridge.restart_requested.emit(str(reason))
             core.event_bus.subscribe("restart_requested", on_restart_requested)
             bridge.restart_requested.connect(lambda _reason: app.quit())
+
+            # A project installed while the controller runs no longer
+            # needs a restart at all (EPWCore.reload_project). The core
+            # has already rebuilt itself by the time this arrives; what
+            # is left is the GUI, whose pages and nav entries are built
+            # from the project too - so it gets exactly the same full
+            # reconstruction a language or feature-configuration change
+            # already gets, for the same reason: not safely patchable in
+            # place. A refused reload leaves the previous project
+            # running, so there is nothing to rebuild.
+            def on_project_reloaded(success):
+                bridge.project_reloaded.emit(bool(success))
+            core.event_bus.subscribe("project_reloaded", on_project_reloaded)
+            bridge.project_reloaded.connect(lambda ok: rebuild_window() if ok else None)
 
             exit_code = app.exec()
             # Defense in depth: closeEvent() already calls this on a normal

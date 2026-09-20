@@ -63,6 +63,20 @@ widoczny obok jej nazwy w oknie Konfiguruj strefy):
   odczytuje stan niesprawny; brak konfiguracji odczytuje jako True
   (nic do zgłoszenia, tak jakby to sprawdzenie nie istniało) — patrz
   [Nadzór zasilania](help://intr_power_supervision)
+- `Security.System.SirenActive` — **True, gdy sygnalizator ma
+  dźwięczeć**. To właśnie ten tag podpinasz w Logic Studio do wyjścia
+  cyfrowego syreny, przez takie blokady, jakich wymaga instalacja.
+  Przechodzi sam w False po upływie skonfigurowanego czasu
+  sygnalizacji (Studio → Strefy → Sygnalizator; 0 = bez ograniczenia),
+  podczas gdy sam alarm trwa dalej — syrena bez końca jest zwykle
+  niezgodna z miejscowymi przepisami o hałasie
+- `Security.System.StrobeActive` — lampa, która przeżywa dźwięk: True
+  od alarmu aż do skasowania pamięci alarmu, żeby wracający na obiekt
+  człowiek zobaczył, że pod jego nieobecność coś się wydarzyło
+- `Security.System.Panic` — True po zadziałaniu
+  [linii napadowej](help://intr_line_types), aż do skasowania pamięci
+  alarmu. Celowo osobny od `Security.System.Alarm`, żeby logika mogła
+  wysłać **ten** sygnał gdzieś po cichu i nie ruszać syreny
 - `Security.System.TechnicalAlarm` — True, gdy którekolwiek z powyższych
   sprawdzeń zasilania NIE JEST sprawne (`MainsOk` albo `BatteryOk` ma
   wartość False); osobna kategoria od `Security.System.Alarm`, który
@@ -71,3 +85,10 @@ widoczny obok jej nazwy w oknie Konfiguruj strefy):
 Zapis `Security.Zone.<id>.ArmRequest` to jedyny tag, który ten system
 odczytuje jako wejście — każdy pozostały powyżej jest tylko do odczytu,
 zapisywany przez sam system.
+
+Program logiki dosięga tego wszystkiego również przez katalog
+`SSWIN.*` — ten sam stan pod standardowymi nazwami sygnałów, plus
+komendy `SSWIN.CMD_ARM` / `CMD_ARM_PARTIAL` / `CMD_DISARM` /
+`CMD_RESET` oraz `SSWIN.CMD_SILENCE`, która zatrzymuje **sam dźwięk**:
+strefa zostaje w alarmie, pamięć i lampa zostają. To samo robi przycisk
+**Wycisz** na stronie Przegląd.

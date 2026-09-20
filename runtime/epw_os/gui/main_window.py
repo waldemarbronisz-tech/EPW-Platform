@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
                  startup_issues=None, force_manager=None, forces_changed_signal=None,
-                 logic_engine=None, logic_reload_callback=None):
+                 logic_engine=None, logic_reload_callback=None, project_reload_callback=None):
         super().__init__()
         # EPWCore.reload_logic - the one operation that puts a NEW logic
         # program into the running scan (Project menu). A callback rather
@@ -47,6 +47,11 @@ class MainWindow(QMainWindow):
         # managers it needs, never the composition root itself. None in
         # tests and wherever no such operation exists.
         self._logic_reload_callback = logic_reload_callback
+        # EPWCore.reload_project - installing a project used to mean
+        # "restart EPW OS"; now the controller rebuilds itself from the
+        # new file in place. None in the isolated widget tests, which
+        # build a window without a core.
+        self._project_reload_callback = project_reload_callback
         # The scan that executes the user's logic. The status bar shows
         # whether it is running at all (an operator standing at the
         # cabinet has no other way to tell a controller whose interlocks
@@ -802,6 +807,15 @@ class MainWindow(QMainWindow):
         self._settings_actions["menu.settings_language"] = act_lang
         act_pin = settings_menu.addAction(tr("menu.settings_change_pin"))
         act_pin.triggered.connect(self._open_change_pin_dialog)
+        # Who may operate this controller, and with what secret: the
+        # keypad code and the remote (MQTT) token, both set here at the
+        # cabinet. The PEOPLE come from the project - Studio decides who
+        # exists and what they may do.
+        self._act_alarm_users = settings_menu.addAction(tr("menu.settings_alarm_users"))
+        self._act_alarm_users.triggered.connect(self._open_alarm_users_dialog)
+        self._refresh_alarm_users_action_visibility()
+        self.access_manager.level_changed.connect(self._refresh_alarm_users_action_visibility)
+
         self._settings_actions["menu.settings_change_pin"] = act_pin
         act_sleep = settings_menu.addAction(tr("menu.settings_screen_sleep"))
         act_sleep.triggered.connect(self._open_screen_sleep_dialog)
@@ -1708,6 +1722,22 @@ class MainWindow(QMainWindow):
         self._act_load_synoptic.setVisible(is_engineer)
         self._act_load_synoptic.setEnabled(is_engineer)
 
+    def _refresh_alarm_users_action_visibility(self, *_):
+        """Engineer-only, hidden AND disabled below it - the same
+        treatment as every other Engineer-gated entry here."""
+        is_engineer = self.access_manager.has_access(AccessLevel.ENGINEER)
+        self._act_alarm_users.setVisible(is_engineer)
+        self._act_alarm_users.setEnabled(is_engineer)
+
+    def _open_alarm_users_dialog(self):
+        if not self.access_manager.has_access(AccessLevel.ENGINEER):
+            self.deny_access(AccessLevel.ENGINEER, "Alarm system users")
+            return
+        from epw_os.gui.widgets.alarm_users_dialog import AlarmUsersDialog
+        dialog = AlarmUsersDialog(self.access_manager, self)
+        dialog.exec()
+        dialog.deleteLater()
+
     def _refresh_reload_logic_action_visibility(self, *_):
         """Engineer-only, same hidden AND disabled treatment as every
         other Engineer-gated menu entry here."""
@@ -1931,11 +1961,31 @@ class MainWindow(QMainWindow):
         if not path:
             return
         ok, error = self.project_manager.install_project_file(path)
-        if ok:
-            self._info(tr("dialog.project_installed_restart"))
-        else:
+        if not ok:
             reason = tr(error["key"], error["text"], **error["params"])
             self._warn(tr("dialog.project_install_refused", reason=reason))
+            return
+        if self._project_reload_callback is None:
+            self._info(tr("dialog.project_installed_restart"))
+            return
+        # Asked, not assumed: the rebuild stops the logic scan and the
+        # alarm system for as long as it takes, which is the operator's
+        # decision to make - same stance as reloading the logic program.
+        answer = QMessageBox.question(
+            self, tr("dialog.open_title"), tr("dialog.project_reload_confirm"),
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
+        )
+        if answer != QMessageBox.Yes:
+            self._info(tr("dialog.project_installed_restart"))
+            return
+        result = self._project_reload_callback(actor=f"Panel:{self.access_manager.level}", level=None)
+        if result.get("success"):
+            # The window this method runs in is about to be replaced
+            # (main.py rebuilds it on "project_reloaded"), so say so
+            # before that happens rather than after.
+            self._info(tr("dialog.project_reloaded"))
+        else:
+            self._warn(tr("dialog.project_reload_failed", reason=result.get("reason", "")))
 
     def _file_export_project(self):
         if self._no_project_manager():

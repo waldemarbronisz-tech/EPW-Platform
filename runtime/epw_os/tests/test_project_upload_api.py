@@ -1,8 +1,13 @@
 """Task "wysyłanie projektu na sterownik przez REST" (PROJEKT_EPW_ZADANIA
-p. 5): Engineer-token project endpoints, the revision guard, the restart
-request after an install, and the rollback to .bak when the installed
-file is refused at the next start. Real ProjectManager on scratch files,
-real ApiAuth on a scratch token file, FastAPI TestClient.
+p. 5): Engineer-token project endpoints, the revision guard, and the
+rollback to .bak when the installed file is refused at the next start.
+Real ProjectManager on scratch files, real ApiAuth on a scratch token
+file, FastAPI TestClient.
+
+Since p. 3a an install REBUILDS the running controller instead of asking
+for a restart (EPWCore.reload_project) - the restart is now the fallback
+for a reload that did not happen or did not work, and the tests below say
+which of the two each request got.
 """
 import hashlib
 import json
@@ -46,9 +51,23 @@ class _Core:
         self.project_manager.set_audit_sink(self.audit_logger, lambda: "Engineer")
         self.project_manager.load_project()
 
+        self.reloads = []
+        self.reload_succeeds = True
+
     def request_restart(self, reason, actor="SYSTEM"):
         self.restart_requested = reason
         self.restarts.append((reason, actor))
+
+    def reload_project(self, actor="", level=None):
+        """What EPWCore does for real (rebuilds itself from the new
+        file) - here only recorded, so these tests stay about the
+        ENDPOINT. The rebuild itself is proved in
+        test_project_hot_reload.py against a real core."""
+        self.reloads.append((actor, level))
+        return {"success": self.reload_succeeds,
+                "reason": "" if self.reload_succeeds else "the project file was refused",
+                "removed_tags": ["ELA1.DI.9"], "issues": [],
+                "logic": {"success": True, "reason": ""}}
 
 
 def _project(name, setting=25.0, revision_saves=1):
@@ -109,7 +128,7 @@ def test_download_needs_engineer_and_returns_the_file_as_is(client):
 
 # --- installing ---------------------------------------------------------------------
 
-def test_install_replaces_the_file_keeps_a_backup_and_schedules_a_restart(client, tmp_path):
+def test_install_replaces_the_file_keeps_a_backup_and_rebuilds_the_controller(client, tmp_path):
     http, core, path = client
     new_path = _write(_project("New design", setting=40.0), tmp_path / "laptop" / "projekt.epw", times=3)
     payload = new_path.read_bytes()
@@ -121,7 +140,10 @@ def test_install_replaces_the_file_keeps_a_backup_and_schedules_a_restart(client
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["installed"] and body["revision"] == 3 and body["previous_revision"] == 1
-    assert body["restart_scheduled"] is True and body["actor"] == "API:Engineer"
+    assert body["restart_scheduled"] is False, "nothing to restart for - it was rebuilt in place"
+    assert body["reloaded"]["success"] is True
+    assert body["reloaded"]["removed_tags"] == ["ELA1.DI.9"], "the caller is told what disappeared"
+    assert body["actor"] == "API:Engineer"
     assert body["settings_hash"] == pf.settings_hash(pf.read_project(new_path).project)
     assert pf.read_project(path).project.metadata.name == "New design"
     assert pf.read_project(str(path) + ".bak").project.metadata.name == "Running site"
@@ -129,10 +151,9 @@ def test_install_replaces_the_file_keeps_a_backup_and_schedules_a_restart(client
     assert not [f for f in os.listdir(path.parent) if f.startswith("upload.")]  # the temp upload is gone
     assert ("PROJECT_FILE_INSTALLED", "API:Engineer") == core.audit_logger.entries[-1][:2]
 
-    deadline = time.time() + 5
-    while core.restart_requested is None and time.time() < deadline:
-        time.sleep(0.05)
-    assert core.restarts == [("project installed via REST (revision 3)", "API:Engineer")]
+    assert core.reloads == [("API:Engineer", None)]
+    time.sleep(0.3)
+    assert core.restarts == []
 
 
 def test_install_without_restart_and_with_a_stale_revision(client, tmp_path):
@@ -224,3 +245,33 @@ def test_core_reports_the_rollback_as_a_startup_issue(tmp_path, db):
         assert core.restart_requested == "test"
     finally:
         core.shutdown()
+
+
+def test_a_reload_that_failed_falls_back_to_the_restart(client, tmp_path):
+    """The one case the restart still exists for: the controller could
+    not take the new project up in place, so it is asked to come back on
+    it instead."""
+    http, core, path = client
+    core.reload_succeeds = False
+    payload = _write(_project("New design"), tmp_path / "laptop" / "projekt.epw").read_bytes()
+
+    body = http.post("/api/v1/project/install", content=payload, headers=_engineer(core)).json()
+
+    assert body["reloaded"]["success"] is False
+    assert body["restart_scheduled"] is True
+    deadline = time.time() + 5
+    while core.restart_requested is None and time.time() < deadline:
+        time.sleep(0.05)
+    assert core.restarts and core.restarts[0][1] == "API:Engineer"
+
+
+def test_reload_false_installs_for_the_next_start_as_before(client, tmp_path):
+    http, core, path = client
+    payload = _write(_project("New design"), tmp_path / "laptop" / "projekt.epw").read_bytes()
+
+    body = http.post("/api/v1/project/install?reload=false&restart=false",
+                     content=payload, headers=_engineer(core)).json()
+
+    assert body["reloaded"] is None
+    assert core.reloads == []
+    assert body["restart_scheduled"] is False

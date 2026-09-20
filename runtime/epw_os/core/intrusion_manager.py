@@ -183,7 +183,14 @@ class LineType:
     DELAYED = "DELAYED"
     TWENTY_FOUR_HOUR = "24H"
     SUPERVISORY = "SUPERVISORY"
-    _ALL = (INSTANT, DELAYED, TWENTY_FOUR_HOUR, SUPERVISORY)
+    # NAPADOWA: a hold-up button. Alarms in ANY zone state, exactly like
+    # 24H, and additionally raises SSWIN.PANIC. What makes it its own
+    # type rather than a 24H line with a label: by default it does NOT
+    # start the sounder (shared/project_format.py's Sounder.panic_silent)
+    # - the point of a hold-up alarm is that the person standing over you
+    # does not learn you pressed it.
+    PANIC = "PANIC"
+    _ALL = (INSTANT, DELAYED, TWENTY_FOUR_HOUR, SUPERVISORY, PANIC)
 
 
 class ZoneState:
@@ -630,6 +637,14 @@ class IntrusionManager:
         # disarmed zone keeps FULL so that the next arm with no mode
         # given behaves exactly as it always did.
         self._zone_arm_mode = {}
+        # The SOUNDER, held as state and published as SSWIN.SIREN_ACTIVE /
+        # SIREN_TIME_LEFT / STROBE_ACTIVE - never as an output. Which DO a
+        # siren hangs on is a line of logic the engineer draws (owner's
+        # decision, see shared/project_format.py's Sounder).
+        self._sounder_started_at = None   # when the current alarm started sounding
+        self._sounder_silenced = False    # somebody pressed silence - alarm stays, noise stops
+        self._panic_active = False        # a hold-up line fired; cleared with the alarm memory
+        self._sounder_cfg = {"siren_seconds": 180.0, "panic_silent": True}
         # The people allowed to operate this system: user_id -> record
         # (shared/project_format.py's IntrusionUser, as a dict). Empty
         # means nobody is configured, which - see may_operate() - leaves
@@ -727,6 +742,12 @@ class IntrusionManager:
         for line_id, raw in self.project_manager.get_intrusion_line_supervision().items():
             if line_id in self._lines:
                 self._line_life[line_id] = _normalize_line_life_record(raw, line_id=line_id)
+        get_sounder = getattr(self.project_manager, "get_intrusion_sounder", None)
+        if get_sounder is not None:
+            stored = get_sounder() or {}
+            if isinstance(stored, dict):
+                self._sounder_cfg.update({k: stored[k] for k in ("siren_seconds", "panic_silent")
+                                          if k in stored})
         get_users = getattr(self.project_manager, "get_intrusion_users", None)
         self.set_users(get_users() if get_users is not None else [])
         self._power_supervision.update(
@@ -855,6 +876,87 @@ class IntrusionManager:
                                         zone_name=zone_name, line_id=line_id, line_name=line["name"])
         if len(restored_zones) != len(armed):
             self._persist_operation_state()
+
+    # --- the sounder (state, not an output) --------------------------------
+
+    def _stop_sounder_if_quiet(self):
+        """Caller holds self._lock (an RLock). The sounder stops when no
+        zone is in ALARM any more - disarmed, recovered after its hold
+        time, or the alarm cleared. Silence is forgotten with it, so the
+        next alarm sounds.
+
+        The tag refresh happens either way: the caller may have changed
+        the STROBE (alarm memory) without ending the alarm itself."""
+        if not any(state == ZoneState.ALARM for state in self._zone_state.values()):
+            self._sounder_started_at = None
+            self._sounder_silenced = False
+        self._refresh_system_tags()
+
+    def siren_active(self) -> bool:
+        """Whether the sounder should be sounding RIGHT NOW - the signal
+        an engineer wires to a DO in Logic Studio (SSWIN.SIREN_ACTIVE).
+
+        False once the configured time is up, even though the alarm
+        itself carries on: a siren that never stops is usually against
+        local regulations, and the strobe is what keeps showing that
+        something happened."""
+        with self._lock:
+            if self._sounder_started_at is None or self._sounder_silenced:
+                return False
+            if not any(state == ZoneState.ALARM for state in self._zone_state.values()):
+                return False
+            limit = float(self._sounder_cfg.get("siren_seconds", 0) or 0)
+            if limit <= 0:
+                return True
+            return (time.time() - self._sounder_started_at) < limit
+
+    def siren_time_left(self) -> float:
+        """Seconds the sounder may still sound for. 0 when it is not
+        sounding; 0 also when no limit is configured - "no limit" has no
+        countdown to show."""
+        with self._lock:
+            if self._sounder_started_at is None or self._sounder_silenced:
+                return 0.0
+            limit = float(self._sounder_cfg.get("siren_seconds", 0) or 0)
+            if limit <= 0:
+                return 0.0
+            return max(0.0, limit - (time.time() - self._sounder_started_at))
+
+    def strobe_active(self) -> bool:
+        """The light, which outlives the noise: on from the alarm until
+        somebody clears the memory, so a person coming back to the site
+        sees that something happened while they were away."""
+        with self._lock:
+            return any(record["active"] for record in self._zone_alarm_memory.values())
+
+    def panic_active(self) -> bool:
+        with self._lock:
+            return self._panic_active
+
+    def silence(self, actor: str = "SYSTEM", user=None) -> bool:
+        """Stops the noise WITHOUT clearing the alarm (SSWIN.CMD_SILENCE).
+        The zone stays in ALARM, the memory stays, the strobe stays on -
+        only the sounder goes quiet. Refused for somebody who may not
+        operate any zone currently in alarm."""
+        with self._lock:
+            alarming = [zone_id for zone_id, state in self._zone_state.items() if state == ZoneState.ALARM]
+        if not alarming:
+            return False
+        if user is not None and not any(self.may_operate(user, zone_id) for zone_id in alarming):
+            self._refuse_user(user, alarming[0], "silence the alarm of")
+            return False
+        with self._lock:
+            if self._sounder_started_at is None or self._sounder_silenced:
+                return False
+            self._sounder_silenced = True
+        detail = "Sounder silenced (the alarm itself is unchanged)"
+        log.warning(detail)
+        if self.audit_logger is not None:
+            self.audit_logger.record("INTRUSION_SOUNDER_SILENCED", actor, detail, success=True)
+        self._record_alarm_history("INTRUSION_SOUNDER_SILENCED", actor, detail,
+                                    zone_id=alarming[0], zone_name=self._zones[alarming[0]]["name"])
+        self._refresh_system_tags()
+        return True
 
     # --- night (partial) arming -------------------------------------------
 
@@ -1108,6 +1210,17 @@ class IntrusionManager:
                                   description="True while any zone is counting down its entry delay", source="SYSTEM")
         self.tag_manager.add_tag(f"{TAG_PREFIX}.System.ExitCountdownActive", False, TagType.BOOL,
                                   description="True while any zone is counting down its exit delay", source="SYSTEM")
+        self.tag_manager.add_tag(f"{TAG_PREFIX}.System.SirenActive", False, TagType.BOOL,
+                                  description="True while the sounder should be sounding - the signal an "
+                                              "engineer wires to a siren output in Logic Studio (EPW-OS "
+                                              "drives no siren itself)", source="SYSTEM")
+        self.tag_manager.add_tag(f"{TAG_PREFIX}.System.StrobeActive", False, TagType.BOOL,
+                                  description="True while any zone's alarm memory is set - the light that "
+                                              "outlives the noise, until somebody clears the alarm",
+                                  source="SYSTEM")
+        self.tag_manager.add_tag(f"{TAG_PREFIX}.System.Panic", False, TagType.BOOL,
+                                  description="True after a PANIC (hold-up) line fired, until the alarm "
+                                              "memory is cleared", source="SYSTEM")
         self.tag_manager.add_tag(f"{TAG_PREFIX}.Supervisory.Violated", False, TagType.BOOL,
                                   description="True while any SUPERVISORY line is violated (e.g. for lighting logic)",
                                   source="SYSTEM")
@@ -1214,6 +1327,7 @@ class IntrusionManager:
             self._zone_walk_test_observed[zone_id] = {}
             self._zone_alarm_memory[zone_id] = _new_zone_alarm_memory()
             self._zone_arm_mode[zone_id] = ArmMode.FULL
+            self._stop_sounder_if_quiet()
         self.tag_manager.add_tag(self._zone_tag(zone_id, "State"), ZoneState.DISARMED, TagType.STRING,
                                   description="This zone's current lifecycle state - DISARMED / EXIT_DELAY / "
                                               "ARMED / ENTRY_DELAY / ALARM (see Arming, Disarming, and "
@@ -1900,6 +2014,15 @@ class IntrusionManager:
             # restarting the hold countdown against ITS OWN hold time.
             self._cancel_zone_alarm_hold_timer(zone_id)
             self._zone_alarm_trigger_line[zone_id] = line_id
+            is_panic = bool(line and line["line_type"] == LineType.PANIC)
+            if is_panic:
+                self._panic_active = True
+            # A fresh alarm un-silences: somebody silenced the PREVIOUS
+            # one, and a new break-in is not covered by that decision.
+            if not (is_panic and self._sounder_cfg.get("panic_silent", True)):
+                if self._sounder_started_at is None:
+                    self._sounder_started_at = time.time()
+                self._sounder_silenced = False
             hold_seconds = float(line.get("alarm_hold_seconds", DEFAULT_ALARM_HOLD_SECONDS)) if line else 0.0
             if hold_seconds > 0:
                 timer = threading.Timer(hold_seconds, self._on_alarm_hold_elapsed, args=(zone_id,))
@@ -1921,6 +2044,10 @@ class IntrusionManager:
         # _on_entry_delay_elapsed, or a line FAULT via
         # _dispatch_line_fault) triggered it.
         self._record_alarm_cause(zone_id, line_id, line_name, reason)
+        # _set_zone_state above refreshed the tags before this method
+        # decided whether the sounder starts - so publish them again,
+        # now that SirenActive/Panic are settled.
+        self._refresh_system_tags()
 
     def _record_alarm_cause(self, zone_id: str, line_id, line_name, reason: str):
         """A LATCH, same principle as safety_kernel.py's own ("zdarzenie,
@@ -1975,6 +2102,13 @@ class IntrusionManager:
                 return False  # idempotent, no duplicate audit/history entry - same stance as bypass/arm/disarm
             self._zone_alarm_memory[zone_id] = _new_zone_alarm_memory()
             zone_name = self._zones[zone_id]["name"]
+            # The strobe follows the memory (strobe_active()), so clearing
+            # it here is what turns the light off. The hold-up flag goes
+            # with it: SSWIN.PANIC means "somebody pressed it and nobody
+            # has acknowledged that yet", not a permanent property.
+            if not any(record["active"] for record in self._zone_alarm_memory.values()):
+                self._panic_active = False
+            self._stop_sounder_if_quiet()
         self._refresh_zone_alarm_memory_tags(zone_id)
         self._persist_alarm_memory()
         if self.audit_logger is not None:
@@ -2008,6 +2142,7 @@ class IntrusionManager:
                 return
             self._set_zone_state(zone_id, ZoneState.ARMED)
             self._zone_alarm_trigger_line[zone_id] = None
+            self._stop_sounder_if_quiet()
 
     def _maybe_recover_from_alarm_hold(self, line_id: str):
         """Called whenever `line_id`'s COUNTED violation clears (see
@@ -2058,6 +2193,12 @@ class IntrusionManager:
 
         if line_type == LineType.TWENTY_FOUR_HOUR:
             return (zone_id, line_id, "24H line violated")
+
+        if line_type == LineType.PANIC:
+            # Like 24H - any zone state, any arming mode, no night
+            # filtering below. A hold-up button that only worked while
+            # the building was armed would be worse than none.
+            return (zone_id, line_id, "Panic line triggered")
 
         # Night arming: a line the operator excluded from this mode is,
         # for INSTANT and DELAYED purposes, exactly as if the zone were
@@ -2686,6 +2827,12 @@ class IntrusionManager:
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.Alarm", ZoneState.ALARM in states)
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.EntryCountdownActive", ZoneState.ENTRY_DELAY in states)
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.ExitCountdownActive", ZoneState.EXIT_DELAY in states)
+        # The sounder's own state, as tags too: the panel shows them and
+        # MQTT publishes them, while LOGIC reads the same facts through
+        # SSWIN.SIREN_ACTIVE/STROBE_ACTIVE (see sswin_signals.py).
+        self.tag_manager.update_tag(f"{TAG_PREFIX}.System.SirenActive", self.siren_active())
+        self.tag_manager.update_tag(f"{TAG_PREFIX}.System.StrobeActive", self.strobe_active())
+        self.tag_manager.update_tag(f"{TAG_PREFIX}.System.Panic", self.panic_active())
 
     # --- reading (GUI/logic-facing) ---------------------------------------
 

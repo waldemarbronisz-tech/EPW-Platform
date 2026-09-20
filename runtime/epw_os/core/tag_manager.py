@@ -82,6 +82,7 @@ class TagManager:
         self.event_bus = event_bus
         self._tags: Dict[str, Tag] = {}
         self._forced = set()   # tag names pinned by ForceManager
+        self._configured_tags = set()   # channel tags the last configure() created - see reconfigure()
         self._lock = threading.RLock()
         self.mode = "SIMULATION MODE" # LIVE MODE or SIMULATION MODE
         # Bug fix (Task: "System.Mode nie jest zarejestrowany"): set_mode()
@@ -149,6 +150,31 @@ class TagManager:
             import copy
             return [copy.copy(tag) for tag in self._tags.values()]
             
+    def reconfigure(self, devices: list):
+        """configure() again, for a project reloaded while the controller
+        runs (EPWCore.reload_project()) - and the only path that lets a
+        channel tag DISAPPEAR.
+
+        configure() alone would not do: it only adds, so a card removed
+        in Studio would leave its DI/DO/AO tags behind for ever, still
+        readable, still in the REST tag list, still nameable by logic -
+        a channel that no longer exists anywhere in the device. What is
+        removed is exactly what a previous configure() created and this
+        `devices` list no longer does; every other tag (System.*,
+        Security.*, analog points, cabinet status) belongs to somebody
+        else and is left alone.
+
+        Returns the tag names that went away, for the caller's audit
+        entry - a channel vanishing under a running controller is worth
+        a line in the register."""
+        previous = set(self._configured_tags)
+        self.configure(devices)
+        removed = sorted(previous - self._configured_tags)
+        for name in removed:
+            self.remove_tag(name)
+            self._forced.discard(name)
+        return removed
+
     def configure(self, devices: list):
         """The ONLY way DI/DO channel tags come into existence (task
         "migracja adresacji" - init_default_tags()'s own flat DI1..DI64/
@@ -163,6 +189,15 @@ class TagManager:
         no leading zero, `card` taken verbatim from the project (never
         assumed to start with "ELA"/"ADA")."""
         from epw_os.core.addressing import format_address
+        # Every name this call creates is recorded, so reconfigure()
+        # above can tell a channel that DISAPPEARED from a project from
+        # one that was never in it.
+        created = set()
+
+        def add(name, *args, **kwargs):
+            created.add(name)
+            self.add_tag(name, *args, **kwargs)
+
         for dev in devices:
             dev_id = dev.get("id")
             dev_type = dev.get("type")
@@ -187,36 +222,37 @@ class TagManager:
                 # as an analog input); analog_scaling.compute_raw_value()
                 # turns an engineering value into it on the way out.
                 for i in range(1, int(dev.get("channels", 0) or 0) + 1):
-                    self.add_tag(format_address(dev_id, "AO", i), 0.0, TagType.REAL,
-                                 quality=TagQuality.NOT_INITIALIZED, source="HARDWARE",
-                                 description=f"Analog output channel {i} on module '{dev_id}' - the raw value "
-                                             f"written to the card. NOT_INITIALIZED until something writes it.")
+                    add(format_address(dev_id, "AO", i), 0.0, TagType.REAL,
+                        quality=TagQuality.NOT_INITIALIZED, source="HARDWARE",
+                        description=f"Analog output channel {i} on module '{dev_id}' - the raw value "
+                                    f"written to the card. NOT_INITIALIZED until something writes it.")
                 continue
             if dev_type == "ELA":
                 for i in range(1, dev.get("channels", 32) + 1):
-                    self.add_tag(format_address(dev_id, "DI", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
-                                 source="HARDWARE",
-                                 description=f"Digital input channel {i} on ELA module '{dev_id}' - True while "
-                                             f"the field contact is closed. NOT_INITIALIZED until the driver "
-                                             f"reports a real reading at least once.")
+                    add(format_address(dev_id, "DI", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
+                        source="HARDWARE",
+                        description=f"Digital input channel {i} on ELA module '{dev_id}' - True while "
+                                    f"the field contact is closed. NOT_INITIALIZED until the driver "
+                                    f"reports a real reading at least once.")
             elif dev_type == "ADA":
                 for i in range(1, dev.get("channels", 32) + 1):
-                    self.add_tag(format_address(dev_id, "DO", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
-                                 source="HARDWARE",
-                                 description=f"Digital output channel {i} on ADA module '{dev_id}' - True while "
-                                             f"commanded/reading closed. NOT_INITIALIZED until the driver "
-                                             f"reports a real reading at least once.")
+                    add(format_address(dev_id, "DO", i), False, TagType.BOOL, quality=TagQuality.NOT_INITIALIZED,
+                        source="HARDWARE",
+                        description=f"Digital output channel {i} on ADA module '{dev_id}' - True while "
+                                    f"commanded/reading closed. NOT_INITIALIZED until the driver "
+                                    f"reports a real reading at least once.")
             elif dev_type == "EPM":
                 for phase in ("UL1", "UL2", "UL3"):
-                    self.add_tag(f"{dev_id}.{phase}.RMS", 0.0, TagType.REAL, quality=TagQuality.NOT_INITIALIZED,
-                                 source="HARDWARE",
-                                 description=f"RMS phase-to-neutral voltage, phase {phase[-1]}, from power "
-                                             f"meter '{dev_id}' (volts). NOT_INITIALIZED until the driver "
-                                             f"reports a real reading at least once.")
-                self.add_tag(f"{dev_id}.FREQ", 0.0, TagType.REAL, quality=TagQuality.NOT_INITIALIZED,
-                             source="HARDWARE",
-                             description=f"Mains frequency measured by power meter '{dev_id}' (Hz). "
-                                         f"NOT_INITIALIZED until the driver reports a real reading at least once.")
+                    add(f"{dev_id}.{phase}.RMS", 0.0, TagType.REAL, quality=TagQuality.NOT_INITIALIZED,
+                        source="HARDWARE",
+                        description=f"RMS phase-to-neutral voltage, phase {phase[-1]}, from power "
+                                    f"meter '{dev_id}' (volts). NOT_INITIALIZED until the driver "
+                                    f"reports a real reading at least once.")
+                add(f"{dev_id}.FREQ", 0.0, TagType.REAL, quality=TagQuality.NOT_INITIALIZED,
+                    source="HARDWARE",
+                    description=f"Mains frequency measured by power meter '{dev_id}' (Hz). "
+                                f"NOT_INITIALIZED until the driver reports a real reading at least once.")
+        self._configured_tags = created
 
     def publish_from_driver(self, name, value, quality=TagQuality.GOOD):
         return self._apply_update(name, value, quality, source="DRIVER")

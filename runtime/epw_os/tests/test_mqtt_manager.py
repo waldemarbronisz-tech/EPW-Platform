@@ -531,3 +531,79 @@ def test_set_mqtt_config_defensively_strips_a_password_key(tmp_path):
     with open(pm.project_file, encoding="utf-8") as f:
         raw = json.load(f)
     assert "password" not in raw["mqtt"]
+
+
+# --- commands: this module carries them, it does not judge them --------------
+# The owner's decision to accept commands over MQTT did NOT move any of
+# that decision-making in here (see core/remote_commands.py). What these
+# check is exactly the transport's share: subscribe when a handler
+# exists, hand the message over untouched INCLUDING the retained flag
+# only the broker knows, publish the answer, and stay shut otherwise.
+
+def _connect(client):
+    client.on_connect(client, None, {}, 0)
+
+
+def test_the_command_topic_is_not_subscribed_to_without_a_handler(bus, tags, project, tmp_path):
+    manager, client = make_manager(bus, tags, project, tmp_path, enabled=True)
+    _connect(client)
+    assert manager.command_topic() not in client.subscribed
+    manager.stop()
+
+
+def test_a_handler_makes_the_command_topic_live(bus, tags, project, tmp_path):
+    manager, client = make_manager(bus, tags, project, tmp_path, enabled=True)
+    manager.set_command_handler(lambda *a: {"accepted": True})
+    _connect(client)
+    assert manager.command_topic() in client.subscribed
+    manager.stop()
+
+
+def test_a_command_is_handed_over_whole_with_the_retained_flag(bus, tags, project, tmp_path):
+    """Whether the broker marked a message RETAINED is the one thing only
+    the transport can know - and the gateway refuses on it, so losing it
+    here would quietly re-enable replay."""
+    manager, client = make_manager(bus, tags, project, tmp_path, enabled=True)
+    seen = []
+    manager.set_command_handler(lambda topic, payload, retained: seen.append((topic, payload, retained)) or
+                                {"accepted": False, "reason": "test"})
+    _connect(client)
+
+    message = type("Msg", (), {"topic": manager.command_topic(), "payload": b'{"id": "x"}', "retain": True})()
+    client.on_message(client, None, message)
+
+    assert seen == [(manager.command_topic(), b'{"id": "x"}', True)]
+    manager.stop()
+
+
+def test_the_answer_is_published_and_never_retained(bus, tags, project, tmp_path):
+    """An answer left on the board would be handed to every future
+    subscriber as if it had just happened."""
+    manager, client = make_manager(bus, tags, project, tmp_path, enabled=True)
+    manager.set_command_handler(lambda *a: {"id": "x", "accepted": False, "reason": "no"})
+    _connect(client)
+    client.published.clear()
+
+    message = type("Msg", (), {"topic": manager.command_topic(), "payload": b'{"id": "x"}', "retain": False})()
+    client.on_message(client, None, message)
+    # The answer goes through the ordinary outgoing queue, drained by the
+    # worker thread - the same wait every other publish test here uses.
+    assert _wait_until(lambda: any(t == manager.command_result_topic() for t, _p, _r in client.published))
+
+    results = [p for p in client.published if p[0] == manager.command_result_topic()]
+    assert results and json.loads(results[0][1])["reason"] == "no"
+    assert results[0][2] is False, "the result must not be retained"
+    manager.stop()
+
+
+def test_a_message_on_a_topic_that_merely_looks_like_a_command_is_dropped(bus, tags, project, tmp_path):
+    manager, client = make_manager(bus, tags, project, tmp_path, enabled=True)
+    called = []
+    manager.set_command_handler(lambda *a: called.append(a))
+    _connect(client)
+
+    for topic in (manager.command_topic() + "/arm", "epw/TESTUNIT/cmd/result", "epw/OTHER/cmd"):
+        client.on_message(client, None, type("Msg", (), {"topic": topic, "payload": b"{}", "retain": False})())
+
+    assert called == []
+    manager.stop()

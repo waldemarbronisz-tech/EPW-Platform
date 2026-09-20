@@ -1,6 +1,6 @@
 # Typy linii
 
-Każda linia dozorowa ma dokładnie jeden z czterech typów, wybierany przy
+Każda linia dozorowa ma dokładnie jeden z pięciu typów, wybierany przy
 konfiguracji:
 
 - **Natychmiastowa** — wywołuje alarm w chwili naruszenia, ale tylko
@@ -24,9 +24,20 @@ konfiguracji:
   jak każdy inny typ linii; patrz
   [Tryby pracy: stykowy i parametryzowany](help://intr_input_modes),
   co liczy się jako awaria.
+- **Napadowa** — przycisk napadowy. Alarmuje natychmiast w **każdym**
+  stanie strefy, dokładnie jak linia całodobowa, i nie podlega też
+  filtrowi dozoru nocnego — przycisk napadowy działający tylko przy
+  uzbrojonym obiekcie byłby gorszy niż żaden. To, co czyni z niej
+  osobny typ: domyślnie **nie** uruchamia syreny. Alarm jest w pełni
+  prawdziwy (pamięć alarmu się zatrzaskuje, `Security.System.Panic`
+  przechodzi w True, sygnał lampy się załącza), ale po cichu — sens
+  alarmu napadowego polega na tym, że stojący nad tobą człowiek nie
+  dowiaduje się, że go nacisnąłeś. Instalacja, która chce go
+  słyszalnego, wyłącza to w Studiu, razem z resztą nastaw
+  sygnalizatora.
 
 Czas na wyjście i czas na wejście danej strefy (patrz
 [Uzbrajanie, rozbrajanie i czasy](help://intr_arming)) dotyczą każdej
 linii typu Natychmiastowa/Zwłoczna w tej strefie jako całości — w
 trakcie odliczania te dwa typy linii są nieaktywne; tylko linia
-Całodobowa przebija się przez to w każdym stanie.
+Całodobowa i Napadowa przebijają się przez to w każdym stanie.

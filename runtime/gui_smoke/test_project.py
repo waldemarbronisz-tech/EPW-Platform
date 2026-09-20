@@ -142,3 +142,95 @@ def test_recently_opened_missing_files_marked_valid_one_opens_and_reorders(make_
     # already proves this.
     assert target_path in ws_module.load_recent_projects()
     assert ws_module.load_recent_projects()[0] == target_path, "opening it again must move it back to the front"
+
+
+# --- File > Open: installing a project now rebuilds the controller -----------
+# Owner's instruction: "dzialaj z tym". The file used to be installed for
+# "the next start"; now the panel offers to rebuild in place, and the
+# rebuild itself is EPWCore.reload_project (proved against a real core in
+# runtime/epw_os/tests/test_project_hot_reload.py). What matters HERE is
+# that the panel asks, passes the person through, and never claims a
+# restart is needed when there is one.
+
+class _InstallingProjectManager(MockProjectManager):
+    def __init__(self, ok=True):
+        super().__init__()
+        self._ok = ok
+
+    def install_project_file(self, path, actor=None):
+        if self._ok:
+            return True, None
+        return False, {"key": "project_format.unreadable", "params": {"detail": "no"}, "text": "not a project"}
+
+
+def _install_window(make_window, project_manager, reload_result):
+    calls = []
+
+    def reload_project(actor="", level=None):
+        calls.append((actor, level))
+        return reload_result
+
+    access = MockControllableAccessManager()
+    access.level = "Engineer"
+    w = make_window(MockTagManager(), MockCommandManager(), access, project_manager,
+                    project_reload_callback=reload_project)
+    return w, calls
+
+
+def test_installing_a_project_offers_to_rebuild_and_names_who_asked(make_window, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("/tmp/projekt.epw", "")))
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question",
+                        staticmethod(lambda *a, **k: asked.append(a[2]) or QMessageBox.Yes))
+    w, calls = _install_window(make_window, _InstallingProjectManager(), {"success": True, "reason": ""})
+
+    w._install_project_file()
+
+    assert asked, "asked, not assumed - the rebuild stops the scan and the alarm system for a moment"
+    assert calls == [("Panel:Engineer", None)], "the person is named; the level check is the core's own"
+
+
+def test_declining_the_rebuild_leaves_the_file_for_the_next_start(make_window, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("/tmp/projekt.epw", "")))
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.No))
+    w, calls = _install_window(make_window, _InstallingProjectManager(), {"success": True, "reason": ""})
+
+    w._install_project_file()
+
+    assert calls == [], "the file is installed, but nothing was taken apart"
+
+
+def test_a_refused_file_is_never_offered_for_a_rebuild(make_window, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("/tmp/junk.epw", "")))
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: asked.append(a) or QMessageBox.Yes))
+    w, calls = _install_window(make_window, _InstallingProjectManager(ok=False),
+                               {"success": True, "reason": ""})
+
+    w._install_project_file()
+
+    assert asked == [] and calls == [], "a file the reader refused never reaches the controller"
+
+
+def test_without_a_core_behind_it_the_panel_still_installs_for_the_next_start(make_window, monkeypatch):
+    """The path that existed before: a window built without a reload
+    callback must not lose File > Open."""
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("/tmp/projekt.epw", "")))
+    asked = []
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: asked.append(a) or QMessageBox.Yes))
+    access = MockControllableAccessManager()
+    access.level = "Engineer"
+    project_manager = _InstallingProjectManager()
+    w = make_window(MockTagManager(), MockCommandManager(), access, project_manager)
+
+    w._install_project_file()
+
+    assert asked == [], "nothing to offer - there is no controller to rebuild"
