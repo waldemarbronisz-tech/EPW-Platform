@@ -266,5 +266,9 @@
   },
   "labels": {
     "empty": "Brak etykiet w projekcie - nadaj etykietę przewodowi albo użyj „Dodaj odwołanie...”."
+  },
+  "catalog": {
+    "input": "Wejście",
+    "output": "Wyjście"
   }
 }

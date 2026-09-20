@@ -13,6 +13,7 @@ vs. ui/panels/signals.py, and core/help_content.py below: this module
 is testable without a QApplication, and reusable for the "Eksportuj
 katalog bloków..." menu action (§2.4) with no UI dependency at all.
 """
+from shared.logic import i18n as block_i18n
 from shared.logic.blocks.registry import BlockRegistry
 
 # feat/help-system §5.5-adjacent convenience: a category label -> a short
@@ -21,9 +22,18 @@ from shared.logic.blocks.registry import BlockRegistry
 _CATEGORY_INTROS = {}
 
 
+def _language():
+    """The language the catalogue should be generated in. Imported here
+    rather than at module scope so this module stays headless and
+    testable on its own, exactly as its docstring already claims."""
+    from logic_studio.i18n import block_language
+    return block_language()
+
+
 def _direction_label(pin) -> str:
+    from logic_studio.i18n import tr
     from shared.logic.blocks.pin import Pin
-    return "Input" if pin.direction == Pin.DIR_INPUT else "Output"
+    return tr("catalog.input") if pin.direction == Pin.DIR_INPUT else tr("catalog.output")
 
 
 def describe_block_type(type_id: str) -> dict:
@@ -45,31 +55,32 @@ def describe_block_type(type_id: str) -> dict:
         return None
 
     block = block_class()
+    language = _language()
     pins = []
     for pin in block.inputs + block.outputs:
         pins.append({
             "name": pin.name,
             "direction": _direction_label(pin),
             "data_type": pin.data_type,
-            "description": block.pin_description(pin.name),
+            "description": block_i18n.text(block.pin_description(pin.name), language),
             "safety_relevant": bool(getattr(pin, "safety_relevant", False)),
         })
 
     properties = []
     for key, value in block.properties.items():
         properties.append({
-            "key": key,
+            "key": block_i18n.property_label(key, language),
             "type": type(value).__name__,
             "default": value,
             "unit": block.property_unit(key),
-            "description": block.property_description(key),
+            "description": block_i18n.text(block.property_description(key), language),
         })
 
     return {
         "type_id": type_id,
-        "display_name": block.display_name,
-        "category": block.category,
-        "description": block.description,
+        "display_name": block_i18n.block_label(block.display_name, language),
+        "category": block_i18n.category_label(block.category, language),
+        "description": block_i18n.text(block.description, language),
         "pins": pins,
         "properties": properties,
         "aliases": list(block.aliases),

@@ -266,5 +266,9 @@
   },
   "labels": {
     "empty": "No labels in the project - give a wire a label or use 'Add reference...'."
+  },
+  "catalog": {
+    "input": "Input",
+    "output": "Output"
   }
 }
