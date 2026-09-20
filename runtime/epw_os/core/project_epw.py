@@ -45,7 +45,7 @@ PROJECT_KEYS = (
     "format", "schema_version", "project_id", "metadata", "modules", "enabled_features",
     "devices", "point_registry", "tag_descriptions", "output_descriptions", "analog_points", "analog_outputs",
     "apparatuses", "intrusion_zones", "intrusion_lines", "intrusion_users",
-    "intrusion_power_supervision",
+    "intrusion_power_supervision", "intrusion_sounder",
     "process_protections", "electrical_protection_stages", "modbus_bus", "switching_counter_settings",
     "mqtt", "service_notes",
 )
@@ -70,6 +70,12 @@ MQTT_SETTINGS = ("enabled", "host", "port", "username", "tls", "client_id", "top
 SERVICE_NOTE_SETTINGS = ("notes",)          # per device tag - its whole logbook
 ANALOG_STRUCTURE = ("description", "technical_note")
 POWER_SUPERVISION_KEYS = ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state")
+# The sounder is SETTINGS, not structure: how long the siren may sound
+# and whether a hold-up line sounds at all are nastawy of the same kind
+# as a line's alarm_hold_seconds. Which output the siren hangs on is not
+# here at all - that is a line of logic (shared/project_format.py's
+# Sounder).
+SOUNDER_KEYS = ("siren_seconds", "panic_silent")
 
 # Sections where any difference at all is structure.
 _WHOLLY_STRUCTURAL = ("project_id", "metadata", "modules", "enabled_features", "devices", "point_registry",
@@ -160,6 +166,7 @@ def build_project_view(project) -> dict:
         # live in the controller's own access file.
         "intrusion_users": [asdict(u) for u in project.intrusion_users],
         "intrusion_power_supervision": _power_supervision_view(project.power_supervision),
+        "intrusion_sounder": asdict(project.sounder),
         "process_protections": [asdict(p) for p in project.process_protections],
         "electrical_protection_stages": [asdict(s) for s in project.electrical_protection_stages],
         # Read by ProjectManager.get_mqtt_config()/get_service_notes() exactly
@@ -289,6 +296,15 @@ def diff_settings(project, config: dict) -> SettingsDiff:
             current, base = notes.get(tag, []), baseline["service_notes"].get(tag, [])
             if not _same(current, base):
                 diff.changes.append(SettingChange("service_notes", tag, "notes", base, current))
+
+    sounder = config.get("intrusion_sounder", baseline["intrusion_sounder"])
+    if not isinstance(sounder, dict):
+        diff.structural.append("intrusion_sounder")
+    else:
+        for name in SOUNDER_KEYS:
+            base = baseline["intrusion_sounder"][name]
+            if name in sounder and not _same(sounder[name], base):
+                diff.changes.append(SettingChange("intrusion_sounder", "sounder", name, base, sounder[name]))
 
     power = config.get("intrusion_power_supervision", baseline["intrusion_power_supervision"])
     normalized = {k: power.get(k) for k in POWER_SUPERVISION_KEYS} if isinstance(power, dict) and power else {}

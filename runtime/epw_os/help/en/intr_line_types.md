@@ -1,6 +1,6 @@
 # Line Types
 
-Every supervision line is exactly one of four types, chosen when it's
+Every supervision line is exactly one of five types, chosen when it's
 configured:
 
 - **Instant** — raises an alarm the moment it's violated, but only
@@ -23,9 +23,19 @@ configured:
   other line type; see
   [Input Modes: Contact vs. Parametrized](help://intr_input_modes) for
   what counts as a fault.
+- **Panic (hold-up)** — a hold-up button. Alarms immediately in **any**
+  zone state, exactly like a 24-Hour line, and it is not filtered out
+  by night arming either — a hold-up button that only worked while the
+  building was armed would be worse than none. What makes it its own
+  type: by default it does **not** sound the siren. The alarm is
+  entirely real (the alarm memory latches, `Security.System.Panic` goes
+  True, the strobe signal comes on), but quietly — the point of a
+  hold-up alarm is that the person standing over you does not learn
+  you pressed it. An installation that wants it audible turns that off
+  in Studio, with the rest of the sounder settings.
 
 A zone's exit delay and entry delay (see
 [Arming, Disarming, and Delays](help://intr_arming)) apply to every
 Instant/Delayed line in that zone as a whole — while either is
-counting down, those two line types are inert; only a 24-Hour line
-pierces through in every state.
+counting down, those two line types are inert; only a 24-Hour or Panic
+line pierces through in every state.

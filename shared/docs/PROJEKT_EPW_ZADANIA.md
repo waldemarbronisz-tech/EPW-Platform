@@ -62,7 +62,9 @@ Moduł spoza składu w ogóle nie jest tworzony: nie ma obiektu, wątków ani ta
    - *Plik → Otwórz* (poziom Engineer) wgrywa wskazany `.epw`;
    - plik jest najpierw sprawdzany wspólnym czytnikiem, a zły jest odrzucany z powodem;
    - poprzedni plik zostaje jako `projekt.epw.bak`, a zdarzenie trafia do dziennika;
-   - zmiana działa **po restarcie**, bo tagi, moduły i strony budują się z projektu raz, przy starcie.
+   - panel pyta, czy przebudować sterownik teraz — i **przebudowuje go bez
+     restartu** (`EPWCore.reload_project()`, p. 3a). Odmowa zostawia plik na
+     następny start, tak jak było wcześniej.
 2. **Ręcznie:** skopiowanie pliku do `runtime/projekt.epw` (albo wskazanie go przez `EPW_PROJECT_FILE`) i restart.
 3. **Odczyt ze sterownika:** `GET /api/v1/project` zwraca:
    - nazwę, opis, autora i daty;
@@ -71,6 +73,58 @@ Moduł spoza składu w ogóle nie jest tworzony: nie ma obiektu, wątków ani ta
 
    Tego Studio potrzebuje przed wysłaniem projektu, żeby zatrzymać się, gdy sterownik ma nowszą rewizję.
 4. **Ściągnięcie ze sterownika:** *Plik → Eksport* zapisuje `projekt.epw` dokładnie w postaci, w jakiej sterownik z nim pracuje, razem z nastawami zmienionymi na panelu.
+
+---
+
+## 3a. Przeładowanie projektu bez restartu — ZROBIONE 2026-09-20
+
+Polecenie właściciela: „działaj z tym". Do tej pory na żywo dało się
+wymienić wyłącznie **program logiki**; reszta budowała się z projektu raz,
+przy starcie. `EPWCore.reload_project()` przebudowuje całą resztę.
+
+**Co jest przebudowywane** — dokładnie to, co `startup()` buduje z projektu,
+w tej samej kolejności i **tymi samymi pomocnikami** (ta sama para
+start/stop modułu, ten sam `_configure_io_driver()`, te same definicje
+komend), żeby istniał jeden opis „jak projekt staje się sterownikiem", a nie
+dwa, które mogą się rozjechać:
+
+karty i ich kanały → sterownik magistrali → rejestr urządzeń → aparaty i
+ich powiązania z Widokiem Głównym → symulowana instalacja → użytkownicy
+alarmówki → moduły ze składu → opisy tagów i rejestr punktów → definicje
+komend → bramka MQTT → program logiki → sprawdzenie składu.
+
+**Co NIE jest ruszane** — wszystko, czego projekt nie posiada: baza i
+historian, sam menedżer sterowników, `safety_kernel`, łącze MQTT, REST,
+dziennik audytowy, poziom dostępu, na którym ktoś jest zalogowany. To
+przeżywa projekty.
+
+**Cztery rzeczy, które naiwne „domerguj" robi źle** — i dlatego mają
+własne metody:
+
+| Problem | Odpowiedź |
+|---|---|
+| karta skasowana w Studiu zostawiała swoje tagi kanałów na zawsze | `TagManager.reconfigure()` — jedyna droga, którą tag kanału może **zniknąć**; usuwa dokładnie to, co poprzednie `configure()` stworzyło, a czego ta lista kart już nie tworzy |
+| aparat skasowany w Studiu dalej dawał się sterować (`load_definitions()` merguje po kluczu) | `CommandManager.clear_definitions()` przed ponownym wczytaniem |
+| karta znikała z projektu, ale zostawała w rejestrze urządzeń i wisiała na timeoucie | `DeviceManager.unregister_device()` |
+| `register_driver()` podmienia referencję po cichu, więc poprzedni sterownik magistrali dalej odpytywałby tę samą szynę własnym wątkiem | `DriverManager.unregister_driver()` — zatrzymuje i zapomina; nowy startuje pojedynczo, bo `start_all()` uruchomiłoby drugi wątek w każdym już działającym sterowniku |
+
+**Wymuszenia są zdejmowane na początku** — wymuszenie przypina tag, którego
+nowy projekt może w ogóle nie mieć.
+
+**Panel** przebudowuje się tak samo, jak przy zmianie języka i zmianie
+składu: `main.py` słucha zdarzenia `project_reloaded` i woła
+`rebuild_window()`. Strony i nawigacja też budują się z projektu i żadnego z
+tych trzech przypadków nie da się bezpiecznie połatać w miejscu.
+
+**Poziom Engineer, wpis w dzienniku** (`PROJECT_RELOADED`). Odrzucony plik
+zostawia w pracy poprzedni projekt.
+
+**REST:** `POST /api/v1/project/install` domyślnie przeładowuje
+(`?reload=false` wgrywa na następny start; restart nie jest już planowany,
+kiedy przeładowanie się udało) i odpowiada polem `reloaded` — czy sterownik
+naprawdę pracuje już według przysłanego projektu.
+
+Dowód: `runtime/epw_os/tests/test_project_hot_reload.py`.
 
 ---
 
@@ -104,8 +158,8 @@ real engine, we'd evaluate the interlock graph").
 Teraz skan naprawdę działa, na tym samym silniku i tej samej bibliotece
 bloków, co symulacja w Logic Studio (`shared/logic/`). Szczegóły —
 odmowy ładowarki, granice wobec trybu szkoleniowego i wymuszeń,
-odwzorowanie sygnałów `SYS.*` oraz to, czego jeszcze NIE ma
-(`SSWIN.*`, trwałość bitów retencyjnych) — opisuje osobny dokument:
+odwzorowanie sygnałów `SYS.*` i `SSWIN.*` oraz trwałość bitów
+retencyjnych — opisuje osobny dokument:
 **`LOGIKA_W_RUNTIME.md`**.
 
 ## 5. Wysyłanie projektu na sterownik przez REST — ZROBIONE 2026-09-17
@@ -246,7 +300,9 @@ przez `project_format.apply_settings_snapshot()`).
 - **Zabezpieczenia elektryczne w runtime** nie mają trwałości poza projektem.
   - Wartości etapów pochodzą z `projekt.epw`, a etap, którego projekt nie wymienia, ma wartość domyślną z katalogu ADA01.
   - Test weryfikacji zabezpieczeń dostaje id aparatu z listy aparatów projektu mających wyjście i punkt zwrotny.
-- **Wgranie projektu nie przebudowuje działającego sterownika** — potrzebny restart (p. 3).
+- **Wgranie projektu przebudowuje działający sterownik** — ZROBIONE 2026-09-20,
+  p. 3a. Restart został jako droga awaryjna (`?reload=false&restart=true`), nie
+  jako normalna procedura.
 - **Sterowanie z Home Assistanta przez MQTT** — ZROBIONE 2026-09-20.
   Łącze MQTT przestało być tylko podglądem: HAOS może uzbrajać alarmówkę
   (pełny i nocny dozór), rozbrajać, kasować alarm, zmieniać nastawy

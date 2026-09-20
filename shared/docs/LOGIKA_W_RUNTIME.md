@@ -148,10 +148,34 @@ tłumaczenie jest decyzją i stoi w jednym miejscu:
   dostępu, który deklaruje sam blok („Minimalny poziom dostępu" —
   Logic Studio to tylko zapisuje, egzekucja jest po stronie EPW-OS).
 
-Czego ten sterownik **nie ma** i dlatego nie udaje: dozoru częściowego
-(`ARMED_PARTIAL` jako komenda — `CMD_ARM_PARTIAL`), sygnalizatora
-(`SIREN_*`, `STROBE_*`) i osobnej linii napadowej (`PANIC`). Odczyt daje
-wartość bezpieczną, a **zapis** takiej komendy jest raz zgłaszany do logu.
+**Sygnalizator — to jest stan, nie wyjście.** Polecenie właściciela:
+„chcę móc to swobodnie programować ustawiając bit wewnętrzny alarm i
+pobudzenie danego DO który wyjdzie na syrenę". EPW-OS **nie steruje żadną
+syreną**. Wystawia fakty, a schemat decyduje, co z nimi zrobić:
+
+| Sygnał | Znaczy |
+|---|---|
+| `SSWIN.SIREN_ACTIVE` | sygnalizator ma teraz dźwięczeć — **to** podpina się do DO |
+| `SSWIN.SIREN_TIME_LEFT` | ile sekund jeszcze wolno (0 = nie dźwięczy albo nie ma limitu) |
+| `SSWIN.STROBE_ACTIVE` | pamięć alarmu — światło, które przeżywa dźwięk, aż ktoś skasuje alarm |
+| `SSWIN.PANIC` | zadziałała linia napadowa i nikt tego jeszcze nie potwierdził |
+| `SSWIN.CMD_SILENCE` | wycisz **sam dźwięk**: strefa zostaje w ALARM, pamięć i lampa zostają |
+
+`SIREN_ACTIVE` gaśnie samo po czasie z nastawy `Sounder.siren_seconds`
+(0 = bez ograniczenia), podczas gdy `ALARM_ACTIVE` i `STROBE_ACTIVE` trwają
+dalej — syrena bez końca jest zwykle niezgodna z przepisami, a lampa i tak
+pokazuje, że coś się stało. `CMD_SILENCE` jako jedyna komenda działa
+**na system, nie na każdą strefę po kolei**: stan sygnalizatora jest jeden.
+
+**Linia napadowa** (`LineType.PANIC`) alarmuje w **każdym** stanie strefy,
+jak linia całodobowa, i nie podlega filtrowi dozoru nocnego. Różni się tym,
+że domyślnie **nie uruchamia syreny** (`Sounder.panic_silent`) — sens
+przycisku napadowego polega na tym, że stojący nad tobą człowiek nie
+dowiaduje się, że go nacisnąłeś.
+
+`UNSERVED_SIGNALS` jest dziś **puste**. Mechanizm został: odczyt sygnału,
+na który ten sterownik nie odpowiada, daje wartość bezpieczną, a **zapis**
+takiej komendy jest raz zgłaszany do logu — nie znika po cichu.
 
 **Sygnały retencyjne (`MR.`/`MWR.`) przeżywają restart.** Ich wartości
 leżą w `runtime_state.json` (sekcja `logic_retentive`), zapisywane co 30 s
@@ -166,10 +190,10 @@ wartość po programie, który już ich nie zna, nie jest wskrzeszana.
 - **`cycle_delayed_reads`** (diagnostyka „odczyt wyprzedza zapis")
   zostaje po stronie edytora — eksport tego nie niesie, a silnik tego
   nie czyta.
-- **Sygnalizator alarmówki** (syrena/lampa) nie istnieje w runtime —
-  dopóki nie powstanie, `SSWIN.SIREN_*`/`STROBE_*`/`CMD_SILENCE` nie mają
-  czego mówić.
-- **Linia napadowa** nie istnieje jako typ linii — stąd `SSWIN.PANIC`.
+- ~~Sygnalizator alarmówki~~ — ZROBIONY 2026-09-20, jako **stan**:
+  `SSWIN.SIREN_ACTIVE` / `SIREN_TIME_LEFT` / `STROBE_ACTIVE` / `CMD_SILENCE`,
+  nastawy w `Sounder` (Studio → Strefy). Wyjście na syrenę rysuje inżynier.
+- ~~Linia napadowa~~ — ZROBIONA 2026-09-20 (`LineType.PANIC`, `SSWIN.PANIC`).
 - ~~Dozór częściowy (nocny)~~ — ZROBIONY 2026-09-20 (`ArmMode.NIGHT`,
   flaga `active_at_night` przy linii; `SSWIN.CMD_ARM_PARTIAL` działa).
 
@@ -186,3 +210,4 @@ wartość po programie, który już ich nie zna, nie jest wskrzeszana.
 | `runtime/epw_os/tests/test_logic_execution.py` | zachowanie sterownika (skan, granice, odmowy) |
 | `runtime/epw_os/tests/test_logic_visibility.py` | wskaźnik pracy, REST, przeładowanie bez restartu |
 | `runtime/epw_os/tests/test_sswin_and_retentive.py` | mapowanie `SSWIN.*`, komendy, bity retencyjne |
+| `runtime/epw_os/tests/test_intrusion_sounder_and_panic.py` | sygnalizator jako stan, linia napadowa |

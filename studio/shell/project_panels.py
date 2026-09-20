@@ -104,7 +104,7 @@ from studio.shell.project_format import (
     effective_location,
     Card, Device, ELECTRICAL_PROTECTION_ACTIONS, ElectricalProtectionStage, IntrusionUser, Line,
     LineInputMode, LineParametrization, LineType, Location, MqttConfig, NORMAL_STATE_NC, NORMAL_STATE_NO,
-    Point, PowerSupervision, ProcessProtection, ProjectFormatError, Zone, default_value_windows,
+    Point, PowerSupervision, ProcessProtection, ProjectFormatError, Sounder, Zone, default_value_windows,
     apply_settings_snapshot, load_project, settings_diff, settings_hash, settings_snapshot,
 )
 from studio.shell.site_format import LINK_TAG_RE, OBJECT_LINK_MARK, link_type_for, suggest_link_tag
@@ -2218,7 +2218,32 @@ class ZonesPanel(QWidget):
         power_form.addRow(tr("zones.mains_tag"), mains_row)
         power_form.addRow(tr("zones.battery_tag"), battery_row)
         layout.addLayout(power_form)
+
+        # The SOUNDER. Note what is not here: no output to pick. EPW-OS
+        # publishes SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE
+        # and the engineer wires those to a DO in Logic Studio (owner's
+        # decision - "chce moc to swobodnie programowac ustawiajac bit
+        # wewnetrzny alarm i pobudzenie danego DO ktory wyjdzie na
+        # syrene"). What is configurable is only for how long it may
+        # sound, and whether a hold-up line sounds at all.
+        layout.addWidget(_section_label(tr("zones.sounder_heading")))
+        sounder_hint = QLabel(tr("zones.sounder_hint"))
+        sounder_hint.setWordWrap(True)
+        layout.addWidget(sounder_hint)
+        sounder_form = QFormLayout()
+        self.siren_seconds_spin = QDoubleSpinBox()
+        self.siren_seconds_spin.setRange(0.0, 3600.0)
+        self.siren_seconds_spin.setDecimals(0)
+        self.siren_seconds_spin.setSuffix(" s")
+        self.siren_seconds_spin.setSpecialValueText(tr("zones.siren_no_limit"))
+        self.panic_silent_check = QCheckBox(tr("zones.panic_silent"))
+        sounder_form.addRow(tr("zones.siren_seconds"), self.siren_seconds_spin)
+        sounder_form.addRow("", self.panic_silent_check)
+        layout.addLayout(sounder_form)
         layout.addStretch(1)
+
+        self.siren_seconds_spin.valueChanged.connect(self._on_sounder_changed)
+        self.panic_silent_check.toggled.connect(self._on_sounder_changed)
 
         self.mains_tag_combo.currentIndexChanged.connect(self._on_power_changed)
         self.mains_ok_check.toggled.connect(self._on_power_changed)
@@ -2252,6 +2277,12 @@ class ZonesPanel(QWidget):
         self.battery_ok_check.blockSignals(True)
         self.battery_ok_check.setChecked(ps.battery_ok_state)
         self.battery_ok_check.blockSignals(False)
+        self.siren_seconds_spin.blockSignals(True)
+        self.siren_seconds_spin.setValue(float(project.sounder.siren_seconds))
+        self.siren_seconds_spin.blockSignals(False)
+        self.panic_silent_check.blockSignals(True)
+        self.panic_silent_check.setChecked(bool(project.sounder.panic_silent))
+        self.panic_silent_check.blockSignals(False)
         self._loading = False
 
     def _append_row(self, zone: Zone):
@@ -2321,6 +2352,17 @@ class ZonesPanel(QWidget):
             mains_ok_state=self.mains_ok_check.isChecked(),
             battery_tag=self.battery_tag_combo.currentData(),
             battery_ok_state=self.battery_ok_check.isChecked(),
+        )
+        project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_sounder_changed(self):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        project.sounder = Sounder(
+            siren_seconds=float(self.siren_seconds_spin.value()),
+            panic_silent=self.panic_silent_check.isChecked(),
         )
         project.touch()
         self._studio_window._on_project_changed()
@@ -4528,7 +4570,16 @@ class ControllerPanel(QWidget):
                 message = tr("controller.send_failed", reason=result)
             QMessageBox.warning(self, tr("controller.send_to_device"), message)
             return
-        key = "controller.send_done" if result.get("restart_scheduled") else "controller.send_done_no_restart"
+        # Three real outcomes, not two: the controller rebuilt itself
+        # from the project (the normal one now), it is restarting onto
+        # it, or the file is waiting for its next start.
+        reloaded = result.get("reloaded") or {}
+        if reloaded.get("success"):
+            key = "controller.send_done_reloaded"
+        elif result.get("restart_scheduled"):
+            key = "controller.send_done"
+        else:
+            key = "controller.send_done_no_restart"
         self.status_label.setText(tr("controller.status_sent", revision=result.get("revision")))
         QMessageBox.information(self, tr("controller.send_to_device"), tr(key, revision=result.get("revision")))
 

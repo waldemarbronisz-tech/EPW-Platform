@@ -479,12 +479,21 @@ def reset_switching_counter(tag_name: str, core=Depends(get_core), level: str = 
 
 @app.post("/api/v1/project/install")
 async def install_project(request: Request, expected_revision: Optional[int] = None, restart: bool = True,
+                          reload: bool = True,
                           core=Depends(get_core), level: str = Depends(_require_engineer)):
     """Installs the projekt.epw in the request body as this controller's
     project (ProjectManager.install_project_file: checked by the shared
     reader first, previous file kept as .bak, rolled back at the next
-    start if the new one is refused there) and, unless ?restart=false,
-    asks the process to restart a moment after answering.
+    start if the new one is refused there) and puts it into service.
+
+    By default the controller REBUILDS ITSELF from the new file without
+    restarting (EPWCore.reload_project): cards, points, apparatuses,
+    commands, the alarm system, the protections, the logic and the panel
+    are all replaced in place. `?reload=false` installs the file and
+    leaves it for the next start; `?restart=true&reload=false` is the
+    old behaviour, a restart a moment after answering. A restart is
+    never scheduled on top of a reload that worked - there would be
+    nothing left to restart for.
 
     `expected_revision` is the revision Studio read from GET
     /api/v1/project before deciding to send: when the controller's
@@ -524,10 +533,26 @@ async def install_project(request: Request, expected_revision: Optional[int] = N
     installed = pf.read_project(pm.project_file)
     revision = installed.project.revision if installed.ok else None
     settings_hash = pf.settings_hash(installed.project) if installed.ok else None
-    if restart:
+    reloaded = None
+    if reload:
+        # Synchronous, inside the request: the caller (Studio) is told
+        # whether the controller is actually RUNNING the project it just
+        # sent, which is the only answer worth having. A refused reload
+        # leaves the previous project running.
+        result = core.reload_project(actor=actor, level=None)
+        reloaded = {"success": result["success"], "reason": result["reason"],
+                    "removed_tags": result["removed_tags"],
+                    "issues": [issue["text"] for issue in result["issues"]],
+                    "logic": {"success": result["logic"].get("success"),
+                              "reason": result["logic"].get("reason", "")}}
+    if restart and not (reloaded and reloaded["success"]):
         # Answer first, then go down: the request must complete before
         # the process exits.
         threading.Timer(1.5, core.request_restart,
                         args=(f"project installed via REST (revision {revision})", actor)).start()
+        restart_scheduled = True
+    else:
+        restart_scheduled = False
     return {"installed": True, "path": pm.project_file, "revision": revision, "settings_hash": settings_hash,
-            "previous_revision": current, "restart_scheduled": bool(restart), "actor": actor}
+            "previous_revision": current, "restart_scheduled": restart_scheduled,
+            "reloaded": reloaded, "actor": actor}

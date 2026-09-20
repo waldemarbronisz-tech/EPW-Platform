@@ -231,10 +231,10 @@ class RemoteCommandGateway:
     # --- what a command may actually do ----------------------------------------
 
     def _cmd_intrusion(self, body, user, command_id) -> dict:
-        """arm / arm_night / disarm / reset, on one zone or on all of
-        them. Straight into IntrusionManager with `user=` - so the zones
-        that person may operate, and the audit entry naming them, are
-        exactly the same as if they had pressed the button at the
+        """arm / arm_night / disarm / reset / silence, on one zone or on
+        all of them. Straight into IntrusionManager with `user=` - so the
+        zones that person may operate, and the audit entry naming them,
+        are exactly the same as if they had pressed the button at the
         cabinet."""
         from epw_os.core.intrusion_manager import ArmMode
 
@@ -253,6 +253,13 @@ class RemoteCommandGateway:
             zone_ids = [target]
         if not zone_ids:
             return self._refuse("this controller has no zones", command_id, user=user)
+
+        # Silencing is not per zone - there is one sounder state - so it
+        # is answered before the loop rather than run once per zone.
+        if what == "silence":
+            if self.intrusion_manager.silence(actor=f"MQTT:{user['name']}", user=user["id"]):
+                return self._accept(command_id, user, "sounder silenced (the alarm itself is unchanged)")
+            return self._refuse("nothing to silence, or not this person's zone", command_id, user=user)
 
         done, refused = [], []
         for zone_id in zone_ids:

@@ -62,6 +62,22 @@ to its name on the Configure Zones dialog):
   AND reads unhealthy; unconfigured reads True (nothing to report,
   same as if the check didn't exist) — see
   [Power Supervision](help://intr_power_supervision)
+- `Security.System.SirenActive` — **True while the sounder should be
+  sounding**. This is the one you wire to a digital output for the
+  siren, in Logic Studio, through whatever interlocks the installation
+  needs. It goes False on its own once the configured sounding time is
+  up (Studio → Zones → Sounder; 0 means no limit) while the alarm
+  itself carries on — a siren that never stops is usually against local
+  noise rules
+- `Security.System.StrobeActive` — the light, which outlives the noise:
+  True from the alarm until somebody clears the alarm memory, so a
+  person coming back to the site sees that something happened while
+  they were away
+- `Security.System.Panic` — True after a
+  [Panic (hold-up) line](help://intr_line_types) fired, until the alarm
+  memory is cleared. Separate from `Security.System.Alarm` on purpose,
+  so logic can send **this** one somewhere quietly and leave the siren
+  alone
 - `Security.System.TechnicalAlarm` — True while either power check
   above is NOT healthy (`MainsOk` or `BatteryOk` is False); a separate
   category from `Security.System.Alarm`, which stays strictly about
@@ -70,3 +86,10 @@ to its name on the Configure Zones dialog):
 Writing `Security.Zone.<id>.ArmRequest` is the only tag this system
 reads as an input — every other tag above is read-only, written by the
 system itself.
+
+A logic program can also reach all of this through the `SSWIN.*`
+catalog, which is the same state under the standard signal names, plus
+the commands `SSWIN.CMD_ARM` / `CMD_ARM_PARTIAL` / `CMD_DISARM` /
+`CMD_RESET` and `SSWIN.CMD_SILENCE` — the last one stops the **noise**
+only: the zone stays in alarm, the memory and the strobe stay on. The
+same thing the **Silence** button on the Overview page does.

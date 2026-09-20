@@ -30,12 +30,17 @@ every zone armed FULLY, ARMED_PARTIAL covers both "some zones armed" and
 "armed, but only at night", and CMD_ARM_PARTIAL arms every zone in NIGHT
 mode. A schematic that must know the difference gets it.
 
-What this controller still does NOT have, and therefore does not pretend
-to serve: a sounder (no siren/strobe output exists yet, so SIREN_*/
-STROBE_* would be inventions) and a dedicated panic line type.
-UNSERVED_SIGNALS below is that list, and a read of one gets the catalog's
-own safe value while a WRITE to one is reported instead of vanishing
-(see logic_runtime.py's TagIOProvider.write_system_signal).
+The sounder is real now, and it is real in the way the owner asked for:
+the controller owns the STATE - SIREN_ACTIVE, SIREN_TIME_LEFT,
+STROBE_ACTIVE, PANIC, and CMD_SILENCE to stop the noise without touching
+the alarm - while the siren itself hangs on whatever DO the engineer
+wires it to in Logic Studio. Nothing here energizes an output; these are
+the facts a schematic reads to decide that for itself.
+
+UNSERVED_SIGNALS is empty, and stays in place as the mechanism rather
+than the list: a read of an unserved signal gets the catalog's own safe
+value while a WRITE to one is reported instead of vanishing (see
+logic_runtime.py's TagIOProvider.write_system_signal).
 """
 from epw_os.core.intrusion_manager import ArmMode, LineState, ZoneState
 from epw_os.core.logging import log
@@ -43,13 +48,7 @@ from epw_os.core.logging import log
 # Signals this controller cannot answer honestly yet - see the module
 # docstring. Kept as data rather than as gaps in the dispatch table below
 # so that "unserved" is a statement, not an accident of omission.
-UNSERVED_SIGNALS = frozenset({
-    "SSWIN.PANIC",            # no panic line type exists
-    "SSWIN.SIREN_ACTIVE",     # no sounder output exists
-    "SSWIN.STROBE_ACTIVE",
-    "SSWIN.SIREN_TIME_LEFT",
-    "SSWIN.CMD_SILENCE",      # nothing to silence without a sounder
-})
+UNSERVED_SIGNALS = frozenset()
 
 # The line states that ARE sabotage, as the catalog describes it
 # ("obudowa, przewod, zwarcie linii") - a subset of what this controller
@@ -85,7 +84,14 @@ class SswinSignalSource:
     # --- reads --------------------------------------------------------------
 
     def serves(self, signal_id: str) -> bool:
-        return signal_id.startswith("SSWIN.") and signal_id not in UNSERVED_SIGNALS
+        """Whether this source answers for the signal at all. Asked of the
+        tables rather than of the "SSWIN." prefix: with UNSERVED_SIGNALS
+        empty, a prefix test would claim every name in the namespace,
+        including a command this controller has no implementation for -
+        which is precisely the case logic_runtime.py wants reported."""
+        if signal_id in UNSERVED_SIGNALS:
+            return False
+        return signal_id in _READERS or signal_id in _COMMANDS or signal_id in _SYSTEM_COMMANDS
 
     def read(self, signal_id: str):
         """The signal's value, or None when this source does not answer
@@ -115,13 +121,19 @@ class SswinSignalSource:
         (logic_runtime.py) - passing a level here as well would apply the
         operator gate to a program that is not an operator.
         """
+        system_command = _SYSTEM_COMMANDS.get(signal_id)
         command = _COMMANDS.get(signal_id)
-        if command is None or signal_id in UNSERVED_SIGNALS:
+        if (command is None and system_command is None) or signal_id in UNSERVED_SIGNALS:
             return False
         manager = self._manager()
         if manager is None:
             log.warning(f"Logic issued {signal_id}, but this controller has no intrusion module.")
             return False
+
+        if system_command is not None:
+            done = system_command(manager, actor)
+            log.info(f"Logic issued {signal_id}: {'carried out' if done else 'nothing to do'}.")
+            return done
 
         zones = manager.get_zones()
         if not zones:
@@ -246,6 +258,28 @@ def _last_trigger(manager) -> float:
     return 0.0
 
 
+def _siren_active(manager) -> bool:
+    """What a schematic drives the siren DO from. It goes false on its
+    own when the configured sounding time is up, while ALARM_ACTIVE and
+    STROBE_ACTIVE carry on - the noise stops, the alarm does not."""
+    return bool(manager.siren_active())
+
+
+def _strobe_active(manager) -> bool:
+    return bool(manager.strobe_active())
+
+
+def _siren_time_left(manager) -> float:
+    return float(manager.siren_time_left())
+
+
+def _panic(manager) -> bool:
+    """A hold-up line fired and nobody has cleared the alarm memory yet.
+    Separate from ALARM_ACTIVE on purpose: a schematic may want to send
+    THIS one somewhere quietly and leave the siren alone."""
+    return bool(manager.panic_active())
+
+
 _READERS = {
     "SSWIN.ARMED": _armed,
     "SSWIN.ARMED_PARTIAL": _armed_partial,
@@ -261,6 +295,10 @@ _READERS = {
     "SSWIN.FAULT": _fault,
     "SSWIN.LAST_TRIGGER": _last_trigger,
     "SSWIN.ACTIVE_COUNT": _active_count,
+    "SSWIN.SIREN_ACTIVE": _siren_active,
+    "SSWIN.STROBE_ACTIVE": _strobe_active,
+    "SSWIN.SIREN_TIME_LEFT": _siren_time_left,
+    "SSWIN.PANIC": _panic,
 }
 
 _REAL_SIGNALS = frozenset({"SSWIN.DELAY_REMAINING", "SSWIN.LAST_TRIGGER", "SSWIN.ACTIVE_COUNT",
@@ -293,9 +331,24 @@ def _arm_night(manager, zone_id: str, actor: str) -> bool:
     return _arm(manager, zone_id, actor, mode=ArmMode.NIGHT)
 
 
+def _silence(manager, actor: str) -> bool:
+    """"Wycisz sygnalizator" - the sounder only. The zone stays in ALARM,
+    the memory stays, the strobe stays on. Not per zone: there is one
+    sounder state, so silencing it "on every zone" would be four calls
+    doing one thing."""
+    return bool(manager.silence(actor=actor))
+
+
 _COMMANDS = {
     "SSWIN.CMD_ARM": _arm,
     "SSWIN.CMD_ARM_PARTIAL": _arm_night,
     "SSWIN.CMD_DISARM": _disarm,
     "SSWIN.CMD_RESET": _reset,
+}
+
+# Commands that act on the SYSTEM rather than on each zone in turn - run
+# once, with no zone id. Kept as a table beside _COMMANDS so that
+# "per-zone" stays the readable default.
+_SYSTEM_COMMANDS = {
+    "SSWIN.CMD_SILENCE": _silence,
 }

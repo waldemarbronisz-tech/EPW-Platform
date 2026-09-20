@@ -54,8 +54,10 @@ nie rusza kodu i odwrotnie.
 7. Dopiero teraz **wykonanie** i publikacja wyniku.
 
 „Cichy alarm" to alarm w EPW (`REMOTE_COMMAND_REFUSED`, priorytet 3) —
-sterownik nie ma syreny, a alarmy i tak jadą przez MQTT, więc to HA robi
-z tego powiadomienie na telefon. Każda komenda, przyjęta czy odrzucona,
+**cichy dosłownie**: to zdarzenie nie rusza sygnalizatora alarmówki
+(`SSWIN.SIREN_ACTIVE` chodzi za naruszeniem linii, nie za odrzuconą
+komendą), a alarmy i tak jadą przez MQTT, więc to HA robi z tego
+powiadomienie na telefon. Każda komenda, przyjęta czy odrzucona,
 trafia też do dziennika audytowego z **nazwiskiem**, nie z „Panel:Operator".
 
 ## 4. Tematy i format wiadomości
@@ -78,6 +80,7 @@ trafia też do dziennika audytowego z **nazwiskiem**, nie z „Panel:Operator".
 | `action` | `what` | pozostałe pola | poziom |
 |---|---|---|---|
 | `intrusion` | `arm`, `arm_night`, `disarm`, `reset` | `zone` (id strefy albo `all`), opcjonalnie `force: true` | Operator + strefa |
+| `intrusion` | `silence` | — (sygnalizator jest jeden, nie per strefa) | Operator + strefa w alarmie |
 | `apparatus` | `CLOSE`, `OPEN` | `target` (id aparatu) | Operator |
 | `setting` | `process_protection` | `target`, `values: {upper_threshold, lower_threshold, hysteresis, delay_seconds, enabled}` | Engineer |
 | `setting` | `electrical_stage` | `target` (funkcja), `stage`, `values: {enabled, setting, hysteresis, delay_ms, action}` | Engineer |
@@ -154,6 +157,18 @@ Praktycznie:
   przy starcie, gdy broker nie jest lokalny;
 - **jeden token na osobę**, nie jeden wspólny — inaczej dziennik znowu
   przestaje mówić, kto co zrobił.
+
+## 7a. Wyciszenie to nie rozbrojenie
+
+`what: "silence"` zatrzymuje **sam dźwięk**. Strefa zostaje w ALARM,
+pamięć alarmu zostaje, lampa (`SSWIN.STROBE_ACTIVE`) świeci dalej. To jest
+sens osobnej komendy: „wyłącz hałas" i „sprawa jest załatwiona" to dwie
+różne decyzje, często podejmowane kilkanaście minut od siebie. Do tej
+drugiej służy `reset`.
+
+Sama syrena nie jest w EPW-OS żadnym wyjściem — sterownik wystawia stan
+(`SSWIN.SIREN_ACTIVE`), a to, na którym DO wisi syrena, rysuje inżynier w
+Logic Studio. Opis: `LOGIKA_W_RUNTIME.md`, rozdział o `SSWIN.*`.
 
 ## 8. Czego tu nie ma i dlaczego
 

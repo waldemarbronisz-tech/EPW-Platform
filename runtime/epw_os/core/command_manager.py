@@ -68,6 +68,14 @@ class CommandManager:
         over a separate counter tag."""
         self.tag_manager.update_tag("System.PendingCommand", bool(self._pending_commands))
 
+    def clear_definitions(self):
+        """Forgets every command definition, so a reloaded project's
+        apparatuses can be loaded in place of the old ones rather than
+        on top of them (EPWCore.reload_project()) - load_definitions()
+        merges by key, which is right at startup and wrong here: an
+        apparatus deleted in Studio would otherwise stay operable."""
+        self._definitions.clear()
+
     def load_definitions(self, definitions_dict: dict):
         # Task "migracja adresacji": `target`/`action` are informational
         # (event_bus.emit("command_executed", definition.target,

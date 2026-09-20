@@ -35,6 +35,10 @@ class EPWCore:
         self.apparatus_registry = ApparatusRegistry()
 
         self.project_manager = ProjectManager()
+        # Set by _configure_io_driver() (None = this controller runs on
+        # the simulator). Declared here so a reload can tell "no bus
+        # driver yet" from "a bus driver that has to be stopped first".
+        self.modbus_driver = None
         self.logic_engine = LogicEngine(self.tag_manager)
         self.safety_kernel = SafetyKernel(self.tag_manager)
         # Always starts at User, regardless of who was logged in on a
@@ -233,12 +237,18 @@ class EPWCore:
         Sim.* tags are independent of the bus). Cards the Modbus driver
         polls are remembered so commands and heartbeats for them route
         there and the simulator leaves their analog tags alone."""
+        from epw_os.drivers.modbus_driver import DRIVER_ID, ModbusDriver
+        # A reload runs this a second time. The previous bus driver's
+        # polling thread has to be stopped first - two of them on one
+        # bus is worse than none (register_driver() replaces the
+        # reference and would leave the old thread reading).
+        if self.modbus_driver is not None:
+            self.driver_manager.unregister_driver(DRIVER_ID)
         self.modbus_driver = None
         self._modbus_card_ids = set()
         io = self.project_manager.get_io_driver_config()
         if io["driver"] != "MODBUS":
             return
-        from epw_os.drivers.modbus_driver import DRIVER_ID, ModbusDriver
         driver = ModbusDriver(self.event_bus)
         polled = driver.configure(self.project_manager.get_modbus_bus(), devices, io)
         self.modbus_driver = driver
@@ -596,20 +606,7 @@ class EPWCore:
             # this scales to any number of ADA cards/channels a project
             # has, or none at all (an empty `devices` project correctly
             # gets zero default command definitions - nothing to route to).
-            from epw_os.core.addressing import is_address
-            default_commands = {}
-            for tag in self.tag_manager.list_tags():
-                if not is_address(tag.name, "DO"):
-                    continue
-                default_commands[f"{tag.name}.CLOSE"] = {
-                    "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": True,
-                    "feedback_tag": tag.name, "feedback_value": True, "timeout_ms": 1500
-                }
-                default_commands[f"{tag.name}.OPEN"] = {
-                    "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": False,
-                    "feedback_tag": tag.name, "feedback_value": False, "timeout_ms": 1500
-                }
-            self.command_manager.load_definitions(default_commands)
+            self.command_manager.load_definitions(self._default_do_commands())
 
         # Task "Studio osadza ekrany i logikę w projekt.epw": the compiled
         # logic comes out of projekt.epw itself (Studio embeds it on every
@@ -1002,6 +999,211 @@ class EPWCore:
                       if success else f"the logic program was NOT reloaded: {reason}")
             self.audit_logger.record("LOGIC_PROGRAM_RELOADED", actor or "SYSTEM", detail, success=success)
         return {"success": success, "reason": reason, "status": self.logic_engine.get_status()}
+
+    # --- reinstalling the project without a restart -------------------------
+
+    def reload_project(self, actor: str = "", level: str = None) -> dict:
+        """Re-reads projekt.epw and rebuilds everything this controller
+        derives from it - cards, channel tags, apparatuses, commands,
+        alarm system, protections, users, screens, logic - without
+        restarting the process.
+
+        Until now only the logic PROGRAM could be swapped live
+        (reload_logic() above); everything else was built once, at
+        startup, and installing a project meant a restart. Owner's
+        instruction was to change that.
+
+        What is rebuilt is exactly what startup() builds FROM THE
+        PROJECT, in the same order and through the same helpers - the
+        feature start/stop pair, the same _configure_io_driver(), the
+        same command definitions - so there is one description of how a
+        project becomes a running controller, not two that can drift.
+
+        What is NOT touched is everything the project does not own: the
+        database and the historian, the driver manager itself, the
+        safety kernel, the MQTT link, the REST API, the audit log, the
+        access level somebody is signed in at. Those outlive projects.
+
+        Forces are released first, deliberately: a force pins a tag that
+        the new project may not even have, and "a force survived a
+        project change" is not a sentence anybody should have to say.
+
+        The GUI is rebuilt by main.py, which listens for the
+        "project_reloaded" event this emits - pages and nav entries are
+        built from the project too, and neither is safely patchable in
+        place (same reasoning as the language/feature-toggle rebuild).
+
+        Engineer level, audited. Returns {"success", "reason",
+        "removed_tags", "issues", "logic"}.
+        """
+        from epw_os.core.feature_config import is_feature_enabled, normalize_enabled_features
+
+        if level is not None and not self._is_engineer(level):
+            log.warning(f"Refused to reload the project: level {level!r} is below Engineer.")
+            return {"success": False, "reason": "Access denied - Engineer level required.",
+                    "removed_tags": [], "issues": [], "logic": {}}
+
+        who = actor or "SYSTEM"
+        log.warning("Reloading the project in place - the controller does NOT restart.")
+
+        # 1. Put down everything that came from the OLD project, outputs
+        # first. Stopping the scan drives every output it touched to its
+        # safe state (see logic_engine.py), which is the right state to
+        # be in while the plant's description is being replaced.
+        self.logic_engine.stop()
+        if self.force_manager is not None:
+            self.force_manager.release_all(actor=who, reason="the project is being reloaded")
+        old_devices = list(self.project_manager.config.get("devices", []))
+        for feature, (_, stop_name) in self._FEATURE_START_STOP.items():
+            if is_feature_enabled(self.enabled_features, feature):
+                getattr(self, stop_name)()
+
+        # 2. The new project itself. A refused file leaves the previous
+        # one in place (ProjectManager rolls a failed install back), so
+        # the controller comes back up on something valid either way -
+        # but the caller is told, and so is the register.
+        self.startup_issues = []
+        loaded = self.project_manager.load_project()
+        self._report_project_load()
+        self.enabled_features = normalize_enabled_features(self.project_manager.get_enabled_features())
+
+        # 3. Cards and their channels. reconfigure() (not configure())
+        # because a card deleted in Studio has to take its DI/DO/AO tags
+        # with it - configure() alone only ever adds.
+        devices = self.project_manager.config.get("devices", [])
+        removed_tags = self.tag_manager.reconfigure(devices)
+        self._configure_io_driver(devices)
+        # startup() starts the drivers in its own later step; here the
+        # others are already running, so only the bus driver this call
+        # may have just built needs starting. start_all() would spawn a
+        # second polling thread in every driver already going.
+        if self.modbus_driver is not None and self.driver_manager.is_running:
+            self.modbus_driver.start()
+        new_ids = {dev.get("id") for dev in devices}
+        for dev in old_devices:
+            if dev.get("id") not in new_ids:
+                self.device_manager.unregister_device(dev.get("id"))
+        for dev in devices:
+            self.device_manager.register_device(dev.get("id"), self._driver_id_for_card(dev.get("id"), dev),
+                                                dev.get("timeout", 5.0))
+        sim_device_ids = [dev.get("id") for dev in devices
+                          if self._driver_id_for_card(dev.get("id"), dev) == "SIM_DRIVER"]
+        default_devices = ["OrangePi", "ELA01", "ADA01", "Modbus"]
+        for dev_id in default_devices:
+            self.device_manager.register_device(dev_id, "SIM_DRIVER", timeout=5.0)
+        self.sim_driver.set_devices(sim_device_ids + [d for d in default_devices if d not in sim_device_ids])
+
+        # 4. Apparatuses, their Main View bindings and the simulated
+        # plant behind them - set_mappings(), not add_mappings(): an
+        # apparatus the new project does not have must stop answering.
+        from epw_os.core.apparatus import (MAIN_VIEW_ROLE_DESIGNATIONS, apparatus_command_definitions,
+                                           apparatuses_from_records, bind_roles_from_screens)
+        from epw_os.simulation.simulated_plant import plant_mappings_from_apparatuses
+        self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
+        bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
+                                MAIN_VIEW_ROLE_DESIGNATIONS)
+        self.simulated_plant.set_mappings(plant_mappings_from_apparatuses(self.project_manager.get_apparatuses()))
+
+        # Who may operate the alarm system. Their codes and remote
+        # tokens are controller-local and are NOT touched: the project
+        # says who exists, this machine says what their secrets are.
+        self.access_manager.set_users(self.project_manager.get_intrusion_users())
+
+        # 5. The modules the new project switches on. Same helpers
+        # startup() and the feature-configuration dialog both use.
+        for feature, (start_name, _) in self._FEATURE_START_STOP.items():
+            if is_feature_enabled(self.enabled_features, feature):
+                getattr(self, start_name)()
+
+        # 6. Labels the operator or the project put on tags.
+        for tag_name, desc in self.project_manager.get_tag_descriptions().items():
+            self.tag_manager.set_description(tag_name, desc)
+        for point in self.project_manager.get_point_registry():
+            self.tag_manager.set_point_info(point["address"], location=point.get("location", ""),
+                                            technical_note=point.get("technical_note", ""))
+
+        # 7. Commands: cleared, then rebuilt, for the same reason
+        # reconfigure() exists - a deleted apparatus must stop being
+        # operable, and load_definitions() merges by key.
+        self.command_manager.clear_definitions()
+        apparatus_commands = apparatus_command_definitions(
+            [self.apparatus_registry.get(i) for i in self.apparatus_registry.list_ids()],
+            driver_for_tag=self._driver_id_for_tag,
+        )
+        if apparatus_commands:
+            self.command_manager.load_definitions(apparatus_commands)
+        commands = self.project_manager.config.get("commands", {})
+        if commands:
+            self.command_manager.load_definitions(commands)
+        else:
+            self.command_manager.load_definitions(self._default_do_commands())
+
+        # 8. The gateway holds references to the managers just replaced
+        # (the alarm system above is a NEW object), so it is rebuilt with
+        # them - otherwise a command from Home Assistant would arm a
+        # torn-down alarm system.
+        if getattr(self, "remote_commands", None) is not None:
+            from epw_os.core.remote_commands import RemoteCommandGateway
+            self.remote_commands = RemoteCommandGateway(
+                access_manager=self.access_manager,
+                intrusion_manager=self.intrusion_manager,
+                command_manager=self.command_manager,
+                project_manager=self.project_manager,
+                process_protection_manager=self.process_protection_manager,
+                alarm_manager=self.alarm_manager,
+                audit_logger=self.audit_logger,
+            )
+            if self.mqtt_manager is not None:
+                self.mqtt_manager.set_command_handler(self.remote_commands.handle)
+
+        # 9. The logic program, last - it reads everything above.
+        # reload_logic() re-reads the file itself, which is harmless
+        # (the same file, already in hand) and keeps that method the one
+        # description of how a program gets into the scan.
+        logic = self.reload_logic(actor=who, level=None)
+        self._report_composition()
+
+        reason = "" if loaded is not False else "The project file was refused; the previous one is still running."
+        success = loaded is not False
+        if self.audit_logger is not None:
+            detail = (f"the project was reloaded in place without a restart "
+                      f"(revision {self.project_manager.get_project_header().get('revision')}, "
+                      f"{len(removed_tags)} tag(s) removed)"
+                      if success else f"the project was NOT reloaded: {reason}")
+            self.audit_logger.record("PROJECT_RELOADED", who, detail, success=success)
+        # main.py rebuilds the GUI on this - pages and nav entries come
+        # from the project too.
+        self.event_bus.emit("project_reloaded", success)
+        return {"success": success, "reason": reason, "removed_tags": removed_tags,
+                "issues": list(self.startup_issues), "logic": logic}
+
+    def _is_engineer(self, level) -> bool:
+        from epw_os.core.access_manager import AccessLevel
+        order = AccessLevel._ORDER
+        try:
+            return order.index(level) >= order.index(AccessLevel.ENGINEER)
+        except ValueError:
+            return False
+
+    def _default_do_commands(self) -> dict:
+        """The per-channel CLOSE/OPEN definitions every real DO tag gets
+        when the project defines no `commands` section of its own - see
+        startup()'s own long comment on why the old flat DO01-DO04
+        special case is gone."""
+        from epw_os.core.addressing import is_address
+        definitions = {}
+        for tag in self.tag_manager.list_tags():
+            if not is_address(tag.name, "DO"):
+                continue
+            definitions[f"{tag.name}.CLOSE"] = {
+                "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": True,
+                "feedback_tag": tag.name, "feedback_value": True, "timeout_ms": 1500
+            }
+            definitions[f"{tag.name}.OPEN"] = {
+                "driver_id": self._driver_id_for_tag(tag.name), "output_tag": tag.name, "output_value": False,
+                "feedback_tag": tag.name, "feedback_value": False, "timeout_ms": 1500
+            }
+        return definitions
 
     def _analog_output_config(self, tag_name: str) -> dict:
         return next((point for point in self.project_manager.get_analog_output_points()

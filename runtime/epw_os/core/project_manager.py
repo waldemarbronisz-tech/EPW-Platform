@@ -678,6 +678,21 @@ class ProjectManager:
     def set_intrusion_power_supervision(self, data: dict):
         self.config["intrusion_power_supervision"] = dict(data)
 
+    # The sounder, as STATE the controller owns rather than an output it
+    # drives. EPW-OS never energizes a siren: it publishes
+    # SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE and the
+    # engineer draws the line to a DO in Logic Studio (owner's decision -
+    # "chce moc to swobodnie programowac ustawiajac bit wewnetrzny alarm
+    # i pobudzenie danego DO ktory wyjdzie na syrene"). What lives here
+    # is only how long it may sound and whether a hold-up line sounds at
+    # all. Missing key = the defaults in shared/project_format.py's
+    # Sounder.
+    def get_intrusion_sounder(self) -> dict:
+        return self.config.get("intrusion_sounder", {})
+
+    def set_intrusion_sounder(self, data: dict):
+        self.config["intrusion_sounder"] = dict(data)
+
     # Task (pamiec alarmu - "zatrzask", ta sama zasada co safety_kernel):
     # a new, OPTIONAL section keyed by zone id (same identity
     # intrusion_zones itself uses) - a project.json saved before this

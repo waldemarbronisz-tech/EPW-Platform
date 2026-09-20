@@ -86,6 +86,32 @@ class FakeIntrusion:
         self.calls.append(("reset", zone_id, actor))
         return True
 
+    # The sounder, which the real manager holds as state rather than
+    # driving as an output - exactly what the signals below read.
+    siren = False
+    strobe = False
+    seconds_left = 0.0
+    panic = False
+    silence_succeeds = True
+
+    def siren_active(self):
+        return self.siren
+
+    def strobe_active(self):
+        return self.strobe
+
+    def siren_time_left(self):
+        return self.seconds_left
+
+    def panic_active(self):
+        return self.panic
+
+    def silence(self, actor="SYSTEM", user=None):
+        self.calls.append(("silence", None, actor))
+        if self.silence_succeeds:
+            self.siren = False
+        return self.silence_succeeds
+
 
 def _source(**kwargs):
     return SswinSignalSource(FakeIntrusion(**kwargs))
@@ -171,11 +197,60 @@ def test_the_violated_line_count_is_a_number_logic_can_compare():
     assert source.read("SSWIN.ACTIVE_COUNT") == 2.0
 
 
-def test_what_this_controller_does_not_have_is_not_invented():
+def test_nothing_is_unserved_any_anymore_but_the_mechanism_still_works():
+    """The sounder was the last gap; UNSERVED_SIGNALS is empty now. The
+    mechanism stays, so pin it on a signal rather than on the list being
+    non-empty - a read of an unserved signal answers None and the caller
+    falls back to the catalog's safe value."""
+    assert UNSERVED_SIGNALS == frozenset()
     source = _source(zones={"Z1": "ARMED"})
-    for signal in UNSERVED_SIGNALS:
-        assert source.read(signal) is None, signal
-        assert source.serves(signal) is False
+    assert source.read("SSWIN.NOT_A_REAL_SIGNAL") is None
+    assert source.serves("SSWIN.NOT_A_REAL_SIGNAL") is False
+    assert source.serves("SSWIN.SIREN_ACTIVE") is True
+
+
+# --- the sounder: state to wire up, never an output --------------------------
+
+def test_the_siren_is_a_signal_to_wire_not_an_output_the_controller_drives():
+    """The whole point of the sounder living here: EPW-OS says whether it
+    should be sounding, the engineer decides which DO that reaches."""
+    source = _source(zones={"Z1": "ALARM"})
+    manager = source.intrusion_manager
+    manager.siren, manager.strobe, manager.seconds_left = True, True, 42.0
+
+    assert source.read("SSWIN.SIREN_ACTIVE") is True
+    assert source.read("SSWIN.STROBE_ACTIVE") is True
+    assert source.read("SSWIN.SIREN_TIME_LEFT") == 42.0
+
+
+def test_a_hold_up_line_is_its_own_signal_separate_from_the_alarm():
+    """So a schematic can send THIS one somewhere quietly while leaving
+    the siren alone."""
+    source = _source(zones={"Z1": "ALARM"})
+    source.intrusion_manager.panic = True
+    assert source.read("SSWIN.PANIC") is True
+    assert source.read("SSWIN.SIREN_ACTIVE") is False, "a panic line does not sound by default"
+
+
+def test_silencing_is_one_call_not_one_per_zone():
+    """There is a single sounder state, so "every zone" would be three
+    calls doing one thing."""
+    source = _source(zones={"Z1": "ALARM", "Z2": "ALARM", "Z3": "DISARMED"})
+    source.intrusion_manager.siren = True
+
+    assert source.execute("SSWIN.CMD_SILENCE", actor="LOGIC") is True
+    assert source.intrusion_manager.calls == [("silence", None, "LOGIC")]
+    assert source.read("SSWIN.SIREN_ACTIVE") is False
+
+
+def test_a_refused_silence_reports_false():
+    source = _source(zones={"Z1": "ALARM"})
+    source.intrusion_manager.silence_succeeds = False
+    assert source.execute("SSWIN.CMD_SILENCE", actor="LOGIC") is False
+
+
+def test_silence_on_a_controller_without_the_intrusion_module_is_refused():
+    assert SswinSignalSource(None).execute("SSWIN.CMD_SILENCE", actor="LOGIC") is False
 
 
 def test_a_controller_without_the_intrusion_module_reads_safe_values():

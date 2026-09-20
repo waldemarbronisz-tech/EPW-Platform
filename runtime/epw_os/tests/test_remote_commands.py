@@ -65,6 +65,12 @@ class FakeIntrusion:
         self.calls.append(("reset", zone_id, actor))
         return True
 
+    silence_result = True
+
+    def silence(self, actor="SYSTEM", user=None):
+        self.calls.append(("silence", user, actor))
+        return self.silence_result
+
 
 TOKENS_BY_ID = {user["id"]: user for user in TOKENS.values()}
 
@@ -299,3 +305,23 @@ def test_every_command_is_audited_either_way(gateway):
 
     kinds = [entry[0] for entry in gateway.audit_logger.entries]
     assert "REMOTE_COMMAND" in kinds and "REMOTE_COMMAND_REFUSED" in kinds
+
+
+# --- silencing the sounder from Home Assistant -------------------------------
+
+def test_silencing_goes_through_as_one_call_with_the_person_named(gateway):
+    """One sounder state, so this is not run once per zone - and the
+    person is handed over, exactly as for arm/disarm."""
+    result = _send(gateway, action="intrusion", what="silence")
+
+    assert result["accepted"] is True
+    assert gateway.intrusion_manager.calls == [("silence", "U1", "MQTT:Kowalski")]
+
+
+def test_a_refused_silence_says_so_rather_than_claiming_success(gateway):
+    gateway.intrusion_manager.silence_result = False
+
+    result = _send(gateway, action="intrusion", what="silence")
+
+    assert result["accepted"] is False
+    assert "silence" in result["reason"]

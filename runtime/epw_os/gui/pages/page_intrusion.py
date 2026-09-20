@@ -42,6 +42,7 @@ _LINE_TYPE_KEYS = {
     LineType.DELAYED: "pages.intrusion.line_type_delayed",
     LineType.TWENTY_FOUR_HOUR: "pages.intrusion.line_type_24h",
     LineType.SUPERVISORY: "pages.intrusion.line_type_supervisory",
+    LineType.PANIC: "pages.intrusion.line_type_panic",
 }
 
 
@@ -879,6 +880,14 @@ class PageIntrusionOverview(QWidget):
         self.lbl_gate.setStyleSheet(neutral_text_style("font-style: italic;"))
         toolbar.addWidget(self.lbl_gate)
         toolbar.addStretch()
+        # Silencing the sounder is NOT disarming: the zone stays in
+        # alarm, the memory and the strobe stay on. Hidden unless there
+        # is actually noise to stop, so the panel never offers a button
+        # that would do nothing.
+        self.btn_silence = QPushButton(tr("pages.intrusion.btn_silence"))
+        self.btn_silence.clicked.connect(self._silence)
+        self.btn_silence.setVisible(False)
+        toolbar.addWidget(self.btn_silence)
         self.btn_alarm_memory = QPushButton(tr("pages.intrusion.btn_alarm_memory"))
         self.btn_alarm_memory.clicked.connect(self._show_alarm_memory)
         toolbar.addWidget(self.btn_alarm_memory)
@@ -1023,6 +1032,9 @@ class PageIntrusionOverview(QWidget):
         can_configure = self.access_manager.has_access(AccessLevel.ENGINEER)
         self.btn_walk_test.setEnabled(can_configure)
         self.btn_alarm_memory.setEnabled(can_arm)  # viewing needs no level; clearing (inside) checks Operator itself
+        sounding = self.intrusion_manager is not None and self.intrusion_manager.siren_active()
+        self.btn_silence.setVisible(sounding)
+        self.btn_silence.setEnabled(sounding and can_arm)
         if not can_arm:
             self.lbl_gate.setText(tr("pages.intrusion.gate_arm_message"))
         else:
@@ -1367,6 +1379,20 @@ class PageIntrusionOverview(QWidget):
             return
         self.intrusion_manager.bypass_line(line_id, bypassed, actor=self.access_manager.level,
                                             level=self.access_manager.level)
+        self.refresh()
+
+    def _silence(self):
+        """Stops the noise and nothing else - the alarm, its memory and
+        the strobe are untouched. Gated at Operator like every other
+        action here, and the manager re-checks the person's zones."""
+        if self.intrusion_manager is None:  # isolated widget test / mock
+            return
+        if not self.window().request_access(AccessLevel.OPERATOR):
+            return
+        done = self.intrusion_manager.silence(actor=self._actor(), user=self._current_user_id())
+        if not done and self._current_user_id() is not None:
+            QMessageBox.warning(self, tr("pages.intrusion.silence_refused_title"),
+                                tr("pages.intrusion.silence_refused"))
         self.refresh()
 
     # --- alarm memory (Task 3) ---------------------------------------------

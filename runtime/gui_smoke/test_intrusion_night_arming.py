@@ -49,6 +49,18 @@ class FakeIntrusion:
     def get_line_life_snapshot(self, line_id): return {}
     def get_walk_test_status(self, zone_id): return {}
 
+    # -- the sounder, which the page shows a "Silence" button for
+    siren = False
+    silence_result = True
+
+    def siren_active(self): return self.siren
+
+    def silence(self, actor="SYSTEM", user=None):
+        self.calls.append(("silence", None, None, user))
+        if self.silence_result:
+            self.siren = False
+        return self.silence_result
+
     # -- actions
     def arm_zone(self, zone_id, actor, level=None, force=False, mode=ArmMode.FULL, user=None):
         self.calls.append(("arm", zone_id, mode, user))
@@ -167,3 +179,45 @@ def test_a_refused_disarm_is_too(qapp, monkeypatch):
     _zone_buttons(page)[0].click()
 
     assert shown and "not allowed" in shown[0].lower()
+
+
+# --- silencing the sounder ---------------------------------------------------
+# Not disarming: the zone stays in alarm, the memory and the strobe stay
+# on. The button exists because "turn the noise off" and "the break-in
+# is dealt with" are two different decisions, often made minutes apart.
+
+def test_the_silence_button_is_offered_only_while_there_is_noise_to_stop(qapp):
+    quiet = _page(qapp, FakeIntrusion())
+    assert quiet.btn_silence.isHidden() is True
+
+    manager = FakeIntrusion()
+    manager.siren = True
+    sounding = _page(qapp, manager)
+    assert sounding.btn_silence.isHidden() is False
+
+
+def test_pressing_it_silences_and_the_button_goes_away(qapp):
+    manager = FakeIntrusion()
+    manager.siren = True
+    manager.state = ZoneState.ALARM
+    page = _page(qapp, manager, access=_Access(user_id="U1"))
+
+    page.btn_silence.click()
+
+    assert ("silence", None, None, "U1") in manager.calls, "the person is handed over, as with arm/disarm"
+    assert manager.siren is False
+    assert page.btn_silence.isHidden() is True
+    assert manager.state == ZoneState.ALARM, "silencing is not disarming"
+
+
+def test_a_refused_silence_is_put_in_front_of_the_operator(qapp, monkeypatch):
+    manager = FakeIntrusion()
+    manager.siren = True
+    manager.silence_result = False
+    page = _page(qapp, manager, access=_Access(user_id="U2"))
+    shown = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda parent, title, text, *a, **k: shown.append(text))
+
+    page.btn_silence.click()
+
+    assert shown and "may not silence" in shown[0]

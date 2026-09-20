@@ -321,7 +321,13 @@ class LineType:
     DELAYED = "DELAYED"
     TWENTY_FOUR_HOUR = "24H"
     SUPERVISORY = "SUPERVISORY"
-    ALL = (INSTANT, DELAYED, TWENTY_FOUR_HOUR, SUPERVISORY)
+    # NAPADOWA: a hold-up button. Alarms in ANY zone state, like a 24H
+    # line, but raises SSWIN.PANIC and - unless the installation says
+    # otherwise - does NOT start the sounder: the point of a hold-up
+    # alarm is that the person standing over you does not learn you
+    # pressed it.
+    PANIC = "PANIC"
+    ALL = (INSTANT, DELAYED, TWENTY_FOUR_HOUR, SUPERVISORY, PANIC)
 
 
 class LineInputMode:
@@ -431,6 +437,32 @@ class IntrusionUser:
     # A user who has left: kept in the project (the event register still
     # names them in past entries) but refused at the keypad.
     enabled: bool = True
+
+
+@dataclass
+class Sounder:
+    """The alarm system's sounder, as SETTINGS - never as an output.
+
+    EPW-OS deliberately drives no siren itself (owner's decision: "chcę
+    móc to swobodnie programować ustawiając bit wewnętrzny alarm i
+    pobudzenie danego DO który wyjdzie na syrenę"). What the controller
+    owns is the STATE - is the sounder supposed to be sounding right now,
+    for how much longer, has somebody silenced it - published as
+    SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE. Which physical
+    output that reaches, through which interlocks, is a line of logic the
+    engineer draws in Logic Studio.
+
+    That split is what makes one siren, two sirens, a siren plus a
+    strobe, or a siren wired through a contactor all the same problem -
+    a schematic - instead of five options in a config dialog.
+
+    `siren_seconds`: how long the sounder may sound for one alarm. 0
+    means until the alarm is cleared or the zone disarmed. Real
+    installations are usually bound by local noise regulations here.
+    `panic_silent`: whether a PANIC line keeps the sounder quiet."""
+
+    siren_seconds: float = 180.0
+    panic_silent: bool = True
 
 
 @dataclass
@@ -546,6 +578,7 @@ class Project:
     lines: list[Line] = field(default_factory=list)
     intrusion_users: list[IntrusionUser] = field(default_factory=list)
     power_supervision: PowerSupervision = field(default_factory=PowerSupervision)
+    sounder: Sounder = field(default_factory=Sounder)
     electrical_protection_stages: list[ElectricalProtectionStage] = field(default_factory=list)
     process_protections: list[ProcessProtection] = field(default_factory=list)
     modbus_bus: ModbusBusConfig = field(default_factory=ModbusBusConfig)
@@ -638,7 +671,10 @@ def _to_json_dict(project: Project) -> dict:
     # use, just checked across three fields instead of one list).
     ps = project.power_supervision
     power_configured = ps.mains_tag is not None or ps.battery_tag is not None
-    if project.zones or project.lines or project.intrusion_users or power_configured:
+    sounder_configured = (project.sounder.siren_seconds != Sounder.siren_seconds
+                          or project.sounder.panic_silent != Sounder.panic_silent)
+    if (project.zones or project.lines or project.intrusion_users or power_configured
+            or sounder_configured):
         intrusion = {}
         if project.zones:
             intrusion["zones"] = [asdict(z) for z in project.zones]
@@ -648,6 +684,8 @@ def _to_json_dict(project: Project) -> dict:
             intrusion["users"] = [asdict(u) for u in project.intrusion_users]
         if power_configured:
             intrusion["power_supervision"] = asdict(ps)
+        if sounder_configured:
+            intrusion["sounder"] = asdict(project.sounder)
         data["intrusion"] = intrusion
     # SPEC_PROJEKT_EPW.md, "Nastawy zabezpieczeń" - nested under
     # "protection", same "absent = module not present" reading.
@@ -1067,13 +1105,17 @@ def _parse(path) -> tuple:
     project.lines = _records(intrusion, "lines", "intrusion.lines", Line, warnings, id_field="id")
     project.intrusion_users = _records(intrusion, "users", "intrusion.users", IntrusionUser, warnings,
                                        id_field="id")
+    if "sounder" in intrusion:
+        sounder = _build(Sounder, intrusion["sounder"], "intrusion.sounder", warnings)
+        if sounder is not None:
+            project.sounder = sounder
     if "power_supervision" in intrusion:
         supervision = _build(PowerSupervision, intrusion["power_supervision"], "intrusion.power_supervision",
                              warnings)
         if supervision is not None:
             project.power_supervision = supervision
     for key in intrusion:
-        if key not in ("zones", "lines", "users", "power_supervision"):
+        if key not in ("zones", "lines", "users", "sounder", "power_supervision"):
             warnings.append(FormatIssue("unknown_field", {"field": f"intrusion.{key}"}))
 
     protection = _section(data, "protection", "protection", dict, warnings)
@@ -1167,6 +1209,11 @@ SETTING_FIELDS = {
     "analog_points": ("signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals"),
     "switching_counters": ("warning_threshold",),
     "power_supervision": ("mains_tag", "mains_ok_state", "battery_tag", "battery_ok_state"),
+    # The sounder (one record, "system"): how long the siren may sound and
+    # whether a hold-up line sounds at all are nastawy of the same kind as
+    # a line's alarm_hold_seconds. Which OUTPUT the siren hangs on is
+    # nowhere in the project - see Sounder's own docstring.
+    "sounder": ("siren_seconds", "panic_silent"),
     # 2026-09-18: MQTT (one record, "broker") and the service notes (one
     # record per device tag, its whole list) are settings - the panel
     # writes them, Studio diffs and takes them.
@@ -1214,6 +1261,7 @@ def settings_snapshot(project: Project) -> dict:
     supervision = project.power_supervision
     if getattr(supervision, "mains_tag", None) is not None or getattr(supervision, "battery_tag", None) is not None:
         record("power_supervision", "system", supervision)
+    record("sounder", "system", project.sounder)
     record("mqtt", "broker", project.mqtt)
     for tag, notes in sorted(project.service_notes.items()):
         out[f"service_notes/{tag}/notes"] = _setting_value(notes)
@@ -1252,6 +1300,7 @@ def apply_settings_snapshot(project: Project, values: dict) -> list:
         "zones": zones, "lines": lines, "process_protections": processes,
         "electrical_protection_stages": stages, "analog_points": points, "switching_counters": points,
         "power_supervision": {"system": project.power_supervision}, "mqtt": {"broker": project.mqtt},
+        "sounder": {"system": project.sounder},
     }
     applied = []
     for path, value in values.items():

@@ -168,6 +168,13 @@ def main():
                 mqtt_status_changed = Signal(str)
                 restart_requested = Signal(str)
                 forces_changed = Signal(int)
+                # A project reinstalled while the controller runs
+                # (EPWCore.reload_project). Emitted from whichever
+                # thread asked - the REST worker for an install over the
+                # network, the Qt thread for File > Open - so the GUI
+                # rebuild it triggers has to cross back through a signal
+                # like every other off-thread event here.
+                project_reloaded = Signal(bool)
 
             bridge = QtEventBridge()
             
@@ -382,7 +389,8 @@ def main():
                                    startup_issues=core.startup_issues,
                                    force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed,
                                    logic_engine=core.logic_engine,
-                                   logic_reload_callback=core.reload_logic)
+                                   logic_reload_callback=core.reload_logic,
+                                   project_reload_callback=core.reload_project)
 
             def rebuild_window():
                 """Tears down and reconstructs the GUI window in place,
@@ -491,6 +499,20 @@ def main():
                 bridge.restart_requested.emit(str(reason))
             core.event_bus.subscribe("restart_requested", on_restart_requested)
             bridge.restart_requested.connect(lambda _reason: app.quit())
+
+            # A project installed while the controller runs no longer
+            # needs a restart at all (EPWCore.reload_project). The core
+            # has already rebuilt itself by the time this arrives; what
+            # is left is the GUI, whose pages and nav entries are built
+            # from the project too - so it gets exactly the same full
+            # reconstruction a language or feature-configuration change
+            # already gets, for the same reason: not safely patchable in
+            # place. A refused reload leaves the previous project
+            # running, so there is nothing to rebuild.
+            def on_project_reloaded(success):
+                bridge.project_reloaded.emit(bool(success))
+            core.event_bus.subscribe("project_reloaded", on_project_reloaded)
+            bridge.project_reloaded.connect(lambda ok: rebuild_window() if ok else None)
 
             exit_code = app.exec()
             # Defense in depth: closeEvent() already calls this on a normal

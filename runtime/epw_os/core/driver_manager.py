@@ -25,6 +25,23 @@ class DriverManager:
         self.drivers[driver_id] = driver
         log.info(f"Driver registered: {driver_id}")
 
+    def unregister_driver(self, driver_id: str) -> bool:
+        """Stops a registered driver and forgets it. register_driver()
+        replaces silently, which is fine at startup (nothing is there
+        yet) and wrong when a project is reloaded under a running
+        controller - the replaced driver's polling thread would keep
+        running against the same bus. Returns False when nothing was
+        registered under that id."""
+        driver = self.drivers.pop(driver_id, None)
+        if driver is None:
+            return False
+        try:
+            driver.stop()
+        except Exception as e:  # a driver that cannot be stopped must not block the reload
+            log.error(f"Driver {driver_id} did not stop cleanly: {e}")
+        log.info(f"Driver unregistered: {driver_id}")
+        return True
+
     def get_driver(self, driver_id: str) -> Optional[BaseDriver]:
         return self.drivers.get(driver_id)
 

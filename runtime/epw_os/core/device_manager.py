@@ -19,6 +19,18 @@ class DeviceManager:
             "timeout": timeout
         }
         
+    def unregister_device(self, device_id: str) -> bool:
+        """A card that a reloaded project no longer contains
+        (EPWCore.reload_project()). Without this it would sit in the
+        register for ever, timing out against a driver that no longer
+        polls it, and the cabinet-status panel would keep showing a
+        module that is not in the device any more."""
+        if device_id not in self.devices:
+            return False
+        del self.devices[device_id]
+        self.event_bus.emit("device_removed", device_id)
+        return True
+
     def update_comm(self, device_id: str):
         if device_id in self.devices:
             self.devices[device_id]["last_comm"] = time.time()

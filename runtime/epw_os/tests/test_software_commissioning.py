@@ -5,7 +5,9 @@ ids, apparatuses, the screen embedded), a virtual Modbus TCP bus
 controller.local.json), the Synoptic page following the inputs, a click
 that sends a command out to a coil the bus mirrors back as feedback,
 and Studio sending the project to the running controller over its real
-REST API (a uvicorn server on a free port) up to the restart request.
+REST API (a uvicorn server on a free port) - which, since the project can
+be reinstalled live, ends with the controller REBUILDING ITSELF from what
+it was just sent instead of asking to be restarted.
 """
 import importlib.util
 import json
@@ -202,8 +204,16 @@ def test_the_screen_follows_the_bus_a_click_drives_a_coil_and_studio_sends_the_p
         installed = pf.read_project(project_path).project
         assert installed.metadata.description == "changed on the laptop" and installed.revision == 2
         assert pf.read_project(str(project_path) + ".bak").project.revision == 1
-        assert _wait(lambda: core.restart_requested is not None, timeout=6)
-        assert "revision 2" in core.restart_requested
+        # The end of the loop: the controller is running the project it
+        # was just sent, and nothing went down to get there.
+        assert core.restart_requested is None, "a live reinstall needs no restart"
+        # One bus driver, not two: the reload stops the previous polling
+        # thread before building the new one.
+        assert core.modbus_driver is not None and core.modbus_driver.is_alive()
+        assert len([t for t in threading.enumerate() if t.name == "ModbusDriver" and t.is_alive()]) == 1
+        assert core.project_manager.get_project_header()["revision"] == 2
+        assert core.is_running is True
+        assert "rebuilt itself" in shown["info"][0], "and Studio says so, rather than promising a restart"
     finally:
         from PySide6.QtCore import QTimer
         for timer in win.findChildren(QTimer):
