@@ -12,7 +12,9 @@ guessed at:
   2. Every MainWindow built along the way WAS mostly paired with an
      explicit `.shutdown_gui()` call somewhere later in the script (good
      discipline) and PageEntryGate's own 250ms sim_timer was stopped
-     immediately via `_stop_sim_timer()` right after construction (also
+     immediately via `_stop_sim_timer()` right after construction (that
+     page has since been removed entirely; the fixture stayed, see its
+     own docstring) (also
      already done almost everywhere) - so the sim_timer/window-leak
      hypothesis, while a real and worth-fixing hazard, was not the
      dominant cost.
@@ -180,15 +182,20 @@ def _pump_qt_events_after_test(qapp):
 
 
 def _stop_sim_timer(win):
-    """PageEntryGate's 250ms sim_timer has no parent-triggered cleanup
-    path - left running, it fires (and throws a mock tag manager's
-    known-harmless missing-update_tag AttributeError) for as long as the
-    window object stays alive. Purely a test-speed/noise fix - nothing
-    under test depends on the simulation actually running."""
-    try:
-        win.page_entry_gate.sim_timer.stop()
-    except AttributeError:
-        pass
+    """Stops any page timer a freshly built window leaves running.
+
+    It used to be one specific timer: PageEntryGate's 250 ms
+    recalculate_electricity() tick, which invented voltages and currents
+    and threw a mock tag manager's missing-update_tag AttributeError for
+    as long as the window stayed alive. That page is gone (the Main View
+    is the Synoptic screen now), but the fixture stays - it is the one
+    place that guarantees a built window leaves nothing ticking, and the
+    next page to acquire a timer gets the same treatment for free."""
+    for attribute in ("page_entry_gate", "page_synoptic"):
+        page = getattr(win, attribute, None)
+        timer = getattr(page, "sim_timer", None)
+        if timer is not None:
+            timer.stop()
 
 
 @pytest.fixture

@@ -455,7 +455,7 @@ class EPWCore:
                           if self._driver_id_for_card(dev.get("id"), dev) == "SIM_DRIVER"]
 
         # Main View's cabinet-status panel and electricity-simulation
-        # tags (Cabinet.*, Device.*.Status, Sim.*, Meas.*) - unconditional,
+        # tags (Device.*.Status, Sim.*, Meas.*) - unconditional,
         # same as before this task (previously bundled into
         # init_default_tags(), which only ran in the "no devices" branch
         # this if/else used to have - see tag_manager.py's own docstring

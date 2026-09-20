@@ -172,7 +172,7 @@ def list_analog_input_candidates(project_manager) -> list:
     page_analog_inputs.py) rather than a heuristic TagType.REAL scan of
     every tag, which would also catch measurement tags that are real
     numbers but not analog INPUT POINTS at all (UL1.RMS, FREQ,
-    Cabinet.TempInside, ...)."""
+    Meas.L1, ...)."""
     return sorted(p["tag"] for p in project_manager.get_analog_points())
 
 

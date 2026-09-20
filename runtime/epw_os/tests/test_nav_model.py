@@ -35,15 +35,16 @@ def test_default_config_shows_every_page():
     assert page_ids == set(all_page_ids())
 
 
-def test_main_view_group_holds_the_main_diagram_and_the_embedded_screen():
-    """Task's own explicit exception (see nav_model.py's module
-    docstring) - Main View is deliberately a real group with a [+]/[-]
-    toggle, prepared for several synoptic screens. Punkt 2 / luka 5
-    filled the second slot: the screen embedded in projekt.epw."""
+def test_main_view_group_holds_the_embedded_screen_and_nothing_else():
+    """Main View is the screen Studio embedded in projekt.epw - one page,
+    not two. It briefly held a second one (a hand-built entry-gate
+    drawing with invented measurements); that page is gone on the owner's
+    instruction, and the group keeps its [+]/[-] shape for the screens
+    the project itself carries (the page's own selector switches them)."""
     tree = build_nav_tree(DEFAULT_ENABLED_FEATURES)
     main_view_node = next(n for n in tree if n.id == "main_view_group")
     assert main_view_node.kind == "group"
-    assert [c.page_id for c in main_view_node.children] == ["main_view", "synoptic"]
+    assert [c.page_id for c in main_view_node.children] == ["main_view"]
 
 
 def test_intrusion_and_protection_groups_default_to_3_and_2_page_groups():
@@ -155,7 +156,7 @@ def test_always_on_pages_are_never_dropped_by_any_config():
             page_ids.add(node.page_id)
         else:
             page_ids.update(c.page_id for c in node.children)
-    assert page_ids == {"main_view", "synoptic", "digital_inputs", "control_outputs", "events", "alarms", "audit_log"}
+    assert page_ids == {"main_view", "digital_inputs", "control_outputs", "events", "alarms", "audit_log"}
 
 
 def test_engineer_mode_requires_protection_settings():
@@ -198,14 +199,14 @@ def test_first_page_id_of_a_leaf_is_itself():
     assert first_page_id(protection_node) == "protection_electrical"
 
 
-def test_nav_structure_matches_the_task_s_own_17_pages():
-    """Task: "Sprawdz te liste wzgledem rzeczywistego stanu kodu" -
-    the DOWOD-required confirmation that nothing else was added/removed
-    besides the page-split task's own 3 new pages (intrusion_history,
-    intrusion_config, protection_process)."""
-    assert len(all_page_ids()) == 18
+def test_nav_structure_matches_the_task_s_own_page_list():
+    """Task: "Sprawdz te liste wzgledem rzeczywistego stanu kodu" - the
+    DOWOD-required confirmation that nothing else was added or removed.
+    17 now: the separate "synoptic" page merged into Main View, which
+    renders that very screen."""
+    assert len(all_page_ids()) == 17
     assert set(all_page_ids()) == {
-        "main_view", "synoptic", "digital_inputs", "analog_inputs", "control_outputs",
+        "main_view", "digital_inputs", "analog_inputs", "control_outputs",
         "intrusion_overview", "intrusion_history", "intrusion_config",
         "power_quality", "trends", "events", "alarms", "audit_log",
         "system_topology", "bus_diagnostics", "engineer_mode",

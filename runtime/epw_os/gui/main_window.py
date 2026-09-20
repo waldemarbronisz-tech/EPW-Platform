@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt, QTimer, QTime, QDate
 from PySide6.QtGui import QKeySequence
 from epw_os.gui.style import WINDOWS_NT_STYLE, build_stylesheet
-from epw_os.gui.pages.page_entry_gate import PageEntryGate
 from epw_os.gui.pages.page_digital_inputs import PageDigitalInputs
 from epw_os.gui.pages.page_analog_inputs import PageAnalogInputs
 from epw_os.gui.pages.page_control_outputs import PageControlOutputs
@@ -416,26 +415,22 @@ class MainWindow(QMainWindow):
             self._page_index[page_id] = self.stacked_widget.count()
             self.stacked_widget.addWidget(widget)
 
-        # "MAIN VIEW" (was "ENTRY GATE") - this page will host switchable
-        # synoptic screens once the Synoptic Editor integration lands;
-        # PageEntryGate/self.page_entry_gate keep their internal names for
-        # now since renaming the class is a separate, larger refactor with
-        # no behavior change of its own. ALWAYS ON (feature_config.
-        # ALWAYS_ON_FEATURES) - always constructed first, so index 0 is
-        # always Main View regardless of what else is enabled.
-        self.page_entry_gate = PageEntryGate(self.tag_manager, switching_counters=self.switching_counters,
-                                              service_notes=self.service_notes,
-                                              apparatus_registry=self.apparatus_registry)
-        _add_page("main_view", self.page_entry_gate)
-
-        # Punkt 2 / luka 5: the embedded screen, live. Same slot family as
-        # Main View (nav_model.NAV_STRUCTURE's main_view_group).
+        # MAIN VIEW: the screen Studio embedded in projekt.epw, rendered
+        # live. It used to be a hand-built drawing of one particular entry
+        # gate, with a measurement panel whose voltages, currents and
+        # power were invented by a 250 ms timer - removed on the owner's
+        # instruction ("main view ma mieć tylko obraz z synoptic - tam
+        # umieszczamy wizualizację pomiarów"). A real measurement now
+        # reaches the operator the same way every other value does: drawn
+        # on the screen in the Synoptic editor, bound to a real point.
+        # ALWAYS ON (feature_config.ALWAYS_ON_FEATURES) - constructed
+        # first, so index 0 is always the Main View.
         from epw_os.gui.synoptic.page_synoptic import PageSynoptic
         self.page_synoptic = PageSynoptic(self.tag_manager, project_manager=self.project_manager,
                                           apparatus_registry=self.apparatus_registry,
                                           access_manager=self.access_manager,
                                           command_manager=self.command_manager)
-        _add_page("synoptic", self.page_synoptic)
+        _add_page("main_view", self.page_synoptic)
 
         # ALWAYS ON.
         self.page_di = PageDigitalInputs(self.tag_manager, self.access_manager,
