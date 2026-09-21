@@ -60,6 +60,17 @@ def active_screen_id(document) -> str:
     return screens[0]["id"] if screens else DEFAULT_SCREEN_ID
 
 
+def initial_screen_id(document) -> str:
+    """The screen the panel opens with: the editor's "main view"
+    (`mainScreenId`, View -> ★) when it names a screen that exists, else
+    the active one."""
+    if isinstance(document, dict):
+        main = document.get("mainScreenId")
+        if isinstance(main, str) and main and has_screen(document, main):
+            return main
+    return active_screen_id(document)
+
+
 def screen_list(document) -> list:
     """[{"id", "name"}] in the editor's own switching order. A document
     with no `screens` section (one screen, or a file from before

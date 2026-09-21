@@ -46,7 +46,7 @@ import type { MarqueeMode } from '../utils/SelectionBox';
 import { GroupResizeHandles } from './canvas/GroupResizeHandles';
 import { wallsBounds } from '../project/GroupScale';
 import type { ScaleBox } from '../project/GroupScale';
-import { clampZoom, computeFitView, computePlanBounds, GRID_THIN_BELOW_ZOOM } from '../utils/CanvasView';
+import { clampZoom, computeFitView, computePanelView, computePlanBounds, GRID_THIN_BELOW_ZOOM } from '../utils/CanvasView';
 import { FrameElementNode } from './FrameElementNode';
 import { isKindActive, modeForKind, objectKind, restrictSelectionToMode } from '../project/WorkModes';
 import type { ElementKind } from '../project/WorkModes';
@@ -103,6 +103,10 @@ export const Canvas: React.FC = () => {
     frameShapeRefs.current.set(id, node);
   };
   const canvasConfig = useStore(state => state.canvasConfig);
+  // Panel preview (store/previewSlice.ts): drawn as the panel draws it -
+  // no grid, no runtime-frame outline, the panel's own fit, no wheel zoom
+  // or pan - and a click on an apparatus is a command.
+  const panelPreview = useStore(state => state.panelPreview);
   const gridSize = canvasConfig.gridSize;
   const { objects, selectedIds, selectObjects, clearSelection, addObject, updateObject, canvasState, setCanvasState } = useStore();
   const { meters, selectedMeterIds, selectMeters, updateMeter, devices } = useStore();
@@ -206,11 +210,16 @@ export const Canvas: React.FC = () => {
 
   const handleObjectClick = (objectId: string, e: any) => {
     if (previewMode) {
+      const s = useStore.getState();
+      // In a LIVE panel preview an apparatus click is a real command
+      // for the controller (queued for Studio); the symbol then follows
+      // the controller's feedback, not a local toggle.
+      if (s.panelPreview && s.liveValues && s.commandAt(objectId)) return;
       // operateAt, not toggleCircuitAt: in Podglad it toggles at once,
       // and while a simulation is running it raises the controller's
       // confirmation window instead (store/simulationSlice.ts). One
       // entry point, so there is no route round the confirmation.
-      useStore.getState().operateAt(objectId);
+      s.operateAt(objectId);
       return;
     }
     selectObjects([objectId], !!e?.evt?.shiftKey);
@@ -685,6 +694,16 @@ export const Canvas: React.FC = () => {
   // store instead and is left alone here - re-fitting it would throw
   // away the zoom the user chose.
   const activeScreenId = useStore(s => s.activeScreenId);
+  // Panel preview: the panel's own view (runtime frame, or everything
+  // drawn) whenever the preview opens, the screen changes or the window
+  // is resized - the same rule runtime's screen_widget.view_rect() uses.
+  useEffect(() => {
+    if (!panelPreview || !measuredRef.current) return;
+    const s = useStore.getState();
+    const bounds = computePlanBounds(s.objects, s.meters, s.connections, s.walls);
+    s.setCanvasState(computePanelView(s.canvasConfig.viewport, bounds, size.width, size.height));
+  }, [panelPreview, size]);
+
   const fittedScreenRef = useRef<string | null>(null);
   useEffect(() => {
     if (!measuredRef.current) return;
@@ -699,6 +718,7 @@ export const Canvas: React.FC = () => {
 
   const handleWheel = (e: any) => {
     e.evt.preventDefault();
+    if (useStore.getState().panelPreview) return;   // the panel has no zoom
     const scaleBy = 1.1;
     const stage = e.target.getStage();
     const oldScale = stage.scaleX();
@@ -724,7 +744,7 @@ export const Canvas: React.FC = () => {
   const handleMouseDown = (e: any) => {
     // Middle-button pan (unchanged), or a left-button drag while Space
     // is held (commit 4) - the same panning gesture either way.
-    if (e.evt.button === 1 || (isSpaceKeyDown() && e.evt.button === 0)) {
+    if (!useStore.getState().panelPreview && (e.evt.button === 1 || (isSpaceKeyDown() && e.evt.button === 0))) {
       // The browser's own middle-button autoscroll must not start on top
       // of the pan (user, 2026-09-18: "ruch po kanwasie przez kliknięcie i
       // przytrzymanie scrolla").
@@ -1472,11 +1492,11 @@ export const Canvas: React.FC = () => {
               nothing. */}
           <Rect x={0} y={0} width={useStore.getState().canvasConfig.width} height={useStore.getState().canvasConfig.height} fill={useStore.getState().canvasConfig.background} name="grid" />
           <Rect x={0} y={0} width={canvasConfig.width || 1920} height={canvasConfig.height || 1080} fill={canvasConfig.background || COLOR_CANVAS_BACKGROUND} name="grid" />
-          {drawGrid()}
+          {!panelPreview && drawGrid()}
           {/* The runtime frame (View -> Runtime frame): the part of the
               plan the panel will show. Constant-width dashes whatever
               the zoom, never a click target. */}
-          {canvasConfig.viewport && (
+          {canvasConfig.viewport && !panelPreview && (
             <Group listening={false}>
               <Rect
                 x={canvasConfig.viewport.x} y={canvasConfig.viewport.y}

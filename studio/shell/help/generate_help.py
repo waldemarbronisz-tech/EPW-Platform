@@ -1314,6 +1314,22 @@ W inspektorze pomieszczenia X i Y to lewy górny róg pokoju liczony od
 lewego górnego rogu planu, a szerokość i długość to jego rozmiar
 w rzucie — wszystko w metrach.
 
+## Widok główny i podgląd jak na panelu
+
+W **Widok → Widoczne ekrany** gwiazdka przy ekranie oznacza **widok
+główny** — ekran, od którego panel zaczyna. Bez gwiazdki panel zaczyna
+od ekranu, który był otwarty przy zapisie.
+
+**F11** (albo przycisk „Podgląd jak na panelu" na pasku ekranów, albo
+Widok → Podgląd panelu) pokazuje widok główny na całym ekranie dokładnie
+tak, jak pokaże go panel: bez siatki, bez uchwytów, wpasowany według
+ramki ekranu runtime albo do treści. Kliknięcie aparatu **steruje** nim:
+przy włączonym „Na żywo" komenda idzie do sterownika tą samą drogą co
+z panelu (blokady i zabezpieczenia działają, odmowa pojawia się na pasku
+stanu), a symbol podąża za potwierdzeniem ze sterownika; bez łączności
+działa symulacja edytora. Pasek w rogu pozwala przełączyć ekran; **Esc**
+albo F11 wraca do edycji.
+
 ## Ekran jest w projekcie
 
 Nie ma osobnego pliku do wgrania. Ekran jedzie w `projekt.epw` i to
@@ -1370,6 +1386,22 @@ automatic fit.
 In the room inspector X and Y are the room's top-left corner measured
 from the plan's top-left corner, and width and length are its size in
 plan — all in metres.
+
+## Main view and the preview as on the panel
+
+In **View → Visible screens** the star next to a screen marks the **main
+view** — the screen the panel opens with. Without a star the panel opens
+with the screen that was active when the project was saved.
+
+**F11** (or the "Preview as on the panel" button on the screens toolbar,
+or View → Panel preview) shows the main view full screen exactly as the
+panel shows it: no grid, no handles, fitted to the runtime frame or to
+what is drawn. Clicking an apparatus **operates** it: with live on the
+command goes to the controller down the same path as from the panel
+(interlocks and safety checks apply, a refusal shows in the status bar)
+and the symbol follows the controller's feedback; without a link the
+editor's simulation answers. The bar in the corner switches the screen;
+**Esc** or F11 returns to editing.
 
 ## The screen lives in the project
 

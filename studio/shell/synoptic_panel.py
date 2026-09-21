@@ -569,6 +569,41 @@ class SynopticPanel(QWidget):
         )
         self._view.page().runJavaScript(js)
 
+    def enter_panel_preview(self, screen_id=None):
+        """Panel preview (PanelPreview.tsx): the main view screen - or
+        `screen_id` - fills the page as the panel shows it, operable."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        self._view.page().runJavaScript(
+            "typeof window.__synopticPanelPreview === 'function' "
+            f"&& window.__synopticPanelPreview({json.dumps(screen_id)});"
+        )
+
+    def exit_panel_preview(self):
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            return
+        self._view.page().runJavaScript(
+            "typeof window.__synopticPanelPreview === 'function' && window.__synopticPanelPreview(false);"
+        )
+
+    def take_pending_commands(self, callback):
+        """The commands clicked in a LIVE panel preview, drained: `callback`
+        receives a list of {"deviceId", "action"} (empty when none)."""
+        if self._pages.currentIndex() != _PAGE_VIEW:
+            callback([])
+            return
+        js = ("typeof window.__synopticTakeCommands === 'function' "
+              "? window.__synopticTakeCommands() : '[]'")
+
+        def _handle(result):
+            try:
+                commands = json.loads(result) if result else []
+            except ValueError:
+                commands = []
+            callback([c for c in commands if isinstance(c, dict) and c.get("deviceId") and c.get("action")])
+
+        self._view.page().runJavaScript(js, _handle)
+
     def push_live_values(self, values):
         """{tag: value} from the controller (or None when live is off) -
         the editor shows device-bound symbols in their live state

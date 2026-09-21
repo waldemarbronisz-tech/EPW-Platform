@@ -25,6 +25,7 @@ was. This rebuild follows e²TANGO-Studio's own four-part pattern:
      happens to implement which part - EKRANY/LOGIKA become two leaves
      among many, most still unbuilt and shown, honestly, as such.
 """
+import json
 import os
 import re
 from pathlib import Path
@@ -518,6 +519,18 @@ class StudioMainWindow(QMainWindow):
         # aspect happens to have focus - see _HELP_TOPIC_BY_TREE_KEY
         # and _open_contextual_help above for the actual mapping/logic.
         self._help_shortcut = QShortcut(QKeySequence("F1"), self)
+        # Panel preview (SPEC "Widok główny"): F11 shows the main view
+        # screen full screen as the panel shows it, operable; F11 or Esc
+        # in the editor returns.
+        self._panel_preview_active = False
+        self._panel_preview_hidden = []
+        self._panel_preview_was_maximized = False
+        self._panel_preview_timer = QTimer(self)
+        self._panel_preview_timer.setInterval(300)
+        self._panel_preview_timer.timeout.connect(self._panel_preview_tick)
+        self._panel_preview_shortcut = QShortcut(QKeySequence("F11"), self)
+        self._panel_preview_shortcut.setContext(Qt.ShortcutContext.ApplicationShortcut)
+        self._panel_preview_shortcut.activated.connect(self.toggle_panel_preview)
         self._help_shortcut.activated.connect(self._open_contextual_help)
 
     # ------------------------------------------------------------------
@@ -1500,6 +1513,106 @@ class StudioMainWindow(QMainWindow):
 
         if on_progress is not None:
             on_progress(tr("splash.ready"))
+
+    # -- panel preview (F11) ----------------------------------------------------------------
+
+    def panel_preview_active(self) -> bool:
+        return self._panel_preview_active
+
+    def toggle_panel_preview(self):
+        if self._panel_preview_active:
+            self.exit_panel_preview()
+        else:
+            self.enter_panel_preview()
+
+    def enter_panel_preview(self, screen_id=None) -> bool:
+        """The main view screen full screen, as the panel shows it: the
+        editor's own PanelPreview (no grid, the runtime frame or
+        everything drawn fitted, clicks operate) with Studio's chrome -
+        menu, toolbars, tree, status bar - out of the way."""
+        if self._panel_preview_active:
+            return True
+        if self._active != _TREE_ITEM_SCREENS:
+            self._open_screens()
+        panel = self._synoptic_panel
+        if panel is None or not panel.is_page_ready():
+            self.statusBar().showMessage(tr("live.preview_not_ready"), 4000)
+            return False
+        hidden = []
+        for widget in (self.menuBar(), self._shared_toolbar, self._left_splitter, self.statusBar()):
+            if widget is not None and widget.isVisible():
+                widget.setVisible(False)
+                hidden.append(widget)
+        container = self._aspect_containers.get(_TREE_ITEM_SCREENS)
+        if container is not None and container.layout() is not None:
+            layout = container.layout()
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                widget = item.widget() if item is not None else None
+                if widget is not None and widget is not panel and widget.isVisible():
+                    widget.setVisible(False)
+                    hidden.append(widget)
+        self._panel_preview_hidden = hidden
+        self._panel_preview_was_maximized = self.isMaximized()
+        self._panel_preview_active = True
+        self.showFullScreen()
+        panel.enter_panel_preview(screen_id)
+        panel.web_view().setFocus()
+        self._panel_preview_timer.start()
+        return True
+
+    def exit_panel_preview(self):
+        if not self._panel_preview_active:
+            return
+        self._panel_preview_timer.stop()
+        self._panel_preview_active = False
+        panel = self._synoptic_panel
+        if panel is not None:
+            panel.exit_panel_preview()
+        for widget in self._panel_preview_hidden:
+            widget.setVisible(True)
+        self._panel_preview_hidden = []
+        if self._panel_preview_was_maximized:
+            self.showMaximized()
+        else:
+            self.showNormal()
+
+    def _panel_preview_tick(self):
+        """While the preview is on: leave when the editor left (Esc there),
+        and send the commands clicked in a live preview to the controller."""
+        panel = self._synoptic_panel
+        if panel is None:
+            self.exit_panel_preview()
+            return
+        panel.query_state(self._panel_preview_state)
+        panel.take_pending_commands(self.relay_commands)
+
+    def _panel_preview_state(self, state):
+        if self._panel_preview_active and state is not None and not state.get("panelPreview", True):
+            self.exit_panel_preview()
+
+    def relay_commands(self, commands) -> int:
+        """POST /api/v1/commands for every command clicked in the preview -
+        the controller's own path, every interlock and safety check
+        included; a refusal shows in the status bar."""
+        sent = 0
+        for command in commands or []:
+            ok, data = self._controller_link.request_json(
+                "/api/v1/commands", {"device_tag": command["deviceId"], "command": command["action"]})
+            if ok and isinstance(data, dict) and data.get("success", True):
+                sent += 1
+                self.statusBar().showMessage(tr("live.command_sent", device=command["deviceId"], action=command["action"]), 3000)
+            else:
+                detail = self._controller_link.last_error_detail     # 403: {"error", "reasons": [...]}
+                if isinstance(detail, dict) and detail.get("reasons"):
+                    reason = "; ".join(str(r) for r in detail["reasons"])
+                elif isinstance(detail, (str, dict)):
+                    reason = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
+                else:
+                    reason = data
+                self.statusBar().showMessage(tr("live.command_failed", device=command["deviceId"],
+                                               action=command["action"], reason=reason), 6000)
+        return sent
 
     def _open_screens(self):
         if not self._ensure_synoptic_panel():

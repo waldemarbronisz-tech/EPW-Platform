@@ -566,3 +566,9 @@ body, html, #root {
 .format-combo-option-current {
   font-weight: bold;
 }
+
+/* Panel preview (components/PanelPreview.tsx): the whole window is the panel - no bevel round the drawing. */
+.panel-preview .canvas-container {
+  border: none;
+  outline: none;
+}

@@ -70,6 +70,8 @@ type SynopticStudioState = {
   workMode: string;
   drawingWallTool: boolean;
   drawingRoomTool: boolean;
+  /** Panel preview on show (PanelPreview.tsx) - Studio leaves its own full screen when this drops. */
+  panelPreview: boolean;
 };
 type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
 (window as unknown as StudioStateBridge).__synopticStudioState = (): SynopticStudioState => {
@@ -87,6 +89,7 @@ type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
     workMode: s.workMode,
     drawingWallTool: !!s.isDrawingWall,
     drawingRoomTool: !!s.isDrawingRoom,
+    panelPreview: !!s.panelPreview,
   };
 };
 
@@ -216,5 +219,20 @@ type LiveBridge = { __synopticLiveValues?: (json: string) => void };
 // driving the real editor inside the shell's QWebEngineView) read the
 // store through it - the same store the bridges above read. Read-mostly;
 // nothing in the editor itself uses it.
+// Panel preview (store/previewSlice.ts) for Studio: enter with a screen
+// id (null = the main view, else the active screen) or leave with false;
+// and the commands clicked in a live preview, drained as JSON for Studio
+// to POST to the controller.
+type PanelPreviewBridge = {
+  __synopticPanelPreview?: (screenId: string | null | false) => void;
+  __synopticTakeCommands?: () => string;
+};
+(window as unknown as PanelPreviewBridge).__synopticPanelPreview = (screenId): void => {
+  if (screenId === false) useStore.getState().exitPanelPreview();
+  else useStore.getState().enterPanelPreview(screenId);
+};
+(window as unknown as PanelPreviewBridge).__synopticTakeCommands = (): string =>
+  JSON.stringify(useStore.getState().takeCommands());
+
 type StoreHook = { __synopticStore?: typeof useStore };
 (window as unknown as StoreHook).__synopticStore = useStore;

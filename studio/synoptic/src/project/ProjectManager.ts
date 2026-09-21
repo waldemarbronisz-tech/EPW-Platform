@@ -76,6 +76,7 @@ export class ProjectManager {
       circuits: state.circuits || [],
       screens: state.screens,
       activeScreenId: state.activeScreenId,
+      mainScreenId: state.mainScreenId || undefined,
       screenContents: state.screenContents,
       groupCommands: state.groupCommands || [],
       setpointPanels: state.setpointPanels || [],
@@ -132,6 +133,10 @@ export class ProjectManager {
       // one-screen project, which is exactly what it was.
       screens: project.screens?.length ? project.screens : [{ id: 'screen-1', name: 'Screen 1' }],
       activeScreenId: project.activeScreenId || project.screens?.[0]?.id || 'screen-1',
+      mainScreenId: project.mainScreenId && (project.screens || []).some(sc => sc.id === project.mainScreenId)
+        ? project.mainScreenId : null,
+      panelPreview: null,
+      pendingCommands: [],
       screenContents,
       // feat/workspace: views and undo stacks belong to the session that
       // made them, never to a project opened afterwards.

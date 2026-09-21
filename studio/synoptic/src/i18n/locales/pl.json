@@ -245,6 +245,18 @@
     "runtime_frame_clear": "Usuń ramkę (dopasuj do wszystkiego, co narysowane)",
     "runtime_frame_auto": "Bez ramki: panel dopasowuje wszystko, co narysowane",
     "runtime_frame_clear_hint": "Bez ramki panel wpasowuje w swoje okno każdą ścianę, symbol i tablicę tego ekranu, z niewielkim marginesem.",
-    "runtime_frame_tag": "PANEL"
+    "runtime_frame_tag": "PANEL",
+    "main_view": "widok główny",
+    "main_view_hint": "Ekran, od którego panel zaczyna (Widok główny). Kliknij, żeby zaznaczyć albo odznaczyć.",
+    "panel_preview": "Podgląd panelu",
+    "panel_preview_open": "Pokaż jak na panelu (całe okno)",
+    "panel_preview_hint": "Ekran widoku głównego wypełnia okno tak, jak pokaże go panel; kliknięcie aparatu steruje nim - sterownikiem przy włączonym „Na żywo”, symulacją w przeciwnym razie. Esc wraca."
+  },
+  "preview": {
+    "live": "NA ŻYWO - sterownik",
+    "simulation": "SYMULACJA",
+    "screen_hint": "Który ekran pokazuje panel",
+    "close": "Zamknij (Esc)",
+    "close_hint": "Powrót do edycji"
   }
 }

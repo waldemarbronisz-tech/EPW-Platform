@@ -33,6 +33,22 @@ In the room inspector X and Y are the room's top-left corner measured
 from the plan's top-left corner, and width and length are its size in
 plan — all in metres.
 
+## Main view and the preview as on the panel
+
+In **View → Visible screens** the star next to a screen marks the **main
+view** — the screen the panel opens with. Without a star the panel opens
+with the screen that was active when the project was saved.
+
+**F11** (or the "Preview as on the panel" button on the screens toolbar,
+or View → Panel preview) shows the main view full screen exactly as the
+panel shows it: no grid, no handles, fitted to the runtime frame or to
+what is drawn. Clicking an apparatus **operates** it: with live on the
+command goes to the controller down the same path as from the panel
+(interlocks and safety checks apply, a refusal shows in the status bar)
+and the symbol follows the controller's feedback; without a link the
+editor's simulation answers. The bar in the corner switches the screen;
+**Esc** or F11 returns to editing.
+
 ## The screen lives in the project
 
 There is no separate file to upload. The screen travels inside

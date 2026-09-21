@@ -316,6 +316,19 @@ aktywnego ekranu, `screenContents[id].viewport` pozostałych
 `screen_widget.py` `view_rect()`/`content_bounds()`, `screen_set.py`
 przenosi `floorMaterial`/`viewport` nieaktywnego ekranu do jego `canvas`).
 
+**Widok główny i podgląd jak na panelu (2026-09-21).** W edytorze
+*Widok → Widoczne ekrany* gwiazdka oznacza ekran, od którego panel
+zaczyna (`mainScreenId` w dokumencie; runtime:
+`screen_set.initial_screen_id()`, zapamiętany ostatnio oglądany ekran
+nadal wygrywa). **F11** w Studio (albo przycisk na pasku ekranów) chowa
+całe chrome Studia i pokazuje ten ekran na całym ekranie tak, jak
+pokaże go panel (`PanelPreview.tsx`: bez siatki, wpasowanie jak
+`view_rect()`), z obsługą: kliknięcie aparatu przy włączonym „Na żywo"
+to komenda do sterownika (`POST /api/v1/commands`, kolejka
+`__synopticTakeCommands` opróżniana przez Studio co 300 ms, odmowa na
+pasku stanu), bez łączności — symulacja edytora. Esc w edytorze albo F11
+wraca (`__synopticStudioState().panelPreview`).
+
 **Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
 KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z
 `deviceId`, którego aparat w `screens.devices` ma oznaczenie roli,

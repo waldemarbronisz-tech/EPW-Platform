@@ -79,6 +79,8 @@ export interface EPWProjectSchema {
   // format has always written.
   screens?: ScreenInfo[];
   activeScreenId?: string;
+  /** The screen the panel opens with (SPEC "Widok główny"); absent = the active one. */
+  mainScreenId?: string;
   screenContents?: Record<string, ScreenContent>;
   // feat/meter-element part B: the project's device list, per src/
   // project/DeviceSchema.ts's contract (this editor's first caller of

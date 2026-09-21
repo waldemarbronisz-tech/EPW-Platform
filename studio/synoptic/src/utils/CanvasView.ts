@@ -105,6 +105,24 @@ export interface View {
 
 const FIT_PADDING_FRACTION = 0.9; // a little margin around the content, not edge-to-edge
 
+/**
+ * The view the PANEL uses for a screen (runtime's screen_widget.view_rect):
+ * the runtime frame fitted edge to edge when there is one, else everything
+ * drawn with a small margin, else nothing to fit (100%, no pan).
+ */
+export function computePanelView(
+  viewport: RuntimeViewport | undefined,
+  planBounds: Bounds | null,
+  viewportWidth: number,
+  viewportHeight: number,
+): View {
+  if (viewport) {
+    const bounds = { minX: viewport.x, minY: viewport.y, maxX: viewport.x + viewport.width, maxY: viewport.y + viewport.height };
+    return computeFitView(bounds, viewportWidth, viewportHeight, 0.99);
+  }
+  return computeFitView(planBounds, viewportWidth, viewportHeight, 0.92);
+}
+
 /** The canvas rectangle a viewport of the given size shows under `view` - what "Runtime frame: what I see now" records, whole pixels. */
 export function visibleCanvasRect(view: View, viewportWidth: number, viewportHeight: number): RuntimeViewport {
   const zoom = view.zoom > 0 ? view.zoom : 1;
@@ -123,7 +141,8 @@ export function visibleCanvasRect(view: View, viewportWidth: number, viewportHei
  * no pan, when there is nothing to fit (bounds is null) or the
  * viewport has no usable size yet.
  */
-export function computeFitView(bounds: Bounds | null, viewportWidth: number, viewportHeight: number): View {
+export function computeFitView(bounds: Bounds | null, viewportWidth: number, viewportHeight: number,
+                               padding: number = FIT_PADDING_FRACTION): View {
   if (!bounds || viewportWidth <= 0 || viewportHeight <= 0) {
     return { zoom: 1, panX: 0, panY: 0 };
   }
@@ -131,7 +150,7 @@ export function computeFitView(bounds: Bounds | null, viewportWidth: number, vie
   const contentWidth = Math.max(1, bounds.maxX - bounds.minX);
   const contentHeight = Math.max(1, bounds.maxY - bounds.minY);
 
-  const zoom = clampZoom(Math.min(viewportWidth / contentWidth, viewportHeight / contentHeight) * FIT_PADDING_FRACTION);
+  const zoom = clampZoom(Math.min(viewportWidth / contentWidth, viewportHeight / contentHeight) * padding);
 
   const contentCenterX = (bounds.minX + bounds.maxX) / 2;
   const contentCenterY = (bounds.minY + bounds.maxY) / 2;

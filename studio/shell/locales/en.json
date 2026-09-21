@@ -176,7 +176,8 @@
     "synoptic_open": "Open screen...",
     "synoptic_save": "Save screen",
     "synoptic_save_as": "Save screen as...",
-    "live": "Live from the controller"
+    "live": "Live from the controller",
+    "synoptic_panel_preview": "Preview as on the panel (F11)"
   },
   "canvas": {
     "distribute_h": "Distribute Horizontally",
@@ -724,7 +725,10 @@
     "forces_held_elsewhere": "The controller holds {count} force(s) from outside this Studio.",
     "force_mode_title": "Force Mode",
     "force_mode_text": "Forcing overrides input and output states on the controller. Rules: Engineer token only, every force is audited and shown on the cabinet panel; all forces are released when the mode is turned off, when the link to Studio is lost (no heartbeat) and on a controller restart. The protection path is never forced. Enable force mode?",
-    "release_failed": "Could not release the forces: {reason}"
+    "release_failed": "Could not release the forces: {reason}",
+    "preview_not_ready": "The screen editor is still loading - try again in a moment.",
+    "command_sent": "Sent {device}.{action} to the controller.",
+    "command_failed": "The controller refused {device}.{action}: {reason}"
   },
   "object_links": {
     "intro": "One controller's value available on another as a Link.<Id>.In<n> tag - over MQTT: the source publishes its tags, the target subscribes in MQTT Integration (Studio writes the incoming mappings here and never touches manual ones). The Link.* tag works in the target's logic and screens; it is never a command.",

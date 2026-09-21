@@ -245,6 +245,18 @@
     "runtime_frame_clear": "Clear the frame (fit everything drawn)",
     "runtime_frame_auto": "No frame: the panel fits everything drawn",
     "runtime_frame_clear_hint": "Without a frame the panel fits every wall, symbol and panel of this screen into its window, with a small margin.",
-    "runtime_frame_tag": "PANEL"
+    "runtime_frame_tag": "PANEL",
+    "main_view": "main view",
+    "main_view_hint": "The screen the panel opens with (Main View). Click to mark or unmark.",
+    "panel_preview": "Panel preview",
+    "panel_preview_open": "Show as on the panel (full window)",
+    "panel_preview_hint": "The main view screen fills the window as the panel shows it; clicking an apparatus operates it - the controller when live is on, the simulation otherwise. Esc returns."
+  },
+  "preview": {
+    "live": "LIVE - the controller",
+    "simulation": "SIMULATION",
+    "screen_hint": "Which screen the panel shows",
+    "close": "Close (Esc)",
+    "close_hint": "Back to editing"
   }
 }

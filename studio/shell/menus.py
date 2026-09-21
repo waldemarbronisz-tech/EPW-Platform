@@ -555,6 +555,10 @@ def build_synoptic_context_toolbar(toolbar, synoptic_panel, studio_window):
     _add(toolbar, tr("toolbar.synoptic_save_as"), lambda: synoptic_panel.trigger_menu_item("Save As"),
          icon_name="save_as")
     toolbar.addSeparator()
+    # SPEC "Widok główny": the main view screen full screen, as the panel
+    # shows it, operable (F11 too; Esc in the editor returns).
+    _add(toolbar, tr("toolbar.synoptic_panel_preview"), studio_window.toggle_panel_preview, icon_name="scada_preview")
+    toolbar.addSeparator()
 
     # feat/synoptic-modes: the work-mode switch - SYMBOLS / ROOMS /
     # CONNECTIONS / ANNOTATIONS - as four named, mutually exclusive
