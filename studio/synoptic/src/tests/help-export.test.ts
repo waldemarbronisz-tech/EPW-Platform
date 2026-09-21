@@ -50,9 +50,8 @@ describe('help rendered as Markdown for Studio', () => {
       expect(onDisk).toEqual(Object.keys(rendered.files[lang]).map(id => `${id}.md`).sort());
       for (const [id, markdown] of Object.entries(rendered.files[lang])) {
         // Line endings normalized: a Windows checkout with autocrlf hands back CRLF.
-        expect(fs.readFileSync(path.join(dir, `${id}.md`), 'utf-8').replace(/
-/g, '
-'), `${lang}/${id}.md is stale`).toBe(markdown);
+        const onDiskText = fs.readFileSync(path.join(dir, `${id}.md`), 'utf-8').split('\r\n').join('\n');
+        expect(onDiskText, `${lang}/${id}.md is stale`).toBe(markdown);
       }
     }
   });
