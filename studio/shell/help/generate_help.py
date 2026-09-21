@@ -548,9 +548,10 @@ sterownika.
 Drzewo ma stałą strukturę, niezależnie od tego, co jest wypełnione:
 
 - **PROJEKT** — Informacje, Skład urządzenia
-- **KONFIGURACJA** — Karty, Lokalizacje, Rejestr punktów, Rejestr
-  aparatów, Schemat synoptyczny, Logika, MQTT, Notatki serwisowe,
-  Powiązania obiektu
+- **KONFIGURACJA** — Lokalizacje, Karty, Rejestr punktów, Rejestr
+  aparatów, Schemat synoptyczny, Logika, MQTT, Powiązania obiektu,
+  Notatki serwisowe — w kolejności, w jakiej projekt ich potrzebuje:
+  każdy dział po tych, na których się opiera
 - **ALARMÓWKA** — Strefy, Linie dozorowe, Użytkownicy
 - **ZABEZPIECZENIA** — Elektryczne, Procesowe
 - **STEROWNIK** — Połączenie, Test zabezpieczeń
@@ -600,8 +601,10 @@ controller.
 The tree has a fixed structure, regardless of what is filled in:
 
 - **PROJECT** — Information, Device Composition
-- **CONFIGURATION** — Cards, Locations, Point Registry, Apparatus
-  Registry, Synoptic Diagram, Logic, MQTT, Service Notes, Object Links
+- **CONFIGURATION** — Locations, Cards, Point Registry, Apparatus
+  Registry, Synoptic Diagram, Logic, MQTT, Object Links, Service Notes —
+  in the order a project needs them: each branch after the ones it
+  builds on
 - **INTRUSION ALARM** — Zones, Supervised Lines, Users
 - **PROTECTION** — Electrical, Process
 - **CONTROLLER** — Connection, Protection Tests
@@ -879,6 +882,70 @@ Project](help://validation) as a warning — not an error.
 )
 
 topic(
+    "locations", "project", "Lokalizacje", "Locations",
+    """
+# Lokalizacje
+
+Miejsca, do których odnoszą się karty i punkty: szafa, kotłownia, brama,
+hala.
+
+| Kolumna | Zasada |
+|---|---|
+| **Kod** | krótki, tylko **litery A–Z i cyfry**, unikalny (np. `KOT`, `BRAMA1`) |
+| **Opis** | pełna nazwa, którą czyta człowiek |
+
+## Dziedziczenie
+
+Karta stoi w jednej lokalizacji. **Każdy jej punkt dziedziczy tę
+lokalizację**, dopóki nie nadasz mu własnej w [Rejestrze
+punktów](help://points) — rejestr pokazuje wtedy „(dziedziczona: …)".
+
+Dzięki temu przeniesienie karty do innej szafy to jedna zmiana, a nie
+trzydzieści dwie.
+
+## Po co to jest naprawdę
+
+Ta informacja jedzie na sterownik i ląduje przy tagu. Serwisant przy
+szafie widzi nie tylko „ELA1.DI.7 — czujka hali", ale też gdzie ten
+zacisk fizycznie jest. Bez lokalizacji zostaje pytanie, na które nikt
+nie umie odpowiedzieć po dwóch latach.
+
+Punkt wskazujący lokalizację, której nie ma na liście, zgłasza [Sprawdź
+projekt](help://validation).
+""",
+    """
+# Locations
+
+The places cards and points refer to: a cabinet, the boiler room, the
+gate, the hall.
+
+| Column | Rule |
+|---|---|
+| **Code** | short, **letters A–Z and digits only**, unique (e.g. `KOT`, `GATE1`) |
+| **Description** | the full name a human reads |
+
+## Inheritance
+
+A card sits in one location. **Every point on it inherits that
+location** until you give it one of its own in the [Point
+Registry](help://points) — the registry then shows "(inherited: …)".
+
+This is why moving a card to another cabinet is one edit, not
+thirty-two.
+
+## What this is really for
+
+The information travels to the controller and lands on the tag. A
+technician at the cabinet sees not only "ELA1.DI.7 — hall detector" but
+also where that terminal physically is. Without it you are left with a
+question nobody can answer two years later.
+
+A point naming a location that is not on the list is reported by [Check
+Project](help://validation).
+""",
+)
+
+topic(
     "io_cards", "project", "Karty wejść/wyjść", "I/O Cards",
     """
 # Karty wejść/wyjść
@@ -986,70 +1053,6 @@ The **Add location** / **Remove location** buttons lead to the same list
 as the [Locations](help://locations) branch — they are here because a
 location is a field of a card, and this is usually the moment one turns
 out to be missing.
-""",
-)
-
-topic(
-    "locations", "project", "Lokalizacje", "Locations",
-    """
-# Lokalizacje
-
-Miejsca, do których odnoszą się karty i punkty: szafa, kotłownia, brama,
-hala.
-
-| Kolumna | Zasada |
-|---|---|
-| **Kod** | krótki, tylko **litery A–Z i cyfry**, unikalny (np. `KOT`, `BRAMA1`) |
-| **Opis** | pełna nazwa, którą czyta człowiek |
-
-## Dziedziczenie
-
-Karta stoi w jednej lokalizacji. **Każdy jej punkt dziedziczy tę
-lokalizację**, dopóki nie nadasz mu własnej w [Rejestrze
-punktów](help://points) — rejestr pokazuje wtedy „(dziedziczona: …)".
-
-Dzięki temu przeniesienie karty do innej szafy to jedna zmiana, a nie
-trzydzieści dwie.
-
-## Po co to jest naprawdę
-
-Ta informacja jedzie na sterownik i ląduje przy tagu. Serwisant przy
-szafie widzi nie tylko „ELA1.DI.7 — czujka hali", ale też gdzie ten
-zacisk fizycznie jest. Bez lokalizacji zostaje pytanie, na które nikt
-nie umie odpowiedzieć po dwóch latach.
-
-Punkt wskazujący lokalizację, której nie ma na liście, zgłasza [Sprawdź
-projekt](help://validation).
-""",
-    """
-# Locations
-
-The places cards and points refer to: a cabinet, the boiler room, the
-gate, the hall.
-
-| Column | Rule |
-|---|---|
-| **Code** | short, **letters A–Z and digits only**, unique (e.g. `KOT`, `GATE1`) |
-| **Description** | the full name a human reads |
-
-## Inheritance
-
-A card sits in one location. **Every point on it inherits that
-location** until you give it one of its own in the [Point
-Registry](help://points) — the registry then shows "(inherited: …)".
-
-This is why moving a card to another cabinet is one edit, not
-thirty-two.
-
-## What this is really for
-
-The information travels to the controller and lands on the tag. A
-technician at the cabinet sees not only "ELA1.DI.7 — hall detector" but
-also where that terminal physically is. Without it you are left with a
-question nobody can answer two years later.
-
-A point naming a location that is not on the list is reported by [Check
-Project](help://validation).
 """,
 )
 
