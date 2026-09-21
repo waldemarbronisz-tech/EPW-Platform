@@ -88,17 +88,42 @@ class SecuritySignalSource:
         tables rather than of the "SEC." prefix: with UNSERVED_SIGNALS
         empty, a prefix test would claim every name in the namespace,
         including a command this controller has no implementation for -
-        which is precisely the case logic_runtime.py wants reported."""
+        which is precisely the case logic_runtime.py wants reported.
+
+        feat/signal-register §3.3: a per-instance signal
+        (SEC.ZONE.<id>.ARMED and friends) is judged by its SUFFIX, not by
+        whether that zone exists right now. A zone can be added or
+        removed while the controller runs, and "this controller has no
+        implementation for that command" is a different statement from
+        "that zone is gone" - conflating them would report a perfectly
+        implemented request as unimplemented the moment a zone was
+        deleted."""
         if signal_id in UNSERVED_SIGNALS:
             return False
-        return signal_id in _READERS or signal_id in _COMMANDS or signal_id in _SYSTEM_COMMANDS
+        if signal_id in _READERS or signal_id in _COMMANDS or signal_id in _SYSTEM_COMMANDS:
+            return True
+        return _parse_instance_signal(signal_id) is not None
 
     def read(self, signal_id: str):
         """The signal's value, or None when this source does not answer
         for it at all (not an SEC signal, or one of UNSERVED_SIGNALS) -
         the caller then falls back to the catalog's safe value."""
+        if signal_id in UNSERVED_SIGNALS:
+            return None
+
+        parsed = _parse_instance_signal(signal_id)
+        if parsed is not None:
+            kind, instance_id, suffix = parsed
+            per_instance = (_ZONE_READERS if kind == "ZONE" else _LINE_READERS).get(suffix)
+            if per_instance is None:
+                return None          # a request, not a readable state
+            manager = self._manager()
+            if manager is None:
+                return False
+            return per_instance(manager, instance_id)
+
         handler = _READERS.get(signal_id)
-        if handler is None or signal_id in UNSERVED_SIGNALS:
+        if handler is None:
             return None
         manager = self._manager()
         if manager is None:
@@ -121,9 +146,34 @@ class SecuritySignalSource:
         (logic_runtime.py) - passing a level here as well would apply the
         operator gate to a program that is not an operator.
         """
+        if signal_id in UNSERVED_SIGNALS:
+            return False
+
+        # A request aimed at ONE zone, rather than at every zone in turn.
+        parsed = _parse_instance_signal(signal_id)
+        if parsed is not None:
+            kind, instance_id, suffix = parsed
+            per_zone = _ZONE_REQUESTS.get(suffix) if kind == "ZONE" else None
+            if per_zone is None:
+                return False
+            manager = self._manager()
+            if manager is None:
+                log.warning(f"Logic issued {signal_id}, but this controller has no intrusion module.")
+                return False
+            if not any(zone["id"] == instance_id for zone in manager.get_zones()):
+                # Named a zone this installation does not have. Reported,
+                # not silently dropped: a request that does nothing is
+                # otherwise indistinguishable from one that worked.
+                log.warning(f"Logic issued {signal_id}, but there is no zone {instance_id!r} "
+                            f"on this controller - it was not applied.")
+                return False
+            done = bool(per_zone(manager, instance_id, actor))
+            log.info(f"Logic issued {signal_id}: {'carried out' if done else 'refused'}.")
+            return done
+
         system_command = _SYSTEM_COMMANDS.get(signal_id)
         command = _COMMANDS.get(signal_id)
-        if (command is None and system_command is None) or signal_id in UNSERVED_SIGNALS:
+        if command is None and system_command is None:
             return False
         manager = self._manager()
         if manager is None:
@@ -146,6 +196,115 @@ class SecuritySignalSource:
                 done += 1
         log.info(f"Logic issued {signal_id}: carried out on {done} of {len(zones)} zone(s).")
         return done > 0
+
+
+# --- per-instance signals (feat/signal-register §3.3) ------------------------
+#
+# SEC.ZONE.<zone_id>.ARMED, SEC.LINE.<line_id>.VIOLATED,
+# REQ.SEC.ZONE.<zone_id>.ARM. The catalog holds these as patterns and
+# expands them from the project's own zones and lines; this end answers
+# them against the live IntrusionManager.
+#
+# An id is parsed rather than matched against a generated table: the set
+# of zones changes while the controller runs (a zone added in Studio and
+# installed without a restart), and a table built at import would answer
+# for yesterday's installation.
+
+_INSTANCE_PREFIXES = (
+    ("REQ.SEC.ZONE.", "ZONE"),
+    ("SEC.ZONE.", "ZONE"),
+    ("SEC.LINE.", "LINE"),
+)
+
+
+def _parse_instance_signal(signal_id: str):
+    """("ZONE"|"LINE", instance_id, SUFFIX) for a per-instance signal, or
+    None. The instance id may not contain a dot - an id that did would be
+    ambiguous against the suffix, which is why the project's own ids are
+    validated elsewhere."""
+    for prefix, kind in _INSTANCE_PREFIXES:
+        if not signal_id.startswith(prefix):
+            continue
+        rest = signal_id[len(prefix):]
+        instance_id, _, suffix = rest.partition(".")
+        if not instance_id or not suffix or "." in suffix:
+            return None
+        known = _ZONE_SUFFIXES if kind == "ZONE" else _LINE_SUFFIXES
+        if suffix not in known:
+            return None
+        if signal_id.startswith("REQ.") != (suffix in _ZONE_REQUESTS):
+            return None
+        return kind, instance_id, suffix
+    return None
+
+
+def _zone_in_state(state):
+    return lambda manager, zone_id: manager.get_zone_state(zone_id) == state
+
+
+def _zone_lines(manager, zone_id) -> list:
+    return [line for line in manager.get_lines() if line.get("zone_id") == zone_id]
+
+
+def _zone_fault(manager, zone_id) -> bool:
+    """"Awaria strefy" - any line of this zone in a fault state. The
+    manager has no separate per-zone fault flag, and inventing one would
+    mean deciding something this module has no business deciding; what it
+    CAN answer truthfully is whether anything in the zone is faulty."""
+    return any(manager.is_line_fault(line["id"]) for line in _zone_lines(manager, zone_id))
+
+
+def _zone_bypassed(manager, zone_id) -> bool:
+    return any(manager.is_line_bypassed(line["id"]) for line in _zone_lines(manager, zone_id))
+
+
+def _zone_alarm_memory(manager, zone_id) -> bool:
+    return bool(manager.get_alarm_memory(zone_id).get("active"))
+
+
+_ZONE_READERS = {
+    "ARMED": _zone_in_state(ZoneState.ARMED),
+    "DISARMED": _zone_in_state(ZoneState.DISARMED),
+    "ALARM": _zone_in_state(ZoneState.ALARM),
+    "ENTRY_DELAY": _zone_in_state(ZoneState.ENTRY_DELAY),
+    "EXIT_DELAY": _zone_in_state(ZoneState.EXIT_DELAY),
+    "ALARM_MEMORY": _zone_alarm_memory,
+    "WALK_TEST": lambda manager, zone_id: bool(manager.is_walk_test_active(zone_id)),
+    "FAULT": _zone_fault,
+    "BYPASSED": _zone_bypassed,
+}
+
+
+def _line_in_state(state):
+    return lambda manager, line_id: manager.get_line_state(line_id) == state
+
+
+_LINE_READERS = {
+    "SECURE": _line_in_state(LineState.SECURE),
+    "VIOLATED": lambda manager, line_id: bool(manager.is_line_violated_now(line_id)),
+    "FAULT": lambda manager, line_id: bool(manager.is_line_fault(line_id)),
+    "TAMPER": _line_in_state(LineState.TAMPER),
+    "SHORT": _line_in_state(LineState.SHORT),
+    # The register calls it OPEN_FAULT; this controller's own state is
+    # FAULT_OPEN. The register names the signal, the code names the state.
+    "OPEN_FAULT": _line_in_state(LineState.FAULT_OPEN),
+    "UNDETERMINED": _line_in_state(LineState.UNDETERMINED),
+    "BYPASSED": lambda manager, line_id: bool(manager.is_line_bypassed(line_id)),
+    "SUSPECT": lambda manager, line_id: bool(manager.is_line_suspect(line_id)),
+}
+
+_ZONE_REQUESTS = {
+    "ARM": lambda manager, zone_id, actor: _arm(manager, zone_id, actor),
+    "DISARM": lambda manager, zone_id, actor: _disarm(manager, zone_id, actor),
+    "CLEAR_MEMORY": lambda manager, zone_id, actor: _reset(manager, zone_id, actor),
+    "START_WALK_TEST": lambda manager, zone_id, actor: bool(
+        manager.start_walk_test(zone_id, actor=actor)),
+    "STOP_WALK_TEST": lambda manager, zone_id, actor: bool(
+        manager.stop_walk_test(zone_id, actor=actor) is not None),
+}
+
+_ZONE_SUFFIXES = frozenset(_ZONE_READERS) | frozenset(_ZONE_REQUESTS)
+_LINE_SUFFIXES = frozenset(_LINE_READERS)
 
 
 # --- the per-signal readers -------------------------------------------------

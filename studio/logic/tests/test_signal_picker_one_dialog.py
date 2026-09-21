@@ -255,21 +255,40 @@ def test_the_button_that_creates_a_marker_is_hidden_where_markers_cannot_go(app)
 
 # --- §1.4: the block has its own place in the library ------------------------
 
-def test_the_system_signal_blocks_left_the_other_drawer():
-    """They used to sit among the constants and the square-wave generator,
-    which is not where anybody looks for the alarm system's state."""
-    for type_id in ("system.signal", "system.signal_out"):
+def test_the_separate_system_signal_blocks_are_gone_from_the_library(app, qsettings=None):
+    """Owner's correction to 1.4: with all four bit/register blocks
+    reaching the catalog themselves, a separate "System signal" block is
+    a SECOND way to do one thing - and an engineer has to choose between
+    them before knowing there was a choice."""
+    from PySide6.QtCore import QSettings
+    from logic_studio.ui.panels.library import LibraryPanel
+    from shared.logic.blocks.system_signals import LEGACY_LIBRARY_HIDDEN
+
+    panel = LibraryPanel(settings=QSettings("BroniszLabs", "EPW Logic Studio Test"))
+    offered = []
+
+    def walk(item):
+        type_id = item.data(0, Qt.UserRole)
+        if type_id:
+            offered.append(type_id)
+        for i in range(item.childCount()):
+            walk(item.child(i))
+
+    for i in range(panel.tree.topLevelItemCount()):
+        walk(panel.tree.topLevelItem(i))
+
+    assert "virtual.input" in offered, "the block that replaced them is missing too"
+    for type_id in LEGACY_LIBRARY_HIDDEN:
+        assert type_id not in offered, type_id
+
+
+def test_they_are_still_registered_so_old_projects_open():
+    """Hidden, not deleted. A project saved with one must still load."""
+    from shared.logic.blocks.system_signals import LEGACY_LIBRARY_HIDDEN
+
+    for type_id in LEGACY_LIBRARY_HIDDEN:
         block = BlockRegistry.create_block(type_id)
-        assert block.category == "System signals", type_id
-
-    from logic_studio.ui.panels.library import LibraryPanel  # noqa: F401  (import guard)
-    assert "System signals" in BlockRegistry.get_categories()
-
-
-def test_the_new_category_has_a_polish_name():
-    from shared.logic.i18n import category_label
-
-    assert category_label("System signals", "pl") == "Sygnały systemowe"
+        assert block is not None and block.type_id == type_id
 
 
 # --- resolution: which address space a name belongs to -----------------------

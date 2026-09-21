@@ -265,3 +265,52 @@ def test_the_loaded_program_actually_reads_the_system_signal(app):
     engine.step()
 
     assert io.read_internal("M.ECHO", False) is True
+
+
+# --- the blocks that left the library still work -----------------------------
+
+def test_a_project_saved_with_the_old_system_signal_block_still_runs(app):
+    """Owner's correction to 1.4: system.signal is no longer OFFERED, but
+    projects already contain it. Hidden is not deleted - it must open,
+    compile and behave exactly as before, and nothing may rewrite it into
+    a virtual.input behind the engineer's back."""
+    project = _project([_bit("ECHO")])
+    reader = _block("system.signal", **{"Sygnał": "SYS.READY"})
+    sink = _block("virtual.output", Bit="ECHO")
+    reader.outputs[0].connect(sink.inputs[0])
+    project.add_block(reader)
+    project.add_block(sink)
+
+    io = SimulationIOProvider()
+    io.write_system_signal("SYS.READY", True)
+    _run(project, io)
+
+    assert io.read_internal("M.ECHO", False) is True
+    assert reader.type_id == "system.signal", "the block was silently converted"
+
+
+def test_the_old_output_block_still_issues_its_command(app):
+    project = _project()
+    source = _block("const.true")
+    writer = _block("system.signal_out", **{"Sygnał": "REQ.SEC.ARM_ALL"})
+    source.outputs[0].connect(writer.inputs[0])
+    project.add_block(source)
+    project.add_block(writer)
+
+    io, _ = _run(project)
+
+    assert io.read_system_signal("REQ.SEC.ARM_ALL") is True
+
+
+def test_the_four_blocks_that_replaced_them_are_the_ones_offered():
+    """The point of hiding them: one way to reach a signal, not two."""
+    from shared.logic.blocks.system_signals import LEGACY_LIBRARY_HIDDEN
+    from logic_studio.ui.panels.property_grid import _SIGNAL_PICKER_TARGETS
+
+    replacements = {type_id for type_id, _key in _SIGNAL_PICKER_TARGETS}
+
+    assert {"virtual.input", "virtual.output",
+            "internal.reg_in", "internal.reg_out"} <= replacements
+    assert LEGACY_LIBRARY_HIDDEN <= replacements, (
+        "the hidden blocks lost their picker too - an old project could no "
+        "longer even be edited")

@@ -47,7 +47,10 @@ class FakeIntrusion:
         return self.zones.get(zone_id)
 
     def get_lines(self):
-        return [{"id": line_id} for line_id in self.lines]
+        # feat/signal-register §3.3: a line knows its zone, which is what
+        # the per-zone FAULT/BYPASSED signals aggregate over.
+        return [{"id": line_id, "zone_id": line.get("zone_id")}
+                for line_id, line in self.lines.items()]
 
     def is_line_violated_now(self, line_id):
         return bool(self.lines.get(line_id, {}).get("violated"))
@@ -55,8 +58,34 @@ class FakeIntrusion:
     def is_line_fault(self, line_id):
         return bool(self.lines.get(line_id, {}).get("fault"))
 
+    def is_line_bypassed(self, line_id):
+        return bool(self.lines.get(line_id, {}).get("bypassed"))
+
+    def is_line_suspect(self, line_id):
+        return bool(self.lines.get(line_id, {}).get("suspect"))
+
     def get_line_state(self, line_id):
         return self.lines.get(line_id, {}).get("state", "SECURE")
+
+    # --- the walk test, per zone --------------------------------------
+    walk_tests = None
+
+    def is_walk_test_active(self, zone_id):
+        return bool((self.walk_tests or {}).get(zone_id))
+
+    def start_walk_test(self, zone_id, actor, level=None, duration_seconds=None):
+        self.calls.append(("start_walk_test", zone_id, actor))
+        if self.walk_tests is None:
+            self.walk_tests = {}
+        self.walk_tests[zone_id] = True
+        return True
+
+    def stop_walk_test(self, zone_id, actor, level=None):
+        self.calls.append(("stop_walk_test", zone_id, actor))
+        if self.walk_tests is None:
+            self.walk_tests = {}
+        self.walk_tests[zone_id] = False
+        return {"seen": []}
 
     def get_alarm_memory(self, zone_id):
         return dict(self.memory.get(zone_id, {"active": False, "first_cause_line_id": None}))

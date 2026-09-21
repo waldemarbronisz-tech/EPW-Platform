@@ -180,13 +180,17 @@ def test_virtual_output_to_virtual_input_same_scan_via_compiler():
 def test_catalog_loads_and_has_expected_categories():
     from shared.logic import system_signals
     names = [c["name"] for c in system_signals.get_categories()]
-    # feat/security-signals (catalog 1.1.0): four new categories exposing the
-    # FIXED part of EPW-OS's alarm/intrusion subsystem, appended after the
-    # original four — see system_signals_catalog.json's own _comment for
-    # why the dynamic per-line part (SEC.L<n>.*) is deliberately absent.
+    # feat/security-signals (catalog 1.1.0): four categories exposing the
+    # FIXED part of EPW-OS's alarm/intrusion subsystem, after the
+    # original four. feat/signal-register 3.3 (2.1.0) adds the three
+    # PER-INSTANCE ones - they appear here even with no project, because
+    # a category exists whether or not this installation has zones to
+    # expand it with; its `signals` list is simply empty then, which
+    # test_dynamic_signals.py covers.
     assert names == [
         "Stan systemu", "Komunikacja", "Poziom dostępu", "Generatory czasu",
-        "Stan dozoru", "Alarmy", "Sygnalizatory", "Żądania - alarmówka",
+        "Stan dozoru", "Alarmy", "Sygnalizatory", "Strefy", "Linie dozorowe",
+        "Żądania - alarmówka", "Żądania - strefy",
     ]
 
 def test_catalog_contains_every_signal_from_the_spec():

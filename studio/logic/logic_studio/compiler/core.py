@@ -52,6 +52,14 @@ class _ExpandedProjectView:
         # view answers DeviceModel exactly as the real project does.
         self.external_cards = getattr(source, "external_cards", None)
         self.external_analog_points = getattr(source, "external_analog_points", None)
+        # feat/signal-register 3.3: the alarm system's zones and lines,
+        # for exactly the reason spelled out above. The catalogue expands
+        # SEC.ZONE.<zone_id>.ARMED from THESE, so a view that dropped
+        # them made every per-zone signal invisible to the validator -
+        # which then reported a block bound to a perfectly real zone as
+        # naming a signal that exists nowhere.
+        self.external_zones = getattr(source, "external_zones", None)
+        self.external_lines = getattr(source, "external_lines", None)
         # feat/wire-labels §2.5/§5: Validator's free-end/label checks and
         # (from §5 onward) the label-node-merging step all need the
         # live project's Wire records too — passed through UNCHANGED

@@ -21,9 +21,18 @@ register_builtin_blocks()
 def test_library_tree_lists_every_registered_block(qsettings):
     """Regression: an earlier draft of the tree excluded "Documentation" the
     same way the compiler does, silently dropping Text/Note/Section from the
-    library even though they're placeable canvas annotations."""
+    library even though they're placeable canvas annotations.
+
+    feat/signal-register 1.4 (owner's correction): there is now ONE
+    deliberate exception - LEGACY_LIBRARY_HIDDEN, the two system-signal
+    blocks kept registered so older projects still open, but no longer
+    offered for placing because the four bit/register blocks reach the
+    catalog themselves. Subtracted by name rather than by loosening the
+    comparison to >=, so anything else vanishing from the library still
+    fails here."""
     _app()
     from logic_studio.ui.panels.library import LibraryPanel
+    from shared.logic.blocks.system_signals import LEGACY_LIBRARY_HIDDEN
 
     panel = LibraryPanel(settings=qsettings)
     total = 0
@@ -32,8 +41,8 @@ def test_library_tree_lists_every_registered_block(qsettings):
         if item.text(0) != "Recently used":
             total += item.childCount()
 
-    expected = sum(len(BlockRegistry.get_blocks_in_category(c)) for c in BlockRegistry.get_categories())
-    assert total == expected
+    registered = sum(len(BlockRegistry.get_blocks_in_category(c)) for c in BlockRegistry.get_categories())
+    assert total == registered - len(LEGACY_LIBRARY_HIDDEN)
 
 _REMOVED_PLACEHOLDER_CATEGORIES = [
     "Zabezpieczenia Analogowe", "Zabezpieczenia Dwustanowe",

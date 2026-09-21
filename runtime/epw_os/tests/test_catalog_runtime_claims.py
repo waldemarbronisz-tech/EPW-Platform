@@ -42,6 +42,32 @@ def _controller_answers(signal_id: str) -> bool:
 CATALOG = system_signals.get_all_signals()
 
 
+class _Installation:
+    """A project with an alarm system, so the catalogue's per-instance
+    PATTERNS expand into real ids. Without one, get_all_signals() returns
+    the fixed 42 and every SEC.ZONE.* claim would go unchecked - which is
+    precisely where a promise with nothing behind it would hide."""
+    settings = {}
+    external_zones = [{"id": "PARTER", "name": "Parter"}]
+    external_lines = [{"id": "L1", "name": "Drzwi"}]
+
+
+EXPANDED = [s for s in system_signals.get_all_signals(_Installation())
+            if s["id"] not in {c["id"] for c in CATALOG}]
+
+
+def test_the_patterns_actually_expanded():
+    assert len(EXPANDED) >= 20, "no per-instance signal was produced at all"
+
+
+@pytest.mark.parametrize("signal", EXPANDED, ids=lambda s: s["id"])
+def test_every_per_instance_signal_is_answered_too(signal):
+    """A pattern promises one signal PER zone. If the controller cannot
+    answer SEC.ZONE.PARTER.ARMED, the catalogue is offering the engineer
+    a bit for every zone in the installation that never changes."""
+    assert _controller_answers(signal["id"]), signal["id"]
+
+
 def test_the_catalogue_is_not_empty():
     """A passing empty walk would prove nothing about anything."""
     assert len(CATALOG) >= 40

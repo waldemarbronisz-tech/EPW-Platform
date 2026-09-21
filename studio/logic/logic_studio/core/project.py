@@ -483,6 +483,18 @@ class Project:
         # matter how many analog channels the cards declared.
         self.external_analog_points = None
 
+        # feat/signal-register 3.3: this installation's alarm zones and
+        # lines - [{"id", "name"}, ...] - mirrored in by Studio
+        # (logic_panel.sync_cards_from_studio) so the catalog's
+        # SEC.ZONE.<zone_id>.* patterns can become real signals. Empty in
+        # a standalone Logic Studio, which then correctly produces no
+        # per-zone signals at all rather than a placeholder nobody can
+        # bind to. Plain lists, not None: unlike the card bridge there is
+        # no per-project fallback source to defer to - a project either
+        # has an alarm system mirrored in or it has none.
+        self.external_zones = []
+        self.external_lines = []
+
     # ---- feat/undo-diff-storage: each stack's memory is proportional to
     # the SIZE OF EACH EDIT, not to the size of the whole project — see
     # AUDIT_REPORT.md §25 / §9.1 for the measured problem this replaces
