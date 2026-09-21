@@ -120,9 +120,11 @@ class HelpContentStore:
         calls to a fresh HelpContentStore, so a block added mid-session
         (there is no such thing today, blocks register at import time,
         but nothing here assumes otherwise) would still show up."""
+        from shared.logic import i18n as block_i18n
         topics = []
         for category, entries in self._catalog().items():
-            topics.append({"id": f"category:{category}", "title": category, "_is_category": True})
+            topics.append({"id": f"category:{category}", "title": block_i18n.category_label(category, self.language),
+                           "_is_category": True})
             for entry in entries:
                 topics.append({"id": f"block:{entry['type_id']}", "title": entry["display_name"], "_category": category})
         return {"id": _BLOCK_CATEGORY_CHAPTER_ID, "title": "Block catalog", "topics": topics}
@@ -144,7 +146,8 @@ class HelpContentStore:
             entry = block_catalog.describe_block_type(type_id)
             return entry["display_name"] if entry else topic_id
         if topic_id.startswith("category:"):
-            return topic_id[len("category:"):]
+            from shared.logic import i18n as block_i18n
+            return block_i18n.category_label(topic_id[len("category:"):], self.language)
         return self._static_topic_title(topic_id)
 
     def load_topic_markdown(self, topic_id: str, version: str = "") -> str:
@@ -159,9 +162,10 @@ class HelpContentStore:
             return block_catalog.block_entry_markdown(entry)
 
         if topic_id.startswith("category:"):
+            from shared.logic import i18n as block_i18n
             category = topic_id[len("category:"):]
             entries = self._catalog().get(category, [])
-            return block_catalog.category_index_markdown(category, entries)
+            return block_catalog.category_index_markdown(block_i18n.category_label(category, self.language), entries)
 
         if topic_id == "shortcuts":
             # §3.3: generated from the actual _make_action() call sites

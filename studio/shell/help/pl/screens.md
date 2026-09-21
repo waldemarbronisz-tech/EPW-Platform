@@ -2,7 +2,10 @@
 
 Edytor ekranów (Synoptic Editor) jako dział Studia. Rysujesz to, co
 operator zobaczy na sterowniku — i wiążesz rysunek z prawdziwymi
-punktami i aparatami.
+punktami i aparatami. Pełny opis edytora — rozdziały o rysowaniu,
+symbolach, przewodach, elementach ekranu i słownik — jest w tej samej
+pomocy, w dziale [Ekrany — edytor synoptyki](help://synoptic/intro-what);
+F1 na zaznaczonym symbolu otwiera jego temat.
 
 ## Co tu powstaje
 

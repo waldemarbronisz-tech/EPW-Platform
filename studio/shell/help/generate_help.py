@@ -104,6 +104,17 @@ sterowników](help://site).
 Zwykły pojedynczy `projekt.epw` nadal działa jak dotąd — jako obiekt
 z jednym sterownikiem.
 
+## Jedna pomoc dla całego Studia
+
+Ta lista obejmuje działy Studia, a pod nimi dwa edytory:
+[Ekrany](help://synoptic/intro-what) (edytor synoptyki, rozdziały 1–13)
+i [Logikę](help://logic/welcome) (edytor logiki: pojęcia, poradniki,
+katalog bloków, skróty). Wszystko w jednym języku — tym, który wybrałeś
+w Ustawieniach — i powiązane odnośnikami. **F1** w dowolnym miejscu
+otwiera tę pomoc na temacie, w którym stoisz: w dziale Studia na jego
+temacie, w edytorze logiki na zaznaczonym bloku, w edytorze ekranów na
+zaznaczonym symbolu. Pole nad listą przeszukuje wszystkie tematy naraz.
+
 ## Gdzie szukać dalej
 
 - **Projekt** — każdy dział drzewa, pole po polu.
@@ -157,6 +168,18 @@ several controllers](help://site).
 
 A plain single `projekt.epw` still works as before — as a
 one-controller object.
+
+## One help for the whole Studio
+
+This list covers Studio's own departments and, under them, the two
+editors: [Screens](help://synoptic/intro-what) (the synoptic editor,
+chapters 1–13) and [Logic](help://logic/welcome) (the logic editor:
+concepts, guides, the block catalog, shortcuts). All of it in one
+language — the one chosen in Settings — and cross-linked. **F1**
+anywhere opens this help on the topic you are in: a Studio department
+on its topic, the logic editor on the selected block, the screen editor
+on the selected symbol. The box above the list searches every topic at
+once.
 
 ## Where to look next
 
@@ -1283,7 +1306,10 @@ topic(
 
 Edytor ekranów (Synoptic Editor) jako dział Studia. Rysujesz to, co
 operator zobaczy na sterowniku — i wiążesz rysunek z prawdziwymi
-punktami i aparatami.
+punktami i aparatami. Pełny opis edytora — rozdziały o rysowaniu,
+symbolach, przewodach, elementach ekranu i słownik — jest w tej samej
+pomocy, w dziale [Ekrany — edytor synoptyki](help://synoptic/intro-what);
+F1 na zaznaczonym symbolu otwiera jego temat.
 
 ## Co tu powstaje
 
@@ -1356,7 +1382,10 @@ Po połączeniu ze sterownikiem symbole w edytorze pokazują prawdziwy stan
 
 The screen editor (Synoptic Editor) as a Studio department. You draw
 what the operator will see on the controller — and bind the drawing to
-real points and apparatus.
+real points and apparatus. The editor's full description — chapters on
+drawing, symbols, wires, screen elements and the glossary — is in this
+same help, under [Screens — the synoptic editor](help://synoptic/intro-what);
+F1 on a selected symbol opens its topic.
 
 ## What is made here
 
@@ -1432,6 +1461,11 @@ topic(
     """
 # Logika
 
+Pełny opis edytora logiki — pojęcia (etykiety, znaczniki, cykl skanu),
+poradniki, katalog każdego bloku i skróty — jest w tej samej pomocy,
+w dziale [Logika — edytor logiki](help://logic/welcome); F1 na
+zaznaczonym bloku otwiera jego stronę z katalogu.
+
 Edytor logiki sterowania (Logic Studio) jako dział Studia — biblioteka
 bloków, symulacja, kompilacja i eksport do sterownika, te same narzędzia
 co w samodzielnym Logic Studio, w jednej skórze z resztą działów.
@@ -1484,6 +1518,11 @@ wchodzi od razu w jego opis.
 """,
     """
 # Logic
+
+The logic editor's full description — concepts (labels, markers, the
+scan cycle), guides, a page for every block and the shortcuts — is in
+this same help, under [Logic — the logic editor](help://logic/welcome);
+F1 on a selected block opens its catalog page.
 
 The control-logic editor (Logic Studio) as a Studio department — the
 block library, simulation, compilation and export to the controller: the

@@ -163,6 +163,17 @@ _BREADCRUMB_KEYS = {
 # except Help. The two editors mark themselves from their own dirty
 # flags; the panels are marked at the branch that was ACTIVE when the
 # edit was reported through _on_project_changed().
+def _logic_catalog_key() -> str:
+    """The first category of the logic editor's block catalog - where its
+    "Block catalog" menu item opens."""
+    try:
+        from logic_studio.core import block_catalog
+        categories = list(block_catalog.generate_catalog())
+        return f"category:{categories[0]}" if categories else "welcome"
+    except Exception:  # noqa: BLE001 - a missing catalog opens the welcome page, not an error box
+        return "welcome"
+
+
 _MARKABLE_ASPECTS = frozenset(_BREADCRUMB_KEYS) - {
     _TREE_ITEM_HELP, _TREE_ITEM_SCREENS, _TREE_ITEM_LOGIC, _TREE_ITEM_PROTECTION_TESTS}
 _EDITED_MARK_COLOR = "#C00000"
@@ -473,6 +484,7 @@ class StudioMainWindow(QMainWindow):
         self._object_links_panel = None
         self._protection_tests_panel = None
         self._help_panel = None
+        self._synoptic_help_nonce_seen = 0
         self._validation_dialog = None
         self._active = None  # None | _TREE_ITEM_SCREENS | _TREE_ITEM_LOGIC | ...
         self._aspect_containers = {}  # key -> _AspectContainer, rebuilt on every visit
@@ -1096,6 +1108,13 @@ class StudioMainWindow(QMainWindow):
         self._note_synoptic_dirty(state)
         self._set_shared_toolbar_enabled(bool(state.get("canUndo")), bool(state.get("canRedo")))
         self._apply_synoptic_mode_checks(state)
+        # F1 (or Help) pressed inside the screen editor: it asks for
+        # Studio's help instead of opening its own window (App.tsx).
+        request = state.get("helpRequest") or {}
+        nonce = request.get("nonce") or 0
+        if nonce and nonce != self._synoptic_help_nonce_seen:
+            self._synoptic_help_nonce_seen = nonce
+            self.open_help_topic("synoptic/" + (request.get("topicId") or "intro-what"))
         # hasSelection covers Copy/Delete honestly. Paste has no
         # equivalent signal in the read-only bridge (Blocker B's own
         # approved scope stopped at canUndo/canRedo/isDirty/
@@ -1183,10 +1202,14 @@ class StudioMainWindow(QMainWindow):
         all outside Logika/Schemat synoptyczny, which is why its two
         entry points had to be disabled there; now that it always lands
         somewhere, both stay enabled."""
-        if self._active == _TREE_ITEM_LOGIC:
-            self._logic_panel.main_window().act_help.trigger()
-        elif self._active == _TREE_ITEM_SCREENS:
-            self._synoptic_panel.trigger_menu_item("Help Topics")
+        # One help for the whole Studio (help/unified.py): the editors'
+        # own context (a selected block, a selected symbol) picks the
+        # topic, the panel is always Studio's.
+        if self._active == _TREE_ITEM_LOGIC and self._logic_panel is not None:
+            self.open_help_topic("logic/" + self._logic_panel.main_window()._context_help_topic())
+        elif self._active == _TREE_ITEM_SCREENS and self._synoptic_panel is not None:
+            self._synoptic_panel.query_state(
+                lambda state: self.open_help_topic("synoptic/" + (state or {}).get("helpTopic", "intro-what")))
         else:
             self._open_help()
 
@@ -1199,12 +1222,23 @@ class StudioMainWindow(QMainWindow):
         _HELP_TOPIC_BY_TREE_KEY is a real mapping (not an identity
         function) because tree keys and help-topic keys genuinely
         differ for several panels (e.g. "apparatus_registry" -> "apparatus")."""
+        if self._active in (_TREE_ITEM_LOGIC, _TREE_ITEM_SCREENS):
+            # The editor's own context decides the topic (a selected
+            # block, a selected symbol), the panel is still this one.
+            self._help_topics()
+            return
         topic_key = _HELP_TOPIC_BY_TREE_KEY.get(self._active)
         if topic_key is None:
             return
+        self.open_help_topic(topic_key)
+
+    def open_help_topic(self, key: str):
+        """The one help, on `key` (help/unified.py's namespaced keys)."""
+        if self._panel_preview_active:
+            self.exit_panel_preview()
         self.tree.setCurrentItem(self._item_help)
         self._open_help()
-        self._help_panel.select_topic(topic_key)
+        self._help_panel.select_topic(key)
 
     def _show_about_studio(self):
         from studio.shell.project_panels import AboutDialog
@@ -1449,6 +1483,18 @@ class StudioMainWindow(QMainWindow):
             return False
         from studio.shell.logic_panel import LogicPanel
         self._logic_panel = LogicPanel()
+        # Its own help window is not opened inside Studio: F1, the block
+        # catalog and the shortcut table go to Studio's one help, in
+        # Studio's language (help/unified.py).
+        mw = self._logic_panel.main_window()
+        for action, handler in ((mw.act_help, self._help_topics),
+                                (mw.act_help_catalog, lambda: self.open_help_topic("logic/" + _logic_catalog_key())),
+                                (mw.act_help_shortcuts, lambda: self.open_help_topic("logic/shortcuts"))):
+            try:
+                action.triggered.disconnect()
+            except (RuntimeError, TypeError):
+                pass
+            action.triggered.connect(handler)
         return True
 
     def preload_editors(self, on_progress=None, timeout_ms: int = 15000) -> None:

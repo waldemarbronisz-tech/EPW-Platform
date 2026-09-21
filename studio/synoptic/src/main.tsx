@@ -1,4 +1,5 @@
 import { hasAnySelection } from './utils/SelectionFlags';
+import { getContextualHelpTopic } from './help/HelpContextResolver';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -72,6 +73,10 @@ type SynopticStudioState = {
   drawingRoomTool: boolean;
   /** Panel preview on show (PanelPreview.tsx) - Studio leaves its own full screen when this drops. */
   panelPreview: boolean;
+  /** The help topic F1 would open right now (HelpContextResolver) - Studio's "?" asks for it. */
+  helpTopic: string;
+  /** F1/Help pressed inside the editor while embedded: Studio opens its one help on topicId when the nonce changes. */
+  helpRequest: { topicId: string; nonce: number };
 };
 type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
 (window as unknown as StudioStateBridge).__synopticStudioState = (): SynopticStudioState => {
@@ -90,6 +95,8 @@ type StudioStateBridge = { __synopticStudioState?: () => SynopticStudioState };
     drawingWallTool: !!s.isDrawingWall,
     drawingRoomTool: !!s.isDrawingRoom,
     panelPreview: !!s.panelPreview,
+    helpTopic: getContextualHelpTopic(s),
+    helpRequest: s.helpRequest,
   };
 };
 

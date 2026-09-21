@@ -42,6 +42,18 @@ several controllers](help://site).
 A plain single `projekt.epw` still works as before — as a
 one-controller object.
 
+## One help for the whole Studio
+
+This list covers Studio's own departments and, under them, the two
+editors: [Screens](help://synoptic/intro-what) (the synoptic editor,
+chapters 1–13) and [Logic](help://logic/welcome) (the logic editor:
+concepts, guides, the block catalog, shortcuts). All of it in one
+language — the one chosen in Settings — and cross-linked. **F1**
+anywhere opens this help on the topic you are in: a Studio department
+on its topic, the logic editor on the selected block, the screen editor
+on the selected symbol. The box above the list searches every topic at
+once.
+
 ## Where to look next
 
 - **The project** — every branch of the tree, field by field.

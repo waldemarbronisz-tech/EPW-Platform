@@ -61,6 +61,8 @@ export interface AppState {
   setMainScreen: (screenId: string | null) => void;
   commandAt: (objectId: string) => QueuedCommand | null;
   takeCommands: () => QueuedCommand[];
+  helpRequest: { topicId: string; nonce: number };
+  requestStudioHelp: (topicId: string) => void;
   objects: SynopticObject[];
   connections: SynopticConnection[];
   // The meter element (feat/meter-element): its own array, deliberately

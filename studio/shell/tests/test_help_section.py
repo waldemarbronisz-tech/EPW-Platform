@@ -120,8 +120,10 @@ def test_the_panel_shows_chapters_with_their_topics_under_them(app):
     panel = HelpPanel(_Window())
     try:
         tree = panel.topic_tree
-        assert tree.topLevelItemCount() == len(CHAPTERS)
-        leaves = sum(tree.topLevelItem(i).childCount() for i in range(tree.topLevelItemCount()))
+        # Studio's own chapters, then the two editors' help under one
+        # heading each (help/unified.py).
+        assert tree.topLevelItemCount() == len(CHAPTERS) + 2
+        leaves = sum(tree.topLevelItem(i).childCount() for i in range(len(CHAPTERS)))
         assert leaves == len(TOPICS)
         # A chapter is a heading: selecting one must not be possible,
         # because there is nothing to show for it.

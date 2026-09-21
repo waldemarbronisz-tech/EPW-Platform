@@ -269,6 +269,17 @@
   },
   "catalog": {
     "input": "Wejście",
-    "output": "Wyjście"
+    "output": "Wyjście",
+    "pins": "Piny",
+    "properties": "Właściwości",
+    "col_name": "Nazwa",
+    "col_direction": "Kierunek",
+    "col_type": "Typ",
+    "col_description": "Opis",
+    "col_default": "Domyślnie",
+    "col_unit": "Jednostka",
+    "aliases": "Aliasy wyszukiwania",
+    "safety_relevant": "istotny dla bezpieczeństwa",
+    "no_description": "brak opisu"
   }
 }

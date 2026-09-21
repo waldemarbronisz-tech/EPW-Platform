@@ -2,7 +2,10 @@
 
 The screen editor (Synoptic Editor) as a Studio department. You draw
 what the operator will see on the controller — and bind the drawing to
-real points and apparatus.
+real points and apparatus. The editor's full description — chapters on
+drawing, symbols, wires, screen elements and the glossary — is in this
+same help, under [Screens — the synoptic editor](help://synoptic/intro-what);
+F1 on a selected symbol opens its topic.
 
 ## What is made here
 

@@ -838,7 +838,10 @@ class MainWindow(QMainWindow):
         nienmodalne... dało się z niego korzystać podczas pracy")."""
         from logic_studio.ui.help_window import HelpWindow
         if self._help_window is None:
-            self._help_window = HelpWindow(settings=self.settings)
+            # In the interface's language, not the store's English default -
+            # the same rule every tr()'d string follows.
+            from logic_studio.i18n import get_language
+            self._help_window = HelpWindow(settings=self.settings, language=get_language())
         return self._help_window
 
     def _open_help_topic(self, topic_id: str, tab: str = "contents"):

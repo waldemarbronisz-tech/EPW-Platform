@@ -29,14 +29,22 @@ export interface QueuedCommand {
 }
 
 export type PreviewSlice = Pick<AppState,
-  | 'panelPreview' | 'mainScreenId' | 'pendingCommands'
-  | 'enterPanelPreview' | 'exitPanelPreview' | 'setMainScreen' | 'commandAt' | 'takeCommands'
+  | 'panelPreview' | 'mainScreenId' | 'pendingCommands' | 'helpRequest'
+  | 'enterPanelPreview' | 'exitPanelPreview' | 'setMainScreen' | 'commandAt' | 'takeCommands' | 'requestStudioHelp'
 >;
 
 export const createPreviewSlice: StateCreator<AppState, [], [], PreviewSlice> = (set, get) => ({
   panelPreview: null,
   mainScreenId: null,
   pendingCommands: [],
+  helpRequest: { topicId: '', nonce: 0 },
+
+  // Inside Studio (window.__EPW_STUDIO_EMBED__) F1 and Help do not open
+  // this editor's own window: Studio's one help shows the topic, in
+  // Studio's language. Studio reads this through __synopticStudioState.
+  requestStudioHelp: (topicId) => set((state) => ({
+    helpRequest: { topicId, nonce: state.helpRequest.nonce + 1 },
+  })),
 
   enterPanelPreview: (screenId) => {
     const s = get();
