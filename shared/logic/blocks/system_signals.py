@@ -86,9 +86,9 @@ class SystemBooleanSignalBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class SystemSignalOutputBlock(BaseLogicBlock):
-    """feat/sswin-signals §2.2: the write-direction counterpart of
+    """feat/security-signals §2.2: the write-direction counterpart of
     SystemBooleanSignalBlock (system.signal) above — writes a system-signal
-    a-catalog signal whose source == "logic" (SSWIN.CMD_* today; every
+    a-catalog signal whose source == "logic" (SEC.CMD_* today; every
     other catalog signal is source == "runtime" and compiler/validator.py
     rejects a write to one of those outright). Buffered through
     ExecutionEngine.queue_system_signal_write(), flushed to the
@@ -100,7 +100,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
     the one place this fact is spelled out to the engineer editing the
     property directly, not just in ARCHITECTURE.md: Logic Studio's own
     simulation does NOT enforce it — only EPW-OS does, at the point it
-    actually executes SSWIN.CMD_DISARM et al."""
+    actually executes REQ.SEC.DISARM_ALL et al."""
 
     PROPERTY_TOOLTIPS = {
         "Minimalny poziom dostępu": (
@@ -109,12 +109,12 @@ class SystemSignalOutputBlock(BaseLogicBlock):
             "export as information for the controller."
         ),
     }
-    # feat/help-system: dodane przy scaleniu z gałęzią sswin-signals
+    # feat/help-system: dodane przy scaleniu z gałęzią security-signals
     # (zbudowaną wcześniej, przed feat/help-system) — brakujący opis
     # pinu łamał test-strażnik katalogu generowanego z rejestru.
-    PIN_DESCRIPTIONS = {"In": "Value written to the selected system signal (a source==\"logic\" command, e.g. SSWIN.CMD_*)."}
+    PIN_DESCRIPTIONS = {"In": "Value written to the selected system signal (a source==\"logic\" command, e.g. SEC.CMD_*)."}
     PROPERTY_DESCRIPTIONS = {
-        "Sygnał": "Identifier of the system signal written (source==\"logic\" only, e.g. SSWIN.CMD_*).",
+        "Sygnał": "Identifier of the system signal written (source==\"logic\" only, e.g. SEC.CMD_*).",
         "Minimalny poziom dostępu": "Minimum operator access level needed to execute this command (enforced by EPW-OS).",
     }
 
@@ -135,7 +135,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
     def _sync_input_type(self):
         """Input pin type must match the selected catalog signal's own
         type — mirrors SystemBooleanSignalBlock._sync_output_type() above,
-        same reasoning (most SSWIN.CMD_* signals are BOOL, but the catalog
+        same reasoning (most SEC.CMD_* signals are BOOL, but the catalog
         doesn't forbid a future REAL "logic" command)."""
         from shared.logic import system_signals
         signal_id = self.properties.get("Sygnał", "")

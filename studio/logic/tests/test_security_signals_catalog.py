@@ -1,5 +1,5 @@
-"""feat/sswin-signals — the EPW-OS alarm/intrusion subsystem's fixed
-part: catalog 1.1.0 (SSWIN.STATE/ALARM/OUT/CMD), the first source=="logic"
+"""feat/security-signals — the EPW-OS alarm/intrusion subsystem's fixed
+part: catalog 1.1.0 (SEC.STATE/ALARM/OUT/CMD), the first source=="logic"
 system signals, system.signal_out (the write direction), the compiler
 validation around it, and the "Minimalny poziom dostępu" access-level gate
 on safety_relevant writes. See ARCHITECTURE.md "System alarmowy".
@@ -70,8 +70,8 @@ def test_sswin_cmd_signals_are_the_only_logic_sourced_ones_so_far():
     the CMD_* ones are what's expected."""
     logic_sourced = {s["id"] for s in system_signals.get_all_signals() if s["source"] == "logic"}
     assert logic_sourced == {
-        "SSWIN.CMD_ARM", "SSWIN.CMD_ARM_PARTIAL", "SSWIN.CMD_DISARM",
-        "SSWIN.CMD_RESET", "SSWIN.CMD_SILENCE",
+        "REQ.SEC.ARM_ALL", "REQ.SEC.ARM_ALL_PARTIAL", "REQ.SEC.DISARM_ALL",
+        "REQ.SEC.CLEAR_ALARM_MEMORY", "REQ.SEC.SILENCE",
     }
 
 
@@ -91,7 +91,7 @@ def _in_block(signal_id):
 
 def test_writing_a_runtime_sourced_signal_is_a_compile_error():
     p = Project()
-    p.add_block(_out_block("SSWIN.ARMED"))  # source == "runtime"
+    p.add_block(_out_block("SEC.SYSTEM.ARMED"))  # source == "runtime"
 
     res = Compiler(p).compile()
 
@@ -99,7 +99,7 @@ def test_writing_a_runtime_sourced_signal_is_a_compile_error():
 
 def test_writing_a_logic_sourced_signal_compiles():
     p = Project()
-    p.add_block(_out_block("SSWIN.CMD_ARM"))
+    p.add_block(_out_block("REQ.SEC.ARM_ALL"))
 
     c = Compiler(p)
     res = c.compile()
@@ -108,9 +108,9 @@ def test_writing_a_logic_sourced_signal_compiles():
 
 def test_reading_a_logic_sourced_signal_compiles():
     """Reading one's own (or another block's) command is legal — a
-    schematic that echoes SSWIN.CMD_ARM onto an indicator, say."""
+    schematic that echoes REQ.SEC.ARM_ALL onto an indicator, say."""
     p = Project()
-    p.add_block(_in_block("SSWIN.CMD_ARM"))
+    p.add_block(_in_block("REQ.SEC.ARM_ALL"))
 
     c = Compiler(p)
     res = c.compile()
@@ -123,9 +123,9 @@ def test_write_then_read_roundtrips_across_two_scans():
     from shared.logic.engine.time_provider import SystemTimeProvider
 
     p = Project()
-    out = _out_block("SSWIN.CMD_ARM")
+    out = _out_block("REQ.SEC.ARM_ALL")
     p.add_block(out)
-    inp = _in_block("SSWIN.CMD_ARM")
+    inp = _in_block("REQ.SEC.ARM_ALL")
     p.add_block(inp)
 
     c = Compiler(p)
@@ -138,7 +138,7 @@ def test_write_then_read_roundtrips_across_two_scans():
     out_clone.inputs[0].value = True
 
     eng.step()  # scan 1: the write is flushed at the end of this scan
-    assert eng.io.system_signal_overrides.get("SSWIN.CMD_ARM") is True
+    assert eng.io.system_signal_overrides.get("REQ.SEC.ARM_ALL") is True
 
     eng.step()  # scan 2: system.signal now reads the freshly-written value
     inp_clone = res["program"].block_map[inp.uuid]
@@ -147,7 +147,7 @@ def test_write_then_read_roundtrips_across_two_scans():
 def test_writing_an_unrecognized_system_signal_is_a_compile_error():
     p = Project()
     b = BlockRegistry.create_block("system.signal_out")
-    b.properties["Sygnał"] = "SSWIN.NOT_A_REAL_SIGNAL"  # bypass update_property's own resync, matches a corrupted file
+    b.properties["Sygnał"] = "SEC.NOT_A_REAL_SIGNAL"  # bypass update_property's own resync, matches a corrupted file
     p.add_block(b)
 
     res = Compiler(p).compile()
@@ -167,37 +167,37 @@ def test_unconfigured_output_block_does_not_error():
 
 def test_unused_logic_signal_is_a_warning_not_an_error():
     p = Project()
-    p.add_block(_out_block("SSWIN.CMD_ARM"))  # every OTHER CMD_* signal is unused
+    p.add_block(_out_block("REQ.SEC.ARM_ALL"))  # every OTHER CMD_* signal is unused
 
     c = Compiler(p)
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("SSWIN.CMD_RESET" in w and "is not used" in w for w in c.warnings)
+    assert any("REQ.SEC.CLEAR_ALARM_MEMORY" in w and "is not used" in w for w in c.warnings)
 
 def test_a_logic_signal_read_but_not_written_still_counts_as_used():
     """§2.3's own "unused" warning covers "neither read nor written" — a
     signal only ever READ (e.g. echoed onto an indicator before its writer
     exists yet) must not also warn as unused."""
     p = Project()
-    p.add_block(_in_block("SSWIN.CMD_ARM"))
+    p.add_block(_in_block("REQ.SEC.ARM_ALL"))
 
     c = Compiler(p)
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    # "'SSWIN.CMD_ARM'" (quoted, exact) rather than a bare substring check —
-    # "SSWIN.CMD_ARM" is also a substring of "SSWIN.CMD_ARM_PARTIAL", which
+    # "'REQ.SEC.ARM_ALL'" (quoted, exact) rather than a bare substring check —
+    # "REQ.SEC.ARM_ALL" is also a substring of "REQ.SEC.ARM_ALL_PARTIAL", which
     # genuinely IS unused here and must still warn.
-    assert not any("'SSWIN.CMD_ARM'" in w and "is not used" in w for w in c.warnings)
+    assert not any("'REQ.SEC.ARM_ALL'" in w and "is not used" in w for w in c.warnings)
 
 
 # ---- §4.3: two writers ------------------------------------------------------
 
 def test_two_writers_for_the_same_command_is_a_compile_error_naming_both():
     p = Project()
-    o1 = _out_block("SSWIN.CMD_ARM")
-    o2 = _out_block("SSWIN.CMD_ARM")
+    o1 = _out_block("REQ.SEC.ARM_ALL")
+    o2 = _out_block("REQ.SEC.ARM_ALL")
     p.add_block(o1)
     p.add_block(o2)
 
@@ -205,7 +205,7 @@ def test_two_writers_for_the_same_command_is_a_compile_error_naming_both():
     res = c.compile()
 
     assert res is None
-    matching = [e for e in c.errors if "SSWIN.CMD_ARM" in e and "more than one" in e]
+    matching = [e for e in c.errors if "REQ.SEC.ARM_ALL" in e and "more than one" in e]
     assert len(matching) == 1
     assert o1.short_id in matching[0]
     assert o2.short_id in matching[0]
@@ -215,17 +215,17 @@ def test_two_writers_for_the_same_command_is_a_compile_error_naming_both():
 
 def test_safety_relevant_write_with_no_access_level_warns():
     p = Project()
-    p.add_block(_out_block("SSWIN.CMD_DISARM", access_level="Brak"))
+    p.add_block(_out_block("REQ.SEC.DISARM_ALL", access_level="Brak"))
 
     c = Compiler(p)
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    assert any("critical signal" in w and "SSWIN.CMD_DISARM" in w for w in c.warnings)
+    assert any("critical signal" in w and "REQ.SEC.DISARM_ALL" in w for w in c.warnings)
 
 def test_safety_relevant_write_with_engineer_level_does_not_warn():
     p = Project()
-    p.add_block(_out_block("SSWIN.CMD_DISARM", access_level="Engineer"))
+    p.add_block(_out_block("REQ.SEC.DISARM_ALL", access_level="Engineer"))
 
     c = Compiler(p)
     res = c.compile()
@@ -235,7 +235,7 @@ def test_safety_relevant_write_with_engineer_level_does_not_warn():
 
 def test_non_safety_write_with_no_access_level_does_not_warn():
     p = Project()
-    p.add_block(_out_block("SSWIN.CMD_ARM", access_level="Brak"))
+    p.add_block(_out_block("REQ.SEC.ARM_ALL", access_level="Brak"))
 
     c = Compiler(p)
     res = c.compile()
@@ -245,12 +245,12 @@ def test_non_safety_write_with_no_access_level_does_not_warn():
 
 def test_access_level_defaults_to_engineer_for_a_safety_relevant_signal():
     b = BlockRegistry.create_block("system.signal_out")
-    b.update_property("Sygnał", "SSWIN.CMD_DISARM")
+    b.update_property("Sygnał", "REQ.SEC.DISARM_ALL")
     assert b.properties["Minimalny poziom dostępu"] == "Engineer"
 
 def test_access_level_defaults_to_brak_for_a_non_safety_signal():
     b = BlockRegistry.create_block("system.signal_out")
-    b.update_property("Sygnał", "SSWIN.CMD_ARM")
+    b.update_property("Sygnał", "REQ.SEC.ARM_ALL")
     assert b.properties["Minimalny poziom dostępu"] == "Brak"
 
 def test_manual_access_level_override_survives_reselecting_the_same_signal():
@@ -260,7 +260,7 @@ def test_manual_access_level_override_survives_reselecting_the_same_signal():
     defensively; the property grid's own §5.4 already skips the commit
     when old==new, but the block-level guarantee should hold regardless)."""
     b = BlockRegistry.create_block("system.signal_out")
-    b.update_property("Sygnał", "SSWIN.CMD_DISARM")
+    b.update_property("Sygnał", "REQ.SEC.DISARM_ALL")
     assert b.properties["Minimalny poziom dostępu"] == "Engineer"
     b.update_property("Minimalny poziom dostępu", "User")
     assert b.properties["Minimalny poziom dostępu"] == "User"
@@ -291,7 +291,7 @@ def test_export_checksum_covers_the_catalog_version_field():
 
 def test_export_carries_the_access_level_property():
     p = Project()
-    o = _out_block("SSWIN.CMD_DISARM")
+    o = _out_block("REQ.SEC.DISARM_ALL")
     p.add_block(o)
     c = Compiler(p)
     res = c.compile()
@@ -302,7 +302,7 @@ def test_export_carries_the_access_level_property():
 # ---- §4.6: backward compatibility -------------------------------------------
 
 def test_a_project_using_only_pre_1_1_0_signals_loads_and_compiles_cleanly():
-    """A project built against catalog 1.0.0 (before SSWIN existed)
+    """A project built against catalog 1.0.0 (before SEC existed)
     references only signals that are STILL in 1.1.0, unchanged — nothing
     was renamed or removed, only added. Must load/compile with no
     "unrecognized signal" warning."""
@@ -337,7 +337,7 @@ def test_output_block_signal_picker_shows_only_logic_sourced_signals():
     dlg = SignalPickerDialog(p, value_type=None, sections=("system",), system_source_filter="logic")
     sys_root = dlg.tree.topLevelItem(0)
     cats = {sys_root.child(i).text(0) for i in range(sys_root.childCount())}
-    assert cats == {"Komendy"}
+    assert cats == {"Żądania - alarmówka"}
 
 def test_input_block_signal_picker_shows_every_category():
     _app()
@@ -346,7 +346,7 @@ def test_input_block_signal_picker_shows_every_category():
     dlg = SignalPickerDialog(p, value_type=None, sections=("system",))
     sys_root = dlg.tree.topLevelItem(0)
     cats = {sys_root.child(i).text(0) for i in range(sys_root.childCount())}
-    assert "Komendy" in cats
+    assert "Żądania - alarmówka" in cats
     assert "Stan dozoru" in cats
     assert "Alarmy" in cats
 
@@ -359,14 +359,14 @@ def test_signals_panel_shows_writer_block_for_a_logic_sourced_signal():
     from logic_studio.core.crossref import build_crossref
 
     p = Project()
-    out = _out_block("SSWIN.CMD_ARM")
+    out = _out_block("REQ.SEC.ARM_ALL")
     p.add_block(out)
 
     panel = SignalsPanel()
     panel.project = p
-    usage = build_crossref(p)["SSWIN.CMD_ARM"]
+    usage = build_crossref(p)["REQ.SEC.ARM_ALL"]
 
-    text, tooltip = panel._writers_text("SSWIN.CMD_ARM", usage)
+    text, tooltip = panel._writers_text("REQ.SEC.ARM_ALL", usage)
     assert text == out.short_id
 
 def test_signals_panel_still_shows_urzadzenie_for_a_runtime_sourced_signal():
@@ -392,7 +392,7 @@ def test_signals_panel_shows_dash_for_an_unwritten_logic_signal():
     p = Project()
     panel = SignalsPanel()
     panel.project = p
-    usage = SignalUsage(signal_id="SSWIN.CMD_RESET", kind=KIND_SYSTEM, data_type="BOOL")
+    usage = SignalUsage(signal_id="REQ.SEC.CLEAR_ALARM_MEMORY", kind=KIND_SYSTEM, data_type="BOOL")
 
-    text, _tooltip = panel._writers_text("SSWIN.CMD_RESET", usage)
+    text, _tooltip = panel._writers_text("REQ.SEC.CLEAR_ALARM_MEMORY", usage)
     assert text == "—"

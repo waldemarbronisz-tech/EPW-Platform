@@ -4,7 +4,7 @@ The screenshot was a system-signal block reading "SYS.ACCESS_..." - the
 name shrunk to the smallest font the renderer allows and then cut off,
 so the half that says WHICH signal was the half thrown away. Every name
 worth reading is one of the long ones: SYS.ACCESS_ENGINEER,
-SSWIN.CMD_ARM_PARTIAL, SEC.ZONE.PARTER.ARMED.
+REQ.SEC.ARM_ALL_PARTIAL, SEC.ZONE.PARTER.ARMED.
 
 These test the wrap itself against real QFontMetricsF - a fake metric
 object would let a wrap that is wrong on screen pass here. What they
@@ -61,7 +61,7 @@ def test_a_long_identifier_is_wrapped_rather_than_cut(fm):
 def test_no_character_is_ever_lost(fm):
     """Joining the lines back must give the original exactly - a wrap
     that drops a separator produces a name that is not the signal's."""
-    for text in ("SEC.ZONE.PARTER.ARMED", "SSWIN.CMD_ARM_PARTIAL",
+    for text in ("SEC.ZONE.PARTER.ARMED", "REQ.SEC.ARM_ALL_PARTIAL",
                  "ELA01.DI.10", "MWR.BARDZO_DLUGA_NAZWA_REJESTRU"):
         lines = _wrap_io_text(text, fm, fm.horizontalAdvance("ABCDEFGH"))
         assert "".join(lines) == text, (text, lines)

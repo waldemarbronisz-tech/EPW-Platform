@@ -328,7 +328,7 @@ def test_the_system_tab_lists_the_platform_catalogue(panel):
     ids = _column(tab.table, tab.COL_ID)
 
     assert "SYS.READY" in ids
-    assert "SSWIN.CMD_ARM" in ids
+    assert "REQ.SEC.ARM_ALL" in ids
     assert len(ids) >= 40
 
 
@@ -353,7 +353,7 @@ def test_the_direction_column_separates_reading_from_commanding(panel):
             for r in range(tab.table.rowCount())}
 
     assert rows["SYS.READY"] == "read"
-    assert rows["SSWIN.CMD_ARM"] == "write from logic"
+    assert rows["REQ.SEC.ARM_ALL"] == "write from logic"
 
 
 def test_the_runtime_column_says_whether_the_controller_answers(panel):
@@ -372,7 +372,12 @@ def test_the_search_box_filters_on_content_not_only_on_the_identifier(panel):
                if not tab.table.isRowHidden(r)]
 
     assert visible, "a Polish description in the catalogue found nothing"
-    assert all(v.startswith("SSWIN.") for v in visible), visible
+    # "dozór" appears only in the alarm system's own descriptions, and
+    # that subsystem now spans two namespaces: its STATE under
+    # SEC.SYSTEM.*, and the requests the logic issues under REQ.SEC.*.
+    assert all(v.startswith(("SEC.", "REQ.SEC.")) for v in visible), visible
+    assert any(v.startswith("REQ.SEC.") for v in visible), (
+        "the request half of the alarm system was not searched at all")
 
 
 def test_clearing_the_search_brings_everything_back(panel):

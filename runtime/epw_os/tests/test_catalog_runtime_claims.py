@@ -12,7 +12,7 @@ why it is worth a test rather than a convention.
 So this compares the CLAIM against the three dispatch tables that
 actually answer a read: SystemSignalSource._HANDLERS (the SYS.* half),
 pulse_signal_value (the clock generators, computed rather than looked
-up), and SswinSignalSource.serves (the alarm half, which keeps its own
+up), and SecuritySignalSource.serves (the alarm half, which keeps its own
 UNSERVED_SIGNALS list for the same reason).
 
 It runs in the RUNTIME's suite deliberately. The catalogue lives in
@@ -22,7 +22,7 @@ and Studio must never import the runtime to find out.
 import pytest
 
 from epw_os.core.logic_runtime import SystemSignalSource
-from epw_os.core.sswin_signals import SswinSignalSource
+from epw_os.core.security_signals import SecuritySignalSource
 from shared.logic import system_signals
 from shared.logic.engine.io_provider import pulse_signal_value
 
@@ -36,7 +36,7 @@ def _controller_answers(signal_id: str) -> bool:
         return True
     # None manager on purpose: `serves` answers from the tables, not from
     # whether an intrusion module happens to be fitted right now.
-    return SswinSignalSource(None).serves(signal_id)
+    return SecuritySignalSource(None).serves(signal_id)
 
 
 CATALOG = system_signals.get_all_signals()
@@ -59,7 +59,7 @@ def test_a_signal_claimed_served_really_is(signal):
         pytest.skip("declared planned")
     assert _controller_answers(signal["id"]), (
         f"{signal['id']} is marked \"served\" in the catalogue, but no handler, "
-        f"pulse generator or SSWIN table answers a read of it - logic would see "
+        f"pulse generator or SEC table answers a read of it - logic would see "
         f"its safe default for ever."
     )
 
@@ -80,11 +80,11 @@ def test_a_signal_the_controller_answers_is_not_hidden_as_planned(signal):
 def test_a_writable_signal_the_controller_cannot_execute_is_never_served():
     """A source == "logic" command is only real if something executes it.
     Reading such a signal back is not the point - issuing it is."""
-    sswin = SswinSignalSource(None)
+    security = SecuritySignalSource(None)
     for signal in CATALOG:
         if signal.get("source") != "logic" or signal.get("runtime") != "served":
             continue
-        assert sswin.serves(signal["id"]), (
+        assert security.serves(signal["id"]), (
             f"{signal['id']} is offered to the logic as a writable command and "
             f"marked served, but nothing on this controller executes it."
         )

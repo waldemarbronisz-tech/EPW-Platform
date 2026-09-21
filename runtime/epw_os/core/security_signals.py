@@ -1,7 +1,7 @@
-"""The SSWIN.* half of the system-signal catalog, on this controller.
+"""The alarm half of the system-signal catalog, on this controller.
 
-The catalog names the intrusion system as ONE alarm panel - SSWIN.ARMED,
-SSWIN.ALARM_ACTIVE, SSWIN.CMD_DISARM. This controller's intrusion model
+The catalog names the intrusion system as ONE alarm panel - SEC.SYSTEM.ARMED,
+SEC.SYSTEM.ALARM, REQ.SEC.DISARM_ALL. This controller's intrusion model
 is per ZONE: every state and every command belongs to a zone, and a site
 can have several. Mapping one onto the other is a decision about what
 "the alarm system is armed" means when three zones are armed and one is
@@ -19,7 +19,7 @@ The decision, taken here and visible in one place:
     contactor "while the building is armed" must not see ARMED when half
     the building is open.
   * Anything a zone can be in reads as true for the SYSTEM if ANY zone is
-    in it (EXIT_DELAY, ENTRY_DELAY, ALARM_ACTIVE, TAMPER, FAULT): a
+    in it (EXIT_DELAY, ENTRY_DELAY, ALARM, TAMPER, FAULT): a
     single zone in alarm IS the alarm system in alarm.
   * A command applies to EVERY zone, because the catalog's command has
     no zone to name. Per-zone control stays where it already is (the
@@ -27,12 +27,12 @@ The decision, taken here and visible in one place:
 
 Partial arming is real now (ArmMode.NIGHT - "dozór nocny"): ARMED means
 every zone armed FULLY, ARMED_PARTIAL covers both "some zones armed" and
-"armed, but only at night", and CMD_ARM_PARTIAL arms every zone in NIGHT
+"armed, but only at night", and REQ.SEC.ARM_ALL_PARTIAL arms every zone in NIGHT
 mode. A schematic that must know the difference gets it.
 
 The sounder is real now, and it is real in the way the owner asked for:
 the controller owns the STATE - SIREN_ACTIVE, SIREN_TIME_LEFT,
-STROBE_ACTIVE, PANIC, and CMD_SILENCE to stop the noise without touching
+STROBE_ACTIVE, PANIC, and REQ.SEC.SILENCE to stop the noise without touching
 the alarm - while the siren itself hangs on whatever DO the engineer
 wires it to in Logic Studio. Nothing here energizes an output; these are
 the facts a schematic reads to decide that for itself.
@@ -57,8 +57,8 @@ UNSERVED_SIGNALS = frozenset()
 _TAMPER_STATES = (LineState.TAMPER, LineState.SHORT)
 
 
-class SswinSignalSource:
-    """Reads and executes SSWIN.* against an IntrusionManager.
+class SecuritySignalSource:
+    """Reads SEC.SYSTEM.* and executes REQ.SEC.* against an IntrusionManager.
 
     `intrusion_manager` is None whenever the intrusion module is not part
     of this controller's composition - every read then answers the safe
@@ -85,7 +85,7 @@ class SswinSignalSource:
 
     def serves(self, signal_id: str) -> bool:
         """Whether this source answers for the signal at all. Asked of the
-        tables rather than of the "SSWIN." prefix: with UNSERVED_SIGNALS
+        tables rather than of the "SEC." prefix: with UNSERVED_SIGNALS
         empty, a prefix test would claim every name in the namespace,
         including a command this controller has no implementation for -
         which is precisely the case logic_runtime.py wants reported."""
@@ -95,7 +95,7 @@ class SswinSignalSource:
 
     def read(self, signal_id: str):
         """The signal's value, or None when this source does not answer
-        for it at all (not an SSWIN signal, or one of UNSERVED_SIGNALS) -
+        for it at all (not an SEC signal, or one of UNSERVED_SIGNALS) -
         the caller then falls back to the catalog's safe value."""
         handler = _READERS.get(signal_id)
         if handler is None or signal_id in UNSERVED_SIGNALS:
@@ -103,7 +103,7 @@ class SswinSignalSource:
         manager = self._manager()
         if manager is None:
             # Type-appropriate and defined, never None: a project whose
-            # logic reads SSWIN on a controller without the intrusion
+            # logic reads SEC on a controller without the intrusion
             # module sees "nothing is armed, nothing is wrong".
             return 0.0 if signal_id in _REAL_SIGNALS else False
         return handler(manager)
@@ -111,7 +111,7 @@ class SswinSignalSource:
     # --- commands -----------------------------------------------------------
 
     def execute(self, signal_id: str, actor: str) -> bool:
-        """Runs a SSWIN.CMD_* command on every zone. True when it was
+        """Runs a SEC.CMD_* command on every zone. True when it was
         carried out (on at least one zone), False when it was refused or
         there was nothing to run it on.
 
@@ -225,7 +225,7 @@ def _alarm_latched(manager) -> bool:
     """The latch that outlives the condition: a zone whose alarm memory is
     still set although the zone itself is no longer in ALARM - i.e. the
     system is waiting for someone to clear it. While the alarm is still
-    active, ALARM_ACTIVE is the signal that says so."""
+    active, SEC.SYSTEM.ALARM is the signal that says so."""
     return any(manager.get_alarm_memory(zone["id"]).get("active")
                and manager.get_zone_state(zone["id"]) != ZoneState.ALARM
                for zone in manager.get_zones())
@@ -260,7 +260,7 @@ def _last_trigger(manager) -> float:
 
 def _siren_active(manager) -> bool:
     """What a schematic drives the siren DO from. It goes false on its
-    own when the configured sounding time is up, while ALARM_ACTIVE and
+    own when the configured sounding time is up, while SEC.SYSTEM.ALARM and
     STROBE_ACTIVE carry on - the noise stops, the alarm does not."""
     return bool(manager.siren_active())
 
@@ -275,34 +275,34 @@ def _siren_time_left(manager) -> float:
 
 def _panic(manager) -> bool:
     """A hold-up line fired and nobody has cleared the alarm memory yet.
-    Separate from ALARM_ACTIVE on purpose: a schematic may want to send
+    Separate from SEC.SYSTEM.ALARM on purpose: a schematic may want to send
     THIS one somewhere quietly and leave the siren alone."""
     return bool(manager.panic_active())
 
 
 _READERS = {
-    "SSWIN.ARMED": _armed,
-    "SSWIN.ARMED_PARTIAL": _armed_partial,
-    "SSWIN.DISARMED": _disarmed,
-    "SSWIN.READY_TO_ARM": _ready_to_arm,
-    "SSWIN.EXIT_DELAY": _any_state(ZoneState.EXIT_DELAY),
-    "SSWIN.ENTRY_DELAY": _any_state(ZoneState.ENTRY_DELAY),
-    "SSWIN.DELAY_REMAINING": _delay_remaining,
-    "SSWIN.ALARM_ACTIVE": _any_state(ZoneState.ALARM),
-    "SSWIN.ALARM_LATCHED": _alarm_latched,
-    "SSWIN.ALARM_MEMORY": _alarm_memory,
-    "SSWIN.TAMPER": _tamper,
-    "SSWIN.FAULT": _fault,
-    "SSWIN.LAST_TRIGGER": _last_trigger,
-    "SSWIN.ACTIVE_COUNT": _active_count,
-    "SSWIN.SIREN_ACTIVE": _siren_active,
-    "SSWIN.STROBE_ACTIVE": _strobe_active,
-    "SSWIN.SIREN_TIME_LEFT": _siren_time_left,
-    "SSWIN.PANIC": _panic,
+    "SEC.SYSTEM.ARMED": _armed,
+    "SEC.SYSTEM.ARMED_PARTIAL": _armed_partial,
+    "SEC.SYSTEM.DISARMED": _disarmed,
+    "SEC.SYSTEM.READY_TO_ARM": _ready_to_arm,
+    "SEC.SYSTEM.EXIT_DELAY": _any_state(ZoneState.EXIT_DELAY),
+    "SEC.SYSTEM.ENTRY_DELAY": _any_state(ZoneState.ENTRY_DELAY),
+    "SEC.SYSTEM.DELAY_REMAINING": _delay_remaining,
+    "SEC.SYSTEM.ALARM": _any_state(ZoneState.ALARM),
+    "SEC.SYSTEM.ALARM_LATCHED": _alarm_latched,
+    "SEC.SYSTEM.ALARM_MEMORY": _alarm_memory,
+    "SEC.SYSTEM.TAMPER": _tamper,
+    "SEC.SYSTEM.FAULT": _fault,
+    "SEC.SYSTEM.LAST_TRIGGER": _last_trigger,
+    "SEC.SYSTEM.ACTIVE_COUNT": _active_count,
+    "SEC.SYSTEM.SIREN_ACTIVE": _siren_active,
+    "SEC.SYSTEM.STROBE_ACTIVE": _strobe_active,
+    "SEC.SYSTEM.SIREN_TIME_LEFT": _siren_time_left,
+    "SEC.SYSTEM.PANIC": _panic,
 }
 
-_REAL_SIGNALS = frozenset({"SSWIN.DELAY_REMAINING", "SSWIN.LAST_TRIGGER", "SSWIN.ACTIVE_COUNT",
-                           "SSWIN.SIREN_TIME_LEFT"})
+_REAL_SIGNALS = frozenset({"SEC.SYSTEM.DELAY_REMAINING", "SEC.SYSTEM.LAST_TRIGGER", "SEC.SYSTEM.ACTIVE_COUNT",
+                           "SEC.SYSTEM.SIREN_TIME_LEFT"})
 
 
 # --- the commands -----------------------------------------------------------
@@ -313,7 +313,7 @@ def _arm(manager, zone_id: str, actor: str, mode: str = ArmMode.FULL) -> bool:
         # A zone that will not arm (a violated line, a fault) is the
         # normal reason - logged so a command that quietly did nothing is
         # never a mystery.
-        log.warning(f"SSWIN arm refused for zone {zone_id}: {getattr(result, 'reason', '')}")
+        log.warning(f"SEC arm refused for zone {zone_id}: {getattr(result, 'reason', '')}")
     return bool(getattr(result, "success", False))
 
 
@@ -340,15 +340,15 @@ def _silence(manager, actor: str) -> bool:
 
 
 _COMMANDS = {
-    "SSWIN.CMD_ARM": _arm,
-    "SSWIN.CMD_ARM_PARTIAL": _arm_night,
-    "SSWIN.CMD_DISARM": _disarm,
-    "SSWIN.CMD_RESET": _reset,
+    "REQ.SEC.ARM_ALL": _arm,
+    "REQ.SEC.ARM_ALL_PARTIAL": _arm_night,
+    "REQ.SEC.DISARM_ALL": _disarm,
+    "REQ.SEC.CLEAR_ALARM_MEMORY": _reset,
 }
 
 # Commands that act on the SYSTEM rather than on each zone in turn - run
 # once, with no zone id. Kept as a table beside _COMMANDS so that
 # "per-zone" stays the readable default.
 _SYSTEM_COMMANDS = {
-    "SSWIN.CMD_SILENCE": _silence,
+    "REQ.SEC.SILENCE": _silence,
 }

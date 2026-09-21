@@ -87,9 +87,10 @@ Writing `Security.Zone.<id>.ArmRequest` is the only tag this system
 reads as an input — every other tag above is read-only, written by the
 system itself.
 
-A logic program can also reach all of this through the `SSWIN.*`
+A logic program can also reach all of this through the `SEC.SYSTEM.*`
 catalog, which is the same state under the standard signal names, plus
-the commands `SSWIN.CMD_ARM` / `CMD_ARM_PARTIAL` / `CMD_DISARM` /
-`CMD_RESET` and `SSWIN.CMD_SILENCE` — the last one stops the **noise**
+the requests `REQ.SEC.ARM_ALL` / `REQ.SEC.ARM_ALL_PARTIAL` /
+`REQ.SEC.DISARM_ALL` / `REQ.SEC.CLEAR_ALARM_MEMORY` and
+`REQ.SEC.SILENCE` — the last one stops the **noise**
 only: the zone stays in alarm, the memory and the strobe stay on. The
 same thing the **Silence** button on the Overview page does.

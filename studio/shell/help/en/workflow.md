@@ -83,10 +83,10 @@ readouts bound to real points.
 
 [Logic](help://logic) — a block diagram on those same addresses. Inputs,
 gates, flip-flops, timers, analog blocks, the system signals `SYS.*` and
-the alarm's `SSWIN.*`, outputs.
+the alarm's `SEC.*/REQ.SEC.*`, outputs.
 
 This is where you close everything the controller does not do by itself
-— for instance routing `SSWIN.SIREN_ACTIVE` to the output a siren
+— for instance routing `SEC.SYSTEM.SIREN_ACTIVE` to the output a siren
 physically hangs on.
 
 ## Step 9. The intrusion alarm (if it is in the composition)

@@ -355,6 +355,20 @@ class Validator:
                     system_writers.setdefault(key, (catalog_entry["id"], []))[1].append(self._block_ref(block))
                 continue
 
+            # feat/signal-register §3.1: a RETIRED name gets its own
+            # message. Falling through to "exists in neither place" would
+            # be true and useless - the engineer would go looking for a
+            # signal that was renamed, not deleted.
+            from shared.logic.signal_renames import new_name as _renamed_to
+            replacement = _renamed_to(name)
+            if replacement:
+                errors.append(
+                    f"[{self._block_ref(block)}] Signal '{name}' no longer exists - "
+                    f"it is now called '{replacement}'. Nothing was converted automatically: "
+                    f"point the block at the new name."
+                )
+                continue
+
             entry = DeviceModel.get_internal_bit(self.project, name)
             # §4.4: signal in neither address space -> ERROR. Exactly the
             # point of replacing free-text "Tag" with a registry: a typo is
@@ -507,9 +521,9 @@ class Validator:
                         f"'{property_name}': {', '.join(names)} — the last substitution wins."
                     )
 
-        # 8. System-signal WRITE direction (feat/sswin-signals §2.3) — the
+        # 8. System-signal WRITE direction (feat/security-signals §2.3) — the
         # first category of system signals with source == "logic"
-        # (SSWIN.CMD_* today). system.signal (read) already has its own,
+        # (SEC.CMD_* today). system.signal (read) already has its own,
         # deliberately lenient WARNING for an unrecognized id (§3.4
         # migration compat, case 3 above) — system.signal_out is a brand
         # new block type with no such back-compat concern, so an unknown
@@ -552,7 +566,7 @@ class Validator:
 
         # §2.3: a "logic"-sourced catalog signal nobody reads OR writes ->
         # WARNING (housekeeping aid, same spirit as §4.3's unused-internal-
-        # signal rule) — every SSWIN.CMD_* entry is a fixed catalog
+        # signal rule) — every SEC.CMD_* entry is a fixed catalog
         # signal, never itself "undefined", so there's no ERROR case
         # analogous to internal bits' missing-registry-entry rule here.
         for sig in system_signals.get_all_signals(self.project):
@@ -560,10 +574,10 @@ class Validator:
                 warnings.append(f"System signal '{sig['id']}' (command) is not used by any block.")
 
         # 9. Access-level gate on a block writing a safety_relevant system
-        # signal (feat/sswin-signals §3.3) — WARNING only, never an error:
+        # signal (feat/security-signals §3.3) — WARNING only, never an error:
         # an engineer may deliberately decide "Brak" is fine for a given
         # deployment, but leaving it unset without a second thought on a
-        # signal like SSWIN.CMD_DISARM is exactly the "logic bug disarms
+        # signal like REQ.SEC.DISARM_ALL is exactly the "logic bug disarms
         # the object" hazard this property exists to catch early. §3.2:
         # Logic Studio itself never ENFORCES the gate — only warns that
         # it's missing — EPW-OS is what actually checks it at runtime.

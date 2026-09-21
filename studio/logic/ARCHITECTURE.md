@@ -375,14 +375,14 @@ rekompilacji, bez osobnego kroku).
 `core/system_signals_catalog.json` — **stały**, identyczny w każdym
 projekcie, wersjonowany niezależnie od `EPWLOGIC_SCHEMA_VERSION`/
 `RUNTIME_SCHEMA_VERSION` własnym polem `catalog_version` (`"1.1.0"` od
-feat/sswin-signals, §28 — było `"1.0.0"`). Ładowany raz, cache'owany w
+feat/security-signals, §28 — było `"1.0.0"`). Ładowany raz, cache'owany w
 `core/system_signals.py`.
 
 **Format**: `{"format": "EPW_SIGNAL_CATALOG", "schema_version": 1,
 "catalog_version": "1.1.0", "categories": [{"id", "name", "signals":
 [{"id", "description", "label", "type", "source", "safety_relevant"}]}]}`.
 `"source"` (`"runtime"` — sygnał produkowany przez urządzenie, do
-odczytu, jedyna wartość aż do feat/sswin-signals; `"logic"` — sygnał
+odczytu, jedyna wartość aż do feat/security-signals; `"logic"` — sygnał
 zapisywany przez logikę, patrz §28.5) determinuje, w którą stronę wolno
 danym sygnałem sterować — `compiler/validator.py` odrzuca próbę zapisu
 sygnału `"runtime"` i próbę zapisu tego samego sygnału `"logic"` przez
@@ -391,7 +391,7 @@ więcej niż jeden blok.
 **Zasady wersjonowania**: dodanie nowego sygnału to podniesienie
 `catalog_version` w wersji MINOR (nie łamie istniejących projektów — nowy
 sygnał po prostu staje się dostępny w `SignalPickerDialog`) — dokładnie
-to zrobiło feat/sswin-signals, pierwszy realny bump tego pola od
+to zrobiło feat/security-signals, pierwszy realny bump tego pola od
 `"1.0.0"` do `"1.1.0"`, §28.6 poniżej rozwija konsekwencje dla EPW-OS.
 Usunięcie lub zmiana znaczenia istniejącego sygnału to MAJOR — projekt
 skompilowany przeciw starszemu katalogowi eksportuje
@@ -2928,21 +2928,21 @@ dziewiąty przypadek niemożliwym do wysłania niezauważonym — zweryfikowany
 empirycznie (dopisanie tymczasowego, atrapowego czwartego elementu do
 `Project.serialize()` natychmiast wysadziło dokładnie jeden test, bez
 kaskady mylących błędów; usunięcie atrapy przywróciło zielony zestaw).
-## 33. System alarmowy (feat/sswin-signals)
+## 33. System alarmowy (feat/security-signals)
 
 Katalog sygnałów systemowych (`core/system_signals_catalog.json`,
 §10/§11) udostępnia od tej gałęzi (`catalog_version` 1.0.0 -> 1.1.0)
 część podsystemu alarmowego/dozorowego EPW-OS (dozór, sabotaż), którego
 logika wcześniej nie widziała w ogóle — cztery nowe kategorie prefiksu
-`SSWIN.`: `SSWIN.STATE` (stan dozoru), `SSWIN.ALARM`, `SSWIN.OUT`
-(sygnalizatory) i `SSWIN.CMD` (komendy).
+`SEC.`: `SEC.STATE` (stan dozoru), `SEC.ALARM`, `SEC.OUT`
+(sygnalizatory) i `SEC.CMD` (komendy).
 
 ### 33.1 Część stała i część dynamiczna
 
 Udostępniona tu jest WYŁĄCZNIE część STAŁA tego podsystemu — sygnały,
 których zbiór jest taki sam w każdym projekcie, niezależnie od
 konfiguracji konkretnego obiektu. Świadomie POMINIĘTA jest część
-DYNAMICZNA: sygnały poszczególnych linii dozorowych (`SSWIN.L<n>.*` —
+DYNAMICZNA: sygnały poszczególnych linii dozorowych (`SEC.L<n>.*` —
 `VIOLATED`, `BYPASSED` itp. dla linii 1..N), których liczba wynika z
 konfiguracji obiektu w EPW-OS (ile linii dozorowych fizycznie
 podłączono), nie ze sprzętu Logic Studio zna. To ten sam rodzaj granicy,
@@ -2951,19 +2951,19 @@ zdefiniowana lista), a nie odkrywa ich automatycznie. Część dynamiczna
 wymaga mechanizmu IMPORTU katalogu z konfiguracji EPW-OS, analogicznego
 do (choć technicznie odrębnego od) importu listy aparatów ELA/ADA —
 świadomie osobny PR, nie doklejony tutaj na siłę. Do tego czasu
-`SSWIN.L<n>.*` nie istnieje w pliku katalogu i nie powinno być tam
+`SEC.L<n>.*` nie istnieje w pliku katalogu i nie powinno być tam
 ręcznie dopisywane — pojawi się wraz z tamtym mechanizmem, nie wcześniej.
 
-Gdyby przyszła gałąź dodała podział na strefy, sygnały `SSWIN.STATE`
-zachowują dzisiejsze, ZBIORCZE znaczenie (`SSWIN.ARMED` = którakolwiek
+Gdyby przyszła gałąź dodała podział na strefy, sygnały `SEC.STATE`
+zachowują dzisiejsze, ZBIORCZE znaczenie (`SEC.SYSTEM.ARMED` = którakolwiek
 strefa uzbrojona) — stan per-strefa doszedłby jako osobny wymiar
-(`SSWIN.Z<n>.*`), nie przez zmianę znaczenia istniejących sygnałów.
+(`SEC.Z<n>.*`), nie przez zmianę znaczenia istniejących sygnałów.
 
-### 33.2 Prefiks `SSWIN.` a `ALM.`
+### 33.2 Prefiks `SEC.` a `ALM.`
 
 `ALM.` (bloki `alarm.definition`, jeśli/gdy powstaną — na dziś: warunek
 alarmowy wyliczony przez logikę projektu i kwitowany przez operatora) i
-`SSWIN.` (stan podsystemu alarmowego SAMEGO URZĄDZENIA) to dwa
+`SEC.` (stan podsystemu alarmowego SAMEGO URZĄDZENIA) to dwa
 CAŁKOWICIE różne byty, mimo że oba dotyczą "alarmów": jeden jest
 wynikiem logiki tego konkretnego projektu, drugi jest faktem o stanie
 sprzętu, dokładnie tak samo niezmiennym z punktu widzenia logiki jak
@@ -2974,9 +2974,9 @@ własny warunek logiki, czy w stan urządzenia. Rozróżnienie nazewnicze
 eliminuje tę pomyłkę u źródła, zamiast liczyć na to, że opis w drzewie
 zawsze zostanie doczytany.
 
-### 33.3 Sygnalizatory (`SSWIN.OUT`) — wyłącznie do odczytu
+### 33.3 Sygnalizatory (`SEC.OUT`) — wyłącznie do odczytu
 
-`SSWIN.SIREN_ACTIVE`/`STROBE_ACTIVE`/`SIREN_TIME_LEFT` mówią logice, CZY
+`SEC.SYSTEM.SIREN_ACTIVE`/`STROBE_ACTIVE`/`SIREN_TIME_LEFT` mówią logice, CZY
 sygnalizator jest aktywny — nie dają jej możliwości nim WYSTEROWAĆ.
 Czas trwania sygnału, wygaszenie, cykl pracy — to wszystko konfiguracja
 EPW-OS, egzekwowana przez sam podsystem alarmowy niezależnie od tego,
@@ -2985,11 +2985,12 @@ gdyby logika mogła bezpośrednio sterować syreną, dwa niezależne
 mechanizmy (harmonogram EPW-OS i dowolna logika użytkownika) mogłyby
 rywalizować o to samo wyjście fizyczne.
 
-### 33.4 `SSWIN.CMD_SILENCE` a `SSWIN.CMD_RESET`
+### 33.4 `REQ.SEC.SILENCE` a `REQ.SEC.CLEAR_ALARM_MEMORY`
 
 Rozdzielone celowo, mimo że w wielu prostych scenariuszach uruchamiane
-razem: `CMD_SILENCE` wycisza sygnalizator BEZ kasowania `SSWIN.
-ALARM_MEMORY`, `CMD_RESET` kasuje alarm ORAZ pamięć. Scalenie ich w
+razem: `REQ.SEC.SILENCE` wycisza sygnalizator BEZ kasowania
+`SEC.SYSTEM.ALARM_MEMORY`, `REQ.SEC.CLEAR_ALARM_MEMORY` kasuje alarm
+ORAZ pamięć. Scalenie ich w
 jedną komendę oznaczałoby, że wyciszenie syreny (często pierwsza reakcja
 kogokolwiek w pobliżu, nie tylko uprawnionego operatora) usuwałoby ślad
 zdarzenia, zanim ktokolwiek zdążyłby je obejrzeć — dokładnie tę
@@ -2997,7 +2998,7 @@ sytuację, do której `ALARM_MEMORY` w ogóle istnieje.
 
 ### 33.5 Zapis: `system.signal_out` i pierwsze sygnały `source == "logic"`
 
-`SSWIN.CMD_*` to pierwsza kategoria katalogu z `"source": "logic"` —
+`SEC.CMD_*` to pierwsza kategoria katalogu z `"source": "logic"` —
 zapisywana przez logikę, nie przez urządzenie. Nowy blok
 `system.signal_out` (`blocks/system_signals.py`) to write-'owy
 odpowiednik `system.signal`: właściwość "Sygnał" wybierana przez
@@ -3022,7 +3023,7 @@ housekeeping, ten sam duch co nieużywany wpis w rejestrze sygnałów
 wewnętrznych.
 
 **Poziom dostępu dla komend krytycznych**: blok zapisujący sygnał
-oznaczony `safety_relevant` (dziś: `SSWIN.CMD_DISARM`) dostaje
+oznaczony `safety_relevant` (dziś: `REQ.SEC.DISARM_ALL`) dostaje
 właściwość "Minimalny poziom dostępu" (Brak/User/Operator/Engineer) —
 domyślnie "Engineer" w momencie wybrania sygnału `safety_relevant`,
 "Brak" dla każdego innego (przeliczane na nowo przy KAŻDEJ zmianie
@@ -3033,7 +3034,7 @@ przez inżyniera przetrwa dopóki "Sygnał" znów się nie zmieni).
 Studio** — właściwość jedzie do eksportu runtime jako zwykłe pole
 bloku (`properties`, brak specjalnej obróbki w `Exporter.export()` —
 generyczne kopiowanie już to załatwia) i to sterownik, wykonując
-`SSWIN.CMD_DISARM`, decyduje, czy bieżący poziom dostępu operatora
+`REQ.SEC.DISARM_ALL`, decyduje, czy bieżący poziom dostępu operatora
 (`SYS.ACCESS_LEVEL`/`SYS.ACCESS_*`, §11) na to pozwala. Walidator daje
 tylko OSTRZEŻENIE, gdy poziom zostanie na "Brak" dla sygnału
 `safety_relevant` — inżynier może świadomie uznać, że dana instalacja
@@ -3053,7 +3054,7 @@ sygnał pochodzi z urządzenia.
 Zasady same w sobie już opisane ogólnie w §11 (MINOR dla dodania,
 MAJOR dla usunięcia/zmiany znaczenia, PATCH dla samego tekstu) — ta
 podsekcja jest tylko konkretnym przykładem, pierwszym odkąd
-`catalog_version` w ogóle istnieje: dodanie czterech kategorii `SSWIN.*`
+`catalog_version` w ogóle istnieje: dodanie czterech kategorii `SEC.*` i `REQ.SEC.*`
 (§28 powyżej) bez ruszenia ANI JEDNEGO istniejącego wpisu jest
 podręcznikowym MINOR bumpem — stąd `"1.0.0"` -> `"1.1.0"`, nie `"2.0.0"`.
 
@@ -3063,23 +3064,23 @@ której wersji katalogu logika oczekuje. Sterownik rozumiejący `1.1.0`
 uruchamia bez zastrzeżeń logikę skompilowaną na `1.0.0` (nic, czego
 mogła użyć, nie zniknęło ani nie zmieniło znaczenia) — potwierdzone
 testem `test_a_project_using_only_pre_1_1_0_signals_loads_and_compiles_
-cleanly` (`tests/test_sswin_signals.py`, §4.6 dziennika): projekt
+cleanly` (`tests/test_security_signals.py`, §4.6 dziennika): projekt
 odwołujący się wyłącznie do sygnałów sprzed tej gałęzi (np. `SYS.READY`)
 kompiluje się bez ŻADNEGO ostrzeżenia o nierozpoznanym sygnale. Sterownik
 starszy, rozumiejący tylko `1.0.0`, powinien odmówić uruchomienia logiki
 wyeksportowanej z `catalog_version` `1.1.0` (mógłby trafić na
-`SSWIN.CMD_*`, którego znaczenia nie zna) — ta decyzja i jej egzekwowanie
+`SEC.CMD_*`, którego znaczenia nie zna) — ta decyzja i jej egzekwowanie
 należą do EPW-OS, Logic Studio tylko dostarcza numer, z którym da się ją
 podjąć.
 
 ### 33.7 Świadomie poza zakresem
 
-Sygnały poszczególnych linii dozorowych (`SSWIN.L<n>.*`) i mechanizm ich
+Sygnały poszczególnych linii dozorowych (`SEC.L<n>.*`) i mechanizm ich
 importu z konfiguracji EPW-OS (§33.1) — osobny PR. Sterowanie
 sygnalizatorem bezpośrednio z logiki (§33.3) — świadomie niedostępne,
 nie "jeszcze niezrobione". Podział na strefy (§33.1's uwaga na koniec).
 
-Testy: `tests/test_sswin_signals.py` (32 — poprawność katalogu, kierunek
+Testy: `tests/test_security_signals.py` (32 — poprawność katalogu, kierunek
 zapisu, dwóch piszących, poziom dostępu, eksport, zgodność wsteczna,
 filtrowanie dialogu wyboru sygnału, kolumna "Zapisuje"), plus trzy
 zaktualizowane testy-strażnicy w `tests/test_internal_bits.py`

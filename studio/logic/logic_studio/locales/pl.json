@@ -202,7 +202,10 @@
     "field_description": "Opis",
     "field_label": "Etykieta",
     "field_category": "Kategoria",
-    "type_locked": "Ustalony na {type} - blok, z którego otwarto to okno, nie przyjmuje innego typu."
+    "type_locked": "Ustalony na {type} - blok, z którego otwarto to okno, nie przyjmuje innego typu.",
+    "retired_title": "Sygnały zmieniły nazwy",
+    "retired_text": "Ten projekt używa {n} sygnałów, które już nie istnieją. Nic nie zostało przekonwertowane automatycznie - zmiana nazw wykonana bez Twojej wiedzy to zmiana, której nikt nie przegląda, a ta zmienia to, czym schemat steruje. Wskaż w każdym bloku nową nazwę:\n\n{detail}",
+    "retired_line": "{block}: {old} -> {new}"
   },
   "sim": {
     "di_used": "Wejścia dwustanowe (DI)",

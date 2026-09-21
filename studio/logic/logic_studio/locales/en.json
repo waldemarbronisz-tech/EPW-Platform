@@ -202,7 +202,10 @@
     "field_description": "Description",
     "field_label": "Label",
     "field_category": "Category",
-    "type_locked": "Fixed to {type} - the block this was opened from accepts no other type."
+    "type_locked": "Fixed to {type} - the block this was opened from accepts no other type.",
+    "retired_title": "Signals have been renamed",
+    "retired_text": "This project names {n} signal(s) that no longer exist. Nothing was converted automatically - a rename applied behind your back is a rename nobody reviews, and this one changes what the schematic commands. Point each block at the new name:\n\n{detail}",
+    "retired_line": "{block}: {old} -> {new}"
   },
   "sim": {
     "di_used": "Digital inputs (DI)",

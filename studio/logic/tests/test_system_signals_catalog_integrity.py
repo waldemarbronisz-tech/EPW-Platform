@@ -27,7 +27,7 @@ REQUIRED_FIELDS = {"id", "description", "label", "type", "source", "safety_relev
 # anything else would silently not be handled the way the rest of the
 # codebase (Exporter, AnalogInputBlock-style REAL/BOOL branching,
 # compiler/validator.py's own source=="runtime"/"logic" branching for
-# system.signal_out) expects. "logic" (feat/sswin-signals, catalog
+# system.signal_out) expects. "logic" (feat/security-signals, catalog
 # 1.1.0) is the first source writable BY logic instead of only ever
 # produced by a device/runtime -- see ARCHITECTURE.md §33.5.
 VALID_TYPES = {"BOOL", "REAL"}
@@ -90,9 +90,9 @@ def test_every_signal_has_a_non_empty_description():
 
 def test_every_signal_id_starts_with_its_own_category_prefix():
     """Every category id is "<PREFIX>.<SUBCATEGORY>" ("SYS.STATE",
-    "SSWIN.ALARM", ...) and every signal inside it starts with that same
+    "SEC.ALARM", ...) and every signal inside it starts with that same
     "<PREFIX>." -- true of both namespaces the catalog has today (SYS,
-    and SSWIN since feat/sswin-signals/catalog 1.1.0) and, by
+    and SEC since feat/security-signals/catalog 1.1.0) and, by
     construction, of any future one: the invariant is "shares its own
     category's namespace prefix", never a single hardcoded literal."""
     catalog = _load_catalog()

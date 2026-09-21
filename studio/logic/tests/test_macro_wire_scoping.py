@@ -317,8 +317,8 @@ def test_two_instances_of_the_same_macro_do_not_share_their_internal_label():
     assert res is not None, c.errors
     assert c.errors == []
     # each instance's own "Shared" fully resolves inside itself. (feat/
-    # sswin-signals merge: the compiler's warnings list now also carries
-    # unrelated, unused-SSWIN-command warnings -- only "Shared" matters
+    # security-signals merge: the compiler's warnings list now also carries
+    # unrelated, unused-SEC-command warnings -- only "Shared" matters
     # to this test.)
     assert not any("Shared" in w for w in c.warnings), c.warnings
 

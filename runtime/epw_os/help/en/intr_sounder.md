@@ -13,10 +13,10 @@ instead of five options in a configuration dialog.
 
 | Signal | Meaning |
 |---|---|
-| `SSWIN.SIREN_ACTIVE` | the sounder should be sounding **right now** — this is what you wire to an output |
-| `SSWIN.SIREN_TIME_LEFT` | seconds it may still sound for |
-| `SSWIN.STROBE_ACTIVE` | the light, on from the alarm until the memory is cleared |
-| `SSWIN.PANIC` | a hold-up line fired and nobody has acknowledged it yet |
+| `SEC.SYSTEM.SIREN_ACTIVE` | the sounder should be sounding **right now** — this is what you wire to an output |
+| `SEC.SYSTEM.SIREN_TIME_LEFT` | seconds it may still sound for |
+| `SEC.SYSTEM.STROBE_ACTIVE` | the light, on from the alarm until the memory is cleared |
+| `SEC.SYSTEM.PANIC` | a hold-up line fired and nobody has acknowledged it yet |
 
 The same state is on the tags `Security.System.SirenActive`,
 `.StrobeActive` and `.Panic`, so a screen and Home Assistant see it too.

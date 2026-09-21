@@ -250,8 +250,8 @@ def test_a_fully_connected_wire_with_a_unique_label_changes_nothing():
     res = c.compile()
     assert res is not None, c.errors
     assert c.errors == []
-    # feat/sswin-signals merge: the compiler now ALSO warns about every
-    # unused "logic"-sourced catalog signal (SSWIN.CMD_*), independent of
+    # feat/security-signals merge: the compiler now ALSO warns about every
+    # unused "logic"-sourced catalog signal (SEC.CMD_*), independent of
     # labels entirely -- checking for the absence of "JustADocNote" in
     # particular (not an empty warnings list) is what this test actually
     # cares about.
@@ -299,9 +299,9 @@ def test_a_fully_connected_wires_pins_join_a_free_end_sharing_its_label():
     res = c.compile()
     assert res is not None, c.errors
     assert c.errors == []
-    # feat/sswin-signals merge: see the identically-commented assertion
+    # feat/security-signals merge: see the identically-commented assertion
     # above -- the compiler's warnings list now also carries unrelated,
-    # unused-SSWIN-command warnings; only "Shared" itself matters here.
+    # unused-SEC-command warnings; only "Shared" itself matters here.
     assert not any("Shared" in w for w in c.warnings), c.warnings
 
     io = SimulationIOProvider()

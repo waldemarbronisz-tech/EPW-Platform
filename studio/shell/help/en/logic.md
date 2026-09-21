@@ -22,19 +22,19 @@ Besides those you have:
   survive a controller restart;
 - **system signals `SYS.*`** — controller state, access level,
   communications, pulse and blink generators;
-- **alarm signals `SSWIN.*`** — armed, alarm, alarm memory, tamper,
+- **alarm signals `SEC.*/REQ.SEC.*`** — armed, alarm, alarm memory, tamper,
   readiness, and the sounder and its commands.
 
 ## The sounder: you are the one who wires it
 
 The controller **drives no siren**. It publishes state —
-`SSWIN.SIREN_ACTIVE` (it should be sounding), `SIREN_TIME_LEFT`,
+`SEC.SYSTEM.SIREN_ACTIVE` (it should be sounding), `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE` (the light), `PANIC` — and which output a siren hangs
 on, through which interlocks, is a line of the diagram you draw here.
 The settings (how long it may sound, whether a hold-up line stays
 silent) are in [Zones](help://zones).
 
-Likewise `SSWIN.CMD_SILENCE` — stopping the noise without touching the
+Likewise `REQ.SEC.SILENCE` — stopping the noise without touching the
 alarm.
 
 ## Compiling and exporting

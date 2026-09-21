@@ -401,7 +401,7 @@
     "col_entry_delay": "Czas na wejście (s)",
     "power_heading": "Nadzór zasilania",
     "sounder_heading": "Sygnalizator",
-    "sounder_hint": "Sterownik nie steruje syreną. Wystawia stan sygnalizatora - SSWIN.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - a Ty podpinasz to do wyjścia w Logic Studio, przez takie blokady, jakich wymaga instalacja.",
+    "sounder_hint": "Sterownik nie steruje syreną. Wystawia stan sygnalizatora - SEC.SYSTEM.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - a Ty podpinasz to do wyjścia w Logic Studio, przez takie blokady, jakich wymaga instalacja.",
     "siren_seconds": "Sygnalizuj najdłużej:",
     "siren_no_limit": "bez ograniczenia",
     "panic_silent": "Linia napadowa nie uruchamia syreny",

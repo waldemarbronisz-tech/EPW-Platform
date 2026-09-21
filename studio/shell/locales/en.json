@@ -401,7 +401,7 @@
     "col_entry_delay": "Entry Delay (s)",
     "power_heading": "Power Supervision",
     "sounder_heading": "Sounder",
-    "sounder_hint": "The controller does not drive a siren. It publishes the sounder's state - SSWIN.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - and you wire that to an output in Logic Studio, through whatever interlocks the installation needs.",
+    "sounder_hint": "The controller does not drive a siren. It publishes the sounder's state - SEC.SYSTEM.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - and you wire that to an output in Logic Studio, through whatever interlocks the installation needs.",
     "siren_seconds": "Sound for at most:",
     "siren_no_limit": "no limit",
     "panic_silent": "A panic (hold-up) line does not sound the siren",

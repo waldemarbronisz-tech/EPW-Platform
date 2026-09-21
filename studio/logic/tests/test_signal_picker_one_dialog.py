@@ -148,9 +148,9 @@ def test_an_output_block_is_never_offered_a_signal_the_runtime_owns(app):
     ids = _ids(_picker(_project([_bit("BLOKADA_ZS")]), "virtual.output"))
 
     assert "BLOKADA_ZS" in ids, "a marker is always writable"
-    assert "SSWIN.CMD_ARM" in ids, "a command the logic owns"
+    assert "REQ.SEC.ARM_ALL" in ids, "a command the logic owns"
     assert "SYS.READY" not in ids
-    assert "SSWIN.ARMED" not in ids, "the runtime decides this one"
+    assert "SEC.SYSTEM.ARMED" not in ids, "the runtime decides this one"
 
 
 # --- §1.3: an empty section says what belongs in it --------------------------

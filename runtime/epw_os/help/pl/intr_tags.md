@@ -87,8 +87,9 @@ odczytuje jako wejście — każdy pozostały powyżej jest tylko do odczytu,
 zapisywany przez sam system.
 
 Program logiki dosięga tego wszystkiego również przez katalog
-`SSWIN.*` — ten sam stan pod standardowymi nazwami sygnałów, plus
-komendy `SSWIN.CMD_ARM` / `CMD_ARM_PARTIAL` / `CMD_DISARM` /
-`CMD_RESET` oraz `SSWIN.CMD_SILENCE`, która zatrzymuje **sam dźwięk**:
+`SEC.SYSTEM.*` — ten sam stan pod standardowymi nazwami sygnałów, plus
+żądania `REQ.SEC.ARM_ALL` / `REQ.SEC.ARM_ALL_PARTIAL` /
+`REQ.SEC.DISARM_ALL` / `REQ.SEC.CLEAR_ALARM_MEMORY` oraz
+`REQ.SEC.SILENCE`, która zatrzymuje **sam dźwięk**:
 strefa zostaje w alarmie, pamięć i lampa zostają. To samo robi przycisk
 **Wycisz** na stronie Przegląd.

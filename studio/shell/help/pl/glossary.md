@@ -38,7 +38,7 @@ skalowaniem. Patrz [Rejestr punktów](help://points).
 **Strefa** — kawałek obiektu uzbrajany jako całość. Patrz
 [Strefy](help://zones).
 
-**`SSWIN.*`** — sygnały alarmówki dostępne w logice: uzbrojenie, alarm,
+**`SEC.*/REQ.SEC.*`** — sygnały alarmówki dostępne w logice: uzbrojenie, alarm,
 pamięć, sabotaż, sygnalizator, komendy.
 
 **`SYS.*`** — sygnały systemowe sterownika dostępne w logice.

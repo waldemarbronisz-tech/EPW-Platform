@@ -130,15 +130,15 @@ def test_a_bit_output_pointed_at_a_command_writes_the_system_signal(app):
     a value in the wrong image is a value the runtime never acts on."""
     project = _project()
     source = _block("const.true")
-    writer = _block("virtual.output", Bit="SSWIN.CMD_ARM")
+    writer = _block("virtual.output", Bit="REQ.SEC.ARM_ALL")
     source.outputs[0].connect(writer.inputs[0])
     project.add_block(source)
     project.add_block(writer)
 
     io, _ = _run(project)
 
-    assert io.read_system_signal("SSWIN.CMD_ARM") is True
-    assert "SSWIN.CMD_ARM" not in io.internal_image, "written into the wrong address space"
+    assert io.read_system_signal("REQ.SEC.ARM_ALL") is True
+    assert "REQ.SEC.ARM_ALL" not in io.internal_image, "written into the wrong address space"
 
 
 # --- the validator still refuses what was never legal ------------------------
@@ -146,7 +146,7 @@ def test_a_bit_output_pointed_at_a_command_writes_the_system_signal(app):
 def test_writing_a_signal_the_runtime_owns_is_a_compile_error(app):
     project = _project()
     source = _block("const.true")
-    writer = _block("virtual.output", Bit="SSWIN.ARMED")   # source == "runtime"
+    writer = _block("virtual.output", Bit="SEC.SYSTEM.ARMED")   # source == "runtime"
     source.outputs[0].connect(writer.inputs[0])
     project.add_block(source)
     project.add_block(writer)
@@ -189,7 +189,7 @@ def test_two_blocks_writing_the_same_command_is_an_error(app):
     project = _project()
     for index in range(2):
         source = _block("const.true")
-        writer = _block("virtual.output", Bit="SSWIN.CMD_DISARM")
+        writer = _block("virtual.output", Bit="REQ.SEC.DISARM_ALL")
         source.outputs[0].connect(writer.inputs[0])
         project.add_block(source)
         project.add_block(writer)
@@ -197,7 +197,7 @@ def test_two_blocks_writing_the_same_command_is_an_error(app):
     compiler = Compiler(project)
     compiler.compile()
 
-    assert any("more than one writing block" in e and "SSWIN.CMD_DISARM" in e
+    assert any("more than one writing block" in e and "REQ.SEC.DISARM_ALL" in e
                for e in compiler.errors), compiler.errors
 
 

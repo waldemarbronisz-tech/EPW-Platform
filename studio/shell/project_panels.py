@@ -2228,7 +2228,7 @@ class ZonesPanel(QWidget):
         layout.addLayout(power_form)
 
         # The SOUNDER. Note what is not here: no output to pick. EPW-OS
-        # publishes SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE
+        # publishes SEC.SYSTEM.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE
         # and the engineer wires those to a DO in Logic Studio (owner's
         # decision - "chce moc to swobodnie programowac ustawiajac bit
         # wewnetrzny alarm i pobudzenie danego DO ktory wyjdzie na

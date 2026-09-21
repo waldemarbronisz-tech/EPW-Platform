@@ -1,8 +1,8 @@
 {
   "format": "EPW_SIGNAL_CATALOG",
   "schema_version": 1,
-  "catalog_version": "1.2.0",
-  "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/sswin-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SSWIN.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SSWIN.L<n>.* entries here. Prefix SSWIN. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SSWIN. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SSWIN.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SSWIN.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change.",
+  "catalog_version": "2.0.0",
+  "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it.",
   "categories": [
     {
       "id": "SYS.STATE",
@@ -201,11 +201,11 @@
       ]
     },
     {
-      "id": "SSWIN.STATE",
+      "id": "SEC.STATE",
       "name": "Stan dozoru",
       "signals": [
         {
-          "id": "SSWIN.ARMED",
+          "id": "SEC.SYSTEM.ARMED",
           "description": "Dozór załączony (pełny)",
           "label": "DOZÓR",
           "type": "BOOL",
@@ -214,7 +214,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.ARMED_PARTIAL",
+          "id": "SEC.SYSTEM.ARMED_PARTIAL",
           "description": "Dozór częściowy (nocny)",
           "label": "DOZÓR CZ.",
           "type": "BOOL",
@@ -223,7 +223,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.DISARMED",
+          "id": "SEC.SYSTEM.DISARMED",
           "description": "Dozór wyłączony",
           "label": "WYŁ",
           "type": "BOOL",
@@ -232,7 +232,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.READY_TO_ARM",
+          "id": "SEC.SYSTEM.READY_TO_ARM",
           "description": "Gotowość do załączenia — wszystkie linie w spoczynku",
           "label": "GOTOWY",
           "type": "BOOL",
@@ -241,7 +241,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.EXIT_DELAY",
+          "id": "SEC.SYSTEM.EXIT_DELAY",
           "description": "Trwa czas na wyjście",
           "label": "NA WYJŚCIE",
           "type": "BOOL",
@@ -250,7 +250,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.ENTRY_DELAY",
+          "id": "SEC.SYSTEM.ENTRY_DELAY",
           "description": "Trwa czas na wejście",
           "label": "NA WEJŚCIE",
           "type": "BOOL",
@@ -259,7 +259,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.DELAY_REMAINING",
+          "id": "SEC.SYSTEM.DELAY_REMAINING",
           "description": "Pozostały czas opóźnienia [s]",
           "label": "",
           "type": "REAL",
@@ -270,12 +270,12 @@
       ]
     },
     {
-      "id": "SSWIN.ALARM",
+      "id": "SEC.ALARM",
       "name": "Alarmy",
-      "_comment": "SSWIN.TAMPER działa niezależnie od stanu dozoru — sygnalizuje sabotaż również przy wyłączonym dozorze (obudowa/przewód/zwarcie linii to zdarzenie techniczne, nie intruzyjne, więc nie czeka na uzbrojenie obiektu).",
+      "_comment": "SEC.SYSTEM.TAMPER działa niezależnie od stanu dozoru — sygnalizuje sabotaż również przy wyłączonym dozorze (obudowa/przewód/zwarcie linii to zdarzenie techniczne, nie intruzyjne, więc nie czeka na uzbrojenie obiektu).",
       "signals": [
         {
-          "id": "SSWIN.ALARM_ACTIVE",
+          "id": "SEC.SYSTEM.ALARM",
           "description": "Alarm trwa",
           "label": "ALARM",
           "type": "BOOL",
@@ -284,7 +284,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.ALARM_LATCHED",
+          "id": "SEC.SYSTEM.ALARM_LATCHED",
           "description": "Alarm zatrzaśnięty do skasowania",
           "label": "ALARM ZATRZ.",
           "type": "BOOL",
@@ -293,7 +293,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.ALARM_MEMORY",
+          "id": "SEC.SYSTEM.ALARM_MEMORY",
           "description": "Pamięć alarmu od ostatniego kasowania",
           "label": "PAMIĘĆ",
           "type": "BOOL",
@@ -302,7 +302,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.PANIC",
+          "id": "SEC.SYSTEM.PANIC",
           "description": "Alarm napadowy",
           "label": "NAPAD",
           "type": "BOOL",
@@ -311,7 +311,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.TAMPER",
+          "id": "SEC.SYSTEM.TAMPER",
           "description": "Sabotaż — obudowa, przewód, zwarcie linii",
           "label": "SABOTAŻ",
           "type": "BOOL",
@@ -320,7 +320,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.FAULT",
+          "id": "SEC.SYSTEM.FAULT",
           "description": "Awaria systemu alarmowego",
           "label": "AW SSWiN",
           "type": "BOOL",
@@ -329,7 +329,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.LAST_TRIGGER",
+          "id": "SEC.SYSTEM.LAST_TRIGGER",
           "description": "Numer linii, która wywołała ostatni alarm",
           "label": "",
           "type": "REAL",
@@ -338,7 +338,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.ACTIVE_COUNT",
+          "id": "SEC.SYSTEM.ACTIVE_COUNT",
           "description": "Liczba naruszonych linii",
           "label": "",
           "type": "REAL",
@@ -349,12 +349,12 @@
       ]
     },
     {
-      "id": "SSWIN.OUT",
+      "id": "SEC.OUT",
       "name": "Sygnalizatory",
       "_comment": "Wyłącznie do odczytu stanu — wysterowaniem syreny/lampy (czas trwania, wygaszenie) zajmuje się EPW-OS wg własnej konfiguracji; logika ma jedynie wiedzieć, czy sygnalizator jest aktywny, nie sterować nim wprost.",
       "signals": [
         {
-          "id": "SSWIN.SIREN_ACTIVE",
+          "id": "SEC.SYSTEM.SIREN_ACTIVE",
           "description": "Sygnalizator akustyczny załączony",
           "label": "SYRENA",
           "type": "BOOL",
@@ -363,7 +363,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.STROBE_ACTIVE",
+          "id": "SEC.SYSTEM.STROBE_ACTIVE",
           "description": "Sygnalizator optyczny załączony",
           "label": "LAMPA",
           "type": "BOOL",
@@ -372,7 +372,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.SIREN_TIME_LEFT",
+          "id": "SEC.SYSTEM.SIREN_TIME_LEFT",
           "description": "Pozostały czas trwania sygnału [s]",
           "label": "",
           "type": "REAL",
@@ -383,12 +383,12 @@
       ]
     },
     {
-      "id": "SSWIN.CMD",
-      "name": "Komendy",
-      "_comment": "Pierwsza kategoria sygnałów systemowych source==\"logic\" — zapisywanych przez logikę (system.signal_out), nie przez urządzenie. SSWIN.CMD_SILENCE jest celowo rozdzielone od SSWIN.CMD_RESET: wyciszenie sygnalizatora nie może kasować pamięci alarmu (SSWIN.ALARM_MEMORY), bo wtedy zniknąłby ślad zdarzenia zanim ktokolwiek je obejrzał.",
+      "id": "REQ.SEC",
+      "name": "Żądania - alarmówka",
+      "_comment": "Pierwsza kategoria sygnałów systemowych source==\"logic\" — zapisywanych przez logikę (system.signal_out), nie przez urządzenie. REQ.SEC.SILENCE jest celowo rozdzielone od REQ.SEC.CLEAR_ALARM_MEMORY: wyciszenie sygnalizatora nie może kasować pamięci alarmu (SEC.SYSTEM.ALARM_MEMORY), bo wtedy zniknąłby ślad zdarzenia zanim ktokolwiek je obejrzał.",
       "signals": [
         {
-          "id": "SSWIN.CMD_ARM",
+          "id": "REQ.SEC.ARM_ALL",
           "description": "Załącz dozór pełny",
           "label": "ZAŁ DOZÓR",
           "type": "BOOL",
@@ -397,7 +397,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.CMD_ARM_PARTIAL",
+          "id": "REQ.SEC.ARM_ALL_PARTIAL",
           "description": "Załącz dozór częściowy",
           "label": "ZAŁ CZĘŚĆ.",
           "type": "BOOL",
@@ -406,7 +406,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.CMD_DISARM",
+          "id": "REQ.SEC.DISARM_ALL",
           "description": "Wyłącz dozór",
           "label": "WYŁ DOZÓR",
           "type": "BOOL",
@@ -415,7 +415,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.CMD_RESET",
+          "id": "REQ.SEC.CLEAR_ALARM_MEMORY",
           "description": "Skasuj alarm i pamięć",
           "label": "KASUJ",
           "type": "BOOL",
@@ -424,7 +424,7 @@
           "runtime": "served"
         },
         {
-          "id": "SSWIN.CMD_SILENCE",
+          "id": "REQ.SEC.SILENCE",
           "description": "Wycisz sygnalizator bez kasowania alarmu",
           "label": "WYCISZ",
           "type": "BOOL",

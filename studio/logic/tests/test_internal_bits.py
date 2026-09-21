@@ -180,13 +180,13 @@ def test_virtual_output_to_virtual_input_same_scan_via_compiler():
 def test_catalog_loads_and_has_expected_categories():
     from shared.logic import system_signals
     names = [c["name"] for c in system_signals.get_categories()]
-    # feat/sswin-signals (catalog 1.1.0): four new categories exposing the
+    # feat/security-signals (catalog 1.1.0): four new categories exposing the
     # FIXED part of EPW-OS's alarm/intrusion subsystem, appended after the
     # original four — see system_signals_catalog.json's own _comment for
-    # why the dynamic per-line part (SSWIN.L<n>.*) is deliberately absent.
+    # why the dynamic per-line part (SEC.L<n>.*) is deliberately absent.
     assert names == [
         "Stan systemu", "Komunikacja", "Poziom dostępu", "Generatory czasu",
-        "Stan dozoru", "Alarmy", "Sygnalizatory", "Komendy",
+        "Stan dozoru", "Alarmy", "Sygnalizatory", "Żądania - alarmówka",
     ]
 
 def test_catalog_contains_every_signal_from_the_spec():
@@ -205,17 +205,17 @@ def test_catalog_contains_every_signal_from_the_spec():
         "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
         "SYS.ACCESS_LEVEL", "SYS.ACCESS_USER", "SYS.ACCESS_OPERATOR", "SYS.ACCESS_ENGINEER",
         "SYS.PULSE_100MS", "SYS.PULSE_500MS", "SYS.PULSE_1S", "SYS.BLINK_SLOW", "SYS.BLINK_FAST",
-        # feat/sswin-signals — SSWIN.STATE
-        "SSWIN.ARMED", "SSWIN.ARMED_PARTIAL", "SSWIN.DISARMED", "SSWIN.READY_TO_ARM",
-        "SSWIN.EXIT_DELAY", "SSWIN.ENTRY_DELAY", "SSWIN.DELAY_REMAINING",
-        # SSWIN.ALARM
-        "SSWIN.ALARM_ACTIVE", "SSWIN.ALARM_LATCHED", "SSWIN.ALARM_MEMORY", "SSWIN.PANIC",
-        "SSWIN.TAMPER", "SSWIN.FAULT", "SSWIN.LAST_TRIGGER", "SSWIN.ACTIVE_COUNT",
-        # SSWIN.OUT
-        "SSWIN.SIREN_ACTIVE", "SSWIN.STROBE_ACTIVE", "SSWIN.SIREN_TIME_LEFT",
-        # SSWIN.CMD
-        "SSWIN.CMD_ARM", "SSWIN.CMD_ARM_PARTIAL", "SSWIN.CMD_DISARM", "SSWIN.CMD_RESET",
-        "SSWIN.CMD_SILENCE",
+        # feat/security-signals — SEC.STATE
+        "SEC.SYSTEM.ARMED", "SEC.SYSTEM.ARMED_PARTIAL", "SEC.SYSTEM.DISARMED", "SEC.SYSTEM.READY_TO_ARM",
+        "SEC.SYSTEM.EXIT_DELAY", "SEC.SYSTEM.ENTRY_DELAY", "SEC.SYSTEM.DELAY_REMAINING",
+        # SEC.ALARM
+        "SEC.SYSTEM.ALARM", "SEC.SYSTEM.ALARM_LATCHED", "SEC.SYSTEM.ALARM_MEMORY", "SEC.SYSTEM.PANIC",
+        "SEC.SYSTEM.TAMPER", "SEC.SYSTEM.FAULT", "SEC.SYSTEM.LAST_TRIGGER", "SEC.SYSTEM.ACTIVE_COUNT",
+        # SEC.OUT
+        "SEC.SYSTEM.SIREN_ACTIVE", "SEC.SYSTEM.STROBE_ACTIVE", "SEC.SYSTEM.SIREN_TIME_LEFT",
+        # SEC.CMD
+        "REQ.SEC.ARM_ALL", "REQ.SEC.ARM_ALL_PARTIAL", "REQ.SEC.DISARM_ALL", "REQ.SEC.CLEAR_ALARM_MEMORY",
+        "REQ.SEC.SILENCE",
     }
     assert ids == expected
 
@@ -227,7 +227,7 @@ def test_catalog_safety_relevant_signals():
     safety = {s["id"] for s in system_signals.get_all_signals(project) if s["safety_relevant"]}
     assert safety == {
         "SYS.HEALTH", "SYS.FAULT", "ELA01.FAULT", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
-        "SSWIN.PANIC", "SSWIN.TAMPER", "SSWIN.FAULT", "SSWIN.CMD_DISARM",
+        "SEC.SYSTEM.PANIC", "SEC.SYSTEM.TAMPER", "SEC.SYSTEM.FAULT", "REQ.SEC.DISARM_ALL",
     }
 
 def test_catalog_get_signal_unknown_returns_none():

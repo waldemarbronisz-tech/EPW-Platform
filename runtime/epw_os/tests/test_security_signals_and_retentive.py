@@ -1,8 +1,8 @@
 """The two gaps the logic-execution task deliberately left open (task "co
 mamy do roboty", p. 2):
 
-  * SSWIN.* - the catalog names the intrusion system as ONE alarm panel,
-    this controller's model is per ZONE. core/sswin_signals.py is where
+  * SEC.SYSTEM.*/REQ.SEC.* - the catalog names the intrusion system as ONE alarm panel,
+    this controller's model is per ZONE. core/security_signals.py is where
     that translation is decided; these tests pin the decisions.
   * retentive internal signals (MR./MWR.) - Logic Studio only ever stored
     and exported the flag, saying outright that making the value survive
@@ -21,14 +21,14 @@ from epw_os.core import project_format as pf
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.epw_core import EPWCore
 from epw_os.core.logic_runtime import SystemSignalSource, TagIOProvider
-from epw_os.core.sswin_signals import UNSERVED_SIGNALS, SswinSignalSource
+from epw_os.core.security_signals import UNSERVED_SIGNALS, SecuritySignalSource
 from epw_os.tests import _logic_program
 
 
 # --- a stand-in intrusion system --------------------------------------------
 
 class FakeIntrusion:
-    """Only what SswinSignalSource reads: zones with states, lines with
+    """Only what SecuritySignalSource reads: zones with states, lines with
     violated/fault/state flags, alarm memory, countdowns."""
 
     def __init__(self, zones=None, lines=None, modes=None):
@@ -114,7 +114,7 @@ class FakeIntrusion:
 
 
 def _source(**kwargs):
-    return SswinSignalSource(FakeIntrusion(**kwargs))
+    return SecuritySignalSource(FakeIntrusion(**kwargs))
 
 
 # --- what "the system is armed" means ---------------------------------------
@@ -124,77 +124,77 @@ def test_armed_means_every_zone_armed_not_merely_one():
     schematic that runs "while the building is armed" must not see ARMED
     while half the building is open."""
     all_armed = _source(zones={"Z1": "ARMED", "Z2": "ARMED"})
-    assert all_armed.read("SSWIN.ARMED") is True
-    assert all_armed.read("SSWIN.ARMED_PARTIAL") is False
+    assert all_armed.read("SEC.SYSTEM.ARMED") is True
+    assert all_armed.read("SEC.SYSTEM.ARMED_PARTIAL") is False
 
     half = _source(zones={"Z1": "ARMED", "Z2": "DISARMED"})
-    assert half.read("SSWIN.ARMED") is False
-    assert half.read("SSWIN.ARMED_PARTIAL") is True
-    assert half.read("SSWIN.DISARMED") is False
+    assert half.read("SEC.SYSTEM.ARMED") is False
+    assert half.read("SEC.SYSTEM.ARMED_PARTIAL") is True
+    assert half.read("SEC.SYSTEM.DISARMED") is False
 
 
 def test_a_site_with_no_zones_is_neither_armed_nor_disarmed():
     empty = _source(zones={})
-    assert empty.read("SSWIN.ARMED") is False
-    assert empty.read("SSWIN.DISARMED") is False
-    assert empty.read("SSWIN.READY_TO_ARM") is False
+    assert empty.read("SEC.SYSTEM.ARMED") is False
+    assert empty.read("SEC.SYSTEM.DISARMED") is False
+    assert empty.read("SEC.SYSTEM.READY_TO_ARM") is False
 
 
 def test_one_zone_in_alarm_is_the_system_in_alarm():
     source = _source(zones={"Z1": "DISARMED", "Z2": "ALARM"})
-    assert source.read("SSWIN.ALARM_ACTIVE") is True
-    assert source.read("SSWIN.ARMED") is False
+    assert source.read("SEC.SYSTEM.ALARM") is True
+    assert source.read("SEC.SYSTEM.ARMED") is False
 
 
 def test_a_countdown_reports_the_longest_one_running():
-    source = SswinSignalSource(FakeIntrusion(zones={"Z1": "EXIT_DELAY", "Z2": "ARMED"}))
+    source = SecuritySignalSource(FakeIntrusion(zones={"Z1": "EXIT_DELAY", "Z2": "ARMED"}))
     source.intrusion_manager.countdowns = {"Z1": 17, "Z2": 0}
-    assert source.read("SSWIN.EXIT_DELAY") is True
-    assert source.read("SSWIN.ENTRY_DELAY") is False
-    assert source.read("SSWIN.DELAY_REMAINING") == 17.0
+    assert source.read("SEC.SYSTEM.EXIT_DELAY") is True
+    assert source.read("SEC.SYSTEM.ENTRY_DELAY") is False
+    assert source.read("SEC.SYSTEM.DELAY_REMAINING") == 17.0
 
 
 def test_readiness_counts_every_line_that_would_block_an_arm():
     ready = _source(zones={"Z1": "DISARMED"}, lines={"L1": {}})
-    assert ready.read("SSWIN.READY_TO_ARM") is True
+    assert ready.read("SEC.SYSTEM.READY_TO_ARM") is True
 
     violated = _source(zones={"Z1": "DISARMED"}, lines={"L1": {"violated": True}})
-    assert violated.read("SSWIN.READY_TO_ARM") is False
+    assert violated.read("SEC.SYSTEM.READY_TO_ARM") is False
 
     faulty = _source(zones={"Z1": "DISARMED"}, lines={"L1": {"fault": True}})
-    assert faulty.read("SSWIN.READY_TO_ARM") is False
+    assert faulty.read("SEC.SYSTEM.READY_TO_ARM") is False
 
 
 def test_tamper_is_sabotage_only_not_every_line_fault():
     """The catalog's own wording: case, wire, short. An open circuit is a
     line FAULT, which is its own signal."""
     shorted = _source(zones={"Z1": "ARMED"}, lines={"L1": {"state": "SHORT", "fault": True}})
-    assert shorted.read("SSWIN.TAMPER") is True
-    assert shorted.read("SSWIN.FAULT") is True
+    assert shorted.read("SEC.SYSTEM.TAMPER") is True
+    assert shorted.read("SEC.SYSTEM.FAULT") is True
 
     broken = _source(zones={"Z1": "ARMED"}, lines={"L1": {"state": "FAULT_OPEN", "fault": True}})
-    assert broken.read("SSWIN.TAMPER") is False
-    assert broken.read("SSWIN.FAULT") is True
+    assert broken.read("SEC.SYSTEM.TAMPER") is False
+    assert broken.read("SEC.SYSTEM.FAULT") is True
 
 
 def test_the_latch_outlives_the_alarm_it_came_from():
-    source = SswinSignalSource(FakeIntrusion(zones={"Z1": "ALARM"}))
+    source = SecuritySignalSource(FakeIntrusion(zones={"Z1": "ALARM"}))
     source.intrusion_manager.memory = {"Z1": {"active": True, "first_cause_line_id": "L7"}}
-    # While the alarm is still on, ALARM_ACTIVE is what says so.
-    assert source.read("SSWIN.ALARM_ACTIVE") is True
-    assert source.read("SSWIN.ALARM_LATCHED") is False
-    assert source.read("SSWIN.ALARM_MEMORY") is True
+    # While the alarm is still on, SEC.SYSTEM.ALARM is what says so.
+    assert source.read("SEC.SYSTEM.ALARM") is True
+    assert source.read("SEC.SYSTEM.ALARM_LATCHED") is False
+    assert source.read("SEC.SYSTEM.ALARM_MEMORY") is True
 
     source.intrusion_manager.zones["Z1"] = "DISARMED"
-    assert source.read("SSWIN.ALARM_ACTIVE") is False
-    assert source.read("SSWIN.ALARM_LATCHED") is True
-    assert source.read("SSWIN.LAST_TRIGGER") == 7.0
+    assert source.read("SEC.SYSTEM.ALARM") is False
+    assert source.read("SEC.SYSTEM.ALARM_LATCHED") is True
+    assert source.read("SEC.SYSTEM.LAST_TRIGGER") == 7.0
 
 
 def test_the_violated_line_count_is_a_number_logic_can_compare():
     source = _source(zones={"Z1": "ARMED"},
                      lines={"L1": {"violated": True}, "L2": {"violated": True}, "L3": {}})
-    assert source.read("SSWIN.ACTIVE_COUNT") == 2.0
+    assert source.read("SEC.SYSTEM.ACTIVE_COUNT") == 2.0
 
 
 def test_nothing_is_unserved_any_anymore_but_the_mechanism_still_works():
@@ -204,9 +204,9 @@ def test_nothing_is_unserved_any_anymore_but_the_mechanism_still_works():
     falls back to the catalog's safe value."""
     assert UNSERVED_SIGNALS == frozenset()
     source = _source(zones={"Z1": "ARMED"})
-    assert source.read("SSWIN.NOT_A_REAL_SIGNAL") is None
-    assert source.serves("SSWIN.NOT_A_REAL_SIGNAL") is False
-    assert source.serves("SSWIN.SIREN_ACTIVE") is True
+    assert source.read("SEC.NOT_A_REAL_SIGNAL") is None
+    assert source.serves("SEC.NOT_A_REAL_SIGNAL") is False
+    assert source.serves("SEC.SYSTEM.SIREN_ACTIVE") is True
 
 
 # --- the sounder: state to wire up, never an output --------------------------
@@ -218,9 +218,9 @@ def test_the_siren_is_a_signal_to_wire_not_an_output_the_controller_drives():
     manager = source.intrusion_manager
     manager.siren, manager.strobe, manager.seconds_left = True, True, 42.0
 
-    assert source.read("SSWIN.SIREN_ACTIVE") is True
-    assert source.read("SSWIN.STROBE_ACTIVE") is True
-    assert source.read("SSWIN.SIREN_TIME_LEFT") == 42.0
+    assert source.read("SEC.SYSTEM.SIREN_ACTIVE") is True
+    assert source.read("SEC.SYSTEM.STROBE_ACTIVE") is True
+    assert source.read("SEC.SYSTEM.SIREN_TIME_LEFT") == 42.0
 
 
 def test_a_hold_up_line_is_its_own_signal_separate_from_the_alarm():
@@ -228,8 +228,8 @@ def test_a_hold_up_line_is_its_own_signal_separate_from_the_alarm():
     the siren alone."""
     source = _source(zones={"Z1": "ALARM"})
     source.intrusion_manager.panic = True
-    assert source.read("SSWIN.PANIC") is True
-    assert source.read("SSWIN.SIREN_ACTIVE") is False, "a panic line does not sound by default"
+    assert source.read("SEC.SYSTEM.PANIC") is True
+    assert source.read("SEC.SYSTEM.SIREN_ACTIVE") is False, "a panic line does not sound by default"
 
 
 def test_silencing_is_one_call_not_one_per_zone():
@@ -238,59 +238,59 @@ def test_silencing_is_one_call_not_one_per_zone():
     source = _source(zones={"Z1": "ALARM", "Z2": "ALARM", "Z3": "DISARMED"})
     source.intrusion_manager.siren = True
 
-    assert source.execute("SSWIN.CMD_SILENCE", actor="LOGIC") is True
+    assert source.execute("REQ.SEC.SILENCE", actor="LOGIC") is True
     assert source.intrusion_manager.calls == [("silence", None, "LOGIC")]
-    assert source.read("SSWIN.SIREN_ACTIVE") is False
+    assert source.read("SEC.SYSTEM.SIREN_ACTIVE") is False
 
 
 def test_a_refused_silence_reports_false():
     source = _source(zones={"Z1": "ALARM"})
     source.intrusion_manager.silence_succeeds = False
-    assert source.execute("SSWIN.CMD_SILENCE", actor="LOGIC") is False
+    assert source.execute("REQ.SEC.SILENCE", actor="LOGIC") is False
 
 
 def test_silence_on_a_controller_without_the_intrusion_module_is_refused():
-    assert SswinSignalSource(None).execute("SSWIN.CMD_SILENCE", actor="LOGIC") is False
+    assert SecuritySignalSource(None).execute("REQ.SEC.SILENCE", actor="LOGIC") is False
 
 
 def test_a_controller_without_the_intrusion_module_reads_safe_values():
-    source = SswinSignalSource(None)
-    assert source.read("SSWIN.ARMED") is False
-    assert source.read("SSWIN.ALARM_ACTIVE") is False
-    assert source.read("SSWIN.DELAY_REMAINING") == 0.0
-    assert source.execute("SSWIN.CMD_ARM", actor="LOGIC") is False
+    source = SecuritySignalSource(None)
+    assert source.read("SEC.SYSTEM.ARMED") is False
+    assert source.read("SEC.SYSTEM.ALARM") is False
+    assert source.read("SEC.SYSTEM.DELAY_REMAINING") == 0.0
+    assert source.execute("REQ.SEC.ARM_ALL", actor="LOGIC") is False
 
 
 def test_the_module_can_be_switched_on_while_the_controller_runs():
     """EPWCore passes a callable, because feature configuration replaces
     the manager object without a restart."""
     holder = {"manager": None}
-    source = SswinSignalSource(lambda: holder["manager"])
-    assert source.read("SSWIN.ARMED") is False
+    source = SecuritySignalSource(lambda: holder["manager"])
+    assert source.read("SEC.SYSTEM.ARMED") is False
 
     holder["manager"] = FakeIntrusion(zones={"Z1": "ARMED"})
-    assert source.read("SSWIN.ARMED") is True
+    assert source.read("SEC.SYSTEM.ARMED") is True
 
 
 # --- commands ----------------------------------------------------------------
 
 def test_a_command_applies_to_every_zone():
     source = _source(zones={"Z1": "DISARMED", "Z2": "DISARMED"})
-    assert source.execute("SSWIN.CMD_ARM", actor="LOGIC") is True
+    assert source.execute("REQ.SEC.ARM_ALL", actor="LOGIC") is True
     assert source.intrusion_manager.calls == [("arm", "Z1", "LOGIC"), ("arm", "Z2", "LOGIC")]
 
 
 def test_a_refused_arm_is_reported_not_swallowed():
     source = _source(zones={"Z1": "DISARMED"})
     source.intrusion_manager.arm_succeeds = False
-    assert source.execute("SSWIN.CMD_ARM", actor="LOGIC") is False
+    assert source.execute("REQ.SEC.ARM_ALL", actor="LOGIC") is False
 
 
 # --- the write path: rising edge and the block's own access level ------------
 
 def _provider(intrusion, access_manager=None, levels=None):
     io = TagIOProvider(tag_manager=None, access_manager=access_manager,
-                       system_signals=SystemSignalSource(sswin=SswinSignalSource(intrusion)))
+                       system_signals=SystemSignalSource(security=SecuritySignalSource(intrusion)))
     io.command_levels = levels or {}
     return io
 
@@ -309,40 +309,40 @@ def test_a_command_fires_once_per_rising_edge_not_every_scan():
     io = _provider(intrusion)
 
     for _ in range(5):                       # a block holding it true
-        io.write_system_signal("SSWIN.CMD_ARM", True)
+        io.write_system_signal("REQ.SEC.ARM_ALL", True)
     assert len(intrusion.calls) == 1
 
-    io.write_system_signal("SSWIN.CMD_ARM", False)
-    io.write_system_signal("SSWIN.CMD_ARM", True)
+    io.write_system_signal("REQ.SEC.ARM_ALL", False)
+    io.write_system_signal("REQ.SEC.ARM_ALL", True)
     assert len(intrusion.calls) == 2
 
 
 def test_a_command_block_demanding_a_level_is_refused_without_it():
     intrusion = FakeIntrusion(zones={"Z1": "ARMED"})
     io = _provider(intrusion, access_manager=FakeAccess(AccessLevel.USER),
-                   levels={"SSWIN.CMD_DISARM": "Engineer"})
+                   levels={"REQ.SEC.DISARM_ALL": "Engineer"})
 
-    io.write_system_signal("SSWIN.CMD_DISARM", True)
+    io.write_system_signal("REQ.SEC.DISARM_ALL", True)
     assert intrusion.calls == []
 
 
 def test_the_same_command_runs_once_the_level_is_held():
     intrusion = FakeIntrusion(zones={"Z1": "ARMED"})
     access = FakeAccess(AccessLevel.USER)
-    io = _provider(intrusion, access_manager=access, levels={"SSWIN.CMD_DISARM": "Engineer"})
+    io = _provider(intrusion, access_manager=access, levels={"REQ.SEC.DISARM_ALL": "Engineer"})
 
-    io.write_system_signal("SSWIN.CMD_DISARM", True)
-    io.write_system_signal("SSWIN.CMD_DISARM", False)
+    io.write_system_signal("REQ.SEC.DISARM_ALL", True)
+    io.write_system_signal("REQ.SEC.DISARM_ALL", False)
     access.level = AccessLevel.ENGINEER
-    io.write_system_signal("SSWIN.CMD_DISARM", True)
+    io.write_system_signal("REQ.SEC.DISARM_ALL", True)
 
     assert intrusion.calls == [("disarm", "Z1", "LOGIC")]
 
 
 def test_a_gated_command_on_a_controller_that_cannot_tell_who_is_present_is_refused():
     intrusion = FakeIntrusion(zones={"Z1": "ARMED"})
-    io = _provider(intrusion, access_manager=None, levels={"SSWIN.CMD_DISARM": "Operator"})
-    io.write_system_signal("SSWIN.CMD_DISARM", True)
+    io = _provider(intrusion, access_manager=None, levels={"REQ.SEC.DISARM_ALL": "Operator"})
+    io.write_system_signal("REQ.SEC.DISARM_ALL", True)
     assert intrusion.calls == []
 
 

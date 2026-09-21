@@ -55,7 +55,7 @@ nie rusza kodu i odwrotnie.
 
 „Cichy alarm" to alarm w EPW (`REMOTE_COMMAND_REFUSED`, priorytet 3) —
 **cichy dosłownie**: to zdarzenie nie rusza sygnalizatora alarmówki
-(`SSWIN.SIREN_ACTIVE` chodzi za naruszeniem linii, nie za odrzuconą
+(`SEC.SYSTEM.SIREN_ACTIVE` chodzi za naruszeniem linii, nie za odrzuconą
 komendą), a alarmy i tak jadą przez MQTT, więc to HA robi z tego
 powiadomienie na telefon. Każda komenda, przyjęta czy odrzucona,
 trafia też do dziennika audytowego z **nazwiskiem**, nie z „Panel:Operator".
@@ -161,14 +161,14 @@ Praktycznie:
 ## 7a. Wyciszenie to nie rozbrojenie
 
 `what: "silence"` zatrzymuje **sam dźwięk**. Strefa zostaje w ALARM,
-pamięć alarmu zostaje, lampa (`SSWIN.STROBE_ACTIVE`) świeci dalej. To jest
+pamięć alarmu zostaje, lampa (`SEC.SYSTEM.STROBE_ACTIVE`) świeci dalej. To jest
 sens osobnej komendy: „wyłącz hałas" i „sprawa jest załatwiona" to dwie
 różne decyzje, często podejmowane kilkanaście minut od siebie. Do tej
 drugiej służy `reset`.
 
 Sama syrena nie jest w EPW-OS żadnym wyjściem — sterownik wystawia stan
-(`SSWIN.SIREN_ACTIVE`), a to, na którym DO wisi syrena, rysuje inżynier w
-Logic Studio. Opis: `LOGIKA_W_RUNTIME.md`, rozdział o `SSWIN.*`.
+(`SEC.SYSTEM.SIREN_ACTIVE`), a to, na którym DO wisi syrena, rysuje inżynier w
+Logic Studio. Opis: `LOGIKA_W_RUNTIME.md`, rozdział o `SEC.*` i `REQ.SEC.*`.
 
 ## 8. Czego tu nie ma i dlaczego
 

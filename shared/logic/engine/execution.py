@@ -60,7 +60,7 @@ class ExecutionEngine:
         # (feat/internal-bits §2.3) joins them here — same atomic-flush
         # mechanism, its own key since IOProvider.write_internal() is its
         # own method too.
-        # feat/sswin-signals §2.2: "system" joins digital/analog/internal
+        # feat/security-signals §2.2: "system" joins digital/analog/internal
         # here — same atomic-flush mechanism, its own key since
         # IOProvider.write_system_signal() is its own method too (a system
         # signal is a third, separate address space from both physical IO
@@ -99,7 +99,7 @@ class ExecutionEngine:
 
     def queue_system_signal_write(self, signal_id: str, value):
         """System-signal counterpart of queue_digital_output() (feat/
-        sswin-signals §2.2) — same atomic-flush buffering (flushed via
+        security-signals §2.2) — same atomic-flush buffering (flushed via
         IOProvider.write_system_signal() at the end of step(), see
         step()). Called by system.signal_out; the validator (compiler/
         validator.py) is what actually stops a block writing a source ==
@@ -114,10 +114,10 @@ class ExecutionEngine:
         stop() and from the FAULT transition in start() — see 'fail-safe on
         stop' in ARCHITECTURE.md. Outputs are never left latched on their
         last value when the process is not actively being scanned. System
-        signal writes (feat/sswin-signals §2.2) are dropped the same as
-        internal ones, for the same reason: a command like SSWIN.CMD_ARM
+        signal writes (feat/security-signals §2.2) are dropped the same as
+        internal ones, for the same reason: a command like REQ.SEC.ARM_ALL
         has no engine-decidable "safe" value the way False/0.0 is for a
-        physical output — EPW-OS's own SSWIN subsystem, not this buffer,
+        physical output — EPW-OS's own SEC subsystem, not this buffer,
         is what actually decides what happens to an unflushed command."""
         self._output_buffer = {"digital": {}, "analog": {}, "internal": {}, "system": {}}
         if self.io is None:

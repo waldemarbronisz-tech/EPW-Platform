@@ -223,7 +223,7 @@ real engine, we'd evaluate the interlock graph").
 Teraz skan naprawdę działa, na tym samym silniku i tej samej bibliotece
 bloków, co symulacja w Logic Studio (`shared/logic/`). Szczegóły —
 odmowy ładowarki, granice wobec trybu szkoleniowego i wymuszeń,
-odwzorowanie sygnałów `SYS.*` i `SSWIN.*` oraz trwałość bitów
+odwzorowanie sygnałów `SYS.*` i `SEC.*` i `REQ.SEC.*` oraz trwałość bitów
 retencyjnych — opisuje osobny dokument:
 **`LOGIKA_W_RUNTIME.md`**.
 
@@ -440,7 +440,7 @@ przez `project_format.apply_settings_snapshot()`).
     poziom, strefy, aktywny) i *Linie → Dozór nocny* (czy linia czuwa nocą).
     Panel: przycisk „Uzbrój (noc)" przy strefie, która ma co wykluczyć, a
     stan strefy pokazuje tryb.
-  - **SSWIN**: `CMD_ARM_PARTIAL` przestaje być nieobsłużone — uzbraja
+  - **SEC**: `REQ.SEC.ARM_ALL_PARTIAL` przestaje być nieobsłużone — uzbraja
     wszystkie strefy nocą; `ARMED` wymaga teraz uzbrojenia **pełnego**
     wszystkich stref, a `ARMED_PARTIAL` obejmuje też „uzbrojone, ale nocą".
     `SIREN_*`, `STROBE_*` i `PANIC` są obsłużone od 2026-09-20 (p. 3a

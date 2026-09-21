@@ -18,7 +18,7 @@ w `shared/logic/`:
 | `shared/logic/engine/` | `ExecutionEngine`, `CompiledProgram`, `IOProvider`, `TimeProvider` |
 | `shared/logic/program_loader.py` | odtworzenie `CompiledProgram` z eksportu (strona sterownika) |
 | `shared/logic/runtime_export.py` | kontrakt eksportu: marker, wersja schematu, pola objęte sumą kontrolną, suma kontrolna |
-| `shared/logic/internal_bits.py`, `system_signals.py`, `system_signals_catalog.json` | rejestr sygnałów wewnętrznych i katalog `SYS.*`/`SSWIN.*` |
+| `shared/logic/internal_bits.py`, `system_signals.py`, `system_signals_catalog.json` | rejestr sygnałów wewnętrznych i katalog `SYS.*`/`SEC.*` i `REQ.SEC.*` |
 
 Logic Studio i EPW OS **wykonują ten sam kod**. To, co inżynier
 przetestował na kanwie, sterownik wykonuje dosłownie — nie „zgodnie
@@ -121,11 +121,11 @@ rejestru `internal_bits`).
 `SYS.PULSE_*`/`SYS.BLINK_*` (z tej samej wspólnej tablicy okresów, co
 symulacja w Studio — `shared/logic/engine/io_provider.py`).
 
-**`SSWIN.*`** — do alarmówki (`runtime/epw_os/core/sswin_signals.py`).
+**`SEC.*` i `REQ.SEC.*`** — do alarmówki (`runtime/epw_os/core/security_signals.py`).
 Katalog opisuje **jedną centralę**, a runtime ma model **strefowy**, więc
 tłumaczenie jest decyzją i stoi w jednym miejscu:
 
-- `SSWIN.ARMED` = **wszystkie** strefy uzbrojone (i jest co najmniej jedna);
+- `SEC.SYSTEM.ARMED` = **wszystkie** strefy uzbrojone (i jest co najmniej jedna);
   `ARMED_PARTIAL` = część uzbrojona, część nie. Celowo ostrzej niż
   `IntrusionManager.get_system_state()`, które dla wskaźnika stanu uznaje
   „choć jedna strefa czuwa" za uzbrojenie — dla logiki to za mało: schemat
@@ -141,7 +141,8 @@ tłumaczenie jest decyzją i stoi w jednym miejscu:
 - `READY_TO_ARM` — żadna linia naruszona ani w awarii. Linia wykluczona
   (bypass) **nadal** blokuje gotowość: wykluczenie służy do uzbrojenia
   mimo wszystko, nie jest powodem, by nazwać system gotowym.
-- **Komendy** (`CMD_ARM`, `CMD_DISARM`, `CMD_RESET`) działają na
+- **Żądania** (`REQ.SEC.ARM_ALL`, `REQ.SEC.DISARM_ALL`,
+  `REQ.SEC.CLEAR_ALARM_MEMORY`) działają na
   **wszystkie strefy** — komenda z katalogu nie ma strefy do wskazania.
   Wykonują się **na zboczu narastającym** (blok trzymający sygnał w
   jedynce nie powtarza komendy co skan) i dopiero po sprawdzeniu poziomu
@@ -155,16 +156,16 @@ syreną**. Wystawia fakty, a schemat decyduje, co z nimi zrobić:
 
 | Sygnał | Znaczy |
 |---|---|
-| `SSWIN.SIREN_ACTIVE` | sygnalizator ma teraz dźwięczeć — **to** podpina się do DO |
-| `SSWIN.SIREN_TIME_LEFT` | ile sekund jeszcze wolno (0 = nie dźwięczy albo nie ma limitu) |
-| `SSWIN.STROBE_ACTIVE` | pamięć alarmu — światło, które przeżywa dźwięk, aż ktoś skasuje alarm |
-| `SSWIN.PANIC` | zadziałała linia napadowa i nikt tego jeszcze nie potwierdził |
-| `SSWIN.CMD_SILENCE` | wycisz **sam dźwięk**: strefa zostaje w ALARM, pamięć i lampa zostają |
+| `SEC.SYSTEM.SIREN_ACTIVE` | sygnalizator ma teraz dźwięczeć — **to** podpina się do DO |
+| `SEC.SYSTEM.SIREN_TIME_LEFT` | ile sekund jeszcze wolno (0 = nie dźwięczy albo nie ma limitu) |
+| `SEC.SYSTEM.STROBE_ACTIVE` | pamięć alarmu — światło, które przeżywa dźwięk, aż ktoś skasuje alarm |
+| `SEC.SYSTEM.PANIC` | zadziałała linia napadowa i nikt tego jeszcze nie potwierdził |
+| `REQ.SEC.SILENCE` | wycisz **sam dźwięk**: strefa zostaje w ALARM, pamięć i lampa zostają |
 
 `SIREN_ACTIVE` gaśnie samo po czasie z nastawy `Sounder.siren_seconds`
 (0 = bez ograniczenia), podczas gdy `ALARM_ACTIVE` i `STROBE_ACTIVE` trwają
 dalej — syrena bez końca jest zwykle niezgodna z przepisami, a lampa i tak
-pokazuje, że coś się stało. `CMD_SILENCE` jako jedyna komenda działa
+pokazuje, że coś się stało. `REQ.SEC.SILENCE` jako jedyne żądanie działa
 **na system, nie na każdą strefę po kolei**: stan sygnalizatora jest jeden.
 
 **Linia napadowa** (`LineType.PANIC`) alarmuje w **każdym** stanie strefy,
@@ -191,11 +192,12 @@ wartość po programie, który już ich nie zna, nie jest wskrzeszana.
   zostaje po stronie edytora — eksport tego nie niesie, a silnik tego
   nie czyta.
 - ~~Sygnalizator alarmówki~~ — ZROBIONY 2026-09-20, jako **stan**:
-  `SSWIN.SIREN_ACTIVE` / `SIREN_TIME_LEFT` / `STROBE_ACTIVE` / `CMD_SILENCE`,
+  `SEC.SYSTEM.SIREN_ACTIVE` / `SIREN_TIME_LEFT` / `STROBE_ACTIVE` /
+  `REQ.SEC.SILENCE`,
   nastawy w `Sounder` (Studio → Strefy). Wyjście na syrenę rysuje inżynier.
-- ~~Linia napadowa~~ — ZROBIONA 2026-09-20 (`LineType.PANIC`, `SSWIN.PANIC`).
+- ~~Linia napadowa~~ — ZROBIONA 2026-09-20 (`LineType.PANIC`, `SEC.SYSTEM.PANIC`).
 - ~~Dozór częściowy (nocny)~~ — ZROBIONY 2026-09-20 (`ArmMode.NIGHT`,
-  flaga `active_at_night` przy linii; `SSWIN.CMD_ARM_PARTIAL` działa).
+  flaga `active_at_night` przy linii; `REQ.SEC.ARM_ALL_PARTIAL` działa).
 
 ## 6. Gdzie to jest w kodzie
 
@@ -203,11 +205,11 @@ wartość po programie, który już ich nie zna, nie jest wskrzeszana.
 |---|---|
 | `shared/logic/program_loader.py` | eksport → `CompiledProgram` |
 | `runtime/epw_os/core/logic_runtime.py` | `TagIOProvider`, `SystemSignalSource` |
-| `runtime/epw_os/core/sswin_signals.py` | `SSWIN.*` — centrala vs strefy, komendy |
+| `runtime/epw_os/core/security_signals.py` | `SEC.*` i `REQ.SEC.*` — centrala vs strefy, komendy |
 | `runtime/epw_os/core/logic_engine.py` | ładowanie, wątek skanu, fail-safe, blokada komend |
 | `runtime/epw_os/core/epw_core.py` | złożenie tego w start/stop i stan zdrowia |
 | `shared/tests/test_logic_execution_contract.py` | dowód równoważności Studio ↔ sterownik |
 | `runtime/epw_os/tests/test_logic_execution.py` | zachowanie sterownika (skan, granice, odmowy) |
 | `runtime/epw_os/tests/test_logic_visibility.py` | wskaźnik pracy, REST, przeładowanie bez restartu |
-| `runtime/epw_os/tests/test_sswin_and_retentive.py` | mapowanie `SSWIN.*`, komendy, bity retencyjne |
+| `runtime/epw_os/tests/test_security_signals_and_retentive.py` | mapowanie `SEC.*` i `REQ.SEC.*`, komendy, bity retencyjne |
 | `runtime/epw_os/tests/test_intrusion_sounder_and_panic.py` | sygnalizator jako stan, linia napadowa |

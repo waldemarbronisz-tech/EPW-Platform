@@ -280,10 +280,10 @@ wartości liczbowe związane z realnymi punktami.
 
 [Logika](help://logic) — schemat blokowy na tych samych adresach.
 Wejścia, bramki, przerzutniki, czasy, bloki analogowe, sygnały systemowe
-`SYS.*` i alarmówki `SSWIN.*`, wyjścia.
+`SYS.*` i alarmówki `SEC.*/REQ.SEC.*`, wyjścia.
 
 Tu zamykasz wszystko, czego sterownik nie robi sam z siebie: np. sygnał
-`SSWIN.SIREN_ACTIVE` na wyjście, do którego fizycznie wisi syrena.
+`SEC.SYSTEM.SIREN_ACTIVE` na wyjście, do którego fizycznie wisi syrena.
 
 ## Krok 9. Alarmówka (jeśli jest w składzie)
 
@@ -418,10 +418,10 @@ readouts bound to real points.
 
 [Logic](help://logic) — a block diagram on those same addresses. Inputs,
 gates, flip-flops, timers, analog blocks, the system signals `SYS.*` and
-the alarm's `SSWIN.*`, outputs.
+the alarm's `SEC.*/REQ.SEC.*`, outputs.
 
 This is where you close everything the controller does not do by itself
-— for instance routing `SSWIN.SIREN_ACTIVE` to the output a siren
+— for instance routing `SEC.SYSTEM.SIREN_ACTIVE` to the output a siren
 physically hangs on.
 
 ## Step 9. The intrusion alarm (if it is in the composition)
@@ -1482,18 +1482,18 @@ Poza nimi masz:
   które przeżywają restart sterownika;
 - **sygnały systemowe `SYS.*`** — stan sterownika, poziom dostępu,
   komunikacja, generatory impulsów i migania;
-- **sygnały alarmówki `SSWIN.*`** — uzbrojenie, alarm, pamięć alarmu,
+- **sygnały alarmówki `SEC.*/REQ.SEC.*`** — uzbrojenie, alarm, pamięć alarmu,
   sabotaż, gotowość, a także sygnalizator i komendy.
 
 ## Sygnalizator: to Ty go podpinasz
 
-Sterownik **nie steruje żadną syreną**. Wystawia stan — `SSWIN.SIREN_ACTIVE`
+Sterownik **nie steruje żadną syreną**. Wystawia stan — `SEC.SYSTEM.SIREN_ACTIVE`
 (ma dźwięczeć), `SIREN_TIME_LEFT`, `STROBE_ACTIVE` (lampa), `PANIC` —
 a to, na którym wyjściu wisi syrena i przez jakie blokady, jest linią
 schematu, którą rysujesz tutaj. Nastawy (jak długo wolno dźwięczeć, czy
 linia napadowa ma być cicha) są w [Strefach](help://zones).
 
-Tak samo `SSWIN.CMD_SILENCE` — wyciszenie samego dźwięku, bez ruszania
+Tak samo `REQ.SEC.SILENCE` — wyciszenie samego dźwięku, bez ruszania
 alarmu.
 
 ## Kompilacja i eksport
@@ -1541,19 +1541,19 @@ Besides those you have:
   survive a controller restart;
 - **system signals `SYS.*`** — controller state, access level,
   communications, pulse and blink generators;
-- **alarm signals `SSWIN.*`** — armed, alarm, alarm memory, tamper,
+- **alarm signals `SEC.*/REQ.SEC.*`** — armed, alarm, alarm memory, tamper,
   readiness, and the sounder and its commands.
 
 ## The sounder: you are the one who wires it
 
 The controller **drives no siren**. It publishes state —
-`SSWIN.SIREN_ACTIVE` (it should be sounding), `SIREN_TIME_LEFT`,
+`SEC.SYSTEM.SIREN_ACTIVE` (it should be sounding), `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE` (the light), `PANIC` — and which output a siren hangs
 on, through which interlocks, is a line of the diagram you draw here.
 The settings (how long it may sound, whether a hold-up line stays
 silent) are in [Zones](help://zones).
 
-Likewise `SSWIN.CMD_SILENCE` — stopping the noise without touching the
+Likewise `REQ.SEC.SILENCE` — stopping the noise without touching the
 alarm.
 
 ## Compiling and exporting
@@ -1614,7 +1614,7 @@ jako sprawne — „brak konfiguracji = brak nadzoru", bez błędów.
 ## Sygnalizator
 
 Tu są **nastawy**, nie wyjście. Sterownik nie steruje żadną syreną —
-wystawia stan (`SSWIN.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
+wystawia stan (`SEC.SYSTEM.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE`, `PANIC`), a wyjście podpinasz w [Logice](help://logic),
 przez takie blokady, jakich wymaga instalacja.
 
@@ -1657,7 +1657,7 @@ configuration means no supervision", with no errors.
 ## Sounder
 
 These are **settings**, not an output. The controller drives no siren —
-it publishes state (`SSWIN.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
+it publishes state (`SEC.SYSTEM.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE`, `PANIC`), and you wire the output in
 [Logic](help://logic), through whatever interlocks the installation
 needs.
@@ -2814,7 +2814,7 @@ skalowaniem. Patrz [Rejestr punktów](help://points).
 **Strefa** — kawałek obiektu uzbrajany jako całość. Patrz
 [Strefy](help://zones).
 
-**`SSWIN.*`** — sygnały alarmówki dostępne w logice: uzbrojenie, alarm,
+**`SEC.*/REQ.SEC.*`** — sygnały alarmówki dostępne w logice: uzbrojenie, alarm,
 pamięć, sabotaż, sygnalizator, komendy.
 
 **`SYS.*`** — sygnały systemowe sterownika dostępne w logice.
@@ -2871,7 +2871,7 @@ structure. See [Saving and revisions](help://save_versioning).
 **Settings hash** — a digest of every setting, used to detect a
 divergence from the controller.
 
-**`SSWIN.*`** — the alarm system's signals available in logic: armed,
+**`SEC.*/REQ.SEC.*`** — the alarm system's signals available in logic: armed,
 alarm, memory, tamper, the sounder, the commands.
 
 **Supervised line** — one alarm detector on one point. See

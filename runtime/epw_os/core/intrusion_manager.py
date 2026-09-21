@@ -184,7 +184,7 @@ class LineType:
     TWENTY_FOUR_HOUR = "24H"
     SUPERVISORY = "SUPERVISORY"
     # NAPADOWA: a hold-up button. Alarms in ANY zone state, exactly like
-    # 24H, and additionally raises SSWIN.PANIC. What makes it its own
+    # 24H, and additionally raises SEC.SYSTEM.PANIC. What makes it its own
     # type rather than a 24H line with a label: by default it does NOT
     # start the sounder (shared/project_format.py's Sounder.panic_silent)
     # - the point of a hold-up alarm is that the person standing over you
@@ -637,7 +637,7 @@ class IntrusionManager:
         # disarmed zone keeps FULL so that the next arm with no mode
         # given behaves exactly as it always did.
         self._zone_arm_mode = {}
-        # The SOUNDER, held as state and published as SSWIN.SIREN_ACTIVE /
+        # The SOUNDER, held as state and published as SEC.SYSTEM.SIREN_ACTIVE /
         # SIREN_TIME_LEFT / STROBE_ACTIVE - never as an output. Which DO a
         # siren hangs on is a line of logic the engineer draws (owner's
         # decision, see shared/project_format.py's Sounder).
@@ -894,7 +894,7 @@ class IntrusionManager:
 
     def siren_active(self) -> bool:
         """Whether the sounder should be sounding RIGHT NOW - the signal
-        an engineer wires to a DO in Logic Studio (SSWIN.SIREN_ACTIVE).
+        an engineer wires to a DO in Logic Studio (SEC.SYSTEM.SIREN_ACTIVE).
 
         False once the configured time is up, even though the alarm
         itself carries on: a siren that never stops is usually against
@@ -934,7 +934,7 @@ class IntrusionManager:
             return self._panic_active
 
     def silence(self, actor: str = "SYSTEM", user=None) -> bool:
-        """Stops the noise WITHOUT clearing the alarm (SSWIN.CMD_SILENCE).
+        """Stops the noise WITHOUT clearing the alarm (REQ.SEC.SILENCE).
         The zone stays in ALARM, the memory stays, the strobe stays on -
         only the sounder goes quiet. Refused for somebody who may not
         operate any zone currently in alarm."""
@@ -2104,7 +2104,7 @@ class IntrusionManager:
             zone_name = self._zones[zone_id]["name"]
             # The strobe follows the memory (strobe_active()), so clearing
             # it here is what turns the light off. The hold-up flag goes
-            # with it: SSWIN.PANIC means "somebody pressed it and nobody
+            # with it: SEC.SYSTEM.PANIC means "somebody pressed it and nobody
             # has acknowledged that yet", not a permanent property.
             if not any(record["active"] for record in self._zone_alarm_memory.values()):
                 self._panic_active = False
@@ -2829,7 +2829,7 @@ class IntrusionManager:
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.ExitCountdownActive", ZoneState.EXIT_DELAY in states)
         # The sounder's own state, as tags too: the panel shows them and
         # MQTT publishes them, while LOGIC reads the same facts through
-        # SSWIN.SIREN_ACTIVE/STROBE_ACTIVE (see sswin_signals.py).
+        # SEC.SYSTEM.SIREN_ACTIVE/STROBE_ACTIVE (see security_signals.py).
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.SirenActive", self.siren_active())
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.StrobeActive", self.strobe_active())
         self.tag_manager.update_tag(f"{TAG_PREFIX}.System.Panic", self.panic_active())

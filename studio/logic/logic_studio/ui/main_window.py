@@ -1270,6 +1270,32 @@ class MainWindow(QMainWindow):
         self._reset_macro_nav()  # feat/macro-blocks: see _new_project()
         self._refresh_project_dependent_panels()
         self._reconstruct_scene()
+        self._report_retired_signals()
+
+    def _report_retired_signals(self):
+        """feat/signal-register §3.1: say, on opening, that this project
+        names signals that have been renamed - and what to write instead.
+
+        Deliberately a REPORT and not a migration. Converting the blocks
+        here would change what the schematic commands without anybody
+        reviewing the change, and the engineer would then save it. Listed
+        per block, because "some signals were renamed" is not something
+        anybody can act on."""
+        from PySide6.QtWidgets import QMessageBox
+        from shared.logic.signal_renames import retired_in
+
+        retired = retired_in(getattr(self.project, "blocks", []))
+        if not retired:
+            return
+        lines = [
+            tr("signal.retired_line", block=(block.short_id or block.uuid[:8]),
+               old=old, new=new)
+            for block, old, new in retired
+        ]
+        QMessageBox.warning(
+            self, tr("signal.retired_title"),
+            tr("signal.retired_text", n=len(retired), detail="\n".join(lines)),
+        )
 
     def load_project_data(self, data: dict):
         """Task "Studio osadza ekrany i logikę w projekt.epw": opens the

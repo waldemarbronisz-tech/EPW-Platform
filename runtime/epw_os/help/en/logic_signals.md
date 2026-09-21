@@ -20,19 +20,22 @@ healthy, the current access level, whether Training Mode is active,
 whether the clock is synchronised, plus pulse and blink generators for
 timing things without building a timer chain.
 
-## Alarm system signals (`SSWIN.*`)
+## Alarm system signals (`SEC.SYSTEM.*` and `REQ.SEC.*`)
 
 The whole intrusion alarm, as signals a diagram can use.
 
 **Reads:** `ARMED` (every zone armed, fully), `ARMED_PARTIAL` (some
 zones, or night arming), `DISARMED`, `READY_TO_ARM`, `EXIT_DELAY`,
-`ENTRY_DELAY`, `DELAY_REMAINING`, `ALARM_ACTIVE`, `ALARM_LATCHED`,
+`ENTRY_DELAY`, `DELAY_REMAINING`, `ALARM`, `ALARM_LATCHED`,
 `ALARM_MEMORY`, `TAMPER`, `FAULT`, `LAST_TRIGGER`, `ACTIVE_COUNT`, and
 the sounder's own `SIREN_ACTIVE`, `SIREN_TIME_LEFT`, `STROBE_ACTIVE`,
 `PANIC` — see [The Sounder](help://intr_sounder).
 
-**Commands:** `CMD_ARM`, `CMD_ARM_PARTIAL` (night), `CMD_DISARM`,
-`CMD_RESET`, `CMD_SILENCE`. They act on **every zone** — the catalogue's
+**Requests:** `REQ.SEC.ARM_ALL`, `REQ.SEC.ARM_ALL_PARTIAL` (night),
+`REQ.SEC.DISARM_ALL`, `REQ.SEC.CLEAR_ALARM_MEMORY`, `REQ.SEC.SILENCE`.
+They are called requests because that is what they are: the schematic
+asks, and the controller validates the request and then carries it out
+or refuses it with a reason. They act on **every zone** — the catalogue's
 commands have no zone to name — and they execute on a **rising edge**,
 so a block holding the signal high does not repeat the command every
 scan.
@@ -44,6 +47,6 @@ it.
 ## Why the siren is not in this list
 
 Because it is not a signal this controller drives — it is one you wire.
-`SSWIN.SIREN_ACTIVE` says the sounder should be sounding; which output
+`SEC.SYSTEM.SIREN_ACTIVE` says the sounder should be sounding; which output
 that reaches, through which interlocks, is a line of your diagram. See
 [The Sounder](help://intr_sounder).

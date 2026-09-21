@@ -148,7 +148,7 @@ Nazwy **ELA** i **ADA** pochodzą od imion córek autora.
 |---|---|
 | `shared/docs/SPEC_PROJEKT_EPW.md` | kontrakt formatu `projekt.epw` |
 | `shared/docs/PROJEKT_EPW_ZADANIA.md` | jak runtime czyta projekt, co zrobione, co zostało |
-| `shared/docs/LOGIKA_W_RUNTIME.md` | wykonywanie logiki na sterowniku, sygnały `SYS.*` i `SSWIN.*` |
+| `shared/docs/LOGIKA_W_RUNTIME.md` | wykonywanie logiki na sterowniku, sygnały `SYS.*`, `SEC.*` i `REQ.*` |
 | `shared/docs/MQTT_STEROWANIE.md` | sterowanie z Home Assistanta, tokeny, granice zaufania |
 | `runtime/ORANGE_PI_DEPLOYMENT.md` | wdrożenie na sprzęcie |
 | `CHANGELOG.md` | co niesie każde wydanie i czego nadal nie ma |
