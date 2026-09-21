@@ -18,6 +18,21 @@ punktami i aparatami.
 - **Ściany, pokoje, otwory** — rzut obiektu; sterownik rysuje je tak
   samo, z wytłoczeniem pseudo-3D.
 
+## Co panel pokaże
+
+Nie cały niebieski canvas (domyślnie 24 × 13,5 m — jeden magazyn 6 × 4 m
+byłby na nim plamką), tylko to, co narysowane, wpasowane w okno panelu
+z niewielkim marginesem. Gdy chcesz sam zdecydować o kadrze: ustaw
+powiększenie i przesunięcie tak, jak plan ma wyglądać przy szafce,
+i wybierz **Widok → Ramka ekranu runtime → Ustaw z tego, co teraz
+widzę**. Na planie pojawia się pomarańczowa przerywana ramka z podpisem
+PANEL — dokładnie tyle pokaże sterownik. Ramka jest osobna dla każdego
+ekranu; **Usuń ramkę** wraca do dopasowania automatycznego.
+
+W inspektorze pomieszczenia X i Y to lewy górny róg pokoju liczony od
+lewego górnego rogu planu, a szerokość i długość to jego rozmiar
+w rzucie — wszystko w metrach.
+
 ## Ekran jest w projekcie
 
 Nie ma osobnego pliku do wgrania. Ekran jedzie w `projekt.epw` i to

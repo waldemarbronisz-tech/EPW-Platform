@@ -11,7 +11,7 @@ export type ProjectSlice = Pick<AppState,
   | 'projectMetadata' | 'canvasConfig' | 'projectName' | 'fileName' | 'fileHandle'
   | 'isDirty' | 'messages' | 'devices'
   | 'setProjectName' | 'setFileName' | 'setFileHandle' | 'setDirty' | 'setCanvasBackground'
-  | 'addMessage' | 'setCanvasState'
+  | 'addMessage' | 'setCanvasState' | 'setRuntimeViewport'
   | 'screenKind' | 'setScreenKind'
 >;
 
@@ -71,6 +71,12 @@ export const createProjectSlice: StateCreator<AppState, [], [], ProjectSlice> = 
     set(state => ({ messages: [...state.messages, msg] }));
   },
 
+  // View -> Runtime frame. Project data (the panel reads it), so it
+  // dirties the project; undefined = back to "fit everything drawn".
+  setRuntimeViewport: (viewport) => set((prev) => ({
+    canvasConfig: { ...prev.canvasConfig, viewport },
+    isDirty: true,
+  })),
   setCanvasState: (state) => set((prev) => ({
     canvasState: { ...prev.canvasState, ...state } as CanvasState
   })),

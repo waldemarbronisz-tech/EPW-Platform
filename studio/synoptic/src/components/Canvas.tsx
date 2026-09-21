@@ -2,6 +2,10 @@ import { TextEditOverlay } from './TextEditOverlay';
 import { TEXT_BOX_TYPE } from '../project/TextFormatting';
 import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer, Rect, Circle, Group, Path, Text, Line } from 'react-konva';
+import { tr } from '../i18n/tr';
+
+// The runtime frame's own colour: warm, unlike anything on a plan, and not the selection blue.
+const RUNTIME_FRAME_COLOR = '#ff7a00';
 import { useStore } from '../store';
 import type { SynopticConnection, WirePoint } from '../store';
 import { getSymbolDefinition } from '../symbols/SymbolRegistry';
@@ -662,6 +666,8 @@ export const Canvas: React.FC = () => {
           width: entry.contentRect.width,
           height: entry.contentRect.height
         });
+        // For View -> "Runtime frame: what I see now" (ViewMenu.tsx).
+        useStore.getState().setCanvasViewportSize({ width: entry.contentRect.width, height: entry.contentRect.height });
       }
     });
 
@@ -1467,6 +1473,23 @@ export const Canvas: React.FC = () => {
           <Rect x={0} y={0} width={useStore.getState().canvasConfig.width} height={useStore.getState().canvasConfig.height} fill={useStore.getState().canvasConfig.background} name="grid" />
           <Rect x={0} y={0} width={canvasConfig.width || 1920} height={canvasConfig.height || 1080} fill={canvasConfig.background || COLOR_CANVAS_BACKGROUND} name="grid" />
           {drawGrid()}
+          {/* The runtime frame (View -> Runtime frame): the part of the
+              plan the panel will show. Constant-width dashes whatever
+              the zoom, never a click target. */}
+          {canvasConfig.viewport && (
+            <Group listening={false}>
+              <Rect
+                x={canvasConfig.viewport.x} y={canvasConfig.viewport.y}
+                width={canvasConfig.viewport.width} height={canvasConfig.viewport.height}
+                stroke={RUNTIME_FRAME_COLOR} strokeWidth={2} strokeScaleEnabled={false} dash={[14, 7]}
+              />
+              <Text
+                x={canvasConfig.viewport.x + 6 / canvasState.zoom} y={canvasConfig.viewport.y + 4 / canvasState.zoom}
+                text={tr('view.runtime_frame_tag')} fontSize={FONT_SIZE_SMALL} fill={RUNTIME_FRAME_COLOR} fontStyle="bold"
+                scaleX={1 / canvasState.zoom} scaleY={1 / canvasState.zoom}
+              />
+            </Group>
+          )}
         </Layer>
         <Layer>
           {/* The frame element (commit 3): pure background graphic, no

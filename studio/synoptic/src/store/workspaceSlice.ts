@@ -30,7 +30,9 @@ import { visibleScreens } from '../project/WorkspaceLayout';
 
 export type WorkspaceSlice = Pick<AppState,
   | 'workspaceLayout' | 'hiddenScreens' | 'screenViews' | 'screenHistories' | 'tileFrames'
+  | 'canvasViewportSize'
   | 'setWorkspaceLayout' | 'showScreen' | 'hideScreen' | 'setTileFrame' | 'arrangeFreely'
+  | 'setCanvasViewportSize'
 >;
 
 export const createWorkspaceSlice: StateCreator<AppState, [], [], WorkspaceSlice> = (set, get) => ({
@@ -48,6 +50,8 @@ export const createWorkspaceSlice: StateCreator<AppState, [], [], WorkspaceSlice
   tileFrames: {},
 
   setWorkspaceLayout: (layout) => set({ workspaceLayout: layout }),
+  canvasViewportSize: { width: 0, height: 0 },
+  setCanvasViewportSize: (size) => set({ canvasViewportSize: size }),
 
   // feat/window-snapping: a tile dragged by its caption. The first drag
   // freezes the current automatic arrangement into frames (so the other

@@ -39,7 +39,7 @@ from epw_os.gui.synoptic.net_resolver import (connection_states, junction_points
 from epw_os.gui.synoptic.painter import (PrimitivePainter, animation_rotation, blink_state, mark_dash_march,
                                          parse_color)
 from epw_os.gui.synoptic.rooms import closed_rooms, floor_color, room_labels, shade
-from epw_os.gui.synoptic.walls3d import draw_walls
+from epw_os.gui.synoptic.walls3d import draw_walls, drawn_height
 from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value,
                                               present_object)
 
@@ -107,6 +107,73 @@ class ScreenDocument:
     def canvas_size(self):
         canvas = self.project.canvas if self.project is not None else {}
         return float(canvas.get("width") or 1920), float(canvas.get("height") or 1080)
+
+    def view_rect(self) -> QRectF:
+        """What the widget fits into itself: the screen's runtime frame
+        when the engineer set one (View -> Runtime frame in the editor),
+        else everything drawn with a small margin, else the canvas. A
+        single 6 x 4 m room thus fills the panel instead of sitting as a
+        stamp in the middle of an empty 24 x 13.5 m canvas."""
+        cw, ch = self.canvas_size
+        canvas = self.project.canvas if self.project is not None else {}
+        viewport = canvas.get("viewport") if isinstance(canvas, dict) else None
+        if isinstance(viewport, dict) and float(viewport.get("width") or 0) > 0 and float(viewport.get("height") or 0) > 0:
+            return QRectF(float(viewport.get("x") or 0), float(viewport.get("y") or 0),
+                          float(viewport["width"]), float(viewport["height"]))
+        bounds = content_bounds(self.project) if self.project is not None else None
+        if bounds is None or bounds.width() <= 0 or bounds.height() <= 0:
+            return QRectF(0, 0, cw, ch)
+        pad = max(CONTENT_FIT_MIN_MARGIN, CONTENT_FIT_MARGIN_FRACTION * max(bounds.width(), bounds.height()))
+        return bounds.adjusted(-pad, -pad, pad, pad)
+
+
+CONTENT_FIT_MARGIN_FRACTION = 0.04
+CONTENT_FIT_MIN_MARGIN = 24.0
+
+
+def content_bounds(project):
+    """The box around everything the screen draws (the editor's own
+    computePlanBounds, utils/CanvasView.ts, plus the panels runtime also
+    draws), or None for an empty screen. Rotated and scaled symbols count
+    with their real footprint."""
+    boxes = []
+    for obj in getattr(project, "objects", None) or []:
+        w, h = float(obj.get("width") or 0), float(obj.get("height") or 0)
+        boxes.append(SynopticScreenWidget.object_transform(obj).mapRect(QRectF(0, 0, w, h)))
+    for wall in getattr(project, "walls", None) or []:
+        a, b = wall.get("from") or {}, wall.get("to") or {}
+        half = float(wall.get("thickness") or 12) / 2.0
+        lift = drawn_height(wall.get("height"))       # the pseudo-3D face rises above the wall's plan line
+        xs = (float(a.get("x") or 0), float(b.get("x") or 0))
+        ys = (float(a.get("y") or 0), float(b.get("y") or 0))
+        boxes.append(QRectF(min(xs) - half, min(ys) - half - lift,
+                            max(xs) - min(xs) + 2 * half, max(ys) - min(ys) + 2 * half + lift))
+    for frame in getattr(project, "frames", None) or []:
+        boxes.append(QRectF(float(frame.get("x") or 0), float(frame.get("y") or 0),
+                            float(frame.get("width") or 0), float(frame.get("height") or 0)))
+    for panels, default_width in ((getattr(project, "meters", None), 200), (getattr(project, "signal_panels", None), 150),
+                                  (getattr(project, "setpoint_panels", None), 160)):
+        for panel in panels or []:
+            font_size = float(panel.get("fontSize") or FONT_SIZE_BASE)
+            height = panel_height(panel.get("title"), font_size, len(panel.get("rows") or []))
+            boxes.append(QRectF(float(panel.get("x") or 0), float(panel.get("y") or 0),
+                                float(panel.get("width") or default_width), height))
+    for command in getattr(project, "group_commands", None) or []:
+        boxes.append(QRectF(float(command.get("x") or 0), float(command.get("y") or 0),
+                            float(command.get("width") or 160), 36))
+    for conn in getattr(project, "connections", None) or []:
+        for p in conn.get("points") or []:
+            boxes.append(QRectF(float(p.get("x") or 0), float(p.get("y") or 0), 0, 0))
+    boxes = [b for b in boxes if b.width() >= 0 and b.height() >= 0]
+    if not boxes:
+        return None
+    # By hand, not QRectF.united(): that ignores empty rects, and a wire's
+    # end point is exactly such a rect.
+    left = min(b.left() for b in boxes)
+    top = min(b.top() for b in boxes)
+    right = max(b.right() for b in boxes)
+    bottom = max(b.bottom() for b in boxes)
+    return QRectF(left, top, right - left, bottom - top)
 
 
 class SynopticScreenWidget(QWidget):
@@ -188,19 +255,22 @@ class SynopticScreenWidget(QWidget):
             self.update()
 
     def view_transform(self) -> QTransform:
-        """Canvas -> widget pixels: fitted, centred, aspect kept."""
+        """Canvas -> widget pixels: the document's view_rect() (runtime
+        frame, or everything drawn, or the canvas) fitted, centred,
+        aspect kept."""
         if self._document is None:
             return QTransform()
-        cw, ch = self._document.canvas_size
+        rect = self._document.view_rect()
         margin = 8.0
         avail_w = max(1.0, self.width() - 2 * margin)
         avail_h = max(1.0, self.height() - 2 * margin)
-        scale = min(avail_w / cw, avail_h / ch)
-        ox = margin + (avail_w - cw * scale) / 2.0
-        oy = margin + (avail_h - ch * scale) / 2.0
+        scale = min(avail_w / rect.width(), avail_h / rect.height())
+        ox = margin + (avail_w - rect.width() * scale) / 2.0
+        oy = margin + (avail_h - rect.height() * scale) / 2.0
         transform = QTransform()
         transform.translate(ox, oy)
         transform.scale(scale, scale)
+        transform.translate(-rect.x(), -rect.y())
         return transform
 
     @staticmethod
@@ -269,11 +339,12 @@ class SynopticScreenWidget(QWidget):
             painter.end()
             return
         self._transform = self.view_transform()
-        painter.setTransform(self._transform)
         project = self._document.project
-        cw, ch = self._document.canvas_size
-        painter.fillRect(QRectF(0, 0, cw, ch), parse_color(project.canvas.get("background"), COLOR_CANVAS_BACKGROUND))
-        painter.setClipRect(QRectF(0, 0, cw, ch))
+        # The canvas colour under the whole window, not only under the
+        # canvas rectangle: with a frame or a content fit the view may
+        # reach past the canvas, and the plan must not sit in a dark hole.
+        painter.fillRect(self.rect(), parse_color(project.canvas.get("background"), COLOR_CANVAS_BACKGROUND))
+        painter.setTransform(self._transform)
         phase = self._phase_ms()
 
         objects = self._ordered_objects()

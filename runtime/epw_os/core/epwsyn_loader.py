@@ -218,6 +218,23 @@ class EpwsynLoadResult:
     project: Optional[SynopticProject] = None
 
 
+def _viewport_of(value):
+    """The editor's runtime frame (View -> Runtime frame; project/
+    RuntimeViewport.ts): {x, y, width, height} in canvas pixels, or None
+    when absent or malformed - the panel then fits the content."""
+    if not isinstance(value, dict):
+        return None
+    out = {}
+    for key in ("x", "y", "width", "height"):
+        number = value.get(key)
+        if not isinstance(number, (int, float)) or isinstance(number, bool):
+            return None
+        out[key] = float(number)
+    if out["width"] <= 0 or out["height"] <= 0:
+        return None
+    return out
+
+
 def _fail(path: str, message: str) -> EpwsynLoadResult:
     log.error(f"Refused to load synoptic screen {path!r}: {message}")
     return EpwsynLoadResult(ok=False, error=message)
@@ -375,6 +392,7 @@ def load_epwsyn_data(data, path: str = "projekt.epw#screens") -> EpwsynLoadResul
             "background": canvas.get("background", DEFAULT_CANVAS_BACKGROUND),
             "gridSize": canvas.get("gridSize"),
             "floorMaterial": canvas.get("floorMaterial"),   # the screen's floor (rooms), None = the editor's default
+            "viewport": _viewport_of(canvas.get("viewport")),  # what the panel shows; None = fit everything drawn
         },
         kind=kind,
         help_language=data.get("helpLanguage"),

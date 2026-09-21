@@ -18,6 +18,21 @@ real points and apparatus.
 - **Walls, rooms, openings** — the floor plan; the controller draws them
   the same way, with the same pseudo-3D extrusion.
 
+## What the panel shows
+
+Not the whole blue canvas (24 × 13.5 m by default — one 6 × 4 m
+warehouse would be a stamp on it), but what is drawn, fitted into the
+panel's window with a small margin. To decide the framing yourself: zoom
+and pan until the plan looks as it should at the cabinet, then pick
+**View → Runtime frame → Set from what I see now**. An orange dashed
+frame labelled PANEL appears on the plan — exactly what the controller
+will show. The frame is per screen; **Clear the frame** returns to the
+automatic fit.
+
+In the room inspector X and Y are the room's top-left corner measured
+from the plan's top-left corner, and width and length are its size in
+plan — all in metres.
+
 ## The screen lives in the project
 
 There is no separate file to upload. The screen travels inside

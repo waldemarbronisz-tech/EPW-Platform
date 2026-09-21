@@ -301,6 +301,21 @@ i etykietę z rekordu pokoju (`rooms`, ściany wskazują go przez `roomId`);
 poziom w zbiornikach jest przycięty do wnętrza zbiornika (`clipFunc` symbolu
 wyeksportowany jako `clip`).
 
+**Co panel pokazuje z ekranu (2026-09-21).** Nie cały canvas (domyślnie
+1920×1080 px = 24×13,5 m — pojedynczy magazyn 6×4 m byłby na nim
+plamką), tylko **ramkę ekranu runtime** albo — gdy jej nie ma — obrys
+wszystkiego, co narysowane (ściany z wytłoczeniem, symbole, tablice,
+przewody) z niewielkim marginesem, wpasowany w okno z zachowaniem
+proporcji. Ramkę ustawia się w edytorze: *Widok → Ramka ekranu runtime →
+Ustaw z tego, co teraz widzę* (bieżące powiększenie i przesunięcie
+zamienia się w prostokąt w pikselach canvasa; na planie widać go jako
+pomarańczową przerywaną ramkę z podpisem PANEL); *Usuń ramkę* wraca do
+dopasowania automatycznego. Ramka jest per ekran: `canvas.viewport`
+aktywnego ekranu, `screenContents[id].viewport` pozostałych
+(`studio/synoptic/src/project/RuntimeViewport.ts`, runtime:
+`screen_widget.py` `view_rect()`/`content_bounds()`, `screen_set.py`
+przenosi `floorMaterial`/`viewport` nieaktywnego ekranu do jego `canvas`).
+
 **Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
 KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z
 `deviceId`, którego aparat w `screens.devices` ma oznaczenie roli,

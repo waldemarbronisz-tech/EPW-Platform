@@ -1,3 +1,4 @@
+import { normalizeViewport } from './RuntimeViewport';
 import { validateProjectSchema, createEmptyProject, CURRENT_SCHEMA_VERSION, FORMAT_NAME } from './ProjectSchema';
 import { runMigrations } from './Migrations';
 import type { EPWProjectSchema } from './ProjectSchema';
@@ -168,6 +169,7 @@ export class ProjectManager {
         // Saved with the canvas but dropped here, so every reopened
         // project fell back to the default floor.
         floorMaterial: (project.canvas as { floorMaterial?: FloorMaterialId }).floorMaterial,
+        viewport: normalizeViewport((project.canvas as { viewport?: unknown }).viewport),
       },
       isDirty: isDirty,
       selectedIds: [],

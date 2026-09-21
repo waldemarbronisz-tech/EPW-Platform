@@ -39,6 +39,7 @@ function liveContent(state: AppState): ScreenContent {
     groupCommands: state.groupCommands,
     setpointPanels: state.setpointPanels,
     floorMaterial: state.canvasConfig.floorMaterial,
+    viewport: state.canvasConfig.viewport,
   };
 }
 
@@ -54,7 +55,7 @@ function applyContent(state: AppState, content: ScreenContent) {
     rooms: content.rooms || [],
     groupCommands: content.groupCommands,
     setpointPanels: content.setpointPanels,
-    canvasConfig: { ...state.canvasConfig, floorMaterial: content.floorMaterial },
+    canvasConfig: { ...state.canvasConfig, floorMaterial: content.floorMaterial, viewport: content.viewport },
     // Nothing on the incoming screen can be selected yet, and a
     // selection carried over from the previous one would point at
     // objects that are no longer on the canvas.

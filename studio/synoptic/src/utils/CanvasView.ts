@@ -4,6 +4,7 @@
 // content view are both plain arithmetic, no Stage needed to get them
 // right.
 
+import type { RuntimeViewport } from '../project/RuntimeViewport';
 import type { SynopticObject, SynopticConnection } from '../store';
 import type { MeterElement } from '../meter/MeterElement';
 import { computeMeterHeight } from '../meter/MeterElement';
@@ -103,6 +104,18 @@ export interface View {
 }
 
 const FIT_PADDING_FRACTION = 0.9; // a little margin around the content, not edge-to-edge
+
+/** The canvas rectangle a viewport of the given size shows under `view` - what "Runtime frame: what I see now" records, whole pixels. */
+export function visibleCanvasRect(view: View, viewportWidth: number, viewportHeight: number): RuntimeViewport {
+  const zoom = view.zoom > 0 ? view.zoom : 1;
+  const whole = (n: number) => Math.round(n) || 0;   // never -0 in a file
+  return {
+    x: whole(-view.panX / zoom),
+    y: whole(-view.panY / zoom),
+    width: Math.max(1, whole(viewportWidth / zoom)),
+    height: Math.max(1, whole(viewportHeight / zoom)),
+  };
+}
 
 /**
  * The zoom/pan that fits `bounds` inside a viewport of the given size,

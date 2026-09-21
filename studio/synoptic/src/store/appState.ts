@@ -4,6 +4,7 @@
 // `StateCreator<AppState, [], [], ItsOwnSlice>` - Zustand's own
 // documented "slices" pattern - without a circular VALUE import back to
 // store.ts (this file has no runtime code in it at all, only the type).
+import type { RuntimeViewport } from '../project/RuntimeViewport';
 import type { SelectionIds, WorkMode } from '../project/WorkModes';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
@@ -39,7 +40,15 @@ export interface AppState {
     // hang a setting on. Optional and additive - absent means
     // DEFAULT_FLOOR_MATERIAL.
     floorMaterial?: FloorMaterialId;
+    // The part of the plan the panel shows (project/RuntimeViewport.ts);
+    // absent = the panel fits everything drawn. Per screen, like
+    // floorMaterial: parked in ScreenContent when the screen is not live.
+    viewport?: RuntimeViewport;
   };
+  // The editor canvas's own size on screen (Canvas.tsx's ResizeObserver),
+  // so View -> "Runtime frame: what I see now" can turn the current
+  // zoom/pan into a canvas rectangle. Session state, never saved.
+  canvasViewportSize: { width: number; height: number };
   objects: SynopticObject[];
   connections: SynopticConnection[];
   // The meter element (feat/meter-element): its own array, deliberately
@@ -278,6 +287,8 @@ export interface AppState {
   // setter, no UI reachable it from at all). One setter, following the
   // exact shape every other project-field setter here already has.
   setCanvasBackground: (color: string) => void;
+  setRuntimeViewport: (viewport: RuntimeViewport | undefined) => void;
+  setCanvasViewportSize: (size: { width: number; height: number }) => void;
   addMessage: (text: string) => void;
 
   setCanvasState: (state: Partial<CanvasState>) => void;
