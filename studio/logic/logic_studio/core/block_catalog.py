@@ -130,24 +130,25 @@ def block_entry_markdown(entry: dict) -> str:
     topic id as a request to call this instead of reading a .md file
     (§4: the catalog is generated, not hand-written, right down to the
     page a viewer actually reads)."""
+    from logic_studio.i18n import tr
     lines = [
         f"# {entry['display_name']}",
         "",
         f"`{entry['type_id']}` — {entry['category']}",
         "",
-        entry["description"] or "*(no description)*",
+        entry["description"] or f"*({tr('catalog.no_description')})*",
         "",
     ]
 
     if entry["pins"]:
-        lines.append("## Piny")
+        lines.append("## " + tr("catalog.pins"))
         lines.append("")
-        lines.append("| Name | Direction | Type | Description |")
+        lines.append(f"| {tr('catalog.col_name')} | {tr('catalog.col_direction')} | {tr('catalog.col_type')} | {tr('catalog.col_description')} |")
         lines.append("|---|---|---|---|")
         for pin in entry["pins"]:
             desc = _escape_pipe(pin["description"] or "")
             if pin["safety_relevant"]:
-                desc = f"**{desc}** ⚠ safety relevant"
+                desc = f"**{desc}** ⚠ {tr('catalog.safety_relevant')}"
             lines.append(
                 f"| {_escape_pipe(pin['name'])} | {pin['direction']} | "
                 f"{_escape_pipe(pin['data_type'])} | {desc} |"
@@ -155,9 +156,10 @@ def block_entry_markdown(entry: dict) -> str:
         lines.append("")
 
     if entry["properties"]:
-        lines.append("## Properties")
+        lines.append("## " + tr("catalog.properties"))
         lines.append("")
-        lines.append("| Name | Type | Default | Unit | Description |")
+        lines.append(f"| {tr('catalog.col_name')} | {tr('catalog.col_type')} | {tr('catalog.col_default')} | "
+                     f"{tr('catalog.col_unit')} | {tr('catalog.col_description')} |")
         lines.append("|---|---|---|---|---|")
         for prop in entry["properties"]:
             lines.append(
@@ -168,7 +170,7 @@ def block_entry_markdown(entry: dict) -> str:
         lines.append("")
 
     if entry["aliases"]:
-        lines.append("**Aliasy wyszukiwania:** " + ", ".join(entry["aliases"]))
+        lines.append(f"**{tr('catalog.aliases')}:** " + ", ".join(entry["aliases"]))
         lines.append("")
 
     return "\n".join(lines)

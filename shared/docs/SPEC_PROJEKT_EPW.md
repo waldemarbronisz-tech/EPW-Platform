@@ -329,6 +329,27 @@ to komenda do sterownika (`POST /api/v1/commands`, kolejka
 pasku stanu), bez łączności — symulacja edytora. Esc w edytorze albo F11
 wraca (`__synopticStudioState().panelPreview`).
 
+**Jedna pomoc dla całego Studia (2026-09-21).** Studio, edytor ekranów
+i edytor logiki to jeden program inżynierski, więc pomoc jest jedna:
+`studio/shell/help/unified.py` składa w jedno drzewo tematy Studia
+(`help/<lang>/*.md`), rozdziały edytora ekranów (jego treść, dotąd
+wyłącznie w TypeScript, eksportowana do `help/synoptic/` skryptem
+`studio/synoptic/tools/help_export/export.mjs`; test `help-export.test.ts`
+pilnuje świeżości) i pomoc edytora logiki (jego własny
+`HelpContentStore`: tematy, generowany katalog bloków, tabela skrótów).
+Wszystko w języku Studia — także generowane strony katalogu bloków
+i nazwy kategorii, które wcześniej były angielskie przy polskim
+interfejsie. Klucze tematów: `points`, `synoptic/<id>`, `logic/<id>`
+(w tym `logic/block:<typ>`, `logic/category:<nazwa>`); odnośniki każdego
+źródła są przepisywane na tę postać, więc temat jednego edytora może
+wskazywać temat drugiego. F1 i „?” z każdego działu i obu edytorów
+otwierają ten sam panel na temacie kontekstu (zaznaczony blok, zaznaczony
+symbol — edytor ekranów zgłasza to przez `__synopticStudioState().helpRequest`,
+edytor logiki przez przepięte akcje pomocy); własne okna pomocy edytorów
+nie otwierają się w Studiu. Pole nad drzewem przeszukuje wszystkie
+tematy. Pomoc EPW-OS (panel przy szafce) pozostaje osobna — to inny
+program, dla operatora.
+
 **Widok główny (schemat jednokreskowy) po `deviceId`** — role Q1/KMG/KM1/
 KM2/KVG1 wiąże `apparatus.bind_roles_from_screens()`: obiekt ekranu z
 `deviceId`, którego aparat w `screens.devices` ma oznaczenie roli,

@@ -269,6 +269,17 @@
   },
   "catalog": {
     "input": "Input",
-    "output": "Output"
+    "output": "Output",
+    "pins": "Pins",
+    "properties": "Properties",
+    "col_name": "Name",
+    "col_direction": "Direction",
+    "col_type": "Type",
+    "col_description": "Description",
+    "col_default": "Default",
+    "col_unit": "Unit",
+    "aliases": "Search aliases",
+    "safety_relevant": "safety relevant",
+    "no_description": "no description"
   }
 }

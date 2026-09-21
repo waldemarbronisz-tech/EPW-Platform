@@ -1,5 +1,10 @@
 # Logika
 
+Pełny opis edytora logiki — pojęcia (etykiety, znaczniki, cykl skanu),
+poradniki, katalog każdego bloku i skróty — jest w tej samej pomocy,
+w dziale [Logika — edytor logiki](help://logic/welcome); F1 na
+zaznaczonym bloku otwiera jego stronę z katalogu.
+
 Edytor logiki sterowania (Logic Studio) jako dział Studia — biblioteka
 bloków, symulacja, kompilacja i eksport do sterownika, te same narzędzia
 co w samodzielnym Logic Studio, w jednej skórze z resztą działów.

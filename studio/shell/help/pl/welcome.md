@@ -43,6 +43,17 @@ sterowników](help://site).
 Zwykły pojedynczy `projekt.epw` nadal działa jak dotąd — jako obiekt
 z jednym sterownikiem.
 
+## Jedna pomoc dla całego Studia
+
+Ta lista obejmuje działy Studia, a pod nimi dwa edytory:
+[Ekrany](help://synoptic/intro-what) (edytor synoptyki, rozdziały 1–13)
+i [Logikę](help://logic/welcome) (edytor logiki: pojęcia, poradniki,
+katalog bloków, skróty). Wszystko w jednym języku — tym, który wybrałeś
+w Ustawieniach — i powiązane odnośnikami. **F1** w dowolnym miejscu
+otwiera tę pomoc na temacie, w którym stoisz: w dziale Studia na jego
+temacie, w edytorze logiki na zaznaczonym bloku, w edytorze ekranów na
+zaznaczonym symbolu. Pole nad listą przeszukuje wszystkie tematy naraz.
+
 ## Gdzie szukać dalej
 
 - **Projekt** — każdy dział drzewa, pole po polu.

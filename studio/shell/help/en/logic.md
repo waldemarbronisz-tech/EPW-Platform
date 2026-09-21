@@ -1,5 +1,10 @@
 # Logic
 
+The logic editor's full description — concepts (labels, markers, the
+scan cycle), guides, a page for every block and the shortcuts — is in
+this same help, under [Logic — the logic editor](help://logic/welcome);
+F1 on a selected block opens its catalog page.
+
 The control-logic editor (Logic Studio) as a Studio department — the
 block library, simulation, compilation and export to the controller: the
 same tools as the standalone Logic Studio, in one skin with every other

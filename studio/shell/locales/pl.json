@@ -799,5 +799,12 @@
     "user_zones_all": "(wszystkie strefy)",
     "col_line_night": "Czuwa w nocy",
     "line_night_hint": "Odznaczona linia przestaje pilnować, gdy strefa jest uzbrojona w trybie nocnym - zwykle tak ustawia się czujki ruchu wewnątrz. Linia całodobowa alarmuje niezależnie od tego."
+  },
+  "help": {
+    "search": "Szukaj w pomocy…",
+    "group_synoptic": "Ekrany — edytor synoptyki",
+    "group_logic": "Logika — edytor logiki",
+    "block_catalog": "Katalog bloków",
+    "missing": "brak tematu pomocy {topic}"
   }
 }

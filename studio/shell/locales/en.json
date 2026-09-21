@@ -799,5 +799,12 @@
     "user_zones_all": "(every zone)",
     "col_line_night": "Watches at night",
     "line_night_hint": "Unticked, this line stops supervising while its zone is armed in night mode - the usual choice for motion detectors inside. A 24-hour line alarms regardless."
+  },
+  "help": {
+    "search": "Search the help…",
+    "group_synoptic": "Screens — the synoptic editor",
+    "group_logic": "Logic — the logic editor",
+    "block_catalog": "Block catalog",
+    "missing": "no help topic {topic}"
   }
 }

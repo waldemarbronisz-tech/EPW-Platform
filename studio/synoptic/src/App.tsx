@@ -53,6 +53,12 @@ function App() {
   const [helpRequest, setHelpRequest] = useState({ topicId: 'intro-what', nonce: 0 });
 
   const openHelp = (topicId: string) => {
+    // Inside Studio the one help is Studio's (studio/shell/help/unified.py):
+    // ask for it and leave this editor's own window closed.
+    if ((window as unknown as { __EPW_STUDIO_EMBED__?: boolean }).__EPW_STUDIO_EMBED__) {
+      useStore.getState().requestStudioHelp(topicId);
+      return;
+    }
     setHelpRequest(prev => ({ topicId, nonce: prev.nonce + 1 }));
     setShowHelp(true);
   };

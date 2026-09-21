@@ -4761,16 +4761,14 @@ class SettingsDiffDialog(QDialog):
 
 
 class HelpPanel(QWidget):
-    """"Dział help pełny" - a real, browsable topic tree + a Markdown
-    viewer, one per Studio panel (see studio/shell/help/generate_help.py
-    for the actual content and why it's original to Studio, not copied
-    from runtime/epw_os/help/'s own 164 files - those document a
-    DIFFERENT program's own screens). Topic list/order comes from
-    studio/shell/help/_manifest.py, generated alongside the .md content
-    so the two can never disagree. Language follows Studio's own
-    current language (get_language()) - switching language in
-    Ustawienia switches which folder this reads from next time it's
-    opened, same as every other tr()'d string in Studio."""
+    """"Pomoc" - EPW Studio's ONE help (studio/shell/help/unified.py):
+    Studio's own topics, the screen editor's and the logic editor's in
+    one tree, in Studio's current language, cross-linked with help://
+    keys (`points`, `synoptic/intro-what`, `logic/block:logic.and`). F1
+    anywhere - a Studio branch, a selected block in the logic editor, a
+    selected symbol on a screen - lands here, on the matching topic.
+    A search box narrows the tree to the topics whose title or text
+    contain every word typed."""
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -4780,15 +4778,22 @@ class HelpPanel(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # A tree, not a flat list: with 27 topics a single column of
-        # titles stops being navigable, and the chapters ("Start",
-        # "Projekt", "Sterownik"...) are also the order somebody reads
-        # them in for the first time.
+        left = QWidget()
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
+        self.search_edit = QLineEdit()
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self._on_search_changed)
+        left_layout.addWidget(self.search_edit)
+        # A tree: chapters (headings), and under the two editors' own
+        # headings their chapters - the order somebody reads them in.
         self.topic_tree = QTreeWidget()
         self.topic_tree.setHeaderHidden(True)
-        self.topic_tree.setFixedWidth(260)
         self.topic_tree.currentItemChanged.connect(self._on_tree_item_changed)
-        splitter.addWidget(self.topic_tree)
+        left_layout.addWidget(self.topic_tree, 1)
+        left.setFixedWidth(300)
+        splitter.addWidget(left)
 
         self.viewer = QTextBrowser()
         self.viewer.setOpenExternalLinks(False)
@@ -4802,46 +4807,78 @@ class HelpPanel(QWidget):
         splitter.setStretchFactor(1, 1)
         layout.addWidget(splitter)
 
-        self._topics = []
+        self._help = None
         self._items = {}
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(250)
+        self._search_timer.timeout.connect(self._apply_search)
         self.refresh()
 
     def refresh(self):
         from studio.shell.i18n import get_language
-        from studio.shell.help._manifest import CHAPTERS, TOPICS
+        from studio.shell.help.unified import UnifiedHelp
 
         current_key = self._current_key()
-        self._topics = TOPICS
         self._lang = get_language()
-        title_index = 1 if self._lang == "pl" else 2
+        self._help = UnifiedHelp(self._lang)
+        self.search_edit.setPlaceholderText(tr("help.search"))
+        self._build_tree(None)
+        keys = self._help.keys()
+        self._show(current_key if current_key in self._items else (keys[0] if keys else None))
 
+    def _build_tree(self, only_keys):
+        """The whole tree, or - with `only_keys` - the topics found by
+        a search, with the headings that lead to them."""
         self.topic_tree.blockSignals(True)
         self.topic_tree.clear()
         self._items = {}
-        chapter_items = {}
-        for chapter_key, chapter_pl, chapter_en in CHAPTERS:
-            item = QTreeWidgetItem([chapter_pl if self._lang == "pl" else chapter_en])
-            font = item.font(0)
-            font.setBold(True)
-            item.setFont(0, font)
-            # A chapter is a heading, not a destination - selecting one
-            # would leave the viewer with nothing to show.
-            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            chapter_items[chapter_key] = item
-        for entry in self._topics:
-            key, chapter = entry[0], entry[3]
-            leaf = QTreeWidgetItem([entry[title_index]])
-            leaf.setData(0, Qt.ItemDataRole.UserRole, key)
-            chapter_items[chapter].addChild(leaf)
-            self._items[key] = leaf
-        for chapter_key, _pl, _en in CHAPTERS:
-            item = chapter_items[chapter_key]
-            if item.childCount():
+        wanted = None if only_keys is None else set(only_keys)
+
+        def build(node, parent):
+            if node.key is None:
+                item = QTreeWidgetItem([node.title])
+                font = item.font(0)
+                font.setBold(True)
+                item.setFont(0, font)
+                # A heading, not a destination - selecting one would leave
+                # the viewer with nothing to show.
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            else:
+                item = QTreeWidgetItem([node.title])
+                item.setData(0, Qt.ItemDataRole.UserRole, node.key)
+            kept = False
+            for child in node.children:
+                if build(child, item):
+                    kept = True
+            if node.key is not None and (wanted is None or node.key in wanted):
+                kept = True
+            if not kept:
+                return False
+            if node.key is not None:
+                self._items[node.key] = item
+            if parent is None:
                 self.topic_tree.addTopLevelItem(item)
+            else:
+                parent.addChild(item)
+            return True
+
+        for top in self._help.tree():
+            build(top, None)
         self.topic_tree.expandAll()
         self.topic_tree.blockSignals(False)
 
-        self._show(current_key if current_key in self._items else self._topics[0][0])
+    def _on_search_changed(self, _text):
+        self._search_timer.start()
+
+    def _apply_search(self):
+        query = self.search_edit.text().strip()
+        current = self._current_key()
+        self._build_tree(None if not query else self._help.search(query))
+        if current in self._items:
+            self.topic_tree.setCurrentItem(self._items[current])
+        elif query and self._items:
+            self._show(next(iter(self._items)))
 
     def _current_key(self):
         item = self.topic_tree.currentItem() if self._items else None
@@ -4850,29 +4887,34 @@ class HelpPanel(QWidget):
     def _on_tree_item_changed(self, current, _previous):
         key = current.data(0, Qt.ItemDataRole.UserRole) if current is not None else None
         if key is not None:
-            self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+            self.viewer.setMarkdown(self._help.markdown(key))
 
-    def _show(self, key: str):
+    def _show(self, key):
+        if key is None:
+            return
         item = self._items.get(key)
         if item is None:
-            return
+            if self.search_edit.text().strip() and key in self._help.keys():
+                # Hidden by the search: clear it, the link wins.
+                self.search_edit.clear()
+                self._build_tree(None)
+                item = self._items.get(key)
+            if item is None:
+                return
         self.topic_tree.setCurrentItem(item)
         # setCurrentItem() on an already-current item emits nothing, so
         # the viewer is filled here rather than relying on the signal.
-        self.viewer.setMarkdown(load_help_topic_markdown(key, self._lang))
+        self.viewer.setMarkdown(self._help.markdown(key))
 
     def _on_anchor_clicked(self, url):
         if url.scheme() == "help":
-            self.select_topic(url.host() or url.path().lstrip("/"))
+            from studio.shell.help.unified import key_from_url
+            self.select_topic(key_from_url(url))
 
     def select_topic(self, key: str):
-        """Task 5.3 (pomoc kontekstowa, F1) - jumps straight to `key`
-        instead of making the caller know this panel's own row-index
-        bookkeeping. A silent no-op for an unknown key (same "don't
-        crash over a lookup miss" stance _on_topic_selected() above
-        already has for a missing .md file) rather than raising -
-        _HELP_TOPIC_BY_TREE_KEY in main_window.py is a hand-maintained
-        map that could in principle name a topic not in TOPICS."""
+        """F1 and every help:// link land here. A silent no-op for an
+        unknown key rather than a crash - the maps naming topics are
+        hand-maintained."""
         self._show(key)
 
 
