@@ -144,7 +144,10 @@
     "ela_modules": "ELA digital input modules ({n} channels each)",
     "ada_modules": "ADA digital output modules ({n} channels each)",
     "expected_mapping": "Expected a dictionary of address -> label.",
-    "invalid_signals": "Invalid data (internal signals)"
+    "invalid_signals": "Invalid data (internal signals)",
+    "field_name": "Name",
+    "field_version": "Version",
+    "field_cycle_time": "Cycle time"
   },
   "macro": {
     "new_parameter": "New parameter",
@@ -163,7 +166,13 @@
     "property_is": "Property: {name}",
     "pins_button": "Macro block pins...",
     "pins_hint": "To add a new pin, right-click a block inside the macro and choose „Expose macro pin”.",
-    "parameters_hint": "To bind a parameter to a block property, open the properties panel of that block inside the macro and use the „Bind to parameter...” button next to the chosen property."
+    "parameters_hint": "To bind a parameter to a block property, open the properties panel of that block inside the macro and use the „Bind to parameter...” button next to the chosen property.",
+    "field_name": "Name",
+    "field_type": "Type",
+    "field_type_from_property": "Type (from property)",
+    "field_default": "Default",
+    "field_unit": "Unit",
+    "field_description": "Description"
   },
   "signal": {
     "new_title": "New internal signal",
@@ -178,7 +187,22 @@
     "panel_search": "Search signal, label or block id...",
     "issues": "Issues",
     "issues_tooltip": "Show only signals with an error or warning.",
-    "empty": "No signals in the project — add an input or output block and assign an address"
+    "empty": "No signals in the project — add an input or output block and assign an address",
+    "section_physical": "Physical inputs and outputs",
+    "section_internal": "Internal signals",
+    "section_system": "System signals",
+    "empty_physical": "No physical channels - add an I/O card to the project first.",
+    "empty_internal": "No internal signals - add one with the \"New internal signal\" button below.",
+    "empty_system": "No system signal of this type is available here.",
+    "empty_system_writable": "No system signal of this type may be written from the logic.",
+    "no_category": "(no category)",
+    "field_name": "Name",
+    "field_type": "Type",
+    "field_retentive": "Retentive",
+    "field_description": "Description",
+    "field_label": "Label",
+    "field_category": "Category",
+    "type_locked": "Fixed to {type} - the block this was opened from accepts no other type."
   },
   "sim": {
     "di_used": "Digital inputs (DI)",
@@ -232,11 +256,21 @@
     "no_block": "No block selected",
     "unbind": "Unbind from parameter",
     "bind": "Bind to parameter...",
-    "not_selected": "(not selected)"
+    "not_selected": "(not selected)",
+    "identifier": "Identifier",
+    "force_state": "Force state",
+    "uuid": "UUID",
+    "category": "Category",
+    "priority": "Priority"
   },
   "device": {
     "search": "Search address, e.g. DI12 or ELA01...",
-    "header": "Devices"
+    "header": "Devices",
+    "controller": "EPW controller",
+    "input_module": "{dev} (input module / acquisition)",
+    "output_module": "{dev} (output module / actuator)",
+    "no_cards": "No I/O cards - add a card in the project",
+    "analog": "Analog"
   },
   "preview": {
     "more": "More about this block",
@@ -256,10 +290,19 @@
     "similar_label": "Similar label in the project: {similar}",
     "expose_pin": "Expose macro pin",
     "same_signal": "Other blocks with the same signal",
-    "align": "Align"
+    "align": "Align",
+    "cycle_delayed_tooltip": "This internal signal is read before it is written in the current execution order - the value comes from the previous scan. See the \"Messages\" tab after compiling."
   },
   "diff": {
-    "title": "Project comparison"
+    "title": "Project comparison",
+    "blocks_added": "Added blocks ({n})",
+    "blocks_removed": "Removed blocks ({n})",
+    "blocks_changed": "Changed blocks ({n})",
+    "moved": "Moved on the canvas",
+    "pin_connected": "Pin {pin}: new connection",
+    "pin_disconnected": "Pin {pin}: removed connection",
+    "settings_changes": "Settings changes ({n})",
+    "no_differences": "No differences"
   },
   "label": {
     "name": "Label name:"

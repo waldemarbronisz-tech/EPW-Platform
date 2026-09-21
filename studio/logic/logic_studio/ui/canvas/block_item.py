@@ -655,9 +655,7 @@ class BlockItem(QGraphicsItem):
             painter.setFont(font)
             painter.drawText(QRectF(2, self.height - 14, self.width - 4, 12), Qt.AlignLeft | Qt.AlignBottom, "z⁻¹")
             self.setToolTip(
-                "This internal signal is read before it is written in the current "
-                "execution order — the value comes from the previous scan "
-                "(feat/internal-bits §5). See the \"Messages\" tab after compiling."
+                tr("canvas.cycle_delayed_tooltip")
             )
         elif self.type_id in ("virtual.input", "internal.reg_in"):
             self.setToolTip("")

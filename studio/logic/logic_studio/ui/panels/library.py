@@ -180,7 +180,14 @@ class LibraryPanel(QWidget):
         self._rebuild_macro_section()
 
         standard_categories = [
-            "Logic gates", "Edge detection", "Inputs / Outputs", "Analog", "Timers",
+            "Logic gates", "Edge detection", "Inputs / Outputs",
+            # feat/signal-register 1.4: its own visible category, right
+            # after the I/O it belongs beside. It used to sit in "Other"
+            # among the constants and the square-wave generator, which is
+            # where an engineer looking for the alarm system's state would
+            # never think to open.
+            "System signals",
+            "Analog", "Timers",
             "Flip-flops", "Buttons", "LED", "Counters", "Telemetry", "Other",
             # Documentation blocks aren't executable logic — kept last, after
             # every functional category (§9.8).

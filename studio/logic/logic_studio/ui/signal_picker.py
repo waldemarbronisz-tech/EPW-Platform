@@ -17,7 +17,16 @@ KIND_ROLE = Qt.UserRole + 1  # "physical" | "internal" | "system" — for filter
 
 
 class _NewInternalSignalDialog(QDialog):
-    """§6.6: add a registry entry without leaving SignalPickerDialog."""
+    """§6.6: add a registry entry without leaving SignalPickerDialog.
+
+    feat/signal-register §1.5: the TYPE is fixed to the type of the block
+    that opened the picker whenever that block only accepts one. Creating
+    a BOOL from a register block used to be possible, and the signal then
+    simply never appeared in the list it was created from - the registry
+    gained an entry nobody asked for and the engineer was left looking
+    for it. A disabled combo still SHOWS the type (it is information),
+    it just cannot be set to the one value that makes no sense here.
+    """
 
     def __init__(self, value_type: str, parent=None):
         super().__init__(parent)
@@ -28,18 +37,25 @@ class _NewInternalSignalDialog(QDialog):
         form = QFormLayout()
         self.name_edit = QLineEdit()
         self.type_combo = QComboBox()
+        # BOOL/REAL are the stored values of the `type` field, not labels -
+        # they travel into projekt/.epwlogic and are compared verbatim by
+        # the validator and the exporter, so they are deliberately NOT
+        # translated. See test_interface_is_translatable's own note.
         self.type_combo.addItems(["BOOL", "REAL"])
-        self.type_combo.setCurrentText(value_type)
+        if value_type in ("BOOL", "REAL"):
+            self.type_combo.setCurrentText(value_type)
+            self.type_combo.setEnabled(False)
+            self.type_combo.setToolTip(tr("signal.type_locked", type=value_type))
         self.retentive_check = QCheckBox()
         self.description_edit = QLineEdit()
         self.label_edit = QLineEdit()
         self.category_edit = QLineEdit()
-        form.addRow("Name", self.name_edit)
-        form.addRow("Type", self.type_combo)
-        form.addRow("Retentive", self.retentive_check)
-        form.addRow("Description", self.description_edit)
-        form.addRow("Label", self.label_edit)
-        form.addRow("Category", self.category_edit)
+        form.addRow(tr("signal.field_name"), self.name_edit)
+        form.addRow(tr("signal.field_type"), self.type_combo)
+        form.addRow(tr("signal.field_retentive"), self.retentive_check)
+        form.addRow(tr("signal.field_description"), self.description_edit)
+        form.addRow(tr("signal.field_label"), self.label_edit)
+        form.addRow(tr("signal.field_category"), self.category_edit)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -66,6 +82,8 @@ class _NewInternalSignalDialog(QDialog):
 
 
 class SignalPickerDialog(QDialog):
+    _EMPTY_HINT_ROLE = Qt.UserRole + 2   # marks the "nothing here yet" row
+
     def __init__(self, project, value_type: str = "BOOL", parent=None, sections=("physical", "internal", "system"), system_source_filter=None):
         """`value_type`: "BOOL"/"REAL" filters every section to that type;
         None shows both (used for system.signal's "Sygnał", which can
@@ -109,6 +127,10 @@ class SignalPickerDialog(QDialog):
         new_signal_row = QHBoxLayout()
         self.new_signal_btn = QPushButton(tr("signal.new_button"))
         self.new_signal_btn.clicked.connect(self._create_new_signal)
+        # It creates an INTERNAL signal. A picker that does not show the
+        # internal section (system.signal's own) would create something
+        # its own list could never display.
+        self.new_signal_btn.setVisible("internal" in self.sections)
         new_signal_row.addWidget(self.new_signal_btn)
         new_signal_row.addStretch()
         layout.addLayout(new_signal_row)
@@ -133,7 +155,7 @@ class SignalPickerDialog(QDialog):
         # top-level nodes since they carry a completely different character
         # (project-defined vs. platform contract).
         if "physical" in self.sections:
-            phys_root = QTreeWidgetItem(self.tree, ["Physical inputs and outputs"])
+            phys_root = QTreeWidgetItem(self.tree, [tr("signal.section_physical")])
             # feat/io-labels-and-ids §3.2: the Opis column shows the
             # address's own descriptive label (§1) when one is set — "Wyl.
             # Q1 zamknięty" is what an engineer actually recognizes, not
@@ -154,13 +176,14 @@ class SignalPickerDialog(QDialog):
                     addr = point.get("address", "")
                     desc = DeviceModel.get_io_label(self.project, addr) or point.get("name", "") or addr
                     self._add_leaf(phys_root, desc, addr, point.get("unit", ""), addr, "physical")
+            self._hint_if_empty(phys_root, tr("signal.empty_physical"))
 
         # §6.3, section 2: internal signals, grouped by their own "category".
         if "internal" in self.sections:
-            internal_root = QTreeWidgetItem(self.tree, ["Internal signals"])
+            internal_root = QTreeWidgetItem(self.tree, [tr("signal.section_internal")])
             by_category = {}
             for entry in DeviceModel.get_internal_bits(self.project, type_filter=self.value_type):
-                cat = entry.get("category") or "(bez kategorii)"
+                cat = entry.get("category") or tr("signal.no_category")
                 by_category.setdefault(cat, []).append(entry)
             for cat in sorted(by_category):
                 cat_item = QTreeWidgetItem(internal_root, [cat])
@@ -169,11 +192,15 @@ class SignalPickerDialog(QDialog):
                         cat_item, entry.get("description", ""), entry.get("name", ""),
                         entry.get("label", ""), entry.get("name", ""), "internal",
                     )
+            # §1.3: an empty registry is the NORMAL state of a new project,
+            # and an empty row under a heading reads as a broken dialog.
+            # Say what belongs here and how to put it there.
+            self._hint_if_empty(internal_root, tr("signal.empty_internal"))
 
         # §6.3, section 3: fixed system-signal catalog.
         if "system" in self.sections:
             from shared.logic import system_signals
-            sys_root = QTreeWidgetItem(self.tree, ["System signals"])
+            sys_root = QTreeWidgetItem(self.tree, [tr("signal.section_system")])
             for cat in system_signals.get_categories(self.project):
                 matching = [
                     s for s in cat["signals"]
@@ -185,8 +212,31 @@ class SignalPickerDialog(QDialog):
                 cat_item = QTreeWidgetItem(sys_root, [cat["name"]])
                 for sig in matching:
                     self._add_leaf(cat_item, sig["description"], sig["id"], sig.get("label", ""), sig["id"], "system")
+            # An OUTPUT block filters the catalog down to source == "logic";
+            # for a REAL one that is empty today, and silence would read as
+            # "the catalog failed to load".
+            self._hint_if_empty(
+                sys_root,
+                tr("signal.empty_system_writable") if self.system_source_filter == "logic"
+                else tr("signal.empty_system"),
+            )
 
         self.tree.expandAll()
+
+    def _hint_if_empty(self, section_item, text):
+        """One explanatory row under a section that produced nothing.
+
+        Deliberately NOT a leaf: it carries no SIGNAL_ID_ROLE, so it can
+        never be selected, OK stays disabled on it, and _filter_subtree
+        keeps treating it as structure rather than as a match. It is
+        marked with its own role so the section still counts as empty for
+        anything that asks later."""
+        if section_item.childCount() > 0:
+            return None
+        hint = QTreeWidgetItem(section_item, [text])
+        hint.setData(0, self._EMPTY_HINT_ROLE, True)
+        hint.setFlags(hint.flags() & ~Qt.ItemIsSelectable)
+        return hint
 
     def _add_leaf(self, parent, description, name, label, signal_id, kind):
         item = QTreeWidgetItem(parent, [description, name, label])
@@ -214,6 +264,14 @@ class SignalPickerDialog(QDialog):
                 return True
             haystack = " ".join(item.text(c) for c in range(3)).lower()
             visible = text in haystack
+            item.setHidden(not visible)
+            return visible
+
+        if item.data(0, self._EMPTY_HINT_ROLE):
+            # The hint belongs to its section, not to the search: it shows
+            # while nothing is being searched for and disappears the moment
+            # somebody types, when "no results" is the honest answer.
+            visible = not text
             item.setHidden(not visible)
             return visible
 

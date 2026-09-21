@@ -666,8 +666,14 @@ def test_signal_picker_bool_shows_ela_ada_and_bool_internal_and_system():
     assert "SYS.SCAN_TIME" not in ids  # REAL, filtered out
 
 def test_signal_picker_internal_only_scoping_for_bit_property():
-    """The scoping used for virtual.input/output's "Bit" picker — only the
-    internal-signals section, per property_grid.py's _SIGNAL_PICKER_TARGETS."""
+    """Section scoping itself: asked for the internal section alone, the
+    dialog shows that and nothing else.
+
+    NOTE: this is no longer how virtual.input/output open it -
+    feat/signal-register 1.1 widened _SIGNAL_PICKER_TARGETS to
+    ("internal", "system") for all four signal blocks, which
+    test_signal_picker_one_dialog.py covers. What is left here is the
+    mechanism, which system.signal's own picker still relies on."""
     _app()
     from logic_studio.ui.signal_picker import SignalPickerDialog
     p = Project()

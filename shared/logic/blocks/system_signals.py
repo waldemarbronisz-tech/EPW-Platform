@@ -17,7 +17,7 @@ class SystemBooleanSignalBlock(BaseLogicBlock):
     PIN_DESCRIPTIONS = {"Out": "Value of the selected system signal (BOOL or REAL, depending on the signal)."}
     PROPERTY_DESCRIPTIONS = {"Sygnał": "Signal identifier from the system signal catalog (SYS.*)."}
 
-    def __init__(self, type_id="system.signal", default_name="System signal", category="Other", description="Reads a signal from the built-in system signal catalog (SYS.*)."):
+    def __init__(self, type_id="system.signal", default_name="System signal", category="System signals", description="Reads a signal from the built-in system signal catalog (SYS.*)."):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple
@@ -118,7 +118,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
         "Minimalny poziom dostępu": "Minimum operator access level needed to execute this command (enforced by EPW-OS).",
     }
 
-    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="Writes a system signal (SYS.*/SSWIN.* command) from the logic."):
+    def __init__(self, type_id="system.signal_out", default_name="System output", category="System signals", description="Writes a system signal (SYS.*/SEC.* command) from the logic."):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple family — same as system.signal

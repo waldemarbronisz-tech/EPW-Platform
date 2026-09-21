@@ -55,9 +55,9 @@ class ProjectSettingsDialog(QDialog):
         self.cycle_spin.setRange(1, 60000)
         self.cycle_spin.setSuffix(" ms")
         self.cycle_spin.setValue(int(project.settings.get("cycle_time_ms", 100)))
-        form.addRow("Name", self.name_edit)
-        form.addRow("Version", self.version_edit)
-        form.addRow("Cycle Time", self.cycle_spin)
+        form.addRow(tr("settings.field_name"), self.name_edit)
+        form.addRow(tr("settings.field_version"), self.version_edit)
+        form.addRow(tr("settings.field_cycle_time"), self.cycle_spin)
         general_layout.addLayout(form)
 
         general_layout.addWidget(QLabel(tr("settings.analog_points")))

@@ -225,13 +225,24 @@ class Compiler:
         # M./MR./MW./MWR.<name> id) live in the registry, not on the block.
         # Validator has already confirmed every "Bit" resolves to a
         # registry entry of the matching type (§4.4/§4.5).
-        from shared.logic.internal_bits import internal_bit_id
+        # feat/signal-register §1.1: the same "Bit" may now name a signal
+        # of the fixed platform catalog instead of a registry entry - the
+        # two are read and written through different IOProvider methods,
+        # so the KIND is resolved here alongside the id and handed to the
+        # block, which has no Project to ask later.
+        from shared.logic import system_signals
+        from shared.logic.blocks.virtual_io import resolve_signal_reference
         _INTERNAL_SIGNAL_TYPE_IDS = ("virtual.input", "virtual.output", "internal.reg_in", "internal.reg_out")
         for block in isolated_blocks:
             if block.type_id in _INTERNAL_SIGNAL_TYPE_IDS and hasattr(block, 'set_signal_id'):
-                entry = DeviceModel.get_internal_bit(self.project, block.properties.get("Bit", ""))
-                if entry:
-                    block.set_signal_id(internal_bit_id(entry))
+                name = block.properties.get("Bit", "")
+                signal_id, kind = resolve_signal_reference(
+                    name,
+                    DeviceModel.get_internal_bit(self.project, name),
+                    system_signals.get_signal(name, self.project),
+                )
+                if signal_id:
+                    block.set_signal_id(signal_id, kind)
 
         # feat/internal-bits §5: detect internal-signal reads that lag a
         # scan behind their writer, purely from execution_order position —
