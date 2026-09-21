@@ -9,8 +9,10 @@ controller.
 The tree has a fixed structure, regardless of what is filled in:
 
 - **PROJECT** — Information, Device Composition
-- **CONFIGURATION** — Cards, Locations, Point Registry, Apparatus
-  Registry, Synoptic Diagram, Logic, MQTT, Service Notes, Object Links
+- **CONFIGURATION** — Locations, Cards, Point Registry, Apparatus
+  Registry, Synoptic Diagram, Logic, MQTT, Object Links, Service Notes —
+  in the order a project needs them: each branch after the ones it
+  builds on
 - **INTRUSION ALARM** — Zones, Supervised Lines, Users
 - **PROTECTION** — Electrical, Process
 - **CONTROLLER** — Connection, Protection Tests

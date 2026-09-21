@@ -742,13 +742,15 @@ class StudioMainWindow(QMainWindow):
         self._item_modules = add_active_leaf(root, _TREE_ITEM_MODULES, "tree.devices", icon_modules)
 
         config = add_group(root, "tree.group_config")
-        # Cards before locations: a card is the thing you have in your
-        # hand, and it is what gives birth to the points. A location is
-        # a property OF a card, so being asked for it first reads as
-        # paperwork before work (owner, 2026-09-20: "logiczne jest że
-        # najpierw dodajemy karty").
-        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
+        # The branches follow the order in which a project is built: each
+        # one after the ones it needs (owner, 2026-09-21: "kolejne działy
+        # po tych, które wymagają zrobienia czegoś wcześniej"). A card
+        # stands in a location, so locations come first; cards give birth
+        # to points, points are addresses for apparatuses, and the two
+        # editors draw on all of that - the same order as the wizard and
+        # the help's "Jak powstaje projekt".
         self._item_locations = add_active_leaf(config, _TREE_ITEM_LOCATIONS, "tree.locations", icon_locations)
+        self._item_io_cards = add_active_leaf(config, _TREE_ITEM_IO_CARDS, "tree.io_cards", icon_io_cards)
         self._item_point_registry = add_active_leaf(
             config, _TREE_ITEM_POINT_REGISTRY, "tree.point_registry", icon_point_registry
         )
@@ -768,16 +770,16 @@ class StudioMainWindow(QMainWindow):
         config.addChild(self._item_logic)
         self._tree_label_refs.append((self._item_logic, "tree.logic"))
 
-        # 2026-09-18: the MQTT integration is a project setting, the
-        # service notes are the panel's logbook read here - both under
-        # KONFIGURACJA, after the two editors.
+        # After the editors: MQTT (a project setting the tags feed), then
+        # the object's links between its controllers, which ride on MQTT
+        # (site_format.apply_object_links), and last the service notes -
+        # the panel's logbook, only read here, needing nothing above.
         self._item_mqtt = add_active_leaf(config, _TREE_ITEM_MQTT, "tree.mqtt", icons.icon("draw_wire"))
-        self._item_service_notes = add_active_leaf(
-            config, _TREE_ITEM_SERVICE_NOTES, "tree.service_notes", icons.icon("project_registers")
-        )
-        # The object's links between its controllers (site_format.apply_object_links).
         self._item_object_links = add_active_leaf(
             config, _TREE_ITEM_OBJECT_LINKS, "tree.object_links", icons.icon("add_group_command")
+        )
+        self._item_service_notes = add_active_leaf(
+            config, _TREE_ITEM_SERVICE_NOTES, "tree.service_notes", icons.icon("project_registers")
         )
 
         # Task "fix/project-format-integrity" point 2.3 - these two

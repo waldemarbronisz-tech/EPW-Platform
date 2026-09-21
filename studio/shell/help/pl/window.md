@@ -9,9 +9,10 @@ sterownika.
 Drzewo ma stałą strukturę, niezależnie od tego, co jest wypełnione:
 
 - **PROJEKT** — Informacje, Skład urządzenia
-- **KONFIGURACJA** — Karty, Lokalizacje, Rejestr punktów, Rejestr
-  aparatów, Schemat synoptyczny, Logika, MQTT, Notatki serwisowe,
-  Powiązania obiektu
+- **KONFIGURACJA** — Lokalizacje, Karty, Rejestr punktów, Rejestr
+  aparatów, Schemat synoptyczny, Logika, MQTT, Powiązania obiektu,
+  Notatki serwisowe — w kolejności, w jakiej projekt ich potrzebuje:
+  każdy dział po tych, na których się opiera
 - **ALARMÓWKA** — Strefy, Linie dozorowe, Użytkownicy
 - **ZABEZPIECZENIA** — Elektryczne, Procesowe
 - **STEROWNIK** — Połączenie, Test zabezpieczeń
