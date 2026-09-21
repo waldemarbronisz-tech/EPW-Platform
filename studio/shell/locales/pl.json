@@ -39,7 +39,8 @@
     "service_notes": "Notatki serwisowe",
     "object_links": "Powiązania obiektu",
     "protection_tests": "Test zabezpieczeń",
-    "security_users": "Użytkownicy"
+    "security_users": "Użytkownicy",
+    "signals": "Sygnały"
   },
   "breadcrumb": {
     "screens": "Projekt → Konfiguracja → Schemat synoptyczny",
@@ -60,7 +61,8 @@
     "service_notes": "Projekt → Konfiguracja → Notatki serwisowe",
     "object_links": "Projekt → Konfiguracja → Powiązania obiektu",
     "protection_tests": "Projekt → Sterownik → Test zabezpieczeń",
-    "security_users": "Użytkownicy alarmówki"
+    "security_users": "Użytkownicy alarmówki",
+    "signals": "Sygnały"
   },
   "statusbar": {
     "no_project": "Brak otwartego projektu",
@@ -331,6 +333,44 @@
     "force_dialog_title": "Wymuś wartość",
     "force_dialog_text": "Wartość do wymuszenia dla: {points}",
     "force_refused": "Sterownik odmówił:\n{details}"
+  },
+  "signals": {
+    "tab_internal": "Wewnętrzne",
+    "tab_system": "Systemowe",
+    "internal_heading": "Sygnały wewnętrzne (markery)",
+    "internal_intro": "Własne bity i rejestry tej instalacji - to, czym logika przenosi decyzję z miejsca na miejsce. Identyfikator wynika z nazwy, typu i retencji: M. i MR. dla bitu, MW. i MWR. dla rejestru, przy czym forma z R przeżywa restart sterownika. Należą do tego projektu, więc edytuje się je tutaj; ten sam rejestr widać w edytorze logiki.",
+    "system_heading": "Sygnały systemowe (katalog platformy)",
+    "system_intro": "Własne sygnały sterownika, czytelne z poziomu logiki. TUTAJ NICZEGO SIĘ NIE DODAJE: ten katalog jest kontraktem - te same nazwy o tym samym znaczeniu w każdym projekcie i na każdym sterowniku - więc projekt nie może go rozszerzyć. Nazwa wymyślona tutaj byłaby sygnałem, o którym EPW-OS nigdy nie słyszał: logika czytałaby go bez protestu, a on nigdy by nie zmienił wartości. Nowe pozycje przychodzą z wydaniem platformy, razem z tym, co je wylicza.",
+    "col_name": "Nazwa",
+    "col_id": "Identyfikator",
+    "col_type": "Typ",
+    "col_retentive": "Retencja",
+    "col_description": "Opis",
+    "col_category": "Kategoria",
+    "col_label": "Etykieta",
+    "col_used_by": "Użyty w",
+    "col_direction": "Kierunek",
+    "col_source": "Źródło",
+    "col_runtime": "Obsługa w runtime",
+    "add": "Dodaj sygnał",
+    "delete": "Usuń",
+    "search": "Szukaj po identyfikatorze albo opisie...",
+    "new_name_base": "NOWY_SYGNAL",
+    "unused": "nieużywany",
+    "retentive_tooltip": "Wartość przeżywa restart sterownika (MR./MWR.). O sposobie utrwalenia decyduje sterownik - edytor logiki tego nie symuluje.",
+    "invalid_name": "Nieprawidłowa nazwa",
+    "duplicate_title": "Powtórzona nazwa",
+    "duplicate_text": "Sygnał o nazwie „{name}” już istnieje w tym projekcie.",
+    "renamed_blocks": "Zmieniono nazwę na {name} - przepięto bloków: {n}.",
+    "delete_used_title": "Sygnał jest używany",
+    "delete_used_text": "Te sygnały są używane przez bloki w logice. Po usunięciu bloki będą wskazywać sygnał, którego już nie ma, i najbliższa kompilacja zgłosi każdy z nich.\n\n{detail}\n\nUsunąć mimo to?",
+    "delete_used_line": "{name} - używany w: {blocks}",
+    "direction_read": "odczyt",
+    "direction_write": "zapis z logiki",
+    "runtime_served": "obsługiwany",
+    "runtime_planned": "brak źródła",
+    "shown_count": "Pokazano {shown} z {total}",
+    "logic_unavailable": "Rejestr sygnałów wewnętrznych należy do projektu logiki, którego nie udało się otworzyć. Wejdź raz w dział Logika i wróć tutaj."
   },
   "devices": {
     "col_id": "Id",

@@ -74,13 +74,15 @@ def _device_signals(project) -> list:
         for suffix, desc_tpl, label, safety in _ELA_DEVICE_SIGNAL_TEMPLATES:
             signals.append({
                 "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime", "safety_relevant": safety,
+                "label": label, "type": "BOOL", "source": "runtime",
+                "safety_relevant": safety, "runtime": "served",
             })
     for dev in DeviceModel.get_ada_devices(project):
         for suffix, desc_tpl, label, safety in _ADA_DEVICE_SIGNAL_TEMPLATES:
             signals.append({
                 "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime", "safety_relevant": safety,
+                "label": label, "type": "BOOL", "source": "runtime",
+                "safety_relevant": safety, "runtime": "served",
             })
     return signals
 
@@ -105,6 +107,30 @@ def get_categories(project=None) -> list:
 def get_all_signals(project=None) -> list:
     """Every signal across every category, flattened."""
     return [s for cat in get_categories(project) for s in cat["signals"]]
+
+
+RUNTIME_SERVED = "served"
+RUNTIME_PLANNED = "planned"
+
+
+def runtime_status(signal_id: str, project=None) -> str:
+    """Whether the controller actually answers for this signal.
+
+    "served" - EPW-OS computes it from something real. "planned" - the
+    name is agreed and the id is stable, but nothing produces a value
+    yet, so logic reading it sees the safe default and nothing else,
+    for ever.
+
+    An unknown signal is reported as planned rather than served: the
+    honest answer for a name this build has never heard of is "not from
+    here". Per-device diagnostics generated for this project's own
+    ELA/ADA modules are served - they come from the device manager that
+    generated them.
+    """
+    entry = get_signal(signal_id, project)
+    if entry is None:
+        return RUNTIME_PLANNED
+    return entry.get("runtime", RUNTIME_SERVED)
 
 
 def get_signal(signal_id: str, project=None):

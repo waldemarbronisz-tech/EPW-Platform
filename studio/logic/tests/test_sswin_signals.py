@@ -29,11 +29,20 @@ def _app():
 
 # ---- §4.1: catalog correctness (guards future entries too) -----------------
 
-def test_catalog_version_is_1_1_0():
-    assert system_signals.get_catalog_version() == "1.1.0"
+def test_the_catalog_declares_a_version():
+    """EPW-OS refuses logic compiled against a catalog newer than it
+    understands, so the version has to exist and be comparable - a
+    literal pinned here would only mean "somebody edited this test"."""
+    import re
+    version = system_signals.get_catalog_version()
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version or ""), version
 
 def test_every_catalog_entry_has_the_required_fields():
-    required = {"id", "description", "label", "type", "source", "safety_relevant"}
+    required = {"id", "description", "label", "type", "source", "safety_relevant",
+                # feat/signal-register 2.2: whether this controller really
+                # answers for the signal - Studio shows it, and the
+                # runtime's own suite checks the claim.
+                "runtime"}
     for sig in system_signals.get_all_signals():
         missing = required - set(sig.keys())
         assert not missing, f"{sig.get('id', '?')} missing fields: {missing}"
@@ -259,12 +268,15 @@ def test_manual_access_level_override_survives_reselecting_the_same_signal():
 
 # ---- §4.5: export --------------------------------------------------------
 
-def test_export_carries_catalog_version_1_1_0():
+def test_export_carries_the_version_the_catalog_actually_declares():
+    """The real contract: not a particular number, but the SAME number -
+    a runtime file claiming a version the catalog never had is how the
+    controller's compatibility check reaches the wrong conclusion."""
     p = Project()
     c = Compiler(p)
     res = c.compile()
     data = Exporter(p, res["program"].execution_order).export()
-    assert data["system_catalog_version"] == "1.1.0"
+    assert data["system_catalog_version"] == system_signals.get_catalog_version()
 
 def test_export_checksum_covers_the_catalog_version_field():
     p = Project()

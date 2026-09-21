@@ -99,6 +99,69 @@ def io_identifier_text_box(width: float, direction: str, labels_suppressed: bool
     return start_x, max(1.0, width - start_x - 6)
 
 
+# What these identifiers are actually built from. Not whitespace: a
+# signal name has none, so a whitespace wrap would return every name
+# unchanged and nothing on screen would move.
+_WRAP_SEPARATORS = "._-/"
+
+
+def _wrap_io_text(text, fm, available_width):
+    """`text` broken into lines that each fit `available_width`.
+
+    Identifiers have no spaces, so a whitespace wrap would return the
+    text unchanged and change nothing on screen. These names break at the
+    separators they are actually built from - "." and "_" - and the
+    separator STAYS on the line it ends, because "SYS." over "ACCESS_
+    ENGINEER" reads as one name while a leading "." reads as a typo.
+
+    A single segment still too wide (a long custom Tag with no separator
+    in it at all) is broken by characters: ugly, but every character is
+    on the block, which is the point. Never returns an empty list - a
+    caller drawing nothing would be worse than a caller drawing one
+    over-wide line, which the bottom-edge guard already handles.
+    """
+    if not text:
+        return []
+    if fm.horizontalAdvance(text) <= available_width:
+        return [text]
+
+    # Split after each separator, keeping it attached to its own segment.
+    segments, current = [], ""
+    for char in text:
+        current += char
+        if char in _WRAP_SEPARATORS:
+            segments.append(current)
+            current = ""
+    if current:
+        segments.append(current)
+
+    lines, line = [], ""
+    for segment in segments:
+        candidate = line + segment
+        if fm.horizontalAdvance(candidate) <= available_width or not line:
+            line = candidate
+        else:
+            lines.append(line)
+            line = segment
+        # The segment alone may still be too wide - break it by character.
+        while fm.horizontalAdvance(line) > available_width and len(line) > 1:
+            cut = len(line) - 1
+            while cut > 1 and fm.horizontalAdvance(line[:cut]) > available_width:
+                cut -= 1
+            # Never leave a remainder of nothing but separators: that
+            # produces a line reading "_", which is the stranded-separator
+            # case the rule above exists to avoid, reached from the other
+            # side. Backing the cut up one character carries a readable
+            # character down with it ("ACCES" + "S_", not "ACCESS" + "_").
+            while cut > 1 and all(ch in _WRAP_SEPARATORS for ch in line[cut:]):
+                cut -= 1
+            lines.append(line[:cut])
+            line = line[cut:]
+    if line:
+        lines.append(line)
+    return lines or [text]
+
+
 class BlockItem(QGraphicsItem):
     def __init__(self, logic_block, parent=None):
         super().__init__(parent)
@@ -662,11 +725,22 @@ class BlockItem(QGraphicsItem):
 
     def _draw_io_text_lines(self, painter, lines, direction="input"):
         """Each line gets its OWN QRectF, never one multi-line wrapped
-        string — that's what let "VI.NEW_INPUT" float above the block and
-        "State"/"Cmd" pin labels overlap the block name before (§5). Text
-        that still doesn't fit is elided, never drawn past the block's own
-        outline; a line that would land past the bottom edge is skipped
-        entirely rather than spilling over.
+        string handed to Qt — that's what let "VI.NEW_INPUT" float above
+        the block and "State"/"Cmd" pin labels overlap the block name
+        before (§5). Text that still doesn't fit is elided, never drawn
+        past the block's own outline; a line that would land past the
+        bottom edge is skipped entirely rather than spilling over.
+
+        feat/signal-register (owner: "aby zawijało tekst w obrębie
+        symbolu"): a line too wide for the block is now WRAPPED onto
+        further lines rather than ellipsis'd away. A screenshot of
+        "SYS.ACCESS_..." is the case: the name shrank to the minimum font
+        and then lost the half that says which signal it is. The wrap is
+        computed here into concrete lines (_wrap_io_text below) and each
+        one is still drawn in its own rectangle under the same bottom-edge
+        guard, so none of the guarantees above are given up. Eliding
+        remains, for text that cannot fit even wrapped at the smallest
+        size — there is nothing else left to do with it.
 
         §0.4 audit follow-up: the left margin depends on the block's shape,
         not a bare constant — an output-direction chevron has a notch cut
@@ -686,21 +760,32 @@ class BlockItem(QGraphicsItem):
                 continue
 
             base_size = style.FONT_SIZE_TAG if bold else style.FONT_SIZE_PIN_LABEL
-            font, fm = self._fit_io_text_font(text, base_size, bold, available_width)
+            font, fm = self._fit_io_text_font(
+                text, base_size, bold, available_width, self.height - 2 - y)
             line_height = fm.height()
-
-            if y + line_height > self.height - 2:
-                break
 
             painter.setFont(font)
             painter.setPen(QPen(style.COLOR_OUTLINE if bold else style.COLOR_TYPE_LABEL_TEXT))
-            elided = fm.elidedText(text, Qt.ElideRight, available_width)
-            painter.drawText(QRectF(start_x, y, available_width, line_height), Qt.AlignLeft | Qt.AlignTop, elided)
-            y += line_height
+
+            wrapped = _wrap_io_text(text, fm, available_width)
+            for index, piece in enumerate(wrapped):
+                if y + line_height > self.height - 2:
+                    break
+                # The last line that still fits carries whatever is left:
+                # elided, so a name too long even wrapped ends in "..."
+                # rather than simply stopping mid-word as if nothing had
+                # been cut.
+                last_that_fits = (index == len(wrapped) - 1
+                                  or y + 2 * line_height > self.height - 2)
+                if last_that_fits and index < len(wrapped) - 1:
+                    piece = fm.elidedText("".join(wrapped[index:]), Qt.ElideRight, available_width)
+                painter.drawText(QRectF(start_x, y, available_width, line_height),
+                                 Qt.AlignLeft | Qt.AlignTop, piece)
+                y += line_height
 
     _MIN_IO_TEXT_FONT_SIZE = 6
 
-    def _fit_io_text_font(self, text, base_size, bold, available_width):
+    def _fit_io_text_font(self, text, base_size, bold, available_width, available_height=None):
         """User report: "ELA01.DI.9" (single-digit channel) fit fine at
         the normal size, but "ELA01.DI.10" (two-digit - every channel
         from 10 up, once the platform grammar dropped the old fixed-
@@ -709,13 +794,26 @@ class BlockItem(QGraphicsItem):
         explained. Shrinks the font a point at a time (down to
         _MIN_IO_TEXT_FONT_SIZE) before the caller's own elidedText() -
         that stays the last resort for a genuinely long custom Tag/
-        label, not the routine case of one extra digit."""
+        label, not the routine case of one extra digit.
+
+        With wrapping (see _draw_io_text_lines), "fits" is no longer about
+        WIDTH alone: a size is good enough when the text wraps into lines
+        that fit the height still available. That keeps a readable font
+        for "SYS.ACCESS_ENGINEER" - two lines at the normal size beat one
+        unreadable 6pt line - and only shrinks when the wrapped block of
+        text would run off the bottom. `available_height` omitted keeps
+        the old width-only behaviour for any other caller."""
         size = base_size
         while size > self._MIN_IO_TEXT_FONT_SIZE:
             font = QFont(style.FONT_FAMILY, size)
             font.setBold(bold)
-            if QFontMetricsF(font).horizontalAdvance(text) <= available_width:
-                return font, QFontMetricsF(font)
+            metrics = QFontMetricsF(font)
+            if metrics.horizontalAdvance(text) <= available_width:
+                return font, metrics
+            if available_height is not None:
+                wrapped = _wrap_io_text(text, metrics, available_width)
+                if len(wrapped) * metrics.height() <= available_height:
+                    return font, metrics
             size -= 1
         font = QFont(style.FONT_FAMILY, self._MIN_IO_TEXT_FONT_SIZE)
         font.setBold(bold)

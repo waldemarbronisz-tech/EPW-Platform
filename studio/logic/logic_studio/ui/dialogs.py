@@ -332,14 +332,13 @@ class ProjectSettingsDialog(QDialog):
 
     def _usage_blocks(self, name: str) -> list:
         """Blocks referencing internal-signal registry entry `name` (§7.2's
-        "Użycia" column and §7.3's rename-propagation both need this)."""
-        if not name:
-            return []
-        lname = name.lower()
-        return [
-            b for b in self.project.blocks
-            if b.type_id in _INTERNAL_SIGNAL_TYPE_IDS and b.properties.get("Bit", "").lower() == lname
-        ]
+        "Użycia" column and §7.3's rename-propagation both need this).
+
+        feat/signal-register §2.1: the rule itself now lives in
+        shared/logic/internal_bits.py, so this editor and Studio's own
+        Signals department cannot drift apart on what "used" means."""
+        from shared.logic.internal_bits import blocks_using
+        return blocks_using(self.project.blocks, name)
 
     def _load_signals(self, entries):
         self.signals_table.setRowCount(0)
@@ -680,9 +679,9 @@ class ProjectSettingsDialog(QDialog):
         # resolved M./MR./MW./MWR.<name> id is always derived fresh from
         # whatever the registry currently says (core.internal_bits.
         # internal_bit_id()), so that part updates automatically for free.
+        from shared.logic.internal_bits import rename_in_blocks
         for old_name, new_name in self._bit_renames.items():
-            for block in self._usage_blocks(old_name):
-                block.properties["Bit"] = new_name
+            rename_in_blocks(self.project.blocks, old_name, new_name)
 
         # feat/io-labels-and-ids §2.3: one push_state()/set_dirty() for the
         # whole dialog (set_dirty() is called by whoever calls
