@@ -97,7 +97,7 @@
     "mixed": "(różne)",
     "layout": "Położenie i rozmiar",
     "width": "Szerokość",
-    "height": "Wysokość",
+    "height": "Długość",
     "measures": "Wymiary",
     "walls": "Ściany",
     "perimeter": "Obwód",
@@ -105,7 +105,7 @@
     "not_closed": "nie jest zamkniętym pomieszczeniem",
     "move_hint": "Przesunięcie pomieszczenia - przeciągnięciem ściany albo polami X / Y - zabiera ze sobą symbole w środku.",
     "select_whole": "Zaznacz całe pomieszczenie",
-    "size_hint": "Położenie i rozmiar w metrach, z dokładnością do centymetra. Skala: 1 m = 80 px; jedna kratka siatki to 20 cm."
+    "size_hint": "X i Y to lewy górny róg pomieszczenia liczony od lewego górnego rogu planu; szerokość i długość to jego rozmiar w rzucie. Wszystko w metrach, z dokładnością do centymetra. Skala: 1 m = 80 px; jedna kratka siatki to 20 cm. Panel pokazuje to, co obejmuje ramka ekranu runtime (Widok), albo wszystko, co narysowane."
   },
   "lighting": {
     "title": "Oprawa",
@@ -237,5 +237,14 @@
     "site.pressure_switch": "Presostat",
     "site.sprinkler_head": "Zraszacz",
     "site.drip_line": "Linia kroplująca"
+  },
+  "view": {
+    "runtime_frame": "Ramka ekranu runtime",
+    "runtime_frame_set": "Ustaw z tego, co teraz widzę",
+    "runtime_frame_set_hint": "Panel pokaże dokładnie tę część planu, która jest teraz widoczna w tym oknie. Najpierw ustaw powiększenie i przesunięcie tak, jak plan ma wyglądać przy szafce.",
+    "runtime_frame_clear": "Usuń ramkę (dopasuj do wszystkiego, co narysowane)",
+    "runtime_frame_auto": "Bez ramki: panel dopasowuje wszystko, co narysowane",
+    "runtime_frame_clear_hint": "Bez ramki panel wpasowuje w swoje okno każdą ścianę, symbol i tablicę tego ekranu, z niewielkim marginesem.",
+    "runtime_frame_tag": "PANEL"
   }
 }

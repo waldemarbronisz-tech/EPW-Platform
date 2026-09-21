@@ -9,6 +9,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { visibleScreens, WORKSPACE_LAYOUTS } from '../project/WorkspaceLayout';
+import { visibleCanvasRect } from '../utils/CanvasView';
+import { tr } from '../i18n/tr';
 import {
   COLOR_BEVEL_DARK, COLOR_BEVEL_LIGHT, COLOR_OUTLINE, COLOR_PANEL,
   FONT_SIZE_SMALL, FONT_UI,
@@ -56,6 +58,19 @@ export const ViewMenu: React.FC = () => {
   const showScreen = useStore(s => s.showScreen);
   const hideScreen = useStore(s => s.hideScreen);
   const addScreen = useStore(s => s.addScreen);
+  const runtimeViewport = useStore(s => s.canvasConfig.viewport);
+  const setRuntimeViewport = useStore(s => s.setRuntimeViewport);
+
+  // "What I see now": the canvas rectangle this window shows at its
+  // current zoom and pan becomes the screen's runtime frame - the
+  // panel will show exactly that. Frame the plan the way it should look
+  // at the cabinet, then pick this.
+  const setFrameFromView = () => {
+    const s = useStore.getState();
+    const { width, height } = s.canvasViewportSize;
+    if (width > 0 && height > 0) s.setRuntimeViewport(visibleCanvasRect(s.canvasState, width, height));
+    setOpen(false);
+  };
 
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -124,6 +139,20 @@ export const ViewMenu: React.FC = () => {
               </div>
             );
           })}
+
+          <div style={{ ...sectionStyle, marginTop: 6 }}>{tr('view.runtime_frame')}</div>
+          <div style={rowStyle} title={tr('view.runtime_frame_set_hint')} onClick={setFrameFromView}>
+            <span style={{ width: 12 }}>{runtimeViewport ? '•' : ''}</span>
+            <span>{tr('view.runtime_frame_set')}</span>
+          </div>
+          <div
+            style={{ ...rowStyle, opacity: runtimeViewport ? 1 : 0.6 }}
+            title={tr('view.runtime_frame_clear_hint')}
+            onClick={() => { if (runtimeViewport) setRuntimeViewport(undefined); setOpen(false); }}
+          >
+            <span style={{ width: 12 }}>{runtimeViewport ? '' : '•'}</span>
+            <span>{runtimeViewport ? tr('view.runtime_frame_clear') : tr('view.runtime_frame_auto')}</span>
+          </div>
 
           <div style={{ borderTop: `1px solid ${COLOR_BEVEL_DARK}`, marginTop: 4, paddingTop: 2 }}>
             <div

@@ -97,7 +97,7 @@
     "mixed": "(different)",
     "layout": "Position and size",
     "width": "Width",
-    "height": "Height",
+    "height": "Length",
     "measures": "Measures",
     "walls": "Walls",
     "perimeter": "Perimeter",
@@ -105,7 +105,7 @@
     "not_closed": "not a closed room",
     "move_hint": "Moving the room - by dragging a wall or with X / Y - takes the symbols inside it along.",
     "select_whole": "Select the whole room",
-    "size_hint": "Position and size in metres, to the centimetre. The scale is 1 m = 80 px; one grid cell is 20 cm."
+    "size_hint": "X and Y are the room's top-left corner measured from the plan's top-left corner; width and length are its size in plan. All in metres, to the centimetre. The scale is 1 m = 80 px; one grid cell is 20 cm. The panel shows what the runtime frame covers (View), or everything drawn."
   },
   "lighting": {
     "title": "Luminaire",
@@ -237,5 +237,14 @@
     "site.pressure_switch": "Pressure Switch",
     "site.sprinkler_head": "Sprinkler Head",
     "site.drip_line": "Drip Line"
+  },
+  "view": {
+    "runtime_frame": "Runtime frame",
+    "runtime_frame_set": "Set from what I see now",
+    "runtime_frame_set_hint": "The panel will show exactly the part of the plan visible in this window now. Zoom and pan first so the plan looks as it should at the cabinet.",
+    "runtime_frame_clear": "Clear the frame (fit everything drawn)",
+    "runtime_frame_auto": "No frame: the panel fits everything drawn",
+    "runtime_frame_clear_hint": "Without a frame the panel fits every wall, symbol and panel of this screen into its window, with a small margin.",
+    "runtime_frame_tag": "PANEL"
   }
 }

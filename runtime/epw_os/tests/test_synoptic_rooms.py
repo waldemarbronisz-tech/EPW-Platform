@@ -85,7 +85,9 @@ def test_widget_paints_the_floor_in_the_material_and_the_walls_in_theirs():
     top = color_at(250, 100 + 3)                             # the lit face of the top wall (its shaded strip lies on the outer edge)
     expected_top = QColor(rm.wall_tones("cegla")["top"])
     assert abs(top.red() - expected_top.red()) <= 12 and abs(top.blue() - expected_top.blue()) <= 12
-    outside = color_at(700, 500)
-    assert outside.name() == "#00cfcf"                       # the canvas, untouched
+    # The panel fits what is drawn (the room, with a margin), so an empty
+    # canvas point far from it lies off the widget - the canvas colour is
+    # sampled in the widget's own corner, where the margin shows it.
+    assert image.pixelColor(2, 2).name() == "#00cfcf"
     assert isinstance(image, QImage)
     widget.shutdown()

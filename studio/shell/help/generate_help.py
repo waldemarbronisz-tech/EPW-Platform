@@ -1299,6 +1299,21 @@ punktami i aparatami.
 - **Ściany, pokoje, otwory** — rzut obiektu; sterownik rysuje je tak
   samo, z wytłoczeniem pseudo-3D.
 
+## Co panel pokaże
+
+Nie cały niebieski canvas (domyślnie 24 × 13,5 m — jeden magazyn 6 × 4 m
+byłby na nim plamką), tylko to, co narysowane, wpasowane w okno panelu
+z niewielkim marginesem. Gdy chcesz sam zdecydować o kadrze: ustaw
+powiększenie i przesunięcie tak, jak plan ma wyglądać przy szafce,
+i wybierz **Widok → Ramka ekranu runtime → Ustaw z tego, co teraz
+widzę**. Na planie pojawia się pomarańczowa przerywana ramka z podpisem
+PANEL — dokładnie tyle pokaże sterownik. Ramka jest osobna dla każdego
+ekranu; **Usuń ramkę** wraca do dopasowania automatycznego.
+
+W inspektorze pomieszczenia X i Y to lewy górny róg pokoju liczony od
+lewego górnego rogu planu, a szerokość i długość to jego rozmiar
+w rzucie — wszystko w metrach.
+
 ## Ekran jest w projekcie
 
 Nie ma osobnego pliku do wgrania. Ekran jedzie w `projekt.epw` i to
@@ -1340,6 +1355,21 @@ real points and apparatus.
   registry](help://points).
 - **Walls, rooms, openings** — the floor plan; the controller draws them
   the same way, with the same pseudo-3D extrusion.
+
+## What the panel shows
+
+Not the whole blue canvas (24 × 13.5 m by default — one 6 × 4 m
+warehouse would be a stamp on it), but what is drawn, fitted into the
+panel's window with a small margin. To decide the framing yourself: zoom
+and pan until the plan looks as it should at the cabinet, then pick
+**View → Runtime frame → Set from what I see now**. An orange dashed
+frame labelled PANEL appears on the plan — exactly what the controller
+will show. The frame is per screen; **Clear the frame** returns to the
+automatic fit.
+
+In the room inspector X and Y are the room's top-left corner measured
+from the plan's top-left corner, and width and length are its size in
+plan — all in metres.
 
 ## The screen lives in the project
 

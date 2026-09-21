@@ -1,3 +1,4 @@
+import type { RuntimeViewport } from './RuntimeViewport';
 import type { SynopticObject, SynopticConnection } from '../store';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
@@ -31,6 +32,9 @@ export interface EPWCanvasSchema {
   // with. Screen-level appearance, which is exactly what this block
   // already holds (background/gridSize). Optional and additive.
   floorMaterial?: FloorMaterialId;
+  // What the panel shows of the ACTIVE screen (project/RuntimeViewport.ts);
+  // every other screen keeps its own in screenContents[id].viewport.
+  viewport?: RuntimeViewport;
 }
 
 export interface EPWProjectSchema {

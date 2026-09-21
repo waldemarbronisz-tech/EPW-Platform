@@ -22,6 +22,7 @@
 //
 // Type definitions and pure helpers only.
 
+import type { RuntimeViewport } from './RuntimeViewport';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
 import type { FrameElement } from '../elements/FrameElement';
@@ -52,6 +53,8 @@ export interface ScreenContent {
   setpointPanels: SetpointPanelElement[];
   /** Per screen, because one controller's plant room and its office are not floored alike. */
   floorMaterial?: FloorMaterialId;
+  /** What the panel shows of this screen (View -> Runtime frame); absent = fit everything drawn. */
+  viewport?: RuntimeViewport;
 }
 
 export function blankScreenContent(): ScreenContent {

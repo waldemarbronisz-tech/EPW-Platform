@@ -28,8 +28,14 @@ not take the Synoptic page down with it.
 # exactly as it is when a screen is swapped in.
 SCREEN_CONTENT_KEYS = (
     "objects", "connections", "meters", "signalPanels", "frames", "walls", "rooms",
-    "groupCommands", "setpointPanels", "floorMaterial",
+    "groupCommands", "setpointPanels", "floorMaterial", "viewport",
 )
+
+# The screen's own canvas settings. The editor keeps the ACTIVE screen's
+# under `canvas` (canvasConfig) and every other screen's in its
+# ScreenContent - the reader (epwsyn_loader) only ever looks at `canvas`,
+# so screen_document() moves them there.
+SCREEN_CANVAS_KEYS = ("floorMaterial", "viewport")
 
 DEFAULT_SCREEN_ID = ""
 
@@ -92,5 +98,13 @@ def screen_document(document, screen_id: str) -> dict:
             swapped[key] = content[key]
         else:
             swapped.pop(key, None)
+    canvas = document.get("canvas")
+    canvas = dict(canvas) if isinstance(canvas, dict) else {}
+    for key in SCREEN_CANVAS_KEYS:
+        if key in content:
+            canvas[key] = content[key]
+        else:
+            canvas.pop(key, None)
+    swapped["canvas"] = canvas
     swapped["activeScreenId"] = screen_id
     return swapped
