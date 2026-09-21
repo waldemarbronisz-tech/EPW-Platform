@@ -59,6 +59,9 @@ export const ViewMenu: React.FC = () => {
   const hideScreen = useStore(s => s.hideScreen);
   const addScreen = useStore(s => s.addScreen);
   const runtimeViewport = useStore(s => s.canvasConfig.viewport);
+  const mainScreenId = useStore(s => s.mainScreenId);
+  const setMainScreen = useStore(s => s.setMainScreen);
+  const enterPanelPreview = useStore(s => s.enterPanelPreview);
   const setRuntimeViewport = useStore(s => s.setRuntimeViewport);
 
   // "What I see now": the canvas rectangle this window shows at its
@@ -136,9 +139,22 @@ export const ViewMenu: React.FC = () => {
                 <span style={{ width: 12 }}>{shown ? '✓' : ''}</span>
                 <span>{screen.name}</span>
                 {active && <span style={{ marginLeft: 'auto', opacity: 0.8 }}>active</span>}
+                <span
+                  title={tr('view.main_view_hint')}
+                  style={{ marginLeft: active ? 6 : 'auto', opacity: mainScreenId === screen.id ? 1 : 0.35 }}
+                  onClick={e => { e.stopPropagation(); setMainScreen(mainScreenId === screen.id ? null : screen.id); }}
+                >
+                  {mainScreenId === screen.id ? '★ ' + tr('view.main_view') : '☆'}
+                </span>
               </div>
             );
           })}
+
+          <div style={{ ...sectionStyle, marginTop: 6 }}>{tr('view.panel_preview')}</div>
+          <div style={rowStyle} title={tr('view.panel_preview_hint')} onClick={() => { enterPanelPreview(null); setOpen(false); }}>
+            <span style={{ width: 12 }}>▶</span>
+            <span>{tr('view.panel_preview_open')}</span>
+          </div>
 
           <div style={{ ...sectionStyle, marginTop: 6 }}>{tr('view.runtime_frame')}</div>
           <div style={rowStyle} title={tr('view.runtime_frame_set_hint')} onClick={setFrameFromView}>

@@ -5,6 +5,7 @@
 // documented "slices" pattern - without a circular VALUE import back to
 // store.ts (this file has no runtime code in it at all, only the type).
 import type { RuntimeViewport } from '../project/RuntimeViewport';
+import type { PanelPreviewState, QueuedCommand } from './previewSlice';
 import type { SelectionIds, WorkMode } from '../project/WorkModes';
 import type { MeterElement } from '../meter/MeterElement';
 import type { SignalPanelElement } from '../elements/SignalPanelElement';
@@ -49,6 +50,17 @@ export interface AppState {
   // so View -> "Runtime frame: what I see now" can turn the current
   // zoom/pan into a canvas rectangle. Session state, never saved.
   canvasViewportSize: { width: number; height: number };
+  // Panel preview (store/previewSlice.ts): the screen shown full-window
+  // as the panel shows it, or null; the screen the panel opens with; the
+  // commands clicked in a live preview, waiting for Studio to send them.
+  panelPreview: PanelPreviewState | null;
+  mainScreenId: string | null;
+  pendingCommands: QueuedCommand[];
+  enterPanelPreview: (screenId?: string | null) => void;
+  exitPanelPreview: () => void;
+  setMainScreen: (screenId: string | null) => void;
+  commandAt: (objectId: string) => QueuedCommand | null;
+  takeCommands: () => QueuedCommand[];
   objects: SynopticObject[];
   connections: SynopticConnection[];
   // The meter element (feat/meter-element): its own array, deliberately

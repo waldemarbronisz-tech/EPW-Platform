@@ -24,7 +24,7 @@ from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QMessageBox, QVBox
 
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.logging import log
-from epw_os.core.screen_set import active_screen_id, has_screen, screen_document, screen_list
+from epw_os.core.screen_set import has_screen, initial_screen_id, screen_document, screen_list
 from epw_os.gui.synoptic.screen_state import command_for_toggle
 from epw_os.gui.synoptic.screen_widget import SynopticScreenWidget
 from epw_os.i18n import tr
@@ -99,7 +99,7 @@ class PageSynoptic(QWidget):
         if self.project_manager is not None:
             getter = getattr(self.project_manager, "get_last_synoptic_screen", None)
             remembered = getter() if callable(getter) else None
-        chosen = remembered if (remembered and has_screen(self._document, remembered))             else active_screen_id(self._document)
+        chosen = remembered if (remembered and has_screen(self._document, remembered))             else initial_screen_id(self._document)
 
         self.screen_selector.blockSignals(True)
         self.screen_selector.clear()

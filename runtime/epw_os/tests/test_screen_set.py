@@ -87,3 +87,13 @@ def test_a_screen_that_only_declares_walls_replaces_the_objects_it_does_not_have
     third = screen_document(_document(), "s3")
     assert third["objects"] == []
     assert [w["id"] for w in third["walls"]] == ["w9"]
+
+
+def test_the_panel_opens_with_the_main_view_when_the_editor_marked_one():
+    from epw_os.core.screen_set import initial_screen_id
+    document = _document()
+    assert initial_screen_id(document) == "s1"                        # no mark: the active screen
+    assert initial_screen_id({**document, "mainScreenId": "s2"}) == "s2"
+    assert initial_screen_id({**document, "mainScreenId": "s9"}) == "s1"   # a mark on a screen that is gone
+    assert initial_screen_id({**document, "mainScreenId": 7}) == "s1"
+    assert initial_screen_id("x") == ""

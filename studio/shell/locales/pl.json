@@ -176,7 +176,8 @@
     "synoptic_open": "Otwórz ekran...",
     "synoptic_save": "Zapisz ekran",
     "synoptic_save_as": "Zapisz ekran jako...",
-    "live": "Na żywo ze sterownika"
+    "live": "Na żywo ze sterownika",
+    "synoptic_panel_preview": "Podgląd jak na panelu (F11)"
   },
   "canvas": {
     "distribute_h": "Rozłóż poziomo",
@@ -724,7 +725,10 @@
     "forces_held_elsewhere": "Sterownik trzyma {count} wymuszeń spoza tego Studio.",
     "force_mode_title": "Tryb wymuszania",
     "force_mode_text": "Wymuszanie nadpisuje stany wejść i wyjść na sterowniku. Zasady: tylko token Engineer, każde wymuszenie w dzienniku audytowym, widoczne na panelu przy szafce; wszystkie wymuszenia znikają po wyłączeniu trybu, po utracie łączności ze Studio (brak heartbeatu) i po restarcie sterownika. Tor zabezpieczeniowy nie podlega wymuszaniu. Włączyć tryb wymuszania?",
-    "release_failed": "Nie udało się zdjąć wymuszeń: {reason}"
+    "release_failed": "Nie udało się zdjąć wymuszeń: {reason}",
+    "preview_not_ready": "Edytor ekranów jeszcze się ładuje - spróbuj za chwilę.",
+    "command_sent": "Wysłano {device}.{action} do sterownika.",
+    "command_failed": "Sterownik odrzucił {device}.{action}: {reason}"
   },
   "object_links": {
     "intro": "Wartość jednego sterownika obiektu dostępna u drugiego jako tag Link.<Id>.In<n> - przez MQTT: źródło publikuje swoje tagi, cel subskrybuje je w Integracji MQTT (mapowania przychodzące wpisuje tu Studio, ręcznych nie dotyka). Tag Link.* działa u celu w logice i na ekranach; nie jest komendą.",

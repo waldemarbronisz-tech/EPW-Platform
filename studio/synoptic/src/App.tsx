@@ -9,6 +9,7 @@ import { ScreenWorkspace } from './components/ScreenWorkspace';
 import { CommandDialog } from './components/CommandDialog';
 import { PropertyInspector } from './components/PropertyInspector';
 import { StatusBar } from './components/StatusBar';
+import { PanelPreview } from './components/PanelPreview';
 import { useStore } from './store';
 import { validateDeviceBindings } from './project/DeviceBindingValidation';
 import { syncObjectDesignationsAfterDeviceSave, formatDeviceSavedMessage, createAndAssignDevice, assignExistingDeviceById } from './project/DeviceFormSync';
@@ -48,6 +49,7 @@ function App() {
   const [showDeviceRegistries, setShowDeviceRegistries] = useState(false);
   const [showDeviceList, setShowDeviceList] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const panelPreview = useStore(s => s.panelPreview);
   const [helpRequest, setHelpRequest] = useState({ topicId: 'intro-what', nonce: 0 });
 
   const openHelp = (topicId: string) => {
@@ -218,11 +220,11 @@ function App() {
           />
         </Suspense>
       )}
-      <Toolbar />
+      {!panelPreview && <Toolbar />}
       {/* feat/text-formatting: text formatting, grouped as in a word
           processor. Its own class, not .toolbar, so Studio (which hides
           the drawing toolbar in favour of its own) keeps it visible. */}
-      <ModeOptionsBar />
+      {!panelPreview && <ModeOptionsBar />}
 
       {/* feat/workspace: the controller's own "czy zalaczyc?" window.
           Rendered here, above every panel, because a command
@@ -230,7 +232,7 @@ function App() {
           confirmation. It draws nothing until a command is requested. */}
       <CommandDialog />
 
-      <div className="main-workspace">
+      {!panelPreview && <div className="main-workspace">
         <PanelGroup direction="horizontal" autoSaveId="epw-layout-main">
           <Panel defaultSize={20} minSize={10} className="panel-container">
             <Toolbox />
@@ -275,9 +277,10 @@ function App() {
             <PropertyInspector />
           </Panel>
         </PanelGroup>
-      </div>
+      </div>}
 
-      <StatusBar />
+      {!panelPreview && <StatusBar />}
+      {panelPreview && <PanelPreview />}
     </div>
   );
 }

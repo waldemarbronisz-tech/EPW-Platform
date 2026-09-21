@@ -14,6 +14,7 @@ import { createWorkspaceSlice } from './store/workspaceSlice';
 import { createSimulationSlice } from './store/simulationSlice';
 import { createLibrarySlice } from './store/librarySlice';
 import { createLiveSlice } from './store/liveSlice';
+import { createPreviewSlice } from './store/previewSlice';
 import type { AppState } from './store/appState';
 
 // Internal-audit fix (god-file breakup): this file used to hold the
@@ -50,6 +51,7 @@ export const useStore = create<AppState>()((...a) => ({
   ...createSimulationSlice(...a),
   ...createLibrarySlice(...a),
   ...createLiveSlice(...a),
+  ...createPreviewSlice(...a),
   ...createSelectionSlice(...a),
   ...createClipboardSlice(...a),
   ...createHistorySlice(...a),
