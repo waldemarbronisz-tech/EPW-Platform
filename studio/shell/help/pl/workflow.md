@@ -81,10 +81,10 @@ wartości liczbowe związane z realnymi punktami.
 
 [Logika](help://logic) — schemat blokowy na tych samych adresach.
 Wejścia, bramki, przerzutniki, czasy, bloki analogowe, sygnały systemowe
-`SYS.*` i alarmówki `SSWIN.*`, wyjścia.
+`SYS.*` i alarmówki `SEC.*/REQ.SEC.*`, wyjścia.
 
 Tu zamykasz wszystko, czego sterownik nie robi sam z siebie: np. sygnał
-`SSWIN.SIREN_ACTIVE` na wyjście, do którego fizycznie wisi syrena.
+`SEC.SYSTEM.SIREN_ACTIVE` na wyjście, do którego fizycznie wisi syrena.
 
 ## Krok 9. Alarmówka (jeśli jest w składzie)
 

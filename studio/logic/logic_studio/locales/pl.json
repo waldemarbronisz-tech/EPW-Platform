@@ -144,7 +144,10 @@
     "ela_modules": "Moduły wejść dwustanowych ELA (po {n} kanałów)",
     "ada_modules": "Moduły wyjść dwustanowych ADA (po {n} kanałów)",
     "expected_mapping": "Oczekiwano słownika adres -> etykieta.",
-    "invalid_signals": "Nieprawidłowe dane (sygnały wewnętrzne)"
+    "invalid_signals": "Nieprawidłowe dane (sygnały wewnętrzne)",
+    "field_name": "Nazwa",
+    "field_version": "Wersja",
+    "field_cycle_time": "Czas cyklu"
   },
   "macro": {
     "new_parameter": "Nowy parametr",
@@ -163,7 +166,13 @@
     "property_is": "Właściwość: {name}",
     "pins_button": "Piny makrobloku...",
     "pins_hint": "Żeby dodać nowy pin, kliknij prawym przyciskiem blok wewnątrz makra i wybierz „Wystaw pin makrobloku”.",
-    "parameters_hint": "Żeby powiązać parametr z właściwością bloku, otwórz panel właściwości tego bloku wewnątrz makra i użyj przycisku „Powiąż z parametrem...” obok wybranej właściwości."
+    "parameters_hint": "Żeby powiązać parametr z właściwością bloku, otwórz panel właściwości tego bloku wewnątrz makra i użyj przycisku „Powiąż z parametrem...” obok wybranej właściwości.",
+    "field_name": "Nazwa",
+    "field_type": "Typ",
+    "field_type_from_property": "Typ (z właściwości)",
+    "field_default": "Domyślna",
+    "field_unit": "Jednostka",
+    "field_description": "Opis"
   },
   "signal": {
     "new_title": "Nowy sygnał wewnętrzny",
@@ -178,7 +187,25 @@
     "panel_search": "Szukaj sygnału, etykiety albo id bloku...",
     "issues": "Problemy",
     "issues_tooltip": "Pokaż tylko sygnały z błędem albo ostrzeżeniem.",
-    "empty": "Brak sygnałów w projekcie — dodaj blok wejścia albo wyjścia i przypisz adres"
+    "empty": "Brak sygnałów w projekcie — dodaj blok wejścia albo wyjścia i przypisz adres",
+    "section_physical": "Wejścia i wyjścia fizyczne",
+    "section_internal": "Sygnały wewnętrzne",
+    "section_system": "Sygnały systemowe",
+    "empty_physical": "Brak kanałów fizycznych - dodaj najpierw kartę wejść/wyjść do projektu.",
+    "empty_internal": "Brak sygnałów wewnętrznych - dodaj przyciskiem „Nowy sygnał wewnętrzny” poniżej.",
+    "empty_system": "Brak sygnału systemowego tego typu do wykorzystania w tym miejscu.",
+    "empty_system_writable": "Żadnego sygnału systemowego tego typu nie da się zapisać z logiki.",
+    "no_category": "(bez kategorii)",
+    "field_name": "Nazwa",
+    "field_type": "Typ",
+    "field_retentive": "Retencja",
+    "field_description": "Opis",
+    "field_label": "Etykieta",
+    "field_category": "Kategoria",
+    "type_locked": "Ustalony na {type} - blok, z którego otwarto to okno, nie przyjmuje innego typu.",
+    "retired_title": "Sygnały zmieniły nazwy",
+    "retired_text": "Ten projekt używa {n} sygnałów, które już nie istnieją. Nic nie zostało przekonwertowane automatycznie - zmiana nazw wykonana bez Twojej wiedzy to zmiana, której nikt nie przegląda, a ta zmienia to, czym schemat steruje. Wskaż w każdym bloku nową nazwę:\n\n{detail}",
+    "retired_line": "{block}: {old} -> {new}"
   },
   "sim": {
     "di_used": "Wejścia dwustanowe (DI)",
@@ -232,11 +259,21 @@
     "no_block": "Nie zaznaczono bloku",
     "unbind": "Odłącz od parametru",
     "bind": "Powiąż z parametrem...",
-    "not_selected": "(nie wybrano)"
+    "not_selected": "(nie wybrano)",
+    "identifier": "Identyfikator",
+    "force_state": "Wymuszenie",
+    "uuid": "UUID",
+    "category": "Kategoria",
+    "priority": "Priorytet"
   },
   "device": {
     "search": "Szukaj adresu, np. DI12 albo ELA01...",
-    "header": "Urządzenia"
+    "header": "Urządzenia",
+    "controller": "Sterownik EPW",
+    "input_module": "{dev} (moduł wejść / akwizycja)",
+    "output_module": "{dev} (moduł wyjść / wykonawczy)",
+    "no_cards": "Brak kart wejść/wyjść - dodaj kartę w projekcie",
+    "analog": "Analogowe"
   },
   "preview": {
     "more": "Więcej o tym bloku",
@@ -256,10 +293,19 @@
     "similar_label": "Podobna etykieta w projekcie: {similar}",
     "expose_pin": "Wystaw pin makrobloku",
     "same_signal": "Inne bloki z tym samym sygnałem",
-    "align": "Wyrównaj"
+    "align": "Wyrównaj",
+    "cycle_delayed_tooltip": "Ten sygnał wewnętrzny jest czytany, zanim zostanie zapisany w bieżącej kolejności wykonania - wartość pochodzi z poprzedniego cyklu. Zobacz zakładkę „Komunikaty” po kompilacji."
   },
   "diff": {
-    "title": "Porównanie projektów"
+    "title": "Porównanie projektów",
+    "blocks_added": "Dodane bloki ({n})",
+    "blocks_removed": "Usunięte bloki ({n})",
+    "blocks_changed": "Zmienione bloki ({n})",
+    "moved": "Przesunięty na kanwie",
+    "pin_connected": "Pin {pin}: nowe połączenie",
+    "pin_disconnected": "Pin {pin}: usunięte połączenie",
+    "settings_changes": "Zmiany ustawień ({n})",
+    "no_differences": "Brak różnic"
   },
   "label": {
     "name": "Nazwa etykiety:"

@@ -52,6 +52,14 @@ class _ExpandedProjectView:
         # view answers DeviceModel exactly as the real project does.
         self.external_cards = getattr(source, "external_cards", None)
         self.external_analog_points = getattr(source, "external_analog_points", None)
+        # feat/signal-register 3.3: the alarm system's zones and lines,
+        # for exactly the reason spelled out above. The catalogue expands
+        # SEC.ZONE.<zone_id>.ARMED from THESE, so a view that dropped
+        # them made every per-zone signal invisible to the validator -
+        # which then reported a block bound to a perfectly real zone as
+        # naming a signal that exists nowhere.
+        self.external_zones = getattr(source, "external_zones", None)
+        self.external_lines = getattr(source, "external_lines", None)
         # feat/wire-labels §2.5/§5: Validator's free-end/label checks and
         # (from §5 onward) the label-node-merging step all need the
         # live project's Wire records too — passed through UNCHANGED
@@ -225,13 +233,24 @@ class Compiler:
         # M./MR./MW./MWR.<name> id) live in the registry, not on the block.
         # Validator has already confirmed every "Bit" resolves to a
         # registry entry of the matching type (§4.4/§4.5).
-        from shared.logic.internal_bits import internal_bit_id
+        # feat/signal-register §1.1: the same "Bit" may now name a signal
+        # of the fixed platform catalog instead of a registry entry - the
+        # two are read and written through different IOProvider methods,
+        # so the KIND is resolved here alongside the id and handed to the
+        # block, which has no Project to ask later.
+        from shared.logic import system_signals
+        from shared.logic.blocks.virtual_io import resolve_signal_reference
         _INTERNAL_SIGNAL_TYPE_IDS = ("virtual.input", "virtual.output", "internal.reg_in", "internal.reg_out")
         for block in isolated_blocks:
             if block.type_id in _INTERNAL_SIGNAL_TYPE_IDS and hasattr(block, 'set_signal_id'):
-                entry = DeviceModel.get_internal_bit(self.project, block.properties.get("Bit", ""))
-                if entry:
-                    block.set_signal_id(internal_bit_id(entry))
+                name = block.properties.get("Bit", "")
+                signal_id, kind = resolve_signal_reference(
+                    name,
+                    DeviceModel.get_internal_bit(self.project, name),
+                    system_signals.get_signal(name, self.project),
+                )
+                if signal_id:
+                    block.set_signal_id(signal_id, kind)
 
         # feat/internal-bits §5: detect internal-signal reads that lag a
         # scan behind their writer, purely from execution_order position —

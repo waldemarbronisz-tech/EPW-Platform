@@ -1,6 +1,5 @@
 {
   "_comment": "Polish for the logic block library. Generated once by hand and kept by test_block_translations.py: every string the registry exposes must have an entry here, and an entry for a string the registry no longer has is an error too. English is the source - it lives in the block classes themselves, so it cannot drift from a second copy. Pin NAMES (In1, Q, CV, PT, ET) and block mnemonics (AND, TON, CTU) are deliberately NOT translated: they are IEC 61131 identifiers and a schematic that renames them stops being readable to anybody who knows the standard. Their descriptions are translated.",
-
   "categories": {
     "Inputs / Outputs": "Wejścia / wyjścia",
     "Analog": "Analogowe",
@@ -15,7 +14,6 @@
     "Telemetry": "Telemetria",
     "Timers": "Czasomierze"
   },
-
   "names": {
     "Between": "W zakresie",
     "Bit input (internal)": "Wejście bitu (wewn.)",
@@ -31,7 +29,6 @@
     "Text": "Tekst",
     "User message": "Komunikat"
   },
-
   "properties": {
     "Address": "Adres",
     "Align": "Wyrównanie",
@@ -72,14 +69,12 @@
     "Underline": "Podkreślenie",
     "Value": "Wartość"
   },
-
   "enums": {
     "Left": "Do lewej",
     "Center": "Wyśrodkowany",
     "Right": "Do prawej",
     "Justify": "Wyjustowany"
   },
-
   "text": {
     "Analog input — reads a measurement point with signal quality checking.": "Wejście analogowe — czyta punkt pomiarowy ze sprawdzaniem jakości sygnału.",
     "Last trusted measured value — held from the previous good reading while Quality is false.": "Ostatnia zaufana wartość pomiaru — podtrzymana z poprzedniego dobrego odczytu, dopóki Quality jest fałszem.",
@@ -96,14 +91,10 @@
     "Physical digital output (ADA module).": "Fizyczne wyjście dwustanowe (moduł ADA).",
     "State sent to the physical digital output.": "Stan wysyłany na fizyczne wyjście dwustanowe.",
     "Address of the physical digital output (ADA module), e.g. \"ADA01.DO.1\".": "Adres fizycznego wyjścia dwustanowego (moduł ADA), np. „ADA01.DO.1\".",
-    "Reads an internal logic bit (an M./MR. signal, not tied to physical I/O).": "Czyta wewnętrzny bit logiki (sygnał M./MR., niezwiązany z fizycznym wejściem/wyjściem).",
     "Current state of the internal logic bit.": "Bieżący stan wewnętrznego bitu logiki.",
-    "Name of the internal bit (M./MR.) registered in the project settings.": "Nazwa bitu wewnętrznego (M./MR.) zarejestrowanego w ustawieniach projektu.",
-    "Writes an internal logic bit (an M./MR. signal, not tied to physical I/O).": "Zapisuje wewnętrzny bit logiki (sygnał M./MR., niezwiązany z fizycznym wejściem/wyjściem).",
     "Value written to the internal logic bit.": "Wartość zapisywana do wewnętrznego bitu logiki.",
     "Reads an internal analog register (an MW./MWR. signal, not tied to physical I/O).": "Czyta wewnętrzny rejestr analogowy (sygnał MW./MWR., niezwiązany z fizycznym wejściem/wyjściem).",
     "Current value of the internal analog register.": "Bieżąca wartość wewnętrznego rejestru analogowego.",
-    "Name of the internal register (MW./MWR.) registered in the project settings.": "Nazwa rejestru wewnętrznego (MW./MWR.) zarejestrowanego w ustawieniach projektu.",
     "Writes an internal analog register (an MW./MWR. signal, not tied to physical I/O).": "Zapisuje wewnętrzny rejestr analogowy (sygnał MW./MWR., niezwiązany z fizycznym wejściem/wyjściem).",
     "Value written to the internal analog register.": "Wartość zapisywana do wewnętrznego rejestru analogowego.",
     "Linear scaling of a value from one range to another.": "Skalowanie liniowe wartości z jednego zakresu na drugi.",
@@ -186,9 +177,8 @@
     "Reads a signal from the built-in system signal catalog (SYS.*).": "Czyta sygnał z wbudowanego katalogu sygnałów systemowych (SYS.*).",
     "Value of the selected system signal (BOOL or REAL, depending on the signal).": "Wartość wybranego sygnału systemowego (BOOL albo REAL, zależnie od sygnału).",
     "Signal identifier from the system signal catalog (SYS.*).": "Identyfikator sygnału z katalogu sygnałów systemowych (SYS.*).",
-    "Writes a system signal (SYS.*/SSWIN.* command) from the logic.": "Zapisuje sygnał systemowy (komendę SYS.*/SSWIN.*) z poziomu logiki.",
-    "Value written to the selected system signal (a source==\"logic\" command, e.g. SSWIN.CMD_*).": "Wartość zapisywana do wybranego sygnału systemowego (komenda source==„logic\", np. SSWIN.CMD_*).",
-    "Identifier of the system signal written (source==\"logic\" only, e.g. SSWIN.CMD_*).": "Identyfikator zapisywanego sygnału systemowego (tylko source==„logic\", np. SSWIN.CMD_*).",
+    "Value written to the selected system signal (a source==\"logic\" command, e.g. SEC.CMD_*).": "Wartość zapisywana do wybranego sygnału systemowego (komenda source==„logic\", np. SEC.CMD_*).",
+    "Identifier of the system signal written (source==\"logic\" only, e.g. SEC.CMD_*).": "Identyfikator zapisywanego sygnału systemowego (tylko source==„logic\", np. SEC.CMD_*).",
     "Minimum operator access level needed to execute this command (enforced by EPW-OS).": "Minimalny poziom dostępu operatora potrzebny do wykonania tej komendy (egzekwuje EPW-OS).",
     "Square wave generator — a 50% duty-cycle pulse train of the configured period.": "Generator fali prostokątnej — przebieg o wypełnieniu 50% i zadanym okresie.",
     "50% duty-cycle square wave with period Period (s).": "Fala prostokątna o wypełnieniu 50% i okresie Okres (s).",
@@ -271,6 +261,13 @@
     "Time elapsed since the current timing started, in milliseconds.": "Czas, jaki upłynął od rozpoczęcia bieżącego odmierzania, w milisekundach.",
     "Default time preset in milliseconds, used when the PT input is not connected.": "Domyślna nastawa czasu w milisekundach, używana, gdy wejście PT nie jest podłączone.",
     "Off-delay (TOF) — Q turns on immediately with IN, but turns off only PT after IN returns to false.": "Opóźnienie wyłączenia (TOF) — Q załącza się natychmiast razem z IN, ale wyłącza dopiero po czasie PT od powrotu IN do fałszu.",
-    "Pulse timer (TP) — a rising edge on IN fires a Q pulse of fixed length PT, regardless of what IN does next.": "Czasomierz impulsowy (TP) — zbocze narastające na IN wyzwala impuls Q o stałej długości PT, niezależnie od tego, co IN robi dalej."
+    "Pulse timer (TP) — a rising edge on IN fires a Q pulse of fixed length PT, regardless of what IN does next.": "Czasomierz impulsowy (TP) — zbocze narastające na IN wyzwala impuls Q o stałej długości PT, niezależnie od tego, co IN robi dalej.",
+    "Name of an internal bit (M./MR.) from the project registry, or of a readable system signal from the platform catalog.": "Nazwa bitu wewnętrznego (M./MR.) z rejestru projektu albo odczytywalnego sygnału systemowego z katalogu platformy.",
+    "Name of an internal bit (M./MR.) from the project registry, or of a system signal the logic may write (source == \"logic\").": "Nazwa bitu wewnętrznego (M./MR.) z rejestru projektu albo sygnału systemowego, który logika może zapisywać (source == „logic”).",
+    "Name of an internal register (MW./MWR.) from the project registry, or of a readable REAL system signal.": "Nazwa rejestru wewnętrznego (MW./MWR.) z rejestru projektu albo odczytywalnego sygnału systemowego typu REAL.",
+    "Name of an internal register (MW./MWR.) from the project registry, or of a REAL system signal the logic may write.": "Nazwa rejestru wewnętrznego (MW./MWR.) z rejestru projektu albo sygnału systemowego typu REAL, który logika może zapisywać.",
+    "Reads a BOOL signal - an internal bit (M./MR.) or a system signal from the platform catalog.": "Czyta sygnał BOOL - bit wewnętrzny (M./MR.) albo sygnał systemowy z katalogu platformy.",
+    "Writes a BOOL signal - an internal bit (M./MR.) or a writable system signal.": "Zapisuje sygnał BOOL - bit wewnętrzny (M./MR.) albo zapisywalny sygnał systemowy.",
+    "Writes a system signal (SYS.*/SEC.* command) from the logic.": "Zapisuje sygnał systemowy (komenda SYS.*/SEC.*) z poziomu logiki."
   }
 }

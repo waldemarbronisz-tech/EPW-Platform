@@ -29,7 +29,29 @@ _TEXT_CALLS = {
     "QPushButton", "QLabel", "QGroupBox", "QCheckBox", "QRadioButton",
 }
 # Calls where a person reads an argument that is not the first one.
-_TEXT_CALLS_ANY_ARG = {"addTab", "addAction", "addMenu", "addItem", "setHeaderLabels"}
+#
+# feat/signal-register 1.6: QTreeWidgetItem, addRow and setToolTip were
+# the hole this test had. The signal picker's three section headings went
+# straight into QTreeWidgetItem(parent, ["Physical inputs and outputs"])
+# and the "New internal signal" form labelled its six fields with
+# addRow("Name", ...) - every one of them English in a Polish session,
+# and every one of them invisible to a test that only compared the two
+# locale files against each other. A key that is missing gets caught;
+# text that never asked for a key at all does not.
+_TEXT_CALLS_ANY_ARG = {
+    "addTab", "addAction", "addMenu", "addItem", "setHeaderLabels",
+    "QTreeWidgetItem", "addRow", "setToolTip",
+}
+
+# DELIBERATELY NOT LISTED: addItems. Its strings are almost always the
+# STORED VALUES of a property ("BOOL"/"REAL", "True"/"False",
+# "NO FORCE"/"FORCE TRUE"), written verbatim into .epwlogic and compared
+# verbatim by the validator, the exporter and the runtime. Translating
+# them would not translate an interface, it would change the file
+# format - and a Polish project would then fail to open in English.
+# Where a combo genuinely lists LABELS, they go through
+# ui/display_names.py (enum_label), which is where that separation
+# already lives.
 
 # Strings that are not prose: symbols, separators, format scaffolding,
 # and the handful of technical tokens that are the same in every
@@ -84,19 +106,31 @@ def _offending_strings(path):
         else:
             continue
         for arg in args:
-            if isinstance(arg, ast.Constant) and _is_prose(arg.value):
-                found.append((arg.lineno, arg.value))
-            elif isinstance(arg, ast.List):
-                for element in arg.elts:
-                    if isinstance(element, ast.Constant) and _is_prose(element.value):
-                        found.append((element.lineno, element.value))
-            elif isinstance(arg, ast.JoinedStr):
-                # An f-string built from prose - "Trend — {x}" and the
-                # like. The literal parts are what a person reads.
-                for part in arg.values:
-                    if isinstance(part, ast.Constant) and _is_prose(part.value):
-                        found.append((part.lineno, part.value))
+            found.extend(_prose_in(arg))
     return found
+
+
+def _prose_in(node):
+    """Every user-visible literal inside one argument.
+
+    Three shapes, because an argument is written three ways here: a
+    plain string, an f-string (whose literal parts are what a person
+    reads), and a LIST of either - QTreeWidgetItem and setHeaderLabels
+    both take their text that way. The list case used to look at plain
+    strings only, so a heading built as [f"Changed blocks ({n})"] passed
+    a test whose whole purpose was to catch exactly that.
+    """
+    if isinstance(node, ast.Constant):
+        return [(node.lineno, node.value)] if _is_prose(node.value) else []
+    if isinstance(node, ast.JoinedStr):
+        return [(part.lineno, part.value) for part in node.values
+                if isinstance(part, ast.Constant) and _is_prose(part.value)]
+    if isinstance(node, ast.List):
+        out = []
+        for element in node.elts:
+            out.extend(_prose_in(element))
+        return out
+    return []
 
 
 UI_FILES = sorted((_UI_ROOT / "ui").rglob("*.py"))

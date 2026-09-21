@@ -164,6 +164,7 @@ class LibraryPanel(QWidget):
 
     def _populate_tree(self):
         from shared.logic.blocks.registry import BlockRegistry
+        from shared.logic.blocks.system_signals import LEGACY_LIBRARY_HIDDEN
 
         self.tree.clear()
         self._category_roots = {}
@@ -202,7 +203,13 @@ class LibraryPanel(QWidget):
         all_cats.sort(key=sort_key)
 
         for cat in all_cats:
-            type_ids = BlockRegistry.get_blocks_in_category(cat)
+            # feat/signal-register 1.4 (owner's correction): a block kept
+            # only so older projects still open is not offered for
+            # placing - the four bit/register blocks reach the system
+            # catalog themselves now, and a second way to do one thing is
+            # what that change removed. See LEGACY_LIBRARY_HIDDEN.
+            type_ids = [t for t in BlockRegistry.get_blocks_in_category(cat)
+                        if t not in LEGACY_LIBRARY_HIDDEN]
             if not type_ids:
                 continue
 

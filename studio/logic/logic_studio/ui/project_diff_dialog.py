@@ -39,34 +39,34 @@ class ProjectDiffDialog(QDialog):
         self.tree.clear()
 
         if comparison["blocks_added"]:
-            root = QTreeWidgetItem(self.tree, [f"Added blocks ({len(comparison['blocks_added'])})"])
+            root = QTreeWidgetItem(self.tree, [tr("diff.blocks_added", n=len(comparison["blocks_added"]))])
             for b in comparison["blocks_added"]:
                 QTreeWidgetItem(root, [f"+ {block_label(b)}  ({b.get('type_id', '')})"])
 
         if comparison["blocks_removed"]:
-            root = QTreeWidgetItem(self.tree, [f"Removed blocks ({len(comparison['blocks_removed'])})"])
+            root = QTreeWidgetItem(self.tree, [tr("diff.blocks_removed", n=len(comparison["blocks_removed"]))])
             for b in comparison["blocks_removed"]:
                 QTreeWidgetItem(root, [f"− {block_label(b)}  ({b.get('type_id', '')})"])
 
         if comparison["blocks_changed"]:
-            root = QTreeWidgetItem(self.tree, [f"Changed blocks ({len(comparison['blocks_changed'])})"])
+            root = QTreeWidgetItem(self.tree, [tr("diff.blocks_changed", n=len(comparison["blocks_changed"]))])
             for change in comparison["blocks_changed"]:
                 label = change["short_id"] or change["uuid"]
                 if change["display_name"]:
                     label = f"{label} — {change['display_name']}"
                 block_item = QTreeWidgetItem(root, [label])
                 if change["moved"]:
-                    QTreeWidgetItem(block_item, ["Moved on the canvas"])
+                    QTreeWidgetItem(block_item, [tr("diff.moved")])
                 for fc in change["field_changes"]:
                     QTreeWidgetItem(block_item, [f"{fc['field']}: {fc['old']!r} → {fc['new']!r}"])
                 for cc in change["connection_changes"]:
                     for _ in cc["added"]:
-                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: new connection"])
+                        QTreeWidgetItem(block_item, [tr("diff.pin_connected", pin=cc["pin_name"])])
                     for _ in cc["removed"]:
-                        QTreeWidgetItem(block_item, [f"Pin {cc['pin_name']}: removed connection"])
+                        QTreeWidgetItem(block_item, [tr("diff.pin_disconnected", pin=cc["pin_name"])])
 
         if comparison["settings_changes"]:
-            root = QTreeWidgetItem(self.tree, [f"Settings changes ({len(comparison['settings_changes'])})"])
+            root = QTreeWidgetItem(self.tree, [tr("diff.settings_changes", n=len(comparison["settings_changes"]))])
             for sc in comparison["settings_changes"]:
                 if sc["old"] is None:
                     text = f"{sc['key']}: added"
@@ -77,6 +77,6 @@ class ProjectDiffDialog(QDialog):
                 QTreeWidgetItem(root, [text])
 
         if self.tree.topLevelItemCount() == 0:
-            QTreeWidgetItem(self.tree, ["No differences"])
+            QTreeWidgetItem(self.tree, [tr("diff.no_differences")])
 
         self.tree.expandAll()

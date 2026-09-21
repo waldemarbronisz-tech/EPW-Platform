@@ -226,7 +226,7 @@ def test_system_signals_report_this_controller_not_a_simulation(start_core):
     assert io.read_system_signal("SYS.PULSE_1S", 600) is False
     # Anything this controller does not serve yet is defined and falsy,
     # never None.
-    assert io.read_system_signal("SSWIN.ARMED") is False
+    assert io.read_system_signal("SEC.SYSTEM.ARMED") is False
 
 
 def test_an_unserved_system_signal_write_is_reported_once():
@@ -254,11 +254,11 @@ def test_an_unserved_system_signal_write_is_reported_once():
     epw_log.disabled = False
     try:
         io = TagIOProvider(tag_manager=None, system_signals=SystemSignalSource())
-        io.write_system_signal("SSWIN.CMD_ARM", True)
-        io.write_system_signal("SSWIN.CMD_ARM", True)
+        io.write_system_signal("REQ.SEC.ARM_ALL", True)
+        io.write_system_signal("REQ.SEC.ARM_ALL", True)
     finally:
         epw_log.disabled = was_disabled
         epw_log.removeHandler(handler)
 
-    assert len([m for m in records if "SSWIN.CMD_ARM" in m]) == 1
+    assert len([m for m in records if "REQ.SEC.ARM_ALL" in m]) == 1
 

@@ -39,7 +39,8 @@
     "service_notes": "Service Notes",
     "object_links": "Object Links",
     "protection_tests": "Protection Tests",
-    "security_users": "Users"
+    "security_users": "Users",
+    "signals": "Signals"
   },
   "breadcrumb": {
     "screens": "Project → Configuration → Synoptic Diagram",
@@ -60,7 +61,8 @@
     "service_notes": "Project → Configuration → Service Notes",
     "object_links": "Project → Configuration → Object Links",
     "protection_tests": "Project → Controller → Protection Tests",
-    "security_users": "Alarm system users"
+    "security_users": "Alarm system users",
+    "signals": "Signals"
   },
   "statusbar": {
     "no_project": "No project open",
@@ -332,6 +334,44 @@
     "force_dialog_text": "Value to force for: {points}",
     "force_refused": "The controller refused:\n{details}"
   },
+  "signals": {
+    "tab_internal": "Internal",
+    "tab_system": "System",
+    "internal_heading": "Internal signals (markers)",
+    "internal_intro": "This installation's own bits and registers - what the logic uses to carry a decision from one place to another. The identifier is derived from the name, the type and retention: M. and MR. for a bit, MW. and MWR. for a register, the R form surviving a controller restart. They belong to this project, so they are edited here; the same registry is shown inside the logic editor.",
+    "system_heading": "System signals (platform catalogue)",
+    "system_intro": "The controller's own signals, readable from the logic. NOTHING IS ADDED HERE: this catalogue is a contract - the same names with the same meanings in every project and on every controller - so a project cannot extend it. A name invented here would be a signal EPW-OS has never heard of: the logic would read it without complaint, and it would never change value. New entries arrive with a platform release, together with whatever computes them.",
+    "col_name": "Name",
+    "col_id": "Identifier",
+    "col_type": "Type",
+    "col_retentive": "Retentive",
+    "col_description": "Description",
+    "col_category": "Category",
+    "col_label": "Label",
+    "col_used_by": "Used by",
+    "col_direction": "Direction",
+    "col_source": "Source",
+    "col_runtime": "Runtime support",
+    "add": "Add signal",
+    "delete": "Delete",
+    "search": "Search by identifier or description...",
+    "new_name_base": "NEW_SIGNAL",
+    "unused": "not used",
+    "retentive_tooltip": "The value survives a controller restart (MR./MWR.). The controller decides how it is persisted - the logic editor never simulates this.",
+    "invalid_name": "Invalid name",
+    "duplicate_title": "Duplicate name",
+    "duplicate_text": "A signal named \"{name}\" already exists in this project.",
+    "renamed_blocks": "Renamed to {name} - {n} block(s) re-pointed.",
+    "delete_used_title": "The signal is in use",
+    "delete_used_text": "These signals are used by blocks in the logic. Deleting them leaves those blocks pointing at a signal that no longer exists, and the next compilation will report each one.\n\n{detail}\n\nDelete anyway?",
+    "delete_used_line": "{name} - used by: {blocks}",
+    "direction_read": "read",
+    "direction_write": "write from logic",
+    "runtime_served": "supported",
+    "runtime_planned": "no source yet",
+    "shown_count": "Shown {shown} of {total}",
+    "logic_unavailable": "The internal signal registry belongs to the logic project, which could not be opened. Open the Logic department once and come back."
+  },
   "devices": {
     "col_id": "Id",
     "col_behavior": "Behavior",
@@ -361,7 +401,7 @@
     "col_entry_delay": "Entry Delay (s)",
     "power_heading": "Power Supervision",
     "sounder_heading": "Sounder",
-    "sounder_hint": "The controller does not drive a siren. It publishes the sounder's state - SSWIN.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - and you wire that to an output in Logic Studio, through whatever interlocks the installation needs.",
+    "sounder_hint": "The controller does not drive a siren. It publishes the sounder's state - SEC.SYSTEM.SIREN_ACTIVE, SIREN_TIME_LEFT, STROBE_ACTIVE, PANIC - and you wire that to an output in Logic Studio, through whatever interlocks the installation needs.",
     "siren_seconds": "Sound for at most:",
     "siren_no_limit": "no limit",
     "panic_silent": "A panic (hold-up) line does not sound the siren",

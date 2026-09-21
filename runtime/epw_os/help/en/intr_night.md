@@ -44,7 +44,7 @@ plain **Arm**.
 
 ## In logic
 
-`SSWIN.ARMED` requires every zone armed **fully**. `SSWIN.ARMED_PARTIAL`
+`SEC.SYSTEM.ARMED` requires every zone armed **fully**. `SEC.SYSTEM.ARMED_PARTIAL`
 covers both "some zones armed" and "armed, but only at night".
-`SSWIN.CMD_ARM_PARTIAL` arms every zone at night. See [What the Logic
+`REQ.SEC.ARM_ALL_PARTIAL` arms every zone at night. See [What the Logic
 Program Can See](help://logic_signals).

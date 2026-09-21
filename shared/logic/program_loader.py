@@ -204,11 +204,24 @@ def _resolve_analog_ranges(blocks):
 
 
 def _resolve_internal_signal_ids(blocks, internal_bits):
-    """An internal-signal block's "Bit" property names a registry entry;
-    the id it actually reads/writes (M./MR./MW./MWR.<name>) is derived from
-    that entry's type and retentive flag. The exporter carries a full copy
+    """A signal block's "Bit" property names either a registry entry or a
+    signal of the fixed platform catalog (feat/signal-register §1.1), and
+    the two are read/written through different IOProvider methods - so
+    this resolves the KIND as well as the id.
+
+    For a registry entry the id (M./MR./MW./MWR.<name>) is derived from
+    that entry's type and retentive flag; the exporter carries a full copy
     of the registry for this - matched case-insensitively, the same rule
-    DeviceModel.get_internal_bit() uses in the editor."""
+    DeviceModel.get_internal_bit() uses in the editor. For a catalog
+    signal the id IS the name, and the catalog is part of EPW-OS itself,
+    so nothing has to travel in the file for it.
+
+    The catalog is consulted first, exactly as the compiler and the
+    validator do: the resolution order is part of the contract, not an
+    implementation detail each side may pick for itself."""
+    from shared.logic import system_signals
+    from shared.logic.blocks.virtual_io import resolve_signal_reference
+
     by_name = {}
     for entry in internal_bits:
         if isinstance(entry, dict):
@@ -217,6 +230,9 @@ def _resolve_internal_signal_ids(blocks, internal_bits):
     for block in blocks:
         if block.type_id not in _INTERNAL_SIGNAL_TYPE_IDS or not hasattr(block, "set_signal_id"):
             continue
-        entry = by_name.get((block.properties.get("Bit", "") or "").lower())
-        if entry:
-            block.set_signal_id(internal_bit_id(entry))
+        name = block.properties.get("Bit", "") or ""
+        signal_id, kind = resolve_signal_reference(
+            name, by_name.get(name.lower()), system_signals.get_signal(name)
+        )
+        if signal_id:
+            block.set_signal_id(signal_id, kind)

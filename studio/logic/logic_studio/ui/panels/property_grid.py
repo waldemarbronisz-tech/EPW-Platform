@@ -26,12 +26,34 @@ from logic_studio.ui.window_lookup import logic_main_window
 
 # feat/internal-bits §6.1: SignalPickerDialog opens for these (type_id,
 # property key) pairs — value_type/sections tell the dialog what to show.
+# feat/signal-register §1.1: ONE window to choose a bit for the logic,
+# the way eTango does it - the project's own markers AND the platform's
+# readable system signals in the same tree, rather than two blocks an
+# engineer has to know to pick between. Before this every one of the four
+# entries said sections=("internal",), which on a fresh project (no
+# markers yet) opened an empty dialog while 42 system signals sat in a
+# separate block filed under "Other".
+#
+# The type filter stays: a BOOL block never sees a REAL signal.
+#
+# DIRECTION IS FILTERED IN BOTH DIRECTIONS (owner's correction). An
+# OUTPUT never offers a source == "runtime" signal, and an INPUT never
+# offers a source == "logic" one. The second half was missing, so
+# widening these entries to the catalogue offered every REQUEST as
+# something to read - and a request is not a state: REQ.SEC.ARM_ALL is
+# what the logic SAYS, not a value the controller maintains for anybody
+# to read back.
+#
+# Filtered on the `source` FIELD, never on the "REQ." prefix, so a future
+# category of logic-owned signals named something else needs no change
+# here. The compiler rejects both mistakes, and a dialog must not propose
+# what will not compile.
 _SIGNAL_PICKER_TARGETS = {
-    ("virtual.input", "Bit"): ("BOOL", ("internal",)),
-    ("virtual.output", "Bit"): ("BOOL", ("internal",)),
-    ("internal.reg_in", "Bit"): ("REAL", ("internal",)),
-    ("internal.reg_out", "Bit"): ("REAL", ("internal",)),
-    ("system.signal", "Sygnał"): (None, ("system",)),
+    ("virtual.input", "Bit"): ("BOOL", ("internal", "system"), "runtime"),
+    ("virtual.output", "Bit"): ("BOOL", ("internal", "system"), "logic"),
+    ("internal.reg_in", "Bit"): ("REAL", ("internal", "system"), "runtime"),
+    ("internal.reg_out", "Bit"): ("REAL", ("internal", "system"), "logic"),
+    ("system.signal", "Sygnał"): (None, ("system",), "runtime"),
     # feat/sswin-signals §2.4: an OUTPUT block may only ever point at a
     # system signal source == "logic" (writing a source == "runtime" one
     # is a compile error, compiler/validator.py) — filtered on that field,
@@ -314,7 +336,7 @@ class PropertyGridPanel(QWidget):
 
         id_edit = QLineEdit(block.short_id)
         id_edit.setReadOnly(True)
-        form.addRow("Identifier", id_edit)
+        form.addRow(tr("property.identifier"), id_edit)
 
         for key in _IDENTIFICATION_KEYS:
             value = block.properties.get(key, "")
@@ -340,7 +362,7 @@ class PropertyGridPanel(QWidget):
             combo.addItems(["NO FORCE", "FORCE FALSE", "FORCE TRUE"])
             combo.setCurrentText(force_value)
             combo.currentTextChanged.connect(self._on_force_state_changed)
-            form.addRow("Force State", combo)
+            form.addRow(tr("property.force_state"), combo)
 
     def _populate_parameters(self, block):
         form = self._sections[SECTION_PARAMETERS]["form"]
@@ -519,18 +541,18 @@ class PropertyGridPanel(QWidget):
 
         uuid_edit = QLineEdit(block.uuid)
         uuid_edit.setReadOnly(True)
-        form.addRow("UUID", uuid_edit)
+        form.addRow(tr("property.uuid"), uuid_edit)
 
         category_edit = QLineEdit(block.category)
         category_edit.setReadOnly(True)
-        form.addRow("Category", category_edit)
+        form.addRow(tr("property.category"), category_edit)
 
         priority_spin = QSpinBox()
         priority_spin.setRange(-_NUMERIC_RANGE, _NUMERIC_RANGE)
         priority_spin.setValue(block.execution_priority)
         priority_spin.setKeyboardTracking(False)
         priority_spin.editingFinished.connect(lambda s=priority_spin: self._commit_priority(s.value()))
-        form.addRow("Priority", priority_spin)
+        form.addRow(tr("property.priority"), priority_spin)
 
     # ---- Editor factories ----------------------------------------------------
 

@@ -303,8 +303,14 @@ class Validator:
         REAL_SIGNAL_TYPE_IDS = ("internal.reg_in", "internal.reg_out")
         WRITER_TYPE_IDS = ("virtual.output", "internal.reg_out")
 
+        from shared.logic import system_signals
+
         writers = {}  # name.lower() -> [display_name, ...]
         readers = {}  # name.lower() -> [display_name, ...]
+        # Catalog signals are counted separately: they have no registry
+        # entry to hang the other warnings off, but "two blocks writing
+        # the same command" is every bit as wrong for them.
+        system_writers = {}
         referenced_lower_names = set()
 
         for block in blocks:
@@ -314,16 +320,77 @@ class Validator:
             if not name:
                 continue  # unconfigured — the "???" canvas warning already covers this
 
+            expected_type = "REAL" if block.type_id in REAL_SIGNAL_TYPE_IDS else "BOOL"
+
+            # feat/signal-register §1.1: a "Bit" may name EITHER a project
+            # registry entry or a signal of the fixed platform catalog.
+            # The catalog is consulted first and wins - its ids are a
+            # contract shared by every project, and a marker must not be
+            # able to shadow one (the collision itself is reported below,
+            # under the registry's own checks).
+            catalog_entry = system_signals.get_signal(name, self.project)
+            if catalog_entry is not None:
+                if catalog_entry.get("type") != expected_type:
+                    errors.append(f"[{self._block_ref(block)}] System signal '{name}' is of type {catalog_entry.get('type')}, but this block needs {expected_type}.")
+                    continue
+                # §2.4's rule, now enforced for the bit blocks too: only a
+                # source == "logic" signal may be written. The picker does
+                # not offer the others, but a hand-edited file or a project
+                # from a newer catalog can still get here.
+                if block.type_id in WRITER_TYPE_IDS and catalog_entry.get("source") != "logic":
+                    errors.append(
+                        f"[{self._block_ref(block)}] System signal '{name}' is written by the runtime "
+                        f"(source == '{catalog_entry.get('source')}') and cannot be written from the logic."
+                    )
+                    continue
+                # The symmetric rule on the READ side (owner's correction).
+                # A request is not a state: REQ.SEC.ARM_ALL is what the
+                # logic SAYS, and nothing maintains a value for it to be
+                # read back from - a schematic built on reading one waits
+                # for a bit that only moves when that same program writes
+                # it. Tested by `source`, not by the name.
+                if block.type_id not in WRITER_TYPE_IDS and catalog_entry.get("source") != "runtime":
+                    errors.append(
+                        f"[{self._block_ref(block)}] System signal '{name}' is a request the logic "
+                        f"issues (source == '{catalog_entry.get('source')}'), not a state the "
+                        f"controller maintains - it cannot be read."
+                    )
+                    continue
+                # A catalog signal has no registry entry, so none of the
+                # registry bookkeeping below (single-writer, read-but-never-
+                # written, defined-but-unused) applies to it - except the
+                # single-writer rule, which is just as real for a command.
+                if block.type_id in WRITER_TYPE_IDS:
+                    # Grouped case-insensitively like the registry's own
+                    # rule, but the message quotes the CATALOG's spelling -
+                    # a lower-cased id is not a name anybody can search for.
+                    key = name.lower()
+                    system_writers.setdefault(key, (catalog_entry["id"], []))[1].append(self._block_ref(block))
+                continue
+
+            # feat/signal-register §3.1: a RETIRED name gets its own
+            # message. Falling through to "exists in neither place" would
+            # be true and useless - the engineer would go looking for a
+            # signal that was renamed, not deleted.
+            from shared.logic.signal_renames import new_name as _renamed_to
+            replacement = _renamed_to(name)
+            if replacement:
+                errors.append(
+                    f"[{self._block_ref(block)}] Signal '{name}' no longer exists - "
+                    f"it is now called '{replacement}'. Nothing was converted automatically: "
+                    f"point the block at the new name."
+                )
+                continue
+
             entry = DeviceModel.get_internal_bit(self.project, name)
-            # §4.4: signal not in the registry at all -> ERROR. Exactly the
+            # §4.4: signal in neither address space -> ERROR. Exactly the
             # point of replacing free-text "Tag" with a registry: a typo is
             # now a compile error instead of silently creating a new signal.
             if entry is None:
-                errors.append(f"[{self._block_ref(block)}] Internal signal '{name}' does not exist in the project registry (Project settings -> Internal signals).")
+                errors.append(f"[{self._block_ref(block)}] Signal '{name}' exists neither in the project registry (Project settings -> Internal signals) nor in the system signal catalog.")
                 continue
 
             # §4.5: a BOOL block (virtual.*) pointing at a REAL entry, or vice versa -> ERROR.
-            expected_type = "REAL" if block.type_id in REAL_SIGNAL_TYPE_IDS else "BOOL"
             if entry.get("type") != expected_type:
                 errors.append(f"[{self._block_ref(block)}] Signal '{name}' is of type {entry.get('type')}, but this block needs {expected_type}.")
                 continue
@@ -344,6 +411,26 @@ class Validator:
                 errors.append(
                     f"Internal signal '{internal_bit_id(entry)}' has more than one writing block: "
                     + ", ".join(writer_names) + "."
+                )
+
+        for signal_id, writer_names in system_writers.values():
+            if len(writer_names) > 1:
+                errors.append(
+                    f"System signal '{signal_id}' has more than one writing block: "
+                    + ", ".join(writer_names) + "."
+                )
+
+        # feat/signal-register §1.1: a registry entry whose NAME is also a
+        # catalog id can never be reached - resolution gives the catalog
+        # priority, so the marker silently stops being the thing the
+        # engineer thinks they are editing. An error, not a warning: there
+        # is no reading of this that was intended.
+        for entry in self.project.settings.get("internal_bits", []):
+            entry_name = entry.get("name", "")
+            if entry_name and system_signals.get_signal(entry_name, self.project) is not None:
+                errors.append(
+                    f"Internal signal '{entry_name}' has the same name as a system signal from the "
+                    f"platform catalog. Rename it - a block using this name reads the system signal."
                 )
 
         # §4.2: read but never written -> WARNING (can be legitimate while
@@ -447,9 +534,9 @@ class Validator:
                         f"'{property_name}': {', '.join(names)} — the last substitution wins."
                     )
 
-        # 8. System-signal WRITE direction (feat/sswin-signals §2.3) — the
+        # 8. System-signal WRITE direction (feat/security-signals §2.3) — the
         # first category of system signals with source == "logic"
-        # (SSWIN.CMD_* today). system.signal (read) already has its own,
+        # (SEC.CMD_* today). system.signal (read) already has its own,
         # deliberately lenient WARNING for an unrecognized id (§3.4
         # migration compat, case 3 above) — system.signal_out is a brand
         # new block type with no such back-compat concern, so an unknown
@@ -464,6 +551,18 @@ class Validator:
                 sig_id = block.properties.get("Sygnał", "")
                 if sig_id:
                     sys_referenced.add(sig_id)
+                    # The same read-direction rule as the bit blocks above.
+                    # An UNRECOGNISED id here stays a lenient warning (case
+                    # 3's migration compat), but an id that IS in the
+                    # catalogue and belongs to the logic is a real mistake,
+                    # not an old file.
+                    entry = system_signals.get_signal(sig_id, self.project)
+                    if entry is not None and entry.get("source") != "runtime":
+                        errors.append(
+                            f"[{self._block_ref(block)}] Signal '{sig_id}' is a request the logic "
+                            f"issues (source == '{entry.get('source')}'), not a state the "
+                            f"controller maintains - it cannot be read."
+                        )
             elif block.type_id == "system.signal_out":
                 sig_id = block.properties.get("Sygnał", "")
                 if not sig_id:
@@ -492,7 +591,7 @@ class Validator:
 
         # §2.3: a "logic"-sourced catalog signal nobody reads OR writes ->
         # WARNING (housekeeping aid, same spirit as §4.3's unused-internal-
-        # signal rule) — every SSWIN.CMD_* entry is a fixed catalog
+        # signal rule) — every SEC.CMD_* entry is a fixed catalog
         # signal, never itself "undefined", so there's no ERROR case
         # analogous to internal bits' missing-registry-entry rule here.
         for sig in system_signals.get_all_signals(self.project):
@@ -500,10 +599,10 @@ class Validator:
                 warnings.append(f"System signal '{sig['id']}' (command) is not used by any block.")
 
         # 9. Access-level gate on a block writing a safety_relevant system
-        # signal (feat/sswin-signals §3.3) — WARNING only, never an error:
+        # signal (feat/security-signals §3.3) — WARNING only, never an error:
         # an engineer may deliberately decide "Brak" is fine for a given
         # deployment, but leaving it unset without a second thought on a
-        # signal like SSWIN.CMD_DISARM is exactly the "logic bug disarms
+        # signal like REQ.SEC.DISARM_ALL is exactly the "logic bug disarms
         # the object" hazard this property exists to catch early. §3.2:
         # Logic Studio itself never ENFORCES the gate — only warns that
         # it's missing — EPW-OS is what actually checks it at runtime.

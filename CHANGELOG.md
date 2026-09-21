@@ -26,7 +26,7 @@ obsługi ręcznej — dopóki skan pracuje.
 Program da się przeładować bez restartu (Engineer, dziennik).
 
 Sygnały: `SYS.*`, bity wewnętrzne i retencyjne (`MR.`/`MWR.`,
-przeżywają restart) oraz pełna alarmówka przez `SSWIN.*`.
+przeżywają restart) oraz pełna alarmówka przez `SEC.SYSTEM.*` i `REQ.SEC.*`.
 
 ### Projekt wchodzi do pracy bez restartu
 
@@ -47,8 +47,8 @@ jako droga awaryjna.
 - **Użytkownicy imienni** — „tylko Kowalski rozbroi magazyn". Osoby
   pochodzą z projektu, ich kody i tokeny zostają na sterowniku,
   a dziennik pisze nazwisko zamiast „Panel:Operator".
-- **Sygnalizator jako stan, nie wyjście** — `SSWIN.SIREN_ACTIVE`,
-  `SIREN_TIME_LEFT`, `STROBE_ACTIVE`, `PANIC` i `CMD_SILENCE`. To, na
+- **Sygnalizator jako stan, nie wyjście** — `SEC.SYSTEM.SIREN_ACTIVE`,
+  `SIREN_TIME_LEFT`, `STROBE_ACTIVE`, `PANIC` i `REQ.SEC.SILENCE`. To, na
   którym DO wisi syrena i przez jakie blokady, rysuje inżynier.
 - **Linia napadowa** (`PANIC`) — alarmuje w każdym stanie strefy,
   domyślnie cicho.

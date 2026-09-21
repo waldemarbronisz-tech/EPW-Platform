@@ -20,23 +20,25 @@ jest poziom dostępu, czy działa tryb szkoleniowy, czy zegar jest
 zsynchronizowany, a do tego generatory impulsów i migania — do
 odmierzania czasu bez budowania łańcucha przekaźników czasowych.
 
-## Sygnały alarmówki (`SSWIN.*`)
+## Sygnały alarmówki (`SEC.SYSTEM.*` i `REQ.SEC.*`)
 
 Cała alarmówka jako sygnały, których może użyć schemat.
 
-**Odczyty:** `ARMED` (wszystkie strefy uzbrojone, w pełni),
-`ARMED_PARTIAL` (część stref albo dozór nocny), `DISARMED`,
-`READY_TO_ARM`, `EXIT_DELAY`, `ENTRY_DELAY`, `DELAY_REMAINING`,
-`ALARM_ACTIVE`, `ALARM_LATCHED`, `ALARM_MEMORY`, `TAMPER`, `FAULT`,
-`LAST_TRIGGER`, `ACTIVE_COUNT` oraz sygnalizator: `SIREN_ACTIVE`,
-`SIREN_TIME_LEFT`, `STROBE_ACTIVE`, `PANIC` — patrz
+**Odczyty** (wszystkie pod `SEC.SYSTEM.`): `ARMED` (wszystkie
+strefy uzbrojone, w pełni), `ARMED_PARTIAL` (część stref albo dozór
+nocny), `DISARMED`, `READY_TO_ARM`, `EXIT_DELAY`, `ENTRY_DELAY`,
+`DELAY_REMAINING`, `ALARM`, `ALARM_LATCHED`, `ALARM_MEMORY`, `TAMPER`,
+`FAULT`, `LAST_TRIGGER`, `ACTIVE_COUNT` oraz sygnalizator:
+`SIREN_ACTIVE`, `SIREN_TIME_LEFT`, `STROBE_ACTIVE`, `PANIC` — patrz
 [Sygnalizator](help://intr_sounder).
 
-**Komendy:** `CMD_ARM`, `CMD_ARM_PARTIAL` (noc), `CMD_DISARM`,
-`CMD_RESET`, `CMD_SILENCE`. Działają na **wszystkie strefy** — komendy
-z katalogu nie mają strefy do wskazania — i wykonują się na **zboczu
-narastającym**, więc blok trzymający sygnał w jedynce nie powtarza
-komendy co skan.
+**Żądania:** `REQ.SEC.ARM_ALL`, `REQ.SEC.ARM_ALL_PARTIAL` (noc),
+`REQ.SEC.DISARM_ALL`, `REQ.SEC.CLEAR_ALARM_MEMORY`, `REQ.SEC.SILENCE`.
+Nazywają się żądaniami, bo nimi są: schemat prosi, a sterownik żądanie
+sprawdza i wykonuje albo odrzuca z podaniem powodu. Działają na
+**wszystkie strefy** — żądanie z katalogu nie ma strefy do wskazania — i
+wykonują się na **zboczu narastającym**, więc blok trzymający sygnał w
+jedynce nie powtarza żądania co skan.
 
 Komenda sprawdza też poziom dostępu, który deklaruje **sam blok**. Logic
 Studio to wyłącznie zapisuje; egzekwuje ten sterownik.
@@ -44,6 +46,6 @@ Studio to wyłącznie zapisuje; egzekwuje ten sterownik.
 ## Dlaczego nie ma tu syreny
 
 Bo to nie jest sygnał, który ten sterownik prowadzi — to sygnał, który
-Ty podpinasz. `SSWIN.SIREN_ACTIVE` mówi, że sygnalizator ma dźwięczeć;
+Ty podpinasz. `SEC.SYSTEM.SIREN_ACTIVE` mówi, że sygnalizator ma dźwięczeć;
 na które wyjście to trafi i przez jakie blokady, jest linią Twojego
 schematu. Patrz [Sygnalizator](help://intr_sounder).

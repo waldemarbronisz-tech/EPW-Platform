@@ -27,7 +27,7 @@ configuration means no supervision", with no errors.
 ## Sounder
 
 These are **settings**, not an output. The controller drives no siren —
-it publishes state (`SSWIN.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
+it publishes state (`SEC.SYSTEM.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE`, `PANIC`), and you wire the output in
 [Logic](help://logic), through whatever interlocks the installation
 needs.

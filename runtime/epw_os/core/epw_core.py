@@ -622,7 +622,7 @@ class EPWCore:
         # the driver/force managers it routes through do not exist that
         # early.
         from epw_os.core.logic_runtime import SystemSignalSource, TagIOProvider
-        from epw_os.core.sswin_signals import SswinSignalSource
+        from epw_os.core.security_signals import SecuritySignalSource
         self.logic_engine.attach_io(TagIOProvider(
             self.tag_manager,
             write_digital=self._logic_write_digital,
@@ -635,11 +635,11 @@ class EPWCore:
                 training_mode=self.training_mode,
                 time_sync_monitor=self.time_sync_monitor,
                 # None whenever the intrusion module is not in this
-                # controller's composition - every SSWIN read then answers
-                # the safe value and every SSWIN command is refused, which
+                # controller's composition - every SEC read then answers
+                # the safe value and every SEC command is refused, which
                 # is exactly right for logic that arms an alarm system
                 # this controller does not have.
-                sswin=SswinSignalSource(lambda: self.intrusion_manager),
+                security=SecuritySignalSource(lambda: self.intrusion_manager),
             ),
         ))
         # Where the program's retentive internal signals (MR./MWR.) live

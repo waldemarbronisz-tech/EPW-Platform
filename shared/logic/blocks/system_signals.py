@@ -2,6 +2,23 @@ from shared.logic.blocks.base import BaseLogicBlock
 from shared.logic.blocks.pin import Pin
 from shared.logic.blocks.registry import BlockRegistry
 
+# Registered, loadable, compilable - and NOT offered in the library
+# (owner's correction to feat/signal-register 1.4).
+#
+# These two predate the change that let the four bit/register blocks
+# reach the system-signal catalog themselves. Now that they can, a
+# separate "System signal" block is a second way to do one thing, and an
+# engineer has to know which to pick before knowing there was a choice.
+#
+# They are not DELETED, because projects already contain them. A project
+# saved with a system.signal block must still open, still compile and
+# still do exactly what it did - so the class stays, the registration
+# stays, and only the library hides it. Nothing rewrites such a block
+# behind the engineer's back; a schematic changed without anybody
+# reading the change is the mistake the retired-name report exists to
+# prevent, and it would be no better here.
+LEGACY_LIBRARY_HIDDEN = frozenset({"system.signal", "system.signal_out"})
+
 @BlockRegistry.register
 class SystemBooleanSignalBlock(BaseLogicBlock):
     """feat/internal-bits §3.4: reads a signal from the fixed system-signal
@@ -86,9 +103,9 @@ class SystemBooleanSignalBlock(BaseLogicBlock):
 
 @BlockRegistry.register
 class SystemSignalOutputBlock(BaseLogicBlock):
-    """feat/sswin-signals §2.2: the write-direction counterpart of
+    """feat/security-signals §2.2: the write-direction counterpart of
     SystemBooleanSignalBlock (system.signal) above — writes a system-signal
-    a-catalog signal whose source == "logic" (SSWIN.CMD_* today; every
+    a-catalog signal whose source == "logic" (SEC.CMD_* today; every
     other catalog signal is source == "runtime" and compiler/validator.py
     rejects a write to one of those outright). Buffered through
     ExecutionEngine.queue_system_signal_write(), flushed to the
@@ -100,7 +117,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
     the one place this fact is spelled out to the engineer editing the
     property directly, not just in ARCHITECTURE.md: Logic Studio's own
     simulation does NOT enforce it — only EPW-OS does, at the point it
-    actually executes SSWIN.CMD_DISARM et al."""
+    actually executes REQ.SEC.DISARM_ALL et al."""
 
     PROPERTY_TOOLTIPS = {
         "Minimalny poziom dostępu": (
@@ -109,16 +126,16 @@ class SystemSignalOutputBlock(BaseLogicBlock):
             "export as information for the controller."
         ),
     }
-    # feat/help-system: dodane przy scaleniu z gałęzią sswin-signals
+    # feat/help-system: dodane przy scaleniu z gałęzią security-signals
     # (zbudowaną wcześniej, przed feat/help-system) — brakujący opis
     # pinu łamał test-strażnik katalogu generowanego z rejestru.
-    PIN_DESCRIPTIONS = {"In": "Value written to the selected system signal (a source==\"logic\" command, e.g. SSWIN.CMD_*)."}
+    PIN_DESCRIPTIONS = {"In": "Value written to the selected system signal (a source==\"logic\" command, e.g. SEC.CMD_*)."}
     PROPERTY_DESCRIPTIONS = {
-        "Sygnał": "Identifier of the system signal written (source==\"logic\" only, e.g. SSWIN.CMD_*).",
+        "Sygnał": "Identifier of the system signal written (source==\"logic\" only, e.g. SEC.CMD_*).",
         "Minimalny poziom dostępu": "Minimum operator access level needed to execute this command (enforced by EPW-OS).",
     }
 
-    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="Writes a system signal (SYS.*/SSWIN.* command) from the logic."):
+    def __init__(self, type_id="system.signal_out", default_name="System output", category="Other", description="Writes a system signal (SYS.*/SEC.* command) from the logic."):
         super().__init__(type_id, default_name, category, description)
 
         self.color = "#800080"  # Purple family — same as system.signal
@@ -135,7 +152,7 @@ class SystemSignalOutputBlock(BaseLogicBlock):
     def _sync_input_type(self):
         """Input pin type must match the selected catalog signal's own
         type — mirrors SystemBooleanSignalBlock._sync_output_type() above,
-        same reasoning (most SSWIN.CMD_* signals are BOOL, but the catalog
+        same reasoning (most SEC.CMD_* signals are BOOL, but the catalog
         doesn't forbid a future REAL "logic" command)."""
         from shared.logic import system_signals
         signal_id = self.properties.get("Sygnał", "")

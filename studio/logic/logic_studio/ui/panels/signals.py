@@ -344,10 +344,10 @@ class SignalsPanel(QWidget):
         # those kinds; shown as "device" rather than "—" to say why,
         # not just that nothing's there.
         #
-        # feat/sswin-signals §2.5: KIND_SYSTEM used to be lumped in with
+        # feat/security-signals §2.5: KIND_SYSTEM used to be lumped in with
         # those two unconditionally — wrong the moment a system signal CAN
         # have a project block writing it (source == "logic", e.g.
-        # SSWIN.CMD_ARM via system.signal_out): such a signal's `writers`
+        # REQ.SEC.ARM_ALL via system.signal_out): such a signal's `writers`
         # is no longer structurally empty, so it must fall through to the
         # normal short_id rendering below instead. Checked against the
         # catalog's own "source" field, not usage.writers being non-empty —
@@ -456,7 +456,7 @@ class SignalsPanel(QWidget):
         """§3.1: jumps to the WRITER of this signal, or its first reader
         when there's no writer — either a physical/analog input or a
         source == "runtime" system signal (writer structurally always
-        "device", never a project block, feat/sswin-signals §2.5), or
+        "device", never a project block, feat/security-signals §2.5), or
         an internal/source-"logic" signal that's read but never written,
         which §1.4/§2.3 already flag as their own warning."""
         signal_id = self._signal_id_of(item)

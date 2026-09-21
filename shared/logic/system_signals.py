@@ -16,9 +16,20 @@ ELA/ADA devices at all, correctly generates NO per-device diagnostics (task
 "jedno źródło listy kart": DeviceModel.get_ela_devices()/get_ada_devices()
 return [] rather than a silent "ELA01"/"ADA01" default, so there is no
 device to generate a diagnostic signal FOR).
+
+feat/signal-register §3.3: that idea is generalised. A catalog entry may
+carry `instances` naming a project collection ("zones", "lines"), and
+get_categories(project) then produces one signal per member -
+SEC.ZONE.PARTER.ARMED rather than the pattern SEC.ZONE.<zone_id>.ARMED.
+The platform genuinely fixes that every zone HAS an ARMED, what it means
+and what type it is; only how many zones exist belongs to the
+installation. Every consumer already calls get_categories(project), so
+the picker, the Signals panel and the validator each see the concrete
+signals without a change of their own.
 """
 import json
 import os
+import re
 
 _CATALOG_PATH = os.path.join(os.path.dirname(__file__), "system_signals_catalog.json")
 
@@ -67,22 +78,84 @@ def _device_signals(project) -> list:
     # list) - so with no project there was never anything to import it for.
     if project is None:
         return []
-    from logic_studio.core.device_model import DeviceModel
+    try:
+        from logic_studio.core.device_model import DeviceModel
+    except ImportError:
+        # feat/signal-register 3.3: EPW-OS has no editor on its path. It
+        # never passed a project here before, so this line was never
+        # reached from the controller - but the per-instance patterns
+        # give the runtime a real reason to ask the catalogue about a
+        # project, and an ImportError mid-scan would be a poor way to
+        # find that out. The device diagnostics come from the EDITOR's
+        # device list, which the controller does not have, so none is
+        # exactly the right answer here rather than a failure.
+        return []
 
     signals = []
     for dev in DeviceModel.get_ela_devices(project):
         for suffix, desc_tpl, label, safety in _ELA_DEVICE_SIGNAL_TEMPLATES:
             signals.append({
                 "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime", "safety_relevant": safety,
+                "label": label, "type": "BOOL", "source": "runtime",
+                "safety_relevant": safety, "runtime": "served",
             })
     for dev in DeviceModel.get_ada_devices(project):
         for suffix, desc_tpl, label, safety in _ADA_DEVICE_SIGNAL_TEMPLATES:
             signals.append({
                 "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime", "safety_relevant": safety,
+                "label": label, "type": "BOOL", "source": "runtime",
+                "safety_relevant": safety, "runtime": "served",
             })
     return signals
+
+
+# Which project collection an `instances` pattern ranges over, and where
+# to read it from. A logic project embedded in Studio has these mirrored
+# onto it (studio/shell/logic_panel.py), exactly as it already has the
+# card list - a standalone Logic Studio has none, and then a pattern
+# simply produces nothing, which is the correct answer rather than a
+# placeholder nobody can use.
+_INSTANCE_ATTRIBUTES = {
+    "zones": "external_zones",
+    "lines": "external_lines",
+}
+
+_PLACEHOLDER = re.compile(r"<[^>]+>")
+
+
+def _instances(project, kind: str) -> list:
+    attribute = _INSTANCE_ATTRIBUTES.get(kind)
+    if project is None or attribute is None:
+        return []
+    values = getattr(project, attribute, None) or []
+    return [v for v in values if isinstance(v, dict) and v.get("id")]
+
+
+def _expand(signal: dict, project) -> list:
+    """One catalog entry into the signals it actually stands for.
+
+    A plain entry is itself. A pattern entry becomes one signal per
+    instance, with the placeholder replaced by the instance's stable ID
+    and its NAME appended to the description - the id is what the logic
+    binds to and must not follow a rename, while the name is what an
+    engineer recognises in the picker ("Strefa uzbrojona - Parter").
+    """
+    kind = signal.get("instances")
+    if not kind:
+        return [signal]
+    expanded = []
+    for instance in _instances(project, kind):
+        instance_id = str(instance["id"])
+        name = (instance.get("name") or "").strip()
+        concrete = dict(signal)
+        concrete.pop("instances", None)
+        concrete["id"] = _PLACEHOLDER.sub(instance_id, signal["id"], count=1)
+        concrete["instance_of"] = signal["id"]
+        concrete["instance_id"] = instance_id
+        if name:
+            concrete["description"] = f"{signal.get('description', '')} - {name}"
+        expanded.append(concrete)
+    return expanded
 
 
 def get_categories(project=None) -> list:
@@ -95,16 +168,59 @@ def get_categories(project=None) -> list:
     exactly as the static catalog has it. Returns fresh category dicts and a
     fresh signals list each call; the static per-category signal dicts
     themselves are shared, never mutated, with the cached catalog."""
-    categories = [dict(cat) for cat in _load()["categories"]]
-    for cat in categories:
+    categories = []
+    for raw in _load()["categories"]:
+        cat = dict(raw)
+        signals = []
+        for signal in cat["signals"]:
+            signals.extend(_expand(signal, project))
         if cat["id"] == _COMMS_CATEGORY_ID:
-            cat["signals"] = list(cat["signals"]) + _device_signals(project)
+            signals = signals + _device_signals(project)
+        cat["signals"] = signals
+        categories.append(cat)
     return categories
+
+
+def raw_signals() -> list:
+    """Every catalog entry AS WRITTEN, patterns unexpanded.
+
+    get_all_signals() answers "what can this project use", which for a
+    pattern with no instances is nothing at all - correct there, and
+    exactly wrong for anything asking "what does the catalog cover". The
+    status report compares the register against the catalog's coverage,
+    and without this it reported every per-zone signal as missing on the
+    very commit that added it.
+    """
+    return [signal for cat in _load()["categories"] for signal in cat["signals"]]
 
 
 def get_all_signals(project=None) -> list:
     """Every signal across every category, flattened."""
     return [s for cat in get_categories(project) for s in cat["signals"]]
+
+
+RUNTIME_SERVED = "served"
+RUNTIME_PLANNED = "planned"
+
+
+def runtime_status(signal_id: str, project=None) -> str:
+    """Whether the controller actually answers for this signal.
+
+    "served" - EPW-OS computes it from something real. "planned" - the
+    name is agreed and the id is stable, but nothing produces a value
+    yet, so logic reading it sees the safe default and nothing else,
+    for ever.
+
+    An unknown signal is reported as planned rather than served: the
+    honest answer for a name this build has never heard of is "not from
+    here". Per-device diagnostics generated for this project's own
+    ELA/ADA modules are served - they come from the device manager that
+    generated them.
+    """
+    entry = get_signal(signal_id, project)
+    if entry is None:
+        return RUNTIME_PLANNED
+    return entry.get("runtime", RUNTIME_SERVED)
 
 
 def get_signal(signal_id: str, project=None):

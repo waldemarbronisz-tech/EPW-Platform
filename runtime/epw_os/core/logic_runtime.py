@@ -54,8 +54,8 @@ class SystemSignalSource:
     mid-scan. Anything this class cannot answer comes back False/0.0, the
     same "defined, falsy" rule the catalog itself uses for an unset signal.
 
-    The SSWIN.* half (intrusion state and the SSWIN.CMD_* commands) is
-    served by core/sswin_signals.py, which is where the decision about
+    The alarm half (SEC.SYSTEM.* state and the REQ.SEC.* requests) is
+    served by core/security_signals.py, which is where the decision about
     what a system-wide signal means on a per-ZONE intrusion model is
     written down. The handful it deliberately does not answer (partial
     arming, the sounder, a panic line - none of which exist on this
@@ -69,16 +69,16 @@ class SystemSignalSource:
     _ACCESS_LEVEL_VALUES = {"User": 0.0, "Operator": 1.0, "Engineer": 2.0}
 
     def __init__(self, health_manager=None, access_manager=None, training_mode=None,
-                 time_sync_monitor=None, sswin=None):
+                 time_sync_monitor=None, security=None):
         self.health_manager = health_manager
         self.access_manager = access_manager
         self.training_mode = training_mode
         self.time_sync_monitor = time_sync_monitor
-        # The SSWIN.* half of the catalog (core/sswin_signals.py), which
+        # The alarm half of the catalog (core/security_signals.py), which
         # maps the system-wide alarm-panel vocabulary onto this
-        # controller's per-zone intrusion model. None -> every SSWIN
+        # controller's per-zone intrusion model. None -> every SEC
         # signal keeps the catalog's safe value.
-        self.sswin = sswin
+        self.security = security
 
         # Set by the scan loop itself (LogicEngine) before each scan -
         # this class never measures them.
@@ -93,8 +93,8 @@ class SystemSignalSource:
         if pulse is not None:
             return pulse
 
-        if self.sswin is not None:
-            value = self.sswin.read(signal_id)
+        if self.security is not None:
+            value = self.security.read(signal_id)
             if value is not None:
                 return value
 
@@ -190,7 +190,7 @@ class TagIOProvider(IOProvider):
         self.command_levels = {}
 
         # Last value seen per writable system signal - a command executes
-        # on the RISING edge only. A block holding CMD_ARM true would
+        # on the RISING edge only. A block holding REQ.SEC.ARM_ALL true would
         # otherwise re-issue it every single scan, i.e. dozens of times a
         # second.
         self._last_command_value = {}
@@ -286,7 +286,7 @@ class TagIOProvider(IOProvider):
         return self.system_signals.read(signal_id, now_ms)
 
     def write_system_signal(self, signal_id: str, value):
-        """Executes a system-signal command (the SSWIN.CMD_* family, the
+        """Executes a system-signal command (the SEC.CMD_* family, the
         only writable signals the catalog has today).
 
         Three rules, in this order: on the RISING EDGE only (a block
@@ -301,8 +301,8 @@ class TagIOProvider(IOProvider):
         if not rising:
             return
 
-        sswin = getattr(self.system_signals, "sswin", None)
-        if sswin is None or not sswin.serves(signal_id):
+        security = getattr(self.system_signals, "security", None)
+        if security is None or not security.serves(signal_id):
             if signal_id not in self._unserved_writes:
                 self._unserved_writes.add(signal_id)
                 log.warning(f"Logic issued the system command {signal_id}, which this controller does not "
@@ -315,7 +315,7 @@ class TagIOProvider(IOProvider):
                         f"controller is at a lower level - not applied.")
             return
 
-        sswin.execute(signal_id, actor="LOGIC")
+        security.execute(signal_id, actor="LOGIC")
 
     def _has_command_access(self, required: str) -> bool:
         """"Brak" (none) is the default for every non-safety command and

@@ -50,6 +50,7 @@ from logic_studio import i18n as logic_i18n
 LANGUAGE_SETTING = "ui/language"
 from studio.shell.menus import (
     build_intrusion_users_toolbar,
+    build_signals_toolbar,
     build_cards_toolbar, build_controller_toolbar, build_devices_toolbar,
     build_electrical_protection_toolbar, build_fixed_menu, build_help_toolbar, build_lines_toolbar,
     build_locations_toolbar, build_logic_context_toolbar, build_modules_toolbar,
@@ -88,6 +89,7 @@ _TREE_ITEM_INFO = "info"
 _TREE_ITEM_IO_CARDS = "io_cards"
 _TREE_ITEM_LOCATIONS = "locations"
 _TREE_ITEM_POINT_REGISTRY = "point_registry"
+_TREE_ITEM_SIGNALS = "signals"
 # "Co jeszcze możemy dorobić" follow-up - SPEC's next section, Aparaty
 # (a device's feedback/command point lists), same "active" leaf pattern.
 _TREE_ITEM_DEVICES = "apparatus_registry"
@@ -143,6 +145,7 @@ _BREADCRUMB_KEYS = {
     _TREE_ITEM_MODULES: "breadcrumb.devices",
     _TREE_ITEM_LOCATIONS: "breadcrumb.locations",
     _TREE_ITEM_POINT_REGISTRY: "breadcrumb.point_registry",
+    _TREE_ITEM_SIGNALS: "breadcrumb.signals",
     _TREE_ITEM_DEVICES: "breadcrumb.apparatus_registry",
     _TREE_ITEM_ZONES: "breadcrumb.security_zones",
     _TREE_ITEM_LINES: "breadcrumb.security_lines",
@@ -193,6 +196,7 @@ _HELP_TOPIC_BY_TREE_KEY = {
     _TREE_ITEM_IO_CARDS: "io_cards",
     _TREE_ITEM_LOCATIONS: "locations",
     _TREE_ITEM_POINT_REGISTRY: "points",
+    _TREE_ITEM_SIGNALS: "logic",
     _TREE_ITEM_DEVICES: "apparatus",
     _TREE_ITEM_SCREENS: "screens",
     _TREE_ITEM_LOGIC: "logic",
@@ -448,6 +452,7 @@ class StudioMainWindow(QMainWindow):
 
         self._synoptic_panel = None
         self._logic_panel = None
+        self._signals_panel = None
         self._synoptic_dirty = False  # last isDirty read off the Synoptic state bridge
         self._edited_aspects = set()  # tree keys edited since the last save - drawn red with " *"
         # The OBJECT (site_format.Site): its devices are _ProjectSlots, one
@@ -788,6 +793,14 @@ class StudioMainWindow(QMainWindow):
         self._item_screens.setData(0, Qt.ItemDataRole.UserRole, ("active", _TREE_ITEM_SCREENS))
         config.addChild(self._item_screens)
         self._tree_label_refs.append((self._item_screens, "tree.screens"))
+
+        # feat/signal-register 2: the signals an installation needs are
+        # named before they are wired, so this sits immediately before
+        # the logic editor that consumes them - the same "each branch
+        # after the ones it needs" order the rest of this group follows.
+        self._item_signals = add_active_leaf(
+            config, _TREE_ITEM_SIGNALS, "tree.signals", icons.icon("project_registers")
+        )
 
         self._item_logic = QTreeWidgetItem([tr("tree.logic")])
         self._item_logic.setIcon(0, icon_logic)
@@ -1427,6 +1440,8 @@ class StudioMainWindow(QMainWindow):
                 self._open_io_cards()
             elif key == _TREE_ITEM_LOCATIONS:
                 self._open_locations()
+            elif key == _TREE_ITEM_SIGNALS:
+                self._open_signals()
             elif key == _TREE_ITEM_POINT_REGISTRY:
                 self._open_point_registry()
             elif key == _TREE_ITEM_DEVICES:
@@ -1834,6 +1849,26 @@ class StudioMainWindow(QMainWindow):
         )
         self._status_editor.setText(tr("statusbar.no_editor"))
         self._active = _TREE_ITEM_LOCATIONS
+        self._refresh_fixed_menu_state()
+        self._refresh_shared_toolbar_state()
+
+    def _open_signals(self):
+        """The signals department. Its internal half edits the LOGIC
+        project's own registry - the panel reaches it through the
+        embedded editor, building it on first use, because the registry
+        has no other home and a second copy is the mistake this
+        codebase has already made."""
+        if self._signals_panel is None:
+            from studio.shell.signals_panel import SignalsPanel
+            self._signals_panel = SignalsPanel(self)
+        else:
+            self._signals_panel.refresh()
+        self._show_aspect_container(
+            _TREE_ITEM_SIGNALS, self._signals_panel, build_signals_toolbar,
+            self._signals_panel,
+        )
+        self._status_editor.setText(tr("statusbar.no_editor"))
+        self._active = _TREE_ITEM_SIGNALS
         self._refresh_fixed_menu_state()
         self._refresh_shared_toolbar_state()
 

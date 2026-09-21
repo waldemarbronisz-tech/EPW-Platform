@@ -27,7 +27,7 @@ jako sprawne — „brak konfiguracji = brak nadzoru", bez błędów.
 ## Sygnalizator
 
 Tu są **nastawy**, nie wyjście. Sterownik nie steruje żadną syreną —
-wystawia stan (`SSWIN.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
+wystawia stan (`SEC.SYSTEM.SIREN_ACTIVE`, `SIREN_TIME_LEFT`,
 `STROBE_ACTIVE`, `PANIC`), a wyjście podpinasz w [Logice](help://logic),
 przez takie blokady, jakich wymaga instalacja.
 

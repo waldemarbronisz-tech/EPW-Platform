@@ -181,11 +181,26 @@ class LogicPanel(QWidget):
             if _point_kind(point.address) in ("AI", "AO")
         ]
 
+        # feat/signal-register §3.3: the alarm system's zones and lines,
+        # for the same reason and by the same route as the cards above.
+        # The catalog holds SEC.ZONE.<zone_id>.ARMED as a PATTERN; it can
+        # only become SEC.ZONE.PARTER.ARMED if the logic project knows
+        # this installation's zones. Only the stable id and the display
+        # name travel - the id is what a schematic binds to, the name is
+        # what an engineer recognises in the picker.
+        new_zones = [{"id": z.id, "name": z.name} for z in studio_project.zones if z.id]
+        new_lines = [{"id": l.id, "name": l.name} for l in studio_project.lines if l.id]
+
         project = self._main_window.project
-        if project.external_cards == new_cards and project.external_analog_points == new_analog_points:
+        if (project.external_cards == new_cards
+                and project.external_analog_points == new_analog_points
+                and getattr(project, "external_zones", None) == new_zones
+                and getattr(project, "external_lines", None) == new_lines):
             return
         project.external_cards = new_cards
         project.external_analog_points = new_analog_points
+        project.external_zones = new_zones
+        project.external_lines = new_lines
         self._main_window._refresh_project_dependent_panels()
 
     def canvas_background(self) -> str:

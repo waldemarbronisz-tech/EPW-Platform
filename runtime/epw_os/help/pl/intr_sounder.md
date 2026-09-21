@@ -13,10 +13,10 @@ opcjami w oknie konfiguracji.
 
 | Sygnał | Znaczenie |
 |---|---|
-| `SSWIN.SIREN_ACTIVE` | sygnalizator ma dźwięczeć **teraz** — to podpinasz do wyjścia |
-| `SSWIN.SIREN_TIME_LEFT` | ile sekund jeszcze wolno |
-| `SSWIN.STROBE_ACTIVE` | lampa, świeci od alarmu do skasowania pamięci |
-| `SSWIN.PANIC` | zadziałała linia napadowa i nikt tego jeszcze nie potwierdził |
+| `SEC.SYSTEM.SIREN_ACTIVE` | sygnalizator ma dźwięczeć **teraz** — to podpinasz do wyjścia |
+| `SEC.SYSTEM.SIREN_TIME_LEFT` | ile sekund jeszcze wolno |
+| `SEC.SYSTEM.STROBE_ACTIVE` | lampa, świeci od alarmu do skasowania pamięci |
+| `SEC.SYSTEM.PANIC` | zadziałała linia napadowa i nikt tego jeszcze nie potwierdził |
 
 Ten sam stan jest na tagach `Security.System.SirenActive`,
 `.StrobeActive` i `.Panic`, więc widzi go też ekran i Home Assistant.

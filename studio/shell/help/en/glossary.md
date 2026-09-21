@@ -39,7 +39,7 @@ structure. See [Saving and revisions](help://save_versioning).
 **Settings hash** — a digest of every setting, used to detect a
 divergence from the controller.
 
-**`SSWIN.*`** — the alarm system's signals available in logic: armed,
+**`SEC.*/REQ.SEC.*`** — the alarm system's signals available in logic: armed,
 alarm, memory, tamper, the sounder, the commands.
 
 **Supervised line** — one alarm detector on one point. See

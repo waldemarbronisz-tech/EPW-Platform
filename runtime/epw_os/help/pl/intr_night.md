@@ -44,7 +44,7 @@ naciśnie zwykłe **Uzbrój**.
 
 ## W logice
 
-`SSWIN.ARMED` wymaga uzbrojenia **pełnego** wszystkich stref.
-`SSWIN.ARMED_PARTIAL` obejmuje i „część stref uzbrojona", i „uzbrojona,
-ale nocą". `SSWIN.CMD_ARM_PARTIAL` uzbraja nocą wszystkie strefy. Patrz
+`SEC.SYSTEM.ARMED` wymaga uzbrojenia **pełnego** wszystkich stref.
+`SEC.SYSTEM.ARMED_PARTIAL` obejmuje i „część stref uzbrojona", i „uzbrojona,
+ale nocą". `REQ.SEC.ARM_ALL_PARTIAL` uzbraja nocą wszystkie strefy. Patrz
 [Co widzi program logiki](help://logic_signals).

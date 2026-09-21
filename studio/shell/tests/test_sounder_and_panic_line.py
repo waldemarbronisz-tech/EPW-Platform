@@ -3,7 +3,7 @@
 Owner's instruction: "chce moc to swobodnie programowac ustawiajac bit
 wewnetrzny alarm i pobudzenie danego DO ktory wyjdzie na syrene" - so
 what Studio offers here is SETTINGS, never an output to pick. The siren
-is wired in Logic Studio, from SSWIN.SIREN_ACTIVE to whatever DO the
+is wired in Logic Studio, from SEC.SYSTEM.SIREN_ACTIVE to whatever DO the
 installation uses.
 
 Plus the PANIC (napadowa) line type, which simply had no entry before.

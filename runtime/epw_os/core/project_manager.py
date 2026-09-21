@@ -680,7 +680,7 @@ class ProjectManager:
 
     # The sounder, as STATE the controller owns rather than an output it
     # drives. EPW-OS never energizes a siren: it publishes
-    # SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE and the
+    # SEC.SYSTEM.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE and the
     # engineer draws the line to a DO in Logic Studio (owner's decision -
     # "chce moc to swobodnie programowac ustawiajac bit wewnetrzny alarm
     # i pobudzenie danego DO ktory wyjdzie na syrene"). What lives here

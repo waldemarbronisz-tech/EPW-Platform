@@ -119,7 +119,7 @@ class DeviceExplorerPanel(QWidget):
         self.tree.clear()
 
         # Root node
-        root = QTreeWidgetItem(self.tree, ["EPW Controller"])
+        root = QTreeWidgetItem(self.tree, [tr("device.controller")])
         root.setExpanded(True)
 
         # feat/multi-device-io: one branch PER DEVICE the project actually
@@ -134,7 +134,7 @@ class DeviceExplorerPanel(QWidget):
         # would (see DeviceModel's own module docstring).
         ela_pairs = DeviceModel.get_ela_device_channels(self.project)
         for dev, channels in ela_pairs:
-            ela_module = QTreeWidgetItem(root, [f"{dev} (Input Module / Acquisition)"])
+            ela_module = QTreeWidgetItem(root, [tr("device.input_module", dev=dev)])
             ela_module.setExpanded(True)
             for i in range(1, channels + 1):
                 addr = DeviceModel.format_ela_address(dev, i)
@@ -142,7 +142,7 @@ class DeviceExplorerPanel(QWidget):
 
         ada_pairs = DeviceModel.get_ada_device_channels(self.project)
         for dev, channels in ada_pairs:
-            ada_module = QTreeWidgetItem(root, [f"{dev} (Output Module / Actuator)"])
+            ada_module = QTreeWidgetItem(root, [tr("device.output_module", dev=dev)])
             ada_module.setExpanded(True)
             for i in range(1, channels + 1):
                 addr = DeviceModel.format_ada_address(dev, i)
@@ -161,12 +161,12 @@ class DeviceExplorerPanel(QWidget):
         # task's own "podłączasz źródło danych, nie przebudowujesz
         # edytorów" scope).
         if not ela_pairs and not ada_pairs:
-            hint = QTreeWidgetItem(root, ["No I/O cards — add a card in the project"])
+            hint = QTreeWidgetItem(root, [tr("device.no_cards")])
             hint.setDisabled(True)
 
         # Analog points — fully project-defined, empty tree when the project
         # has none. No example/placeholder entries.
-        analog_branch = QTreeWidgetItem(root, ["Analog"])
+        analog_branch = QTreeWidgetItem(root, [tr("device.analog")])
         analog_branch.setExpanded(True)
         if self.project is not None:
             for point in DeviceModel.get_analog_points(self.project):

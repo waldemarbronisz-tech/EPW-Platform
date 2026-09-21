@@ -4,7 +4,7 @@ for the missing line type, "dorob".
 
 So EPW-OS drives NO siren. What it owns is the sounder's STATE - should
 it be sounding, for how much longer, has somebody silenced it, is the
-strobe still on - published as tags and as SSWIN.SIREN_ACTIVE /
+strobe still on - published as tags and as SEC.SYSTEM.SIREN_ACTIVE /
 SIREN_TIME_LEFT / STROBE_ACTIVE / PANIC. Which output the siren hangs
 on, through which interlocks, is a line of logic the engineer draws.
 
@@ -254,7 +254,7 @@ def test_a_break_in_elsewhere_during_a_silent_hold_up_alarm_still_sounds():
 
 
 def test_the_panic_flag_is_cleared_with_the_alarm_not_by_disarming():
-    """SSWIN.PANIC means "somebody pressed it and nobody has
+    """SEC.SYSTEM.PANIC means "somebody pressed it and nobody has
     acknowledged that yet", not a permanent property."""
     manager, tags, _ = _build()
     _violate(tags, HOLDUP)

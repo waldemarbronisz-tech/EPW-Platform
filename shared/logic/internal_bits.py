@@ -53,6 +53,47 @@ def internal_bit_id(entry: dict) -> str:
     return f"{prefix}.{name}"
 
 
+# The four block types whose "Bit" property names a registry entry.
+# Here rather than in either editor, because "which blocks use a marker"
+# has to mean the same thing in both of them.
+SIGNAL_BLOCK_TYPE_IDS = ("virtual.input", "virtual.output",
+                         "internal.reg_in", "internal.reg_out")
+
+
+def blocks_using(blocks, name: str) -> list:
+    """Every block referencing registry entry `name`.
+
+    Case-insensitive, the same comparison the uniqueness rule uses: if
+    BLOKADA_ZS and blokada_zs cannot both exist, then a block saying
+    either one refers to the single entry that does.
+    """
+    if not name:
+        return []
+    lname = name.lower()
+    return [b for b in blocks
+            if getattr(b, "type_id", None) in SIGNAL_BLOCK_TYPE_IDS
+            and (b.properties.get("Bit", "") or "").lower() == lname]
+
+
+def rename_in_blocks(blocks, old_name: str, new_name: str) -> int:
+    """Re-points every block from `old_name` to `new_name`; returns how
+    many were changed.
+
+    A block stores only the bare NAME - its resolved M./MR./MW./MWR.<name>
+    id is derived fresh from whatever the registry says (internal_bit_id
+    above), so changing an entry's type or retentive flag needs no
+    propagation at all. Changing its NAME does: without this, every block
+    keeps pointing at a name the registry no longer has, and the next
+    compile reports each one as an unknown signal.
+    """
+    if not old_name or not new_name or old_name == new_name:
+        return 0
+    touched = blocks_using(blocks, old_name)
+    for block in touched:
+        block.properties["Bit"] = new_name
+    return len(touched)
+
+
 def validate_internal_bit_name(name: str):
     """Format-only validation of a single name (§1.3) — doesn't check
     uniqueness, which needs the full registry. Returns an error message

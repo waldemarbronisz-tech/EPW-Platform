@@ -322,7 +322,7 @@ class LineType:
     TWENTY_FOUR_HOUR = "24H"
     SUPERVISORY = "SUPERVISORY"
     # NAPADOWA: a hold-up button. Alarms in ANY zone state, like a 24H
-    # line, but raises SSWIN.PANIC and - unless the installation says
+    # line, but raises SEC.SYSTEM.PANIC and - unless the installation says
     # otherwise - does NOT start the sounder: the point of a hold-up
     # alarm is that the person standing over you does not learn you
     # pressed it.
@@ -448,7 +448,7 @@ class Sounder:
     pobudzenie danego DO który wyjdzie na syrenę"). What the controller
     owns is the STATE - is the sounder supposed to be sounding right now,
     for how much longer, has somebody silenced it - published as
-    SSWIN.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE. Which physical
+    SEC.SYSTEM.SIREN_ACTIVE / SIREN_TIME_LEFT / STROBE_ACTIVE. Which physical
     output that reaches, through which interlocks, is a line of logic the
     engineer draws in Logic Studio.
 

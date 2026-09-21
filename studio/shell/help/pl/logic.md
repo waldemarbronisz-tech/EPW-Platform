@@ -21,18 +21,18 @@ Poza nimi masz:
   które przeżywają restart sterownika;
 - **sygnały systemowe `SYS.*`** — stan sterownika, poziom dostępu,
   komunikacja, generatory impulsów i migania;
-- **sygnały alarmówki `SSWIN.*`** — uzbrojenie, alarm, pamięć alarmu,
+- **sygnały alarmówki `SEC.*/REQ.SEC.*`** — uzbrojenie, alarm, pamięć alarmu,
   sabotaż, gotowość, a także sygnalizator i komendy.
 
 ## Sygnalizator: to Ty go podpinasz
 
-Sterownik **nie steruje żadną syreną**. Wystawia stan — `SSWIN.SIREN_ACTIVE`
+Sterownik **nie steruje żadną syreną**. Wystawia stan — `SEC.SYSTEM.SIREN_ACTIVE`
 (ma dźwięczeć), `SIREN_TIME_LEFT`, `STROBE_ACTIVE` (lampa), `PANIC` —
 a to, na którym wyjściu wisi syrena i przez jakie blokady, jest linią
 schematu, którą rysujesz tutaj. Nastawy (jak długo wolno dźwięczeć, czy
 linia napadowa ma być cicha) są w [Strefach](help://zones).
 
-Tak samo `SSWIN.CMD_SILENCE` — wyciszenie samego dźwięku, bez ruszania
+Tak samo `REQ.SEC.SILENCE` — wyciszenie samego dźwięku, bez ruszania
 alarmu.
 
 ## Kompilacja i eksport
