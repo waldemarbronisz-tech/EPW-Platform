@@ -35,15 +35,25 @@ from logic_studio.ui.window_lookup import logic_main_window
 # separate block filed under "Other".
 #
 # The type filter stays: a BOOL block never sees a REAL signal.
-# An OUTPUT never offers a source == "runtime" signal - the compiler
-# rejects writing one, and a dialog must not propose what will not
-# compile.
+#
+# DIRECTION IS FILTERED IN BOTH DIRECTIONS (owner's correction). An
+# OUTPUT never offers a source == "runtime" signal, and an INPUT never
+# offers a source == "logic" one. The second half was missing, so
+# widening these entries to the catalogue offered every REQUEST as
+# something to read - and a request is not a state: REQ.SEC.ARM_ALL is
+# what the logic SAYS, not a value the controller maintains for anybody
+# to read back.
+#
+# Filtered on the `source` FIELD, never on the "REQ." prefix, so a future
+# category of logic-owned signals named something else needs no change
+# here. The compiler rejects both mistakes, and a dialog must not propose
+# what will not compile.
 _SIGNAL_PICKER_TARGETS = {
-    ("virtual.input", "Bit"): ("BOOL", ("internal", "system")),
+    ("virtual.input", "Bit"): ("BOOL", ("internal", "system"), "runtime"),
     ("virtual.output", "Bit"): ("BOOL", ("internal", "system"), "logic"),
-    ("internal.reg_in", "Bit"): ("REAL", ("internal", "system")),
+    ("internal.reg_in", "Bit"): ("REAL", ("internal", "system"), "runtime"),
     ("internal.reg_out", "Bit"): ("REAL", ("internal", "system"), "logic"),
-    ("system.signal", "Sygnał"): (None, ("system",)),
+    ("system.signal", "Sygnał"): (None, ("system",), "runtime"),
     # feat/sswin-signals §2.4: an OUTPUT block may only ever point at a
     # system signal source == "logic" (writing a source == "runtime" one
     # is a compile error, compiler/validator.py) — filtered on that field,

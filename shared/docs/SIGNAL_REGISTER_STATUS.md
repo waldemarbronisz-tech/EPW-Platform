@@ -53,12 +53,14 @@ szczegóły i powód w `shared/logic/signal_renames.py`.
 | `SSWIN.FAULT` | `SEC.SYSTEM.FAULT` |
 | `SSWIN.TAMPER` | `SEC.SYSTEM.TAMPER` |
 
-### Nazwy nadane wg gramatyki rejestru (11)
+### Nazwy ustalone tutaj, przyjęte (11)
 
 Te sygnały **nie mają wiersza w rejestrze** — sterownik obsługuje je dziś,
 a rejestr ich nie obejmuje (brak dozoru częściowego, sygnalizatora i linii
 napadowej; rejestr jest też wyłącznie BOOL-owy). Nazwano je konsekwentnie
-z resztą rejestru. **Do potwierdzenia przez właściciela rejestru.**
+z gramatyką rejestru i **właściciel przyjął je 2026-09-21** — to nie jest
+pozycja oczekująca. Wypisane osobno tylko po to, żeby przyszła wersja
+rejestru wiedziała, które nazwy powstały tutaj.
 
 | było | jest |
 |---|---|

@@ -218,16 +218,18 @@ def build() -> str:
     for old, new in by_provenance("register"):
         w("| `%s` | `%s` |" % (old, new))
     w("")
-    w("### Nazwy nadane wg gramatyki rejestru (%d)" % len(by_provenance("convention")))
+    w("### Nazwy ustalone tutaj, przyjęte (%d)" % len(by_provenance("accepted")))
     w("")
     w("Te sygnały **nie mają wiersza w rejestrze** — sterownik obsługuje je dziś,")
     w("a rejestr ich nie obejmuje (brak dozoru częściowego, sygnalizatora i linii")
     w("napadowej; rejestr jest też wyłącznie BOOL-owy). Nazwano je konsekwentnie")
-    w("z resztą rejestru. **Do potwierdzenia przez właściciela rejestru.**")
+    w("z gramatyką rejestru i **właściciel przyjął je 2026-09-21** — to nie jest")
+    w("pozycja oczekująca. Wypisane osobno tylko po to, żeby przyszła wersja")
+    w("rejestru wiedziała, które nazwy powstały tutaj.")
     w("")
     w("| było | jest |")
     w("|---|---|")
-    for old, new in by_provenance("convention"):
+    for old, new in by_provenance("accepted"):
         w("| `%s` | `%s` |" % (old, new))
     w("")
 

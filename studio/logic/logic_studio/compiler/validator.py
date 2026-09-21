@@ -343,6 +343,19 @@ class Validator:
                         f"(source == '{catalog_entry.get('source')}') and cannot be written from the logic."
                     )
                     continue
+                # The symmetric rule on the READ side (owner's correction).
+                # A request is not a state: REQ.SEC.ARM_ALL is what the
+                # logic SAYS, and nothing maintains a value for it to be
+                # read back from - a schematic built on reading one waits
+                # for a bit that only moves when that same program writes
+                # it. Tested by `source`, not by the name.
+                if block.type_id not in WRITER_TYPE_IDS and catalog_entry.get("source") != "runtime":
+                    errors.append(
+                        f"[{self._block_ref(block)}] System signal '{name}' is a request the logic "
+                        f"issues (source == '{catalog_entry.get('source')}'), not a state the "
+                        f"controller maintains - it cannot be read."
+                    )
+                    continue
                 # A catalog signal has no registry entry, so none of the
                 # registry bookkeeping below (single-writer, read-but-never-
                 # written, defined-but-unused) applies to it - except the
@@ -538,6 +551,18 @@ class Validator:
                 sig_id = block.properties.get("Sygnał", "")
                 if sig_id:
                     sys_referenced.add(sig_id)
+                    # The same read-direction rule as the bit blocks above.
+                    # An UNRECOGNISED id here stays a lenient warning (case
+                    # 3's migration compat), but an id that IS in the
+                    # catalogue and belongs to the logic is a real mistake,
+                    # not an old file.
+                    entry = system_signals.get_signal(sig_id, self.project)
+                    if entry is not None and entry.get("source") != "runtime":
+                        errors.append(
+                            f"[{self._block_ref(block)}] Signal '{sig_id}' is a request the logic "
+                            f"issues (source == '{entry.get('source')}'), not a state the "
+                            f"controller maintains - it cannot be read."
+                        )
             elif block.type_id == "system.signal_out":
                 sig_id = block.properties.get("Sygnał", "")
                 if not sig_id:

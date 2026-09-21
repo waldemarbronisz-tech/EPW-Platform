@@ -106,18 +106,68 @@ def test_writing_a_logic_sourced_signal_compiles():
 
     assert res is not None, f"Compile failed: {c.errors}"
 
-def test_reading_a_logic_sourced_signal_compiles():
-    """Reading one's own (or another block's) command is legal — a
-    schematic that echoes REQ.SEC.ARM_ALL onto an indicator, say."""
+def test_reading_a_request_is_a_compile_error():
+    """Owner's correction: a request is not a state.
+
+    This test used to assert the opposite - that echoing REQ.SEC.ARM_ALL
+    onto an indicator was legal. It reads plausibly and it is wrong: the
+    controller does not maintain a value for a request, so a schematic
+    built on reading one waits for a bit that only ever moves when that
+    same program writes it, one scan late, and never at all after a
+    restart. The dialog no longer offers it either."""
     p = Project()
     p.add_block(_in_block("REQ.SEC.ARM_ALL"))
 
     c = Compiler(p)
-    res = c.compile()
 
-    assert res is not None, f"Compile failed: {c.errors}"
+    assert c.compile() is None
+    assert any("REQ.SEC.ARM_ALL" in e and "cannot be read" in e for e in c.errors), c.errors
 
-def test_write_then_read_roundtrips_across_two_scans():
+
+def test_the_refusal_is_decided_by_the_source_field_not_by_the_name():
+    """"REQ." is a naming convention; `source` is the fact. A future
+    logic-owned signal called something else has to be refused too.
+
+    Runs over the catalogue EXPANDED against a project with a zone, so
+    the per-zone requests are covered as the concrete ids an engineer
+    would actually write - a raw pattern is not a signal any project
+    contains, and feeding one in tests the unrecognised-id path instead
+    of the direction rule."""
+    from shared.logic import system_signals
+
+    installation = Project()
+    installation.external_zones = [{"id": "PARTER", "name": "Parter"}]
+    logic_owned = [s for s in system_signals.get_all_signals(installation)
+                   if s.get("source") == "logic"]
+    assert len(logic_owned) > 5, "the catalogue offers the logic almost nothing to write"
+
+    for signal in logic_owned:
+        p = Project()
+        p.external_zones = [{"id": "PARTER", "name": "Parter"}]
+        p.add_block(_in_block(signal["id"]))
+        c = Compiler(p)
+        assert c.compile() is None, signal["id"]
+
+
+def test_a_runtime_state_is_still_perfectly_readable():
+    """The correction must not have closed the door on the normal case."""
+    p = Project()
+    p.add_block(_in_block("SEC.SYSTEM.ARMED"))
+
+    c = Compiler(p)
+
+    assert c.compile() is not None, c.errors
+
+def test_a_request_is_flushed_to_the_io_provider_at_the_end_of_the_scan():
+    """The buffering half of what used to be a round-trip test.
+
+    Its other half - reading the request back with a block on the next
+    scan - is gone with the owner's correction, and the test says so
+    rather than quietly shrinking: nothing may read a request any more,
+    so there is no block to read it with. What still matters, and is
+    still checked, is that the write does not reach the IOProvider
+    mid-scan: every write lands together, at the end, so two blocks
+    reading the world in one scan never see a half-applied picture."""
     from shared.logic.engine.execution import ExecutionEngine
     from shared.logic.engine.io_provider import SimulationIOProvider
     from shared.logic.engine.time_provider import SystemTimeProvider
@@ -125,8 +175,6 @@ def test_write_then_read_roundtrips_across_two_scans():
     p = Project()
     out = _out_block("REQ.SEC.ARM_ALL")
     p.add_block(out)
-    inp = _in_block("REQ.SEC.ARM_ALL")
-    p.add_block(inp)
 
     c = Compiler(p)
     res = c.compile()
@@ -137,12 +185,9 @@ def test_write_then_read_roundtrips_across_two_scans():
     out_clone = res["program"].block_map[out.uuid]
     out_clone.inputs[0].value = True
 
-    eng.step()  # scan 1: the write is flushed at the end of this scan
+    assert eng.io.system_signal_overrides.get("REQ.SEC.ARM_ALL") is None
+    eng.step()
     assert eng.io.system_signal_overrides.get("REQ.SEC.ARM_ALL") is True
-
-    eng.step()  # scan 2: system.signal now reads the freshly-written value
-    inp_clone = res["program"].block_map[inp.uuid]
-    assert inp_clone.outputs[0].value is True
 
 def test_writing_an_unrecognized_system_signal_is_a_compile_error():
     p = Project()
@@ -175,21 +220,22 @@ def test_unused_logic_signal_is_a_warning_not_an_error():
     assert res is not None, f"Compile failed: {c.errors}"
     assert any("REQ.SEC.CLEAR_ALARM_MEMORY" in w and "is not used" in w for w in c.warnings)
 
-def test_a_logic_signal_read_but_not_written_still_counts_as_used():
-    """§2.3's own "unused" warning covers "neither read nor written" — a
-    signal only ever READ (e.g. echoed onto an indicator before its writer
-    exists yet) must not also warn as unused."""
+def test_the_unused_warning_does_not_confuse_one_request_with_another():
+    """This test used to say that a request only ever READ still counts
+    as used. Reading one is a compile error now (owner's correction), so
+    that premise is gone - but the half worth keeping is not: one
+    request's id is a PREFIX of another's, and a substring check would
+    silently mark REQ.SEC.ARM_ALL_PARTIAL as used the moment anything
+    wrote REQ.SEC.ARM_ALL."""
     p = Project()
-    p.add_block(_in_block("REQ.SEC.ARM_ALL"))
+    p.add_block(_out_block("REQ.SEC.ARM_ALL"))
 
     c = Compiler(p)
     res = c.compile()
 
     assert res is not None, f"Compile failed: {c.errors}"
-    # "'REQ.SEC.ARM_ALL'" (quoted, exact) rather than a bare substring check —
-    # "REQ.SEC.ARM_ALL" is also a substring of "REQ.SEC.ARM_ALL_PARTIAL", which
-    # genuinely IS unused here and must still warn.
     assert not any("'REQ.SEC.ARM_ALL'" in w and "is not used" in w for w in c.warnings)
+    assert any("'REQ.SEC.ARM_ALL_PARTIAL'" in w and "is not used" in w for w in c.warnings), c.warnings
 
 
 # ---- §4.3: two writers ------------------------------------------------------

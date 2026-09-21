@@ -142,6 +142,45 @@ def test_a_register_block_is_never_offered_a_bool_signal(app):
     assert "SYS.READY" not in ids
 
 
+def test_an_input_block_is_never_offered_a_request(app):
+    """Owner's correction. Widening the input blocks to the catalogue in
+    1.1 left them with no direction filter, so the dialog listed
+    "Żądania - alarmówka" under "Wejście bitu" - offering a REQUEST as
+    something to read. A request is not a state: nothing maintains a
+    value for it."""
+    ids = _ids(_picker(_project([_bit("BLOKADA_ZS")]), "virtual.input"))
+
+    assert "SEC.SYSTEM.ARMED" in ids, "a real state is still offered"
+    assert not [i for i in ids if i.startswith("REQ.")], [i for i in ids if i.startswith("REQ.")]
+
+
+def test_the_register_input_is_filtered_the_same_way(app):
+    """The defect was one missing tuple element repeated twice."""
+    ids = _ids(_picker(_project(), "internal.reg_in"))
+
+    assert not [i for i in ids if i.startswith("REQ.")], ids
+
+
+def test_the_input_filter_is_on_the_source_field_not_on_the_name(app):
+    """"REQ." is a convention; `source` is the fact. Every catalogue
+    signal the dialog offers an INPUT must be runtime-owned, whatever it
+    is called."""
+    from shared.logic import system_signals
+
+    offered = set(_ids(_picker(_project(), "virtual.input")))
+    for signal in system_signals.get_all_signals():
+        if signal["id"] in offered:
+            assert signal["source"] == "runtime", signal["id"]
+
+
+def test_the_legacy_read_block_is_filtered_too(app):
+    """system.signal is hidden from the library but still editable in an
+    old project - it reads, so it gets the same rule."""
+    ids = _ids(_picker(_project(), "system.signal", key="Sygnał"))
+
+    assert not [i for i in ids if i.startswith("REQ.")], ids
+
+
 def test_an_output_block_is_never_offered_a_signal_the_runtime_owns(app):
     """The compiler rejects writing a source == "runtime" signal. A dialog
     that proposes one is proposing a compile error."""

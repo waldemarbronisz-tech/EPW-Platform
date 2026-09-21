@@ -10,8 +10,10 @@ executes or refuses.
 
 Eleven of the twenty-three have no row in the register at all - it has
 no partial arming, no sounder, no panic line, and it is BOOL-only - so
-they are named by the register's grammar and flagged `convention`, which
-is a fact these tests pin so it cannot quietly become "register" later.
+they are named by the register's grammar and flagged `accepted` - the
+owner reviewed and took them unchanged on 2026-09-21. These tests pin
+which is which, so a name settled here cannot quietly become one the
+register supplied.
 
 The last group is the migration itself, which is deliberately NOT a
 migration: a project naming a retired signal is reported, with the new
@@ -116,25 +118,33 @@ def test_the_register_backed_names_are_the_ones_the_register_has():
 
 def test_the_ones_the_register_does_not_cover_say_so():
     """Eleven signals this controller really serves have no row in the
-    register. Naming them by its grammar is a decision; recording that it
-    WAS a decision is what lets a later revision correct them."""
-    by_convention = dict(by_provenance("convention"))
+    register. Naming them by its grammar was a decision, and the owner
+    accepted it on 2026-09-21; recording that it WAS a decision is what
+    lets a later revision of the register correct them in one place."""
+    settled_here = dict(by_provenance("accepted"))
 
-    assert len(by_convention) == 11
+    assert len(settled_here) == 11
     # The sounder, the panic line and partial arming - real, served, and
     # absent from a register that predates them.
-    assert RETIRED_PREFIX + "PANIC" in by_convention
-    assert RETIRED_PREFIX + "SIREN_ACTIVE" in by_convention
-    assert RETIRED_PREFIX + "ARMED_PARTIAL" in by_convention
+    assert RETIRED_PREFIX + "PANIC" in settled_here
+    assert RETIRED_PREFIX + "SIREN_ACTIVE" in settled_here
+    assert RETIRED_PREFIX + "ARMED_PARTIAL" in settled_here
 
 
-def test_the_real_valued_signals_are_all_convention():
+def test_nothing_is_left_flagged_as_awaiting_a_decision():
+    """The owner accepted the eleven on 2026-09-21. A status page that
+    still listed settled decisions as open teaches people to skip that
+    section, which is how the next real question gets missed."""
+    assert {p for _n, p in RENAMES.values()} == {"register", "accepted"}
+
+
+def test_the_real_valued_signals_were_all_settled_here():
     """The register is BOOL-only, so nothing carrying a number could have
-    come from it."""
+    come from it - each of these four was named here and accepted."""
     for suffix in ("DELAY_REMAINING", "LAST_TRIGGER", "ACTIVE_COUNT", "SIREN_TIME_LEFT"):
         old = RETIRED_PREFIX + suffix
         assert is_retired(old)
-        assert dict(by_provenance("convention")).get(old), suffix
+        assert dict(by_provenance("accepted")).get(old), suffix
 
 
 # --- nothing is converted behind anybody's back ------------------------------

@@ -134,14 +134,16 @@ def test_the_report_lists_every_register_position(register):
 
 
 def test_the_report_separates_names_taken_from_the_register_from_names_invented():
-    """The eleven with no row in the register are a decision somebody has
-    to confirm; burying them among the twelve that came from it would
-    hide exactly the thing worth reviewing."""
+    """The eleven with no row in the register were a decision, accepted
+    by the owner. They stay listed apart from the twelve that came from
+    the register, so a later revision knows which names were settled
+    here - but they are no longer presented as pending."""
     text = gen.build()
 
     assert "Nazwy wzięte z rejestru (12)" in text
-    assert "Nazwy nadane wg gramatyki rejestru (11)" in text
-    assert "Do potwierdzenia przez właściciela rejestru" in text
+    assert "Nazwy ustalone tutaj, przyjęte (11)" in text
+    assert "właściciel przyjął je 2026-09-21" in text
+    assert "Do potwierdzenia" not in text, "a settled decision is still shown as open"
 
 
 def test_the_report_also_lists_what_the_platform_has_and_the_register_does_not():
