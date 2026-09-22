@@ -139,6 +139,14 @@ def _show_splash(app: QApplication):
 def main():
     app = QApplication(sys.argv)
     _apply_studio_skin(app)
+    # Qt's own OK/Cancel/dialogs in the saved language (logic_studio/
+    # qt_translation.py) - installed once here, replaced by
+    # StudioMainWindow._set_language when the language changes.
+    from studio.shell.logic_path import ensure_importable as _ensure_logic_studio_importable
+    _ensure_logic_studio_importable()
+    from logic_studio.qt_translation import install_qt_translations
+    from studio.shell.main_window import saved_language
+    install_qt_translations(app, saved_language())
     if APP_ICON_PATH.exists():
         app_icon = QIcon(str(APP_ICON_PATH))
         app.setWindowIcon(app_icon)
