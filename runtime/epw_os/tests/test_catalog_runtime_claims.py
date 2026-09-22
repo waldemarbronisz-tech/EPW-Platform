@@ -21,6 +21,7 @@ and Studio must never import the runtime to find out.
 """
 import pytest
 
+from epw_os.core.comm_signals import CommSignals
 from epw_os.core.logic_runtime import SystemSignalSource
 from epw_os.core.runtime_state_signals import RuntimeStateSignals
 from epw_os.core.security_signals import SecuritySignalSource
@@ -44,7 +45,7 @@ def _controller_answers(signal_id: str) -> bool:
     return any(source.serves(signal_id) for source in _REGISTER_SOURCES)
 
 
-_REGISTER_SOURCES = [RuntimeStateSignals(None)]
+_REGISTER_SOURCES = [RuntimeStateSignals(None), CommSignals(None)]
 
 
 CATALOG = system_signals.get_all_signals()
@@ -58,6 +59,8 @@ class _Installation:
     settings = {}
     external_zones = [{"id": "PARTER", "name": "Parter"}]
     external_lines = [{"id": "L1", "name": "Drzwi"}]
+    external_cards = [{"id": "ELA1", "kind": "DI", "channels": 16}, {"id": "ELA1", "kind": "AI", "channels": 8},
+                      {"id": "ADA1", "kind": "DO", "channels": 16}]
 
 
 EXPANDED = [s for s in system_signals.get_all_signals(_Installation())

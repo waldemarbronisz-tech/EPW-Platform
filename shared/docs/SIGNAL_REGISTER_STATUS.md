@@ -4,14 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.2.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.3.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 77 |
-| do zrobienia | 72 |
+| w katalogu i obsłużony | 89 |
+| do zrobienia | 60 |
 | czeka na firmware | 24 |
 | czeka na sprzęt | 21 |
 | poza katalogiem | 4 |
@@ -105,18 +105,18 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `RT.SYNOPTIC.READY` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `RT.SYNOPTIC.FAIL` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `RT.SYNOPTIC.BINDING_FAULT` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `COMM.ALL_OK` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.ANY_DEVICE_OFFLINE` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.ANY_DEVICE_FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.BUS_FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.RS485_FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.ETHERNET_FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.LINK_DEGRADED` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.<device_id>.ONLINE` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.<device_id>.OFFLINE` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.<device_id>.FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.<device_id>.TIMEOUT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `COMM.<device_id>.DEGRADED` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `COMM.ALL_OK` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.ANY_DEVICE_OFFLINE` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.ANY_DEVICE_FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.BUS_FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.RS485_FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.ETHERNET_FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.LINK_DEGRADED` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.<device_id>.ONLINE` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.<device_id>.OFFLINE` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.<device_id>.FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.<device_id>.TIMEOUT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `COMM.<device_id>.DEGRADED` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `DEV.<device_id>.READY` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
 | `DEV.<device_id>.RUNNING` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
 | `DEV.<device_id>.FAULT` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |

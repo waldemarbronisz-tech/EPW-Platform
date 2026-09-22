@@ -1,7 +1,7 @@
 {
   "format": "EPW_SIGNAL_CATALOG",
   "schema_version": 1,
-  "catalog_version": "2.2.0",
+  "catalog_version": "2.3.0",
   "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it. feat/signal-register (2.1.0): an entry may carry `instances`, naming the project collection its <placeholder> ranges over (\"zones\", \"lines\"). The platform fixes that every zone has an ARMED and what it means; only HOW MANY zones there are belongs to the installation, so the pattern lives here and get_categories(project) turns it into SEC.ZONE.PARTER.ARMED. Every consumer already asks that function, so the picker, the Signals panel and the validator show the concrete signals with no change of their own. Only patterns EPW-OS actually answers per instance are here - the register's per-zone inhibit and bypass requests have nothing behind them on this controller and are left out rather than promised.",
   "categories": [
     {
@@ -1056,6 +1056,126 @@
           "source": "logic",
           "safety_relevant": true,
           "runtime": "served"
+        }
+      ]
+    },
+    {
+      "id": "COMM",
+      "name": "Komunikacja z urządzeniami",
+      "_comment": "Liczone przez sterownik jako master Modbus (core/comm_signals.py) z tego, co warstwa sterowników i tak notuje dla strony Diagnostyka magistrali: watchdog urządzenia, timeouty, błędy CRC i odpowiedzi, ostatnia poprawna odpowiedź. Wzorce COMM.<device_id>.* rozwijają się po kartach projektu.",
+      "signals": [
+        {
+          "id": "COMM.ALL_OK",
+          "description": "Każde urządzenie projektu odpowiada, bez błędów w ostatnich 30 s",
+          "label": "KOM OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.ANY_DEVICE_OFFLINE",
+          "description": "Któreś urządzenie projektu nie odpowiada",
+          "label": "KOM OFFLINE",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.ANY_DEVICE_FAULT",
+          "description": "Któreś urządzenie projektu przestało odpowiadać (watchdog)",
+          "label": "KOM AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.BUS_FAULT",
+          "description": "Magistrala nie działa: nie da się jej otworzyć, sterownik magistrali padł, albo milczy każde urządzenie naraz",
+          "label": "MAG AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.RS485_FAULT",
+          "description": "Awaria magistrali RS-485 (jak BUS_FAULT, magistrala szeregowa)",
+          "label": "RS485 AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.ETHERNET_FAULT",
+          "description": "Awaria magistrali Ethernet/TCP (jak BUS_FAULT, magistrala TCP)",
+          "label": "ETH AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.LINK_DEGRADED",
+          "description": "Któreś urządzenie odpowiada, ale z błędami w ostatnich 30 s",
+          "label": "KOM DEGRAD",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "COMM.<device_id>.ONLINE",
+          "description": "Urządzenie odpowiada w czasie watchdoga",
+          "label": "ONLINE",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "COMM.<device_id>.OFFLINE",
+          "description": "Urządzenie nie odpowiada (nigdy nie odpowiedziało albo utracone)",
+          "label": "OFFLINE",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "COMM.<device_id>.FAULT",
+          "description": "Urządzenie przestało odpowiadać po tym, jak odpowiadało (watchdog)",
+          "label": "KOM AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "COMM.<device_id>.TIMEOUT",
+          "description": "Ostatnie zdarzenie na magistrali dla urządzenia to timeout, bez poprawnej odpowiedzi od tego czasu",
+          "label": "TIMEOUT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "COMM.<device_id>.DEGRADED",
+          "description": "Urządzenie odpowiada, ale z błędami (timeout, CRC, zła odpowiedź) w ostatnich 30 s",
+          "label": "DEGRAD",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
         }
       ]
     }

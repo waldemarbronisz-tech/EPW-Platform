@@ -245,7 +245,7 @@ def test_every_new_signal_is_in_the_catalogue_with_the_right_direction_and_serve
     for mode in modes.MODES:
         assert ids[f"REQ.MODE.{mode}"]["source"] == "logic"
     assert "MODE.LOCAL" not in ids and "MODE.REMOTE" not in ids     # no source here - not faked
-    assert system_signals.get_catalog_version() == "2.2.0"
+    assert tuple(int(x) for x in system_signals.get_catalog_version().split(".")) >= (2, 2, 0)
 
     # Everything the catalogue says is served, the controller's source really answers.
     signals = RuntimeStateSignals(_core(operating_mode=OperatingModeManager()))

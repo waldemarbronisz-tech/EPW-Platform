@@ -58,6 +58,7 @@ class VirtualBus:
         self.mirror_delay_s = mirror_delay_s
         self.on_write = on_write
         self.writes = []
+        self._silent = set()      # units that do not answer at all (a dead card, a cut wire)
         self._lock = threading.RLock()
         bus = self
 
@@ -71,6 +72,8 @@ class VirtualBus:
                     pdu = bus._recv_exact(self.request, length - 1)
                     if pdu is None:
                         return
+                    if unit in bus._silent:
+                        continue          # no reply: the master times out, exactly like a dead card
                     reply = bus.respond(unit, pdu)
                     self.request.sendall(struct.pack(">HHHB", tid, 0, len(reply) + 1, unit) + reply)
 
@@ -101,6 +104,18 @@ class VirtualBus:
         self.server.server_close()
 
     # -- state ---------------------------------------------------------------------------
+
+    def silence(self, unit: int, silent: bool = True):
+        """A unit that stops answering (the card lost power, the wire is
+        cut): every request to it times out until silence(unit, False)."""
+        with self._lock:
+            if silent:
+                self._silent.add(int(unit))
+            else:
+                self._silent.discard(int(unit))
+
+    def is_silent(self, unit: int) -> bool:
+        return int(unit) in self._silent
 
     def set_input(self, unit: int, channel: int, value: bool):
         with self._lock:

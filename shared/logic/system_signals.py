@@ -118,6 +118,10 @@ def _device_signals(project) -> list:
 _INSTANCE_ATTRIBUTES = {
     "zones": "external_zones",
     "lines": "external_lines",
+    # The project's cards (Studio mirrors them as one entry per channel
+    # KIND - {"id", "kind", "channels"} - so a card appears once per kind
+    # there and exactly once here).
+    "devices": "external_cards",
 }
 
 _PLACEHOLDER = re.compile(r"<[^>]+>")
@@ -128,7 +132,12 @@ def _instances(project, kind: str) -> list:
     if project is None or attribute is None:
         return []
     values = getattr(project, attribute, None) or []
-    return [v for v in values if isinstance(v, dict) and v.get("id")]
+    seen, instances = set(), []
+    for value in values:
+        if isinstance(value, dict) and value.get("id") and value["id"] not in seen:
+            seen.add(value["id"])
+            instances.append(value)
+    return instances
 
 
 def _expand(signal: dict, project) -> list:
