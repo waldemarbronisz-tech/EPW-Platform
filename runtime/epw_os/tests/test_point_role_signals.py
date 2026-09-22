@@ -46,6 +46,7 @@ def _core(registry, devices=None):
     manager = DeviceManager(bus)
     for dev in devices or [{"id": "ELA1", "model": "ELA01"}]:
         manager.register_device(dev["id"], "MODBUS", timeout=5.0)
+        manager.update_comm(dev["id"])           # the cards answer, unless a test says otherwise
     return SimpleNamespace(
         event_bus=bus, tag_manager=tags, device_manager=manager, alarm_manager=None, audit_logger=None,
         modbus_driver=None, _modbus_card_ids=set(), health_manager=None,
@@ -109,6 +110,11 @@ def test_no_data_is_the_safe_value_never_the_last_value():
     core.tag_manager.publish_from_driver("ELA1.DI.2", True, TagQuality.STALE)
     assert read("PWR.POWER_24V_OK") is False and read("PWR.POWER_24V_FAULT") is True and read("UPS.FAULT") is True
     core.tag_manager.publish_from_driver("ELA1.DI.1", True, TagQuality.GOOD)
+    assert read("PWR.POWER_24V_OK") is True
+    # the card's watchdog says offline before the tag's own staleness timer: safe at once (Z4)
+    core.device_manager.devices["ELA1"]["status"] = "COMM_FAILURE"
+    assert read("PWR.POWER_24V_OK") is False and read("PWR.POWER_24V_FAULT") is True
+    core.device_manager.update_comm("ELA1")
     assert read("PWR.POWER_24V_OK") is True
 
 

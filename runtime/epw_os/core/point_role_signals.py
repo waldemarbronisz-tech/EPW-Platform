@@ -16,6 +16,7 @@ where the reason lives. Every UPS.* bit is served here whether or not
 a point carries it - a UPS nobody wired reads its safe value, exactly
 as PWR.* reads without an EPM.
 """
+from epw_os.core.device_manager import DeviceStatus
 from epw_os.core.logging import log
 from epw_os.core.tag_manager import TagQuality
 from shared.logic import point_roles
@@ -94,8 +95,22 @@ class PointRoleSignals:
 
     # --- reading -----------------------------------------------------------------------------
 
+    def _card_online(self, address: str) -> bool:
+        """The card the input sits on, as DeviceManager sees it - the same
+        verdict COMM.<card>.ONLINE gives. A card DeviceManager does not
+        know is left to the tag's own quality."""
+        manager = getattr(self.core, "device_manager", None) if self.core is not None else None
+        devices = getattr(manager, "devices", None)
+        card_id = address.split(".", 1)[0]
+        if not isinstance(devices, dict) or card_id not in devices:
+            return True
+        return devices[card_id].get("status") == DeviceStatus.ONLINE
+
     def _input(self, address: str):
-        """(value, trusted) of a DI tag; (None, False) when unknown."""
+        """(value, trusted) of a DI tag; (None, False) when unknown, when
+        its quality is not GOOD, or when its card is not answering - the
+        card's watchdog and the tag's own staleness timer run apart, and
+        rule Z4 wants the safe value the moment COMM says offline."""
         tags = getattr(self.core, "tag_manager", None) if self.core is not None else None
         getter = getattr(tags, "get_tag", None)
         tag = getter(address) if callable(getter) else None
@@ -103,7 +118,7 @@ class PointRoleSignals:
             return None, False
         quality = getattr(tag, "quality", None)
         quality = getattr(quality, "value", quality)
-        return tag.value, quality in _TRUSTED
+        return tag.value, quality in _TRUSTED and self._card_online(address)
 
     def _role_value(self, role: str, points: list):
         """(the bit, every input trusted) for the contacts carrying `role`."""
