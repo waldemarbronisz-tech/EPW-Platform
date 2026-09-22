@@ -825,8 +825,11 @@ class EPWCore:
         simply read anew."""
         from epw_os.core.comm_signals import CommSignals
         from epw_os.core.device_signals import DeviceSignals
+        from epw_os.core.point_role_signals import PointRoleSignals
         from epw_os.core.runtime_state_signals import RuntimeStateSignals
-        return [RuntimeStateSignals(self), CommSignals(self), DeviceSignals(self)]
+        # PointRoleSignals before DeviceSignals: a role the project gave a
+        # DI contact wins over the device block for that one bit (etap 4).
+        return [RuntimeStateSignals(self), CommSignals(self), PointRoleSignals(self), DeviceSignals(self)]
 
     def _refresh_synoptic_status(self):
         """RT.SYNOPTIC.* (core/synoptic_status.py): every screen of the

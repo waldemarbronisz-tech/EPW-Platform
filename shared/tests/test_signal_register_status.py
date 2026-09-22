@@ -86,13 +86,14 @@ def test_the_per_zone_patterns_really_are_counted(register, catalog_by_id):
     assert "REQ.SEC.ZONE.<zone_id>.ARM" in covered
 
 
-def test_what_waits_on_hardware_says_hardware(catalog_by_id):
-    # UPS.* has no source until a point gets the UPS role (etap 4);
-    # PWR.* and DEV.* are served since etap 3, so they must NOT say so.
-    row = {"ID / Wzorzec": "UPS.ONLINE", "Grupa": "UPS"}
-    assert gen.classify(row, catalog_by_id, {})[0] == "czeka na sprzęt"
-    for signal_id, group in (("PWR.MAINS_OK", "POWER"), ("DEV.<id>.WATCHDOG_OK", "DEVICE HEALTH")):
+def test_power_and_ups_rows_are_served_not_waiting_on_hardware(catalog_by_id):
+    # PWR.* since etap 3 (EPM's register block), UPS.* since etap 4 (a DI
+    # point with a role) - and a POWER/UPS row the catalogue lacks is
+    # honestly "do zrobienia", no longer excused as waiting on hardware.
+    for signal_id, group in (("PWR.MAINS_OK", "POWER"), ("UPS.ONLINE", "UPS"), ("UPS.FAULT", "UPS"),
+                             ("DEV.<id>.WATCHDOG_OK", "DEVICE HEALTH")):
         assert gen.classify({"ID / Wzorzec": signal_id, "Grupa": group}, catalog_by_id, {})[0] == "w katalogu i obsłużony"
+    assert gen.classify({"ID / Wzorzec": "UPS.NOT_A_REAL_BIT", "Grupa": "UPS"}, catalog_by_id, {})[0] == "do zrobienia"
 
 
 def test_a_diagnostic_row_the_catalog_lacks_is_still_named_as_firmware_work(catalog_by_id):

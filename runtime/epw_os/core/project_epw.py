@@ -113,6 +113,10 @@ def build_project_view(project) -> dict:
             "description": point.description,
             "location": pf.effective_location(point, card),
             "technical_note": point.technical_note,
+            # Signal register etap 4: the register signal this DI contact
+            # carries and its contact type (core/point_role_signals.py).
+            "role": point.role if kind == "DI" else None,
+            "contact": point.contact or "NO",
         })
     return {
         "format": pf.FORMAT_MARKER,

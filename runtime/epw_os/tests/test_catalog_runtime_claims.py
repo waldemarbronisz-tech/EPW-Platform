@@ -24,6 +24,7 @@ import pytest
 from epw_os.core.comm_signals import CommSignals
 from epw_os.core.device_signals import DeviceSignals
 from epw_os.core.logic_runtime import SystemSignalSource
+from epw_os.core.point_role_signals import PointRoleSignals
 from epw_os.core.runtime_state_signals import RuntimeStateSignals
 from epw_os.core.security_signals import SecuritySignalSource
 from shared.logic import system_signals
@@ -46,7 +47,7 @@ def _controller_answers(signal_id: str) -> bool:
     return any(source.serves(signal_id) for source in _REGISTER_SOURCES)
 
 
-_REGISTER_SOURCES = [RuntimeStateSignals(None), CommSignals(None), DeviceSignals(None)]
+_REGISTER_SOURCES = [RuntimeStateSignals(None), CommSignals(None), PointRoleSignals(None), DeviceSignals(None)]
 
 
 CATALOG = system_signals.get_all_signals()

@@ -4,15 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.4.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.5.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 154 |
+| w katalogu i obsłużony | 162 |
 | do zrobienia | 32 |
-| czeka na sprzęt | 8 |
 | poza katalogiem | 4 |
 | przyszłość | 2 |
 
@@ -22,7 +21,6 @@ Pozycji w rejestrze: **200**.
   realnie wylicza jego wartość. Logika może go użyć.
 - **w katalogu, bez źródła** — nazwa ustalona, ale nic jeszcze nie liczy
   wartości. Panel Sygnały pokazuje to wprost jako „brak źródła”.
-- **czeka na sprzęt** — potrzebny punkt z nadaną rolą w Studio (zasilanie, UPS).
 - **czeka na firmware** — potrzebne rejestry diagnostyczne w firmware karty.
 - **przyszłość** — koncepcja bez implementacji po żadnej stronie.
 - **poza katalogiem** — sygnał należy do innej warstwy (markery użytkownika,
@@ -193,14 +191,14 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `PWR.AUX_POWER_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PWR.BACKUP_AVAILABLE` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PWR.BACKUP_ACTIVE` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `UPS.ONLINE` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.ON_BATTERY` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.BYPASS` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.LOW_BATTERY` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.BATTERY_FAULT` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.OVERLOAD` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.FAULT` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
-| `UPS.MAINS_PRESENT` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
+| `UPS.ONLINE` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.ON_BATTERY` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.BYPASS` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.LOW_BATTERY` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.BATTERY_FAULT` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.OVERLOAD` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.FAULT` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `UPS.MAINS_PRESENT` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `ALM.ANY_ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `ALM.ANY_UNACK` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `ALM.ANY_CRITICAL` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |

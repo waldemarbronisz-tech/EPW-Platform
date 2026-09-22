@@ -117,10 +117,9 @@ def _normalise(signal_id: str) -> str:
 # What is waiting on what. Keyed by the register's own GROUP column,
 # because that is the unit these decisions are actually made in.
 _PENDING = OrderedDict([
-    ("POWER", ("czeka na sprzęt",
-               "wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie")),
-    ("UPS", ("czeka na sprzęt",
-             "wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie")),
+    # POWER and UPS: served since etap 3 (EPM's register block) and etap 4
+    # (a DI point with a role) - a row of theirs missing from the catalogue
+    # is plainly "do zrobienia" now, not waiting on anything.
     ("DEVICE HEALTH", ("czeka na firmware",
                        "wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01")),
     ("DIAGNOSTICS", ("czeka na firmware",
@@ -197,7 +196,6 @@ def build() -> str:
     w("  realnie wylicza jego wartość. Logika może go użyć.")
     w("- **w katalogu, bez źródła** — nazwa ustalona, ale nic jeszcze nie liczy")
     w("  wartości. Panel Sygnały pokazuje to wprost jako „brak źródła”.")
-    w("- **czeka na sprzęt** — potrzebny punkt z nadaną rolą w Studio (zasilanie, UPS).")
     w("- **czeka na firmware** — potrzebne rejestry diagnostyczne w firmware karty.")
     w("- **przyszłość** — koncepcja bez implementacji po żadnej stronie.")
     w("- **poza katalogiem** — sygnał należy do innej warstwy (markery użytkownika,")

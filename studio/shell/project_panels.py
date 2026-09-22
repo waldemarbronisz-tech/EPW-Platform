@@ -99,6 +99,7 @@ from PySide6.QtWidgets import (
 )
 
 from shared.addressing import format_address, parse_address, try_parse_address
+from shared.logic import point_roles
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
@@ -1345,10 +1346,15 @@ class PointRegistryPanel(QWidget):
         "address", "description", "location", "technical_note",
         "signal_type", "raw_min", "raw_max", "eng_min", "eng_max", "unit", "decimals",
         "warning_threshold",   # DI only: the switching counter's warning threshold (a setting)
+        "role",                # DI only: the register signal this contact carries (signal register etap 4)
+        "contact",             # DI only, with a role: NO (closed = TRUE) or NC (open = TRUE)
         "device",
         "live",                # the controller's value while "Na żywo" is on; red while forced
     ]
-    _LIVE_COL = 13
+    _ROLE_COL = 12
+    _CONTACT_COL = 13
+    _DEVICE_COL = 14
+    _LIVE_COL = 15
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1388,6 +1394,8 @@ class PointRegistryPanel(QWidget):
         # its card is.
         self.table.setColumnWidth(2, 180)
         self.table.setColumnWidth(3, 160)
+        self.table.setColumnWidth(self._ROLE_COL, 230)
+        self.table.setColumnWidth(self._CONTACT_COL, 150)
         # SPEC "Studio - sterownik": live values next to the points, and
         # the force table (Engineer, force mode on) from the row's menu.
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1517,6 +1525,40 @@ class PointRegistryPanel(QWidget):
             threshold_item.setBackground(_GREY_READONLY_BG)
         self.table.setItem(row, 11, threshold_item)
 
+        # Signal register etap 4: a DI contact can CARRY a PWR/UPS/PROT
+        # signal (a UPS status contact, an external relay's trip contact,
+        # a mains relay). The roles are the catalogue's own entries
+        # (shared/logic/point_roles.py) - nothing is typed freehand - and
+        # the contact type gives the bit its sense (NO closed = TRUE,
+        # NC open = TRUE). Not a DI row: both cells read-only and grey.
+        if card_kind == "DI":
+            role_combo = QComboBox()
+            role_combo.addItem(tr("points.role_none"), None)
+            for role in point_roles.roles():
+                role_combo.addItem(f"{role['id']} — {role['description']}", role["id"])
+                role_combo.setItemData(role_combo.count() - 1, role["description"], Qt.ItemDataRole.ToolTipRole)
+            if point.role and role_combo.findData(point.role) < 0:
+                role_combo.addItem(tr("points.role_unknown", role=point.role), point.role)
+            role_combo.setCurrentIndex(max(0, role_combo.findData(point.role)) if point.role else 0)
+            role_combo.setToolTip(tr("points.role_tooltip"))
+            role_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_role_changed(r))
+            self.table.setCellWidget(row, self._ROLE_COL, role_combo)
+
+            contact_combo = QComboBox()
+            contact_combo.addItem(tr("points.contact_no"), point_roles.CONTACT_NO)
+            contact_combo.addItem(tr("points.contact_nc"), point_roles.CONTACT_NC)
+            contact_combo.setCurrentIndex(max(0, contact_combo.findData(point.contact or point_roles.CONTACT_NO)))
+            contact_combo.setEnabled(bool(point.role))
+            contact_combo.setToolTip(tr("points.contact_tooltip"))
+            contact_combo.currentIndexChanged.connect(lambda _i, r=row: self._on_contact_changed(r))
+            self.table.setCellWidget(row, self._CONTACT_COL, contact_combo)
+        else:
+            for col in (self._ROLE_COL, self._CONTACT_COL):
+                blank = QTableWidgetItem("")
+                blank.setFlags(blank.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                blank.setBackground(_GREY_READONLY_BG)
+                self.table.setItem(row, col, blank)
+
         # "Aparat" - read-only, computed from every device's feedback/
         # command lists (point_owner_map()) - SPEC's own "Aparat zużywa
         # punkty": this is the first place that occupancy becomes
@@ -1526,7 +1568,7 @@ class PointRegistryPanel(QWidget):
         device_item.setBackground(_GREY_READONLY_BG)
         if owner_id:
             device_item.setToolTip(owner_id)
-        self.table.setItem(row, 12, device_item)
+        self.table.setItem(row, self._DEVICE_COL, device_item)
 
         live_item = QTableWidgetItem("")
         live_item.setFlags(live_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -1741,6 +1783,38 @@ class PointRegistryPanel(QWidget):
         # depends on the new value (italic vs. normal, the inherited-
         # value text) - a plain data change elsewhere doesn't.
         QTimer.singleShot(0, self.refresh)
+
+    def _point_at(self, row):
+        address_item = self.table.item(row, 0)
+        if address_item is None:
+            return None
+        address = address_item.text()
+        return next((p for p in self._studio_window._project.points if p.address == address), None)
+
+    def _on_role_changed(self, row):
+        if self._loading:
+            return
+        point = self._point_at(row)
+        combo = self.table.cellWidget(row, self._ROLE_COL)
+        if point is None or combo is None:
+            return
+        point.role = combo.currentData() or None
+        contact = self.table.cellWidget(row, self._CONTACT_COL)
+        if contact is not None:
+            contact.setEnabled(bool(point.role))
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_contact_changed(self, row):
+        if self._loading:
+            return
+        point = self._point_at(row)
+        combo = self.table.cellWidget(row, self._CONTACT_COL)
+        if point is None or combo is None:
+            return
+        point.contact = combo.currentData() or point_roles.CONTACT_NO
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
 
     def _on_item_changed(self, item):
         if self._loading:
@@ -5176,6 +5250,53 @@ def validate_project(project) -> list:
                     tr("validation.msg_device_toggle_too_many_outputs", device=device.id, n=len(device.command)),
                     "devices", "select_device", device.id,
                 ))
+
+    # 9) Signal register etap 4 - point roles. A role must be one the
+    # catalogue knows, on a DI point; the same role on two points is two
+    # contacts claiming one bit (the controller combines them, but the
+    # engineer should have meant it); a role whose group a device on the
+    # bus also serves (PWR.* with an EPM, PROT.* with an ADA) is "two
+    # sources of one bit" (4.4) - the controller lets the point win and
+    # says so in its log, the project should say which one is meant.
+    known_roles = set(point_roles.role_ids())
+    role_points = {}
+    for point in project.points:
+        if not point.role:
+            continue
+        _card_id, kind = _address_card_and_kind(point.address)
+        if point.role not in known_roles:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_unknown_role", address=point.address, role=point.role),
+                "points", "select_address", point.address,
+            ))
+            continue
+        if kind != "DI":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_role_not_di", address=point.address, role=point.role),
+                "points", "select_address", point.address,
+            ))
+            continue
+        if point.contact not in point_roles.CONTACTS:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_bad_contact", address=point.address, contact=point.contact),
+                "points", "select_address", point.address,
+            ))
+        role_points.setdefault(point.role, []).append(point.address)
+    card_models = [c.model or "" for c in project.cards]
+    for role, addresses in role_points.items():
+        if len(addresses) > 1:
+            issues.append(ValidationIssue(
+                "warning", tr("validation.msg_point_role_duplicate", role=role, addresses=", ".join(addresses)),
+                "points", "select_address", addresses[0],
+            ))
+        prefix = point_roles.device_source_for(role)
+        devices = [c.id for c in project.cards if prefix and (c.model or "").upper().startswith(prefix)]
+        if devices:
+            issues.append(ValidationIssue(
+                "warning", tr("validation.msg_point_role_double_source", role=role, address=addresses[0],
+                              cards=", ".join(devices)),
+                "points", "select_address", addresses[0],
+            ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"
     for feature_id in MODULE_IDS:

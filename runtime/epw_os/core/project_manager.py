@@ -827,9 +827,9 @@ class ProjectManager:
         return list(self.config.get("modules", []))
 
     def get_point_registry(self) -> list:
-        """[{address, kind, description, location, technical_note}] - the
-        location already resolved (a point without its own inherits its
-        card's)."""
+        """[{address, kind, description, location, technical_note, role,
+        contact}] - the location already resolved (a point without its own
+        inherits its card's); role/contact per core/point_role_signals.py."""
         return [dict(p) for p in self.config.get("point_registry", [])]
 
     def get_modbus_bus(self) -> dict:
