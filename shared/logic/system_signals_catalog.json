@@ -1,7 +1,7 @@
 {
   "format": "EPW_SIGNAL_CATALOG",
   "schema_version": 1,
-  "catalog_version": "2.3.0",
+  "catalog_version": "2.4.0",
   "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it. feat/signal-register (2.1.0): an entry may carry `instances`, naming the project collection its <placeholder> ranges over (\"zones\", \"lines\"). The platform fixes that every zone has an ARMED and what it means; only HOW MANY zones there are belongs to the installation, so the pattern lives here and get_categories(project) turns it into SEC.ZONE.PARTER.ARMED. Every consumer already asks that function, so the picker, the Signals panel and the validator show the concrete signals with no change of their own. Only patterns EPW-OS actually answers per instance are here - the register's per-zone inhibit and bypass requests have nothing behind them on this controller and are left out rather than promised.",
   "categories": [
     {
@@ -1176,6 +1176,693 @@
           "safety_relevant": false,
           "runtime": "served",
           "instances": "devices"
+        }
+      ]
+    },
+    {
+      "id": "PROT",
+      "name": "Zabezpieczenia elektryczne (ADA01)",
+      "_comment": "Wystawiane z rejestrów ADA01 (shared/docs/ADA01_REGISTER_MAP.md) przez core/device_signals.py. Sterownik nie decyduje o zadziałaniu - czyta słowo statusu, które zapisała karta (zasada Z3). Karta milczy = wartość bezpieczna i COMM.<karta>.ONLINE = FALSE (Z4). Stopnie: shared/logic/protection_stages.py.",
+      "signals": [
+        {
+          "id": "PROT.READY",
+          "description": "Zabezpieczenia gotowe - ADA01 zgłasza gotowość",
+          "label": "ZAB GOT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.ACTIVE",
+          "description": "Zabezpieczenia aktywne (czuwają)",
+          "label": "ZAB AKT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.ANY_START",
+          "description": "Dowolny stopień pobudzony",
+          "label": "ZAB POB",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.ANY_TRIP",
+          "description": "Dowolny stopień zadziałał",
+          "label": "ZAB ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.BLOCKED",
+          "description": "Dowolny stopień zablokowany",
+          "label": "ZAB BLOK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.FAIL",
+          "description": "Awaria zabezpieczeń - ADA01 zgłasza awarię albo nie odpowiada",
+          "label": "ZAB AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "safe_value": true
+        },
+        {
+          "id": "PROT.SETTINGS_MISMATCH",
+          "description": "Nastawy w ADA01 różnią się od projektu (suma kontrolna) - decyduje karta",
+          "label": "ZAB NASTAWY",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.TEST_ACTIVE",
+          "description": "Trwa autotest ADA01 (REQ.PROT.TEST)",
+          "label": "ZAB TEST",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.TEST_OK",
+          "description": "Ostatni autotest ADA01 zakończony poprawnie",
+          "label": "ZAB TEST OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.UNDERVOLTAGE",
+          "description": "Zadziałanie podnapięciowe (27, dowolny stopień)",
+          "label": "27 ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.OVERVOLTAGE",
+          "description": "Zadziałanie nadnapięciowe (59, dowolny stopień)",
+          "label": "59 ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.OVERCURRENT",
+          "description": "Zadziałanie nadprądowe (50/51, dowolny stopień)",
+          "label": "50/51 ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.PHASE_LOSS",
+          "description": "Zanik fazy (funkcja 47 - jeden stopień obsługuje zanik i kolejność)",
+          "label": "47 ZANIK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.PHASE_SEQUENCE_FAULT",
+          "description": "Zła kolejność faz (funkcja 47 - ten sam stopień co PHASE_LOSS)",
+          "label": "47 KOLEJN",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.UNBALANCE",
+          "description": "Asymetria - składowa przeciwna prądu (46)",
+          "label": "46 ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.UNDERFREQUENCY",
+          "description": "Zadziałanie podczęstotliwościowe (81U)",
+          "label": "81U ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.OVERFREQUENCY",
+          "description": "Zadziałanie nadczęstotliwościowe (81O)",
+          "label": "81O ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.EARTH_FAULT",
+          "description": "Zadziałanie ziemnozwarciowe (50N/51N)",
+          "label": "50N/51N ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.NEUTRAL_FAULT",
+          "description": "Nadnapięcie składowej zerowej (59N)",
+          "label": "59N ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "PROT.<stage_id>.ENABLED",
+          "description": "Stopień włączony w ADA01 (karta decyduje; rozjazd z projektem = ostrzeżenie)",
+          "label": "WŁ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "protection_stages"
+        },
+        {
+          "id": "PROT.<stage_id>.START",
+          "description": "Stopień pobudzony",
+          "label": "POB",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "protection_stages"
+        },
+        {
+          "id": "PROT.<stage_id>.TRIP",
+          "description": "Stopień zadziałał",
+          "label": "ZADZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "instances": "protection_stages"
+        },
+        {
+          "id": "PROT.<stage_id>.BLOCKED",
+          "description": "Stopień zablokowany",
+          "label": "BLOK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "protection_stages"
+        },
+        {
+          "id": "PROT.<stage_id>.LATCHED",
+          "description": "Zadziałanie zatrzaśnięte w ADA01 do REQ.PROT.RESET_LATCH",
+          "label": "ZATRZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "protection_stages"
+        }
+      ]
+    },
+    {
+      "id": "REQ.PROT",
+      "name": "Żądania - zabezpieczenia",
+      "_comment": "Rejestry komend ADA01 (PROT_CMD, PROT_BLOCK_STAGE, PROT_UNBLOCK_STAGE). RESET/RESET_LATCH/TEST - Operator; BLOCK/UNBLOCK stopnia - Engineer. Każde wykonanie i każda odmowa (brak karty, karta milczy, zapis nieudany) w dzienniku audytowym.",
+      "signals": [
+        {
+          "id": "REQ.PROT.RESET",
+          "description": "Kasuj pobudzenia i zadziałania (bez zatrzasku)",
+          "label": "→RESET",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.PROT.RESET_LATCH",
+          "description": "Kasuj zatrzaśnięte zadziałania",
+          "label": "→RES ZATRZ",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.PROT.TEST",
+          "description": "Uruchom autotest ADA01 (wynik: PROT.TEST_ACTIVE / PROT.TEST_OK)",
+          "label": "→TEST",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.PROT.<stage_id>.BLOCK",
+          "description": "Zablokuj stopień (Engineer)",
+          "label": "→BLOK",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": true,
+          "runtime": "served",
+          "instances": "protection_stages"
+        },
+        {
+          "id": "REQ.PROT.<stage_id>.UNBLOCK",
+          "description": "Odblokuj stopień (Engineer)",
+          "label": "→ODBLOK",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "protection_stages"
+        }
+      ]
+    },
+    {
+      "id": "PWR",
+      "name": "Zasilanie (EPM)",
+      "_comment": "Słowo statusu zasilania z EPM (shared/docs/EPM_REGISTER_MAP.md). EPM milczy = wartość bezpieczna (MAINS_LOST i POWER_24V_FAULT = TRUE, reszta FALSE).",
+      "signals": [
+        {
+          "id": "PWR.MAINS_OK",
+          "description": "Sieć obecna na wszystkich fazach",
+          "label": "SIEĆ OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.MAINS_LOST",
+          "description": "Zanik sieci",
+          "label": "ZANIK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "safe_value": true
+        },
+        {
+          "id": "PWR.L1_OK",
+          "description": "Faza L1 obecna",
+          "label": "L1",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.L2_OK",
+          "description": "Faza L2 obecna",
+          "label": "L2",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.L3_OK",
+          "description": "Faza L3 obecna",
+          "label": "L3",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.NEUTRAL_OK",
+          "description": "Przewód neutralny sprawny",
+          "label": "N OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.PHASE_SEQUENCE_OK",
+          "description": "Kolejność faz poprawna",
+          "label": "KOLEJN OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.POWER_24V_OK",
+          "description": "Zasilanie 24 V DC sprawne",
+          "label": "24V OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.POWER_24V_FAULT",
+          "description": "Awaria zasilania 24 V DC",
+          "label": "24V AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "safe_value": true
+        },
+        {
+          "id": "PWR.DC_BUS_OK",
+          "description": "Szyna DC sprawna",
+          "label": "DC OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.AUX_POWER_OK",
+          "description": "Zasilanie pomocnicze sprawne",
+          "label": "POM OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.BACKUP_AVAILABLE",
+          "description": "Zasilanie rezerwowe dostępne",
+          "label": "REZ DOST",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "PWR.BACKUP_ACTIVE",
+          "description": "Praca z zasilania rezerwowego",
+          "label": "REZ AKT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        }
+      ]
+    },
+    {
+      "id": "DEV",
+      "name": "Stan urządzeń (diagnostyka kart)",
+      "_comment": "Słowo statusu DIAG każdej karty (shared/docs/CARD_DIAGNOSTIC_REGISTER_MAP.md). Karta milczy = FAULT i WATCHDOG_FAULT = TRUE, reszta FALSE.",
+      "signals": [
+        {
+          "id": "DEV.<device_id>.READY",
+          "description": "Karta gotowa",
+          "label": "GOT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.RUNNING",
+          "description": "Karta pracuje",
+          "label": "PRACA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.FAULT",
+          "description": "Karta zgłasza awarię albo nie odpowiada",
+          "label": "AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "instances": "devices",
+          "safe_value": true
+        },
+        {
+          "id": "DEV.<device_id>.WATCHDOG_OK",
+          "description": "Watchdog karty sprawny",
+          "label": "WD OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.WATCHDOG_FAULT",
+          "description": "Watchdog karty zadziałał albo karta nie odpowiada",
+          "label": "WD AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served",
+          "instances": "devices",
+          "safe_value": true
+        },
+        {
+          "id": "DEV.<device_id>.POWER_OK",
+          "description": "Zasilanie karty sprawne",
+          "label": "ZAS OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.CONFIG_OK",
+          "description": "Konfiguracja karty poprawna",
+          "label": "KONF OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.MAINTENANCE",
+          "description": "Karta w trybie serwisowym",
+          "label": "SERWIS",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "DEV.<device_id>.SIMULATION",
+          "description": "Karta emulowana (nie prawdziwy sprzęt)",
+          "label": "EMUL",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        }
+      ]
+    },
+    {
+      "id": "REQ.DEV",
+      "name": "Żądania - urządzenia",
+      "_comment": "RESET i RESYNC - rejestr komend DIAG_CMD karty; RECONNECT - ponowne otwarcie magistrali i wyzerowanie liczników karty. Engineer. Wykonanie i odmowa w dzienniku audytowym.",
+      "signals": [
+        {
+          "id": "REQ.DEV.<device_id>.RESET",
+          "description": "Zrestartuj kartę (Engineer)",
+          "label": "→RESET",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "REQ.DEV.<device_id>.RECONNECT",
+          "description": "Ponownie połącz z kartą - otwórz magistralę od nowa (Engineer)",
+          "label": "→POŁĄCZ",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        },
+        {
+          "id": "REQ.DEV.<device_id>.RESYNC",
+          "description": "Każ karcie ponownie wczytać konfigurację (Engineer)",
+          "label": "→RESYNC",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "devices"
+        }
+      ]
+    },
+    {
+      "id": "DIAG",
+      "name": "Diagnostyka sterownika",
+      "_comment": "Zbiorcze fakty o sterowniku i jego kartach (core/device_signals.py): awarie kart i sterowników, projekt, logika, ekrany, baza, historian, API, czas, dysk, obciążenie, temperatura (rejestry DIAG kart i czujnik SoC).",
+      "signals": [
+        {
+          "id": "DIAG.ANY_FAULT",
+          "description": "Dowolna z poniższych awarii",
+          "label": "DIAG AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.IO_FAULT",
+          "description": "Awaria karty wejść/wyjść albo utrata komunikacji z nią",
+          "label": "IO AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.DRIVER_FAULT",
+          "description": "Awaria magistrali albo sterownika komunikacji",
+          "label": "DRV AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.CONFIG_FAULT",
+          "description": "Projekt odrzucony albo karta zgłasza złą konfigurację",
+          "label": "KONF AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.LOGIC_FAULT",
+          "description": "Program logiki nie działa (nie wczytany albo odrzucony)",
+          "label": "LOG AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.SYNOPTIC_FAULT",
+          "description": "Ekrany odrzucone albo z zerwanym wiązaniem",
+          "label": "EKR AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.DATABASE_FAULT",
+          "description": "Awaria bazy danych",
+          "label": "DB AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.HISTORIAN_FAULT",
+          "description": "Awaria albo degradacja historiana",
+          "label": "HIST AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.API_FAULT",
+          "description": "REST API nie działa",
+          "label": "API AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.TIME_FAULT",
+          "description": "Brak synchronizacji czasu",
+          "label": "CZAS AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.WATCHDOG_FAULT",
+          "description": "Watchdog którejś karty zadziałał",
+          "label": "WD AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.DISK_WARNING",
+          "description": "Dysk zapełniony w ponad 90%",
+          "label": "DYSK OSTRZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.DISK_FULL",
+          "description": "Dysk zapełniony w ponad 98%",
+          "label": "DYSK PEŁNY",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.HIGH_CPU",
+          "description": "Obciążenie procesora powyżej 90% na rdzeń (średnia 1 min)",
+          "label": "CPU",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "DIAG.HIGH_TEMP",
+          "description": "Temperatura karty powyżej 70 °C albo SoC powyżej 75 °C",
+          "label": "TEMP",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
         }
       ]
     }

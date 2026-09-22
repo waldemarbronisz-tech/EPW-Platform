@@ -138,7 +138,7 @@ def build_project_view(project) -> dict:
             {"id": c.id, "kind": kind, "model": c.model, "channels": channels,
              "modbus_unit_id": c.modbus_unit_id, "location": c.location}
             for c in project.cards
-            for kind, channels in c.channel_kinds.items()
+            for kind, channels in (c.channel_kinds.items() if c.channel_kinds else [(None, 0)])
         ],
         "modbus_bus": asdict(project.modbus_bus),
         "point_registry": registry,

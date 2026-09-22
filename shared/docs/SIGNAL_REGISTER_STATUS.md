@@ -4,16 +4,15 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.3.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.4.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 89 |
-| do zrobienia | 60 |
-| czeka na firmware | 24 |
-| czeka na sprzęt | 21 |
+| w katalogu i obsłużony | 154 |
+| do zrobienia | 32 |
+| czeka na sprzęt | 8 |
 | poza katalogiem | 4 |
 | przyszłość | 2 |
 
@@ -117,15 +116,15 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `COMM.<device_id>.FAULT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `COMM.<device_id>.TIMEOUT` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `COMM.<device_id>.DEGRADED` | COMM | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `DEV.<device_id>.READY` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.RUNNING` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.FAULT` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.WATCHDOG_OK` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.WATCHDOG_FAULT` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.POWER_OK` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.CONFIG_OK` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.MAINTENANCE` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DEV.<device_id>.SIMULATION` | DEVICE HEALTH | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
+| `DEV.<device_id>.READY` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.RUNNING` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.FAULT` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.WATCHDOG_OK` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.WATCHDOG_FAULT` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.POWER_OK` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.CONFIG_OK` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.MAINTENANCE` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DEV.<device_id>.SIMULATION` | DEVICE HEALTH | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.ARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.DISARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.ALARM` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -160,40 +159,40 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `SEC.LINE.<line_id>.BYPASSED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.SUSPECT` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.WALK_TEST_SEEN` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.READY` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.ACTIVE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.ANY_START` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.ANY_TRIP` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.BLOCKED` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.FAIL` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.UNDERVOLTAGE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.OVERVOLTAGE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.OVERCURRENT` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.PHASE_LOSS` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.PHASE_SEQUENCE_FAULT` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.UNBALANCE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.UNDERFREQUENCY` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.OVERFREQUENCY` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.EARTH_FAULT` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.NEUTRAL_FAULT` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `PROT.READY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.ACTIVE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.ANY_START` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.ANY_TRIP` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.BLOCKED` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.FAIL` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.UNDERVOLTAGE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.OVERVOLTAGE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.OVERCURRENT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.PHASE_LOSS` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.PHASE_SEQUENCE_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.UNBALANCE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.UNDERFREQUENCY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.OVERFREQUENCY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.EARTH_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.NEUTRAL_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.POWER_REVERSE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.<stage_id>.ENABLED` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.<stage_id>.START` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.<stage_id>.TRIP` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PROT.<stage_id>.BLOCKED` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `PWR.MAINS_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.MAINS_LOST` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.L1_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.L2_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.L3_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.NEUTRAL_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.PHASE_SEQUENCE_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.POWER_24V_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.POWER_24V_FAULT` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.DC_BUS_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.AUX_POWER_OK` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.BACKUP_AVAILABLE` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
-| `PWR.BACKUP_ACTIVE` | POWER | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie |
+| `PROT.<stage_id>.ENABLED` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.<stage_id>.START` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.<stage_id>.TRIP` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PROT.<stage_id>.BLOCKED` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.MAINS_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.MAINS_LOST` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.L1_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.L2_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.L3_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.NEUTRAL_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.PHASE_SEQUENCE_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.POWER_24V_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.POWER_24V_FAULT` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.DC_BUS_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.AUX_POWER_OK` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.BACKUP_AVAILABLE` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `PWR.BACKUP_ACTIVE` | POWER | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `UPS.ONLINE` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
 | `UPS.ON_BATTERY` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
 | `UPS.BYPASS` | UPS | SYSTEM INPUT | czeka na sprzęt | wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie |
@@ -224,21 +223,21 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `MODE.SIMULATION` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.EMERGENCY` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.DEGRADED` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `DIAG.ANY_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.IO_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.DRIVER_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.CONFIG_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.LOGIC_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.SYNOPTIC_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.DATABASE_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.HISTORIAN_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.API_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.TIME_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.WATCHDOG_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.DISK_WARNING` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.DISK_FULL` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.HIGH_CPU` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
-| `DIAG.HIGH_TEMP` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
+| `DIAG.ANY_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.IO_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.DRIVER_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.CONFIG_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.LOGIC_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.SYNOPTIC_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.DATABASE_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.HISTORIAN_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.API_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.TIME_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.WATCHDOG_FAULT` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.DISK_WARNING` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.DISK_FULL` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.HIGH_CPU` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `DIAG.HIGH_TEMP` | DIAGNOSTICS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `REQ.SEC.ARM_ALL` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.DISARM_ALL` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.CLEAR_ALARM_MEMORY` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
@@ -263,14 +262,14 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `REQ.ALM.SILENCE_HORN` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.ALM.RESET` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.ALM.TEST` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.PROT.RESET` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.PROT.RESET_LATCH` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.PROT.TEST` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.PROT.<stage_id>.BLOCK` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.PROT.<stage_id>.UNBLOCK` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.DEV.<device_id>.RESET` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.DEV.<device_id>.RECONNECT` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.DEV.<device_id>.RESYNC` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.PROT.RESET` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.PROT.RESET_LATCH` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.PROT.TEST` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.PROT.<stage_id>.BLOCK` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.PROT.<stage_id>.UNBLOCK` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.DEV.<device_id>.RESET` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.DEV.<device_id>.RECONNECT` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.DEV.<device_id>.RESYNC` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SYSTEM.RESTART_RUNTIME` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.SYSTEM.RELOAD_LOGIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.SYSTEM.RELOAD_SYNOPTIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
@@ -281,11 +280,15 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `ELA<nn>.DI<nn>` | PHYSICAL I/O | PHYSICAL INPUT | poza katalogiem | adres fizyczny, opisany gramatyką adresów (shared/addressing.py) |
 | `ADA<nn>.DO<nn>` | PHYSICAL I/O | PHYSICAL OUTPUT | poza katalogiem | adres fizyczny, opisany gramatyką adresów (shared/addressing.py) |
 
-## W katalogu, poza rejestrem (27)
+## W katalogu, poza rejestrem (31)
 
 Sygnały, które platforma udostępnia, a których rejestr nie opisuje —
 kandydaci do dopisania do arkusza.
 
+- `PROT.<stage_id>.LATCHED`
+- `PROT.SETTINGS_MISMATCH`
+- `PROT.TEST_ACTIVE`
+- `PROT.TEST_OK`
 - `REQ.SEC.ARM_ALL_PARTIAL`
 - `SEC.SYSTEM.ACTIVE_COUNT`
 - `SEC.SYSTEM.ALARM_LATCHED`

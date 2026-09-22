@@ -350,6 +350,9 @@ class ModbusClient:
 
 # --- the driver ---------------------------------------------------------------------------
 
+UNSUPPORTED_BLOCK_RETRY_S = 30.0
+
+
 class ModbusDriver(BaseDriver):
     """Polls the project's cards over the project's bus - see the module
     docstring for the mapping. `configure()` takes projekt.epw's own
@@ -372,6 +375,10 @@ class ModbusDriver(BaseDriver):
         self._read_back_outputs = True
         self._comm_diagnostics = CommDiagnostics()
         self.unavailable_reason = None
+        # (card_id, block) -> monotonic time until which the block is not
+        # asked for again: a firmware without it answers "illegal address",
+        # which is not a communication error.
+        self._unsupported_blocks = {}
 
     # -- configuration -----------------------------------------------------------------
 
@@ -391,7 +398,9 @@ class ModbusDriver(BaseDriver):
             for entry in cards:
                 card_id = entry.get("id")
                 kind = entry.get("kind")
-                if not card_id or kind not in ("DI", "DO", "AI", "AO"):
+                # A card with no channel kind (an EPM meter) is still on
+                # the bus for its register blocks (device_blocks.py).
+                if not card_id or (kind is not None and kind not in ("DI", "DO", "AI", "AO")):
                     continue
                 unit = entry.get("modbus_unit_id")
                 if unit is None:
@@ -399,9 +408,10 @@ class ModbusDriver(BaseDriver):
                         skipped.append(card_id)
                     continue
                 if card_id not in by_id:
-                    by_id[card_id] = {"id": card_id, "unit": int(unit), "kinds": {}}
+                    by_id[card_id] = {"id": card_id, "unit": int(unit), "kinds": {}, "model": entry.get("model") or ""}
                     order.append(card_id)
-                by_id[card_id]["kinds"][kind] = int(entry.get("channels") or 0)
+                if kind is not None:
+                    by_id[card_id]["kinds"][kind] = int(entry.get("channels") or 0)
             self._cards = [by_id[i] for i in order]
             self._skipped = skipped
             self._client = None
@@ -488,6 +498,7 @@ class ModbusDriver(BaseDriver):
                 else:
                     continue  # AO: write-only
                 updates.extend((format_address(card_id, kind, n + 1), value) for n, value in enumerate(values))
+            blocks = self._read_blocks(card, client)
         except ModbusError as e:
             # No heartbeat this cycle: DeviceManager's watchdog flips the
             # card to COMM_FAILURE by itself (the same path a stalled
@@ -498,7 +509,71 @@ class ModbusDriver(BaseDriver):
         self._comm_diagnostics.record_success(card_id, (time.perf_counter() - t0) * 1000.0)
         for tag_name, value in updates:
             self.event_bus.emit("driver_update", tag_name, value, "GOOD")
+        for block, values in blocks:
+            self.event_bus.emit("device_block_read", card_id, block, values)
         self.event_bus.emit("driver_comm_ok", card_id)
+        return True
+
+    def _read_blocks(self, card: dict, client) -> list:
+        """The register blocks the card's model carries (device_blocks.py):
+        PROT on an ADA, POWER on an EPM, DIAG on every card. A Modbus
+        exception (illegal address - a firmware without the block) marks
+        the block unsupported for a while and is not a comm error; a
+        timeout or CRC error is, and propagates like a channel read's."""
+        from epw_os.drivers import device_blocks as B
+        out = []
+        now = time.monotonic()
+        for block in B.blocks_for_model(card.get("model", "")):
+            until = self._unsupported_blocks.get((card["id"], block), 0.0)
+            if until > now:
+                continue
+            start, count = B.BLOCK_RANGES[block]
+            try:
+                values = client.read_registers(card["unit"], B.FC_READ_INPUT_REGISTERS, start, count)
+            except ModbusError as e:
+                if e.kind == ERROR_INVALID_RESPONSE and "exception" in str(e):
+                    self._unsupported_blocks[(card["id"], block)] = now + UNSUPPORTED_BLOCK_RETRY_S
+                    log.info(f"ModbusDriver: card {card['id']} has no {block} block ({e}) - not asked again for "
+                             f"{UNSUPPORTED_BLOCK_RETRY_S:.0f} s.")
+                    continue
+                raise
+            out.append((block, values))
+        return out
+
+    def write_device_register(self, card_id: str, address: int, value: int) -> bool:
+        """One holding register of a card - the command registers of the
+        maps (PROT_CMD, DIAG_CMD, ...). False, logged, when the card is
+        not on this bus or the write fails."""
+        card = self._card_for(card_id)
+        with self._lock:
+            client = self._client
+        if card is None or client is None:
+            log.error(f"ModbusDriver: {card_id} is not on the bus - register {address} not written.")
+            return False
+        try:
+            client.write_register(card["unit"], int(address), int(value) & 0xFFFF)
+        except (ModbusError, TypeError, ValueError) as e:
+            self._comm_diagnostics.record_error(card_id, getattr(e, "kind", ERROR_INVALID_RESPONSE), str(e))
+            log.error(f"ModbusDriver: write {card_id} register {address} = {value} failed - {e}")
+            return False
+        return True
+
+    def reconnect(self) -> bool:
+        """Closes and reopens the transport (REQ.DEV.<id>.RECONNECT)."""
+        with self._lock:
+            if self._client is not None:
+                try:
+                    self._client.close()
+                except Exception:  # noqa: BLE001 - a transport that will not close is replaced anyway
+                    pass
+            try:
+                self._client = ModbusClient(make_transport(self._bus, timeout=self._timeout), retries=self._retries)
+                self.unavailable_reason = None
+            except TransportUnavailable as e:
+                self._client = None
+                self.unavailable_reason = str(e)
+                log.error(f"ModbusDriver: reconnect failed - {e}")
+                return False
         return True
 
     # -- commands ------------------------------------------------------------------------

@@ -205,6 +205,10 @@ class TagManager:
             # AI/AO); the older device list said which module family it was
             # ("type": ELA/ADA/EPM). Same tags either way.
             kind = dev.get("kind")
+            if kind is None and dev.get("model"):
+                # A card with no I/O channels (an EPM meter): its model says what it is.
+                model = str(dev.get("model")).upper()
+                dev_type = "EPM" if model.startswith("EPM") else dev_type
             if kind == "DI":
                 dev_type = "ELA"
             elif kind == "DO":

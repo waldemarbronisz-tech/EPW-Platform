@@ -87,15 +87,17 @@ def test_the_per_zone_patterns_really_are_counted(register, catalog_by_id):
 
 
 def test_what_waits_on_hardware_says_hardware(catalog_by_id):
-    for group in ("POWER", "UPS"):
-        row = {"ID / Wzorzec": "PWR.MAINS_OK", "Grupa": group}
-        assert gen.classify(row, catalog_by_id, {})[0] == "czeka na sprzęt"
+    # UPS.* has no source until a point gets the UPS role (etap 4);
+    # PWR.* and DEV.* are served since etap 3, so they must NOT say so.
+    row = {"ID / Wzorzec": "UPS.ONLINE", "Grupa": "UPS"}
+    assert gen.classify(row, catalog_by_id, {})[0] == "czeka na sprzęt"
+    for signal_id, group in (("PWR.MAINS_OK", "POWER"), ("DEV.<id>.WATCHDOG_OK", "DEVICE HEALTH")):
+        assert gen.classify({"ID / Wzorzec": signal_id, "Grupa": group}, catalog_by_id, {})[0] == "w katalogu i obsłużony"
 
 
-def test_what_waits_on_firmware_says_firmware(catalog_by_id):
-    for group in ("DEVICE HEALTH", "DIAGNOSTICS"):
-        row = {"ID / Wzorzec": "DEV.<id>.WATCHDOG_OK", "Grupa": group}
-        assert gen.classify(row, catalog_by_id, {})[0] == "czeka na firmware"
+def test_a_diagnostic_row_the_catalog_lacks_is_still_named_as_firmware_work(catalog_by_id):
+    row = {"ID / Wzorzec": "DEV.<id>.NOT_A_REAL_BIT", "Grupa": "DEVICE HEALTH"}
+    assert gen.classify(row, catalog_by_id, {})[0] == "czeka na firmware"
 
 
 def test_a_user_marker_is_not_reported_as_missing_from_the_catalogue(catalog_by_id):

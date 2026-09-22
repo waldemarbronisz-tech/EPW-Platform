@@ -128,6 +128,11 @@ _PLACEHOLDER = re.compile(r"<[^>]+>")
 
 
 def _instances(project, kind: str) -> list:
+    if kind == "protection_stages":
+        # ADA01's stage table is a platform contract, not a project
+        # collection: the same 22 stages in every installation.
+        from shared.logic.protection_stages import stage_instances
+        return stage_instances()
     attribute = _INSTANCE_ATTRIBUTES.get(kind)
     if project is None or attribute is None:
         return []

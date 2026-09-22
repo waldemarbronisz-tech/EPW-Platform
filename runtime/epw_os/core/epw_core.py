@@ -824,8 +824,9 @@ class EPWCore:
         scan (nothing captured), so a manager replaced at runtime is
         simply read anew."""
         from epw_os.core.comm_signals import CommSignals
+        from epw_os.core.device_signals import DeviceSignals
         from epw_os.core.runtime_state_signals import RuntimeStateSignals
-        return [RuntimeStateSignals(self), CommSignals(self)]
+        return [RuntimeStateSignals(self), CommSignals(self), DeviceSignals(self)]
 
     def _refresh_synoptic_status(self):
         """RT.SYNOPTIC.* (core/synoptic_status.py): every screen of the
