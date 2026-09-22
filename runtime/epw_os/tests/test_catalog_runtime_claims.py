@@ -28,6 +28,7 @@ from epw_os.core.logic_runtime import SystemSignalSource
 from epw_os.core.point_role_signals import PointRoleSignals
 from epw_os.core.runtime_state_signals import RuntimeStateSignals
 from epw_os.core.security_signals import SecuritySignalSource
+from epw_os.core.system_requests import SystemRequests
 from shared.logic import system_signals
 from shared.logic.engine.io_provider import pulse_signal_value
 
@@ -49,7 +50,7 @@ def _controller_answers(signal_id: str) -> bool:
 
 
 _REGISTER_SOURCES = [RuntimeStateSignals(None), CommSignals(None), PointRoleSignals(None), DeviceSignals(None),
-                     AlarmSignals(None)]
+                     AlarmSignals(None), SystemRequests(None)]
 
 
 CATALOG = system_signals.get_all_signals()

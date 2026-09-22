@@ -261,7 +261,9 @@ def test_the_register_status_now_counts_these_rows_as_served():
     for row in ("SYS.RUNNING", "SYS.CLOCK_1MIN", "RT.LOGIC.OVERRUN", "RT.SYNOPTIC.BINDING_FAULT", "MODE.MAINTENANCE",
                 "REQ.MODE.EMERGENCY"):
         assert gen.classify({"ID / Wzorzec": row, "Grupa": "X"}, catalog, {})[0] == "w katalogu i obsłużony", row
-    assert gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog, {})[0] == "do zrobienia"
+    # MODE.LOCAL has no source on this controller: since etap 6 the report
+    # says so with the reason, rather than calling it unfinished work.
+    assert gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog, {})[0] == "bez źródła"
 
 
 # --- the panel's side: REST, the same table -------------------------------------

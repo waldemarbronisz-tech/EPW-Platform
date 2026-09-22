@@ -704,6 +704,12 @@ class IntrusionManager:
         self._zone_walk_test_deadline = {}   # zone_id -> time.monotonic() when it auto-ends, or None
         self._zone_walk_test_timer = {}      # zone_id -> Timer or None
         self._zone_walk_test_observed = {}   # zone_id -> {line_id: {"count": int, "last_at": time.time()}}
+        # Signal register etap 6: zones whose ARMING is inhibited
+        # (REQ.SEC.ZONE.<id>.INHIBIT / UNINHIBIT, SEC.ZONE.<id>.INHIBITED).
+        # Operational, in memory: an inhibit lasts until it is lifted or
+        # the controller restarts - after a restart arming is possible
+        # again, which is the safe direction for a lock on arming.
+        self._zone_inhibited = set()
 
         self._stop_event = threading.Event()
         self._thread = None
@@ -1696,6 +1702,9 @@ class IntrusionManager:
         # the level alone decides, exactly as before.
         if not self.may_operate(user, zone_id):
             return ArmResult(False, reason=self._refuse_user(user, zone_id, "arm"))
+        if self.is_zone_inhibited(zone_id):
+            log.warning(f"Refused to arm intrusion zone {zone_id!r}: arming is inhibited.")
+            return ArmResult(False, reason="Arming is inhibited for this zone - lift the inhibit first.")
         with self._lock:
             zone = self._zones.get(zone_id)
             if zone is None:
@@ -1909,6 +1918,54 @@ class IntrusionManager:
     def is_walk_test_active(self, zone_id: str) -> bool:
         with self._lock:
             return self._zone_walk_test_active.get(zone_id, False)
+
+    def is_line_walk_test_seen(self, line_id: str) -> bool:
+        """SEC.LINE.<id>.WALK_TEST_SEEN: the line reacted during its zone's
+        walk test - observed at least once since the test started. The
+        record lives as long as the test: stop_walk_test() hands it over
+        in its summary and clears it, so the bit is FALSE again."""
+        with self._lock:
+            line = self._lines.get(line_id)
+            if line is None:
+                return False
+            return line_id in self._zone_walk_test_observed.get(line["zone_id"], {})
+
+    # --- arming inhibit (signal register etap 6) ---------------------------
+
+    def set_zone_inhibited(self, zone_id: str, inhibited: bool, actor: str, level: str = None) -> bool:
+        """"Zablokuj mozliwosc uzbrojenia": while a zone is inhibited every
+        arm_zone() on it is refused (the panel's and the logic's alike).
+        Operator level. Audited; idempotent (no duplicate entry)."""
+        if level is not None and _level_rank(level) < _level_rank(AccessLevel.OPERATOR):
+            log.warning(f"Refused to change the arming inhibit of zone {zone_id!r}: level {level!r} is below Operator.")
+            return False
+        with self._lock:
+            zone = self._zones.get(zone_id)
+            if zone is None:
+                return False
+            inhibited = bool(inhibited)
+            if (zone_id in self._zone_inhibited) == inhibited:
+                return False
+            if inhibited:
+                self._zone_inhibited.add(zone_id)
+            else:
+                self._zone_inhibited.discard(zone_id)
+            zone_name = zone["name"]
+        event = "INTRUSION_ZONE_INHIBIT_ON" if inhibited else "INTRUSION_ZONE_INHIBIT_OFF"
+        detail = f"Zone '{zone_name}': arming {'inhibited' if inhibited else 'inhibit lifted'}"
+        if self.audit_logger is not None:
+            self.audit_logger.record(event, actor, detail, success=True)
+        self._record_alarm_history(event, actor, detail, zone_id=zone_id, zone_name=zone_name)
+        return True
+
+    def is_zone_inhibited(self, zone_id: str) -> bool:
+        with self._lock:
+            return zone_id in self._zone_inhibited
+
+    def technical_alarm_active(self) -> bool:
+        """SEC.SYSTEM.TECHNICAL_ALARM: the power supervision's own verdict
+        (mains or battery not OK), as _recompute_power_state() publishes it."""
+        return bool(self.tag_manager.get_value(f"{TAG_PREFIX}.System.TechnicalAlarm"))
 
     def get_walk_test_remaining(self, zone_id: str) -> int:
         """Whole seconds left, rounded up - same reasoning

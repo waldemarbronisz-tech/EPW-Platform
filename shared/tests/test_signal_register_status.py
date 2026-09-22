@@ -96,6 +96,24 @@ def test_power_and_ups_rows_are_served_not_waiting_on_hardware(catalog_by_id):
     assert gen.classify({"ID / Wzorzec": "UPS.NOT_A_REAL_BIT", "Grupa": "UPS"}, catalog_by_id, {})[0] == "do zrobienia"
 
 
+def test_a_position_without_a_source_says_so_with_its_reason(catalog_by_id):
+    status, note = gen.classify({"ID / Wzorzec": "PROT.POWER_REVERSE", "Grupa": "PROTECTION"}, catalog_by_id, {})
+    assert status == "bez źródła" and "funkcji 32" in note
+    status, note = gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog_by_id, {})
+    assert status == "bez źródła" and "LOCAL" in note
+    assert gen.classify({"ID / Wzorzec": "MODE.NORMAL", "Grupa": "MODES"}, catalog_by_id, {})[0] == "w katalogu i obsłużony"
+
+
+def test_nothing_is_left_as_merely_to_do(register, catalog_by_id):
+    """Etap 6's goal: every register position is served, or carries a
+    named reason (future, outside the catalogue, no source)."""
+    from shared.logic.signal_renames import RENAMES
+    renames = {gen._normalise(old): new for old, new in RENAMES.items()}
+    undone = [row["ID / Wzorzec"] for row in register
+              if gen.classify(row, catalog_by_id, renames)[0] == "do zrobienia"]
+    assert undone == []
+
+
 def test_a_diagnostic_row_the_catalog_lacks_is_still_named_as_firmware_work(catalog_by_id):
     row = {"ID / Wzorzec": "DEV.<id>.NOT_A_REAL_BIT", "Grupa": "DEVICE HEALTH"}
     assert gen.classify(row, catalog_by_id, {})[0] == "czeka na firmware"
@@ -110,10 +128,11 @@ def test_a_user_marker_is_not_reported_as_missing_from_the_catalogue(catalog_by_
 
 
 def test_something_in_scope_and_absent_is_honestly_called_unfinished(catalog_by_id):
-    # MODE.LOCAL: in the register, in a group the catalogue covers, and
-    # deliberately absent - this controller has no notion of a control
-    # place, so the bit is not faked (rule Z1).
-    row = {"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}
+    # A row in a group the catalogue covers, absent from the catalogue
+    # and with no named reason: the honest word is "do zrobienia", never
+    # a facade (rule Z1). (MODE.LOCAL, once the example here, now carries
+    # its reason - see test_a_position_without_a_source_says_so_with_its_reason.)
+    row = {"ID / Wzorzec": "MODE.NOT_YET_INVENTED", "Grupa": "MODES"}
 
     assert gen.classify(row, catalog_by_id, {})[0] == "do zrobienia"
 

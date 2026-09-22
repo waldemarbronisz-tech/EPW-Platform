@@ -1,0 +1,11 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\walde\AppData\Local\Python\pythoncore-3.14-64\python.exe
+Using --randomly-seed=1173420340
+rootdir: D:\BroniszLabs\EPW_Platform\EPW-Platform\runtime
+configfile: pytest.ini
+plugins: anyio-4.14.2, randomly-5.0.0
+collecting ... collected 1 item
+
+runtime\epw_os\tests\test_device_signals.py::test_3_6_from_an_emulated_trip_to_the_coil_the_logic_closes_and_back_from_a_restart PASSED [100%]
+
+============================== 1 passed in 7.96s ==============================

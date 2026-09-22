@@ -42,6 +42,7 @@ than the list: a read of an unserved signal gets the catalog's own safe
 value while a WRITE to one is reported instead of vanishing (see
 logic_runtime.py's TagIOProvider.write_system_signal).
 """
+from epw_os.core.access_manager import AccessLevel
 from epw_os.core.intrusion_manager import ArmMode, LineState, ZoneState
 from epw_os.core.logging import log
 
@@ -134,6 +135,16 @@ class SecuritySignalSource:
         return handler(manager)
 
     # --- commands -----------------------------------------------------------
+
+    def required_level(self, signal_id: str):
+        """The level a per-zone request demands of whoever is present
+        (logic_runtime.py takes the stricter of this and the block's
+        own) - only for the requests added by etap 6; the earlier ones
+        keep the block-level gate they were accepted with."""
+        parsed = _parse_instance_signal(signal_id)
+        if parsed is None or parsed[0] != "ZONE":
+            return None
+        return _ZONE_REQUEST_LEVELS.get(parsed[2])
 
     def execute(self, signal_id: str, actor: str) -> bool:
         """Runs a SEC.CMD_* command on every zone. True when it was
@@ -272,7 +283,15 @@ _ZONE_READERS = {
     "WALK_TEST": lambda manager, zone_id: bool(manager.is_walk_test_active(zone_id)),
     "FAULT": _zone_fault,
     "BYPASSED": _zone_bypassed,
+    # Signal register etap 6: arming inhibited (IntrusionManager.set_zone_inhibited).
+    "INHIBITED": lambda manager, zone_id: bool(_call(manager, "is_zone_inhibited", zone_id)),
 }
+
+
+def _call(manager, method: str, *args):
+    """A manager method that an older stand-in may not have: False then."""
+    function = getattr(manager, method, None)
+    return function(*args) if callable(function) else False
 
 
 def _line_in_state(state):
@@ -291,7 +310,31 @@ _LINE_READERS = {
     "UNDETERMINED": _line_in_state(LineState.UNDETERMINED),
     "BYPASSED": lambda manager, line_id: bool(manager.is_line_bypassed(line_id)),
     "SUSPECT": lambda manager, line_id: bool(manager.is_line_suspect(line_id)),
+    "WALK_TEST_SEEN": lambda manager, line_id: bool(_call(manager, "is_line_walk_test_seen", line_id)),
 }
+
+
+def _bypass_zone(manager, zone_id: str, actor: str, bypassed: bool) -> bool:
+    """Every line of the zone bypassed (or restored). Carried out when
+    the zone has lines and each of them ends up in the requested state -
+    a line already there counts as done, not as a failure."""
+    lines = _zone_lines(manager, zone_id)
+    if not lines:
+        log.warning(f"SEC bypass request for zone {zone_id}: the zone has no lines.")
+        return False
+    for line in lines:
+        if bool(manager.is_line_bypassed(line["id"])) != bypassed:
+            manager.bypass_line(line["id"], bypassed, actor)
+    return all(bool(manager.is_line_bypassed(line["id"])) == bypassed for line in lines)
+
+
+def _inhibit_zone(manager, zone_id: str, actor: str, inhibited: bool) -> bool:
+    setter = getattr(manager, "set_zone_inhibited", None)
+    if not callable(setter):
+        return False
+    setter(zone_id, inhibited, actor)
+    return bool(_call(manager, "is_zone_inhibited", zone_id)) == inhibited
+
 
 _ZONE_REQUESTS = {
     "ARM": lambda manager, zone_id, actor: _arm(manager, zone_id, actor),
@@ -301,6 +344,18 @@ _ZONE_REQUESTS = {
         manager.start_walk_test(zone_id, actor=actor)),
     "STOP_WALK_TEST": lambda manager, zone_id, actor: bool(
         manager.stop_walk_test(zone_id, actor=actor) is not None),
+    # Signal register etap 6.
+    "BYPASS": lambda manager, zone_id, actor: _bypass_zone(manager, zone_id, actor, True),
+    "UNBYPASS": lambda manager, zone_id, actor: _bypass_zone(manager, zone_id, actor, False),
+    "INHIBIT": lambda manager, zone_id, actor: _inhibit_zone(manager, zone_id, actor, True),
+    "UNINHIBIT": lambda manager, zone_id, actor: _inhibit_zone(manager, zone_id, actor, False),
+}
+
+# The level the same action needs from the panel (rule Z2): a bypass is
+# an engineer's (IntrusionManager.bypass_line), an inhibit an operator's.
+_ZONE_REQUEST_LEVELS = {
+    "BYPASS": AccessLevel.ENGINEER, "UNBYPASS": AccessLevel.ENGINEER,
+    "INHIBIT": AccessLevel.OPERATOR, "UNINHIBIT": AccessLevel.OPERATOR,
 }
 
 _ZONE_SUFFIXES = frozenset(_ZONE_READERS) | frozenset(_ZONE_REQUESTS)
@@ -458,6 +513,16 @@ _READERS = {
     "SEC.SYSTEM.STROBE_ACTIVE": _strobe_active,
     "SEC.SYSTEM.SIREN_TIME_LEFT": _siren_time_left,
     "SEC.SYSTEM.PANIC": _panic,
+    # Signal register etap 6: the register's own aggregates, each what
+    # the manager can answer truthfully.
+    "SEC.SYSTEM.TECHNICAL_ALARM": lambda manager: bool(_call(manager, "technical_alarm_active")),
+    "SEC.SYSTEM.ANY_ZONE_ARMED": _any_state(ZoneState.ARMED),
+    "SEC.SYSTEM.ANY_ZONE_ALARM": _any_state(ZoneState.ALARM),
+    "SEC.SYSTEM.ANY_LINE_VIOLATED": lambda manager: any(
+        manager.is_line_violated_now(line["id"]) for line in manager.get_lines()),
+    "SEC.SYSTEM.ANY_LINE_FAULT": _fault,
+    "SEC.SYSTEM.WALK_TEST": lambda manager: any(
+        bool(manager.is_walk_test_active(zone["id"])) for zone in manager.get_zones()),
 }
 
 _REAL_SIGNALS = frozenset({"SEC.SYSTEM.DELAY_REMAINING", "SEC.SYSTEM.LAST_TRIGGER", "SEC.SYSTEM.ACTIVE_COUNT",

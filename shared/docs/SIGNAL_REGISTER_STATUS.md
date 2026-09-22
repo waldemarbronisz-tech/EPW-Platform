@@ -4,15 +4,15 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.6.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.7.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 176 |
-| do zrobienia | 18 |
+| w katalogu i obsłużony | 191 |
 | poza katalogiem | 4 |
+| bez źródła | 3 |
 | przyszłość | 2 |
 
 ## Co znaczy każdy stan
@@ -21,6 +21,7 @@ Pozycji w rejestrze: **200**.
   realnie wylicza jego wartość. Logika może go użyć.
 - **w katalogu, bez źródła** — nazwa ustalona, ale nic jeszcze nie liczy
   wartości. Panel Sygnały pokazuje to wprost jako „brak źródła”.
+- **bez źródła** — nic na tej platformie nie zna wartości; powód w tabeli, decyzja Waldka.
 - **czeka na firmware** — potrzebne rejestry diagnostyczne w firmware karty.
 - **przyszłość** — koncepcja bez implementacji po żadnej stronie.
 - **poza katalogiem** — sygnał należy do innej warstwy (markery użytkownika,
@@ -126,17 +127,17 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `SEC.SYSTEM.ARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.DISARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.ALARM` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SEC.SYSTEM.TECHNICAL_ALARM` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SEC.SYSTEM.TECHNICAL_ALARM` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.TAMPER` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.FAULT` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.ENTRY_DELAY` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.EXIT_DELAY` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SEC.SYSTEM.ANY_ZONE_ARMED` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SEC.SYSTEM.ANY_ZONE_ALARM` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SEC.SYSTEM.ANY_LINE_VIOLATED` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SEC.SYSTEM.ANY_LINE_FAULT` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SEC.SYSTEM.ANY_ZONE_ARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SEC.SYSTEM.ANY_ZONE_ALARM` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SEC.SYSTEM.ANY_LINE_VIOLATED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SEC.SYSTEM.ANY_LINE_FAULT` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.SYSTEM.ALARM_MEMORY` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SEC.SYSTEM.WALK_TEST` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SEC.SYSTEM.WALK_TEST` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.ZONE.<zone_id>.ARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.ZONE.<zone_id>.DISARMED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.ZONE.<zone_id>.ALARM` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -146,7 +147,7 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `SEC.ZONE.<zone_id>.BYPASSED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.ZONE.<zone_id>.ALARM_MEMORY` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.ZONE.<zone_id>.WALK_TEST` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SEC.ZONE.<zone_id>.INHIBITED` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SEC.ZONE.<zone_id>.INHIBITED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.SECURE` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.VIOLATED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.FAULT` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -156,7 +157,7 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `SEC.LINE.<line_id>.UNDETERMINED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.BYPASSED` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SEC.LINE.<line_id>.SUSPECT` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SEC.LINE.<line_id>.WALK_TEST_SEEN` | SECURITY | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SEC.LINE.<line_id>.WALK_TEST_SEEN` | SECURITY | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.READY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.ACTIVE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.ANY_START` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -173,7 +174,7 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `PROT.OVERFREQUENCY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.EARTH_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.NEUTRAL_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `PROT.POWER_REVERSE` | PROTECTION | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `PROT.POWER_REVERSE` | PROTECTION | SYSTEM INPUT | bez źródła | brak funkcji 32 (moc zwrotna) w ADA01 i w panelu zabezpieczeń - do decyzji Waldka |
 | `PROT.<stage_id>.ENABLED` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.<stage_id>.START` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.<stage_id>.TRIP` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -212,8 +213,8 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `MODE.NORMAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.AUTO` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MANUAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `MODE.LOCAL` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.REMOTE` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `MODE.LOCAL` | MODES | SYSTEM INPUT | bez źródła | miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś źródła komend - wymaga decyzji, co LOCAL blokuje |
+| `MODE.REMOTE` | MODES | SYSTEM INPUT | bez źródła | jak MODE.LOCAL - jedna decyzja dla obu |
 | `MODE.SERVICE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MAINTENANCE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.TEST` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -242,13 +243,13 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `REQ.SEC.SILENCE` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.ARM` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.DISARM` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
-| `REQ.SEC.ZONE.<zone_id>.BYPASS` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.SEC.ZONE.<zone_id>.UNBYPASS` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.SEC.ZONE.<zone_id>.BYPASS` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.SEC.ZONE.<zone_id>.UNBYPASS` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.CLEAR_MEMORY` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.START_WALK_TEST` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.STOP_WALK_TEST` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
-| `REQ.SEC.ZONE.<zone_id>.INHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.SEC.ZONE.<zone_id>.UNINHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.SEC.ZONE.<zone_id>.INHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.SEC.ZONE.<zone_id>.UNINHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.MODE.NORMAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.MODE.AUTO` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.MODE.MANUAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
@@ -268,9 +269,9 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `REQ.DEV.<device_id>.RESET` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.DEV.<device_id>.RECONNECT` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.DEV.<device_id>.RESYNC` | REQ DEVICE | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
-| `REQ.SYSTEM.RESTART_RUNTIME` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.SYSTEM.RELOAD_LOGIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.SYSTEM.RELOAD_SYNOPTIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.SYSTEM.RESTART_RUNTIME` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.SYSTEM.RELOAD_LOGIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.SYSTEM.RELOAD_SYNOPTIC` | REQ SYSTEM | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `LINK.<link_id>.IN01..IN32` | INTER-CONTROLLER | SYSTEM INPUT | przyszłość | sygnały między sterownikami, bez implementacji |
 | `LINK.<link_id>.OUT01..OUT32` | INTER-CONTROLLER | SYSTEM OUTPUT / REQUEST | przyszłość | sygnały między sterownikami, bez implementacji |
 | `M.USER.<name>` | USER INTERNAL | USER INTERNAL | poza katalogiem | to markery użytkownika (M.*) z działu Sygnały, nie katalog platformy |

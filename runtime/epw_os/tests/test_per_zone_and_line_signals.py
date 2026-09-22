@@ -47,11 +47,13 @@ def test_a_per_instance_name_is_taken_apart_correctly():
 
 
 def test_a_suffix_this_controller_does_not_implement_is_not_claimed():
-    """The register has SEC.ZONE.<id>.INHIBITED; nothing here answers it,
-    so it must not be recognised - claiming it would be the promise with
-    nothing behind it."""
-    assert _parse_instance_signal("SEC.ZONE.PARTER.INHIBITED") is None
-    assert _parse_instance_signal("REQ.SEC.ZONE.PARTER.BYPASS") is None
+    """A suffix nothing here answers must not be recognised - claiming
+    it would be the promise with nothing behind it. (INHIBITED and
+    BYPASS, once the examples here, are served since etap 6.)"""
+    assert _parse_instance_signal("SEC.ZONE.PARTER.FROZEN") is None
+    assert _parse_instance_signal("REQ.SEC.ZONE.PARTER.EXPLODE") is None
+    assert _parse_instance_signal("SEC.ZONE.PARTER.INHIBITED") == ("ZONE", "PARTER", "INHIBITED")
+    assert _parse_instance_signal("REQ.SEC.ZONE.PARTER.BYPASS") == ("ZONE", "PARTER", "BYPASS")
 
 
 def test_a_state_is_not_mistaken_for_a_request_or_the_other_way_round():

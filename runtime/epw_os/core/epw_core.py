@@ -830,8 +830,9 @@ class EPWCore:
         from epw_os.core.runtime_state_signals import RuntimeStateSignals
         # PointRoleSignals before DeviceSignals: a role the project gave a
         # DI contact wins over the device block for that one bit (etap 4).
+        from epw_os.core.system_requests import SystemRequests
         return [RuntimeStateSignals(self), CommSignals(self), PointRoleSignals(self), DeviceSignals(self),
-                AlarmSignals(self)]
+                AlarmSignals(self), SystemRequests(self)]
 
     def _refresh_synoptic_status(self):
         """RT.SYNOPTIC.* (core/synoptic_status.py): every screen of the
@@ -1043,6 +1044,38 @@ class EPWCore:
                       if success else f"the logic program was NOT reloaded: {reason}")
             self.audit_logger.record("LOGIC_PROGRAM_RELOADED", actor or "SYSTEM", detail, success=success)
         return {"success": success, "reason": reason, "status": self.logic_engine.get_status()}
+
+    def reload_synoptic(self, actor: str = "", level: str = None) -> dict:
+        """Re-reads the screens from projekt.epw and rebinds what the
+        controller derives from them - the apparatus roles the Main View
+        names and RT.SYNOPTIC.* - without touching the logic or the
+        cards (REQ.SYSTEM.RELOAD_SYNOPTIC). The panel rebuilds its pages
+        from the same event a full project reload emits, because pages
+        are built from the screens and are not patchable in place.
+        Engineer level, audited. Returns {"success", "reason", "problems"}."""
+        from epw_os.core.apparatus import MAIN_VIEW_ROLE_DESIGNATIONS, bind_roles_from_screens
+        if level is not None and not self._is_engineer(level):
+            log.warning(f"Refused to reload the screens: level {level!r} is below Engineer.")
+            return {"success": False, "reason": "Access denied - Engineer level required.", "problems": []}
+        who = actor or "SYSTEM"
+        try:
+            self.project_manager.load_project()
+            bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
+                                    MAIN_VIEW_ROLE_DESIGNATIONS)
+            self._refresh_synoptic_status()
+        except Exception as e:  # noqa: BLE001 - reported, audited, never a scan crash
+            reason = f"{type(e).__name__}: {e}"
+            log.error(f"Screens NOT reloaded: {reason}")
+            if self.audit_logger is not None:
+                self.audit_logger.record("SYNOPTIC_RELOADED", who, f"the screens were NOT reloaded: {reason}",
+                                         success=False)
+            return {"success": False, "reason": reason, "problems": []}
+        problems = list(self.synoptic_status.get("problems", []))
+        if self.audit_logger is not None:
+            self.audit_logger.record("SYNOPTIC_RELOADED", who, "the screens were reloaded"
+                                     + (f" with {len(problems)} problem(s)" if problems else ""), success=True)
+        self.event_bus.emit("project_reloaded", True)
+        return {"success": True, "reason": "", "problems": problems}
 
     # --- reinstalling the project without a restart -------------------------
 
