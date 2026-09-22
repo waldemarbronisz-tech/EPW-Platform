@@ -118,11 +118,18 @@ def _normalize_protection(raw: dict) -> dict:
 
 
 class ProcessProtectionManager:
-    def __init__(self, event_bus, tag_manager, project_manager, audit_logger=None):
+    def __init__(self, event_bus, tag_manager, project_manager, audit_logger=None, alarm_manager=None):
         self.event_bus = event_bus
         self.tag_manager = tag_manager
         self.project_manager = project_manager
         self.audit_logger = audit_logger
+        # Signal register etap 5: a latched EXCEEDED is a process ALARM
+        # (PROCESS_<id> in the AlarmManager, priority High) with the
+        # manager's own acknowledge/clear lifecycle - that lifecycle is
+        # what ALM.<id>.ACTIVE / ACKNOWLEDGED / LATCHED read
+        # (core/alarm_signals.py). None (a test, a controller without
+        # one) keeps the Exceeded tag alone, as before.
+        self.alarm_manager = alarm_manager
 
         self._lock = threading.RLock()
         self._protections = {}    # id -> dict (see _PROTECTION_FIELDS)
@@ -275,6 +282,8 @@ class ProcessProtectionManager:
         if timer is not None:
             timer.cancel()
         self.tag_manager.remove_tag(self._exceeded_tag(protection_id))
+        if self.alarm_manager is not None:
+            self.alarm_manager.clear_alarm(self._alarm_id(protection_id))
         self._persist()
         if self.audit_logger is not None:
             self.audit_logger.record("PROCESS_PROTECTION_REMOVED", level or "Engineer",
@@ -414,7 +423,26 @@ class ProcessProtectionManager:
             if self._exceeded.get(protection_id) == exceeded:
                 return
             self._exceeded[protection_id] = exceeded
+            protection = dict(self._protections.get(protection_id) or {})
         self.tag_manager.update_tag(self._exceeded_tag(protection_id), exceeded)
+        self._publish_alarm(protection_id, protection, exceeded)
+
+    def _alarm_id(self, protection_id: str) -> str:
+        from epw_os.core.alarm_signals import process_alarm_id
+        return process_alarm_id(protection_id)
+
+    def _publish_alarm(self, protection_id: str, protection: dict, exceeded: bool):
+        if self.alarm_manager is None:
+            return
+        if exceeded:
+            value = self.tag_manager.get_value(protection.get("analog_tag", ""))
+            self.alarm_manager.trigger_alarm(
+                self._alarm_id(protection_id),
+                f"{protection.get('name') or protection_id}: {protection.get('analog_tag', '?')} = {value} outside "
+                f"{protection.get('lower_threshold')}..{protection.get('upper_threshold')}",
+                source_tag=protection.get("analog_tag", ""), priority=3)
+        else:
+            self.alarm_manager.clear_alarm(self._alarm_id(protection_id))
 
     # --- lifecycle (Task: feature-configuration toggle - "wylaczona
     # funkcja... nie tworzy watkow ani timerow... nie rejestruje swoich
@@ -436,3 +464,5 @@ class ProcessProtectionManager:
                 timer.cancel()
         for protection_id in protection_ids:
             self.tag_manager.remove_tag(self._exceeded_tag(protection_id))
+            if self.alarm_manager is not None:
+                self.alarm_manager.clear_alarm(self._alarm_id(protection_id))

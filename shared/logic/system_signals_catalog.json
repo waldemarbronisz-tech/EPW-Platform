@@ -1,8 +1,8 @@
 {
   "format": "EPW_SIGNAL_CATALOG",
   "schema_version": 1,
-  "catalog_version": "2.5.0",
-  "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it. feat/signal-register (2.1.0): an entry may carry `instances`, naming the project collection its <placeholder> ranges over (\"zones\", \"lines\"). The platform fixes that every zone has an ARMED and what it means; only HOW MANY zones there are belongs to the installation, so the pattern lives here and get_categories(project) turns it into SEC.ZONE.PARTER.ARMED. Every consumer already asks that function, so the picker, the Signals panel and the validator show the concrete signals with no change of their own. Only patterns EPW-OS actually answers per instance are here - the register's per-zone inhibit and bypass requests have nothing behind them on this controller and are left out rather than promised. feat/signal-register-2 (2.5.0, etap 4): UPS.* arrives as dry contacts on ELA inputs - Studio's point registry gives a DI point a ROLE (shared/logic/point_roles.py: the PWR/UPS/PROT entries a contact can carry) and a contact type (NO/NC), and the controller (runtime/epw_os/core/point_role_signals.py) exposes the bit under the same name an EPM or ADA01 would give it. A role assigned in the project wins over the device block for that one bit; Studio's \"Sprawdz projekt\" warns when both exist.",
+  "catalog_version": "2.6.0",
+  "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it. feat/signal-register (2.1.0): an entry may carry `instances`, naming the project collection its <placeholder> ranges over (\"zones\", \"lines\"). The platform fixes that every zone has an ARMED and what it means; only HOW MANY zones there are belongs to the installation, so the pattern lives here and get_categories(project) turns it into SEC.ZONE.PARTER.ARMED. Every consumer already asks that function, so the picker, the Signals panel and the validator show the concrete signals with no change of their own. Only patterns EPW-OS actually answers per instance are here - the register's per-zone inhibit and bypass requests have nothing behind them on this controller and are left out rather than promised. feat/signal-register-2 (2.5.0, etap 4): UPS.* arrives as dry contacts on ELA inputs - Studio's point registry gives a DI point a ROLE (shared/logic/point_roles.py: the PWR/UPS/PROT entries a contact can carry) and a contact type (NO/NC), and the controller (runtime/epw_os/core/point_role_signals.py) exposes the bit under the same name an EPM or ADA01 would give it. A role assigned in the project wins over the device block for that one bit; Studio's \"Sprawdz projekt\" warns when both exist. feat/signal-register-2 (2.6.0, etap 5): ALM.* - the process alarms. A process protection (runtime/epw_os/core/process_protection_manager.py) that latches EXCEEDED raises PROCESS_<id> in the AlarmManager; ALM.<alarm_id>.* ranges over the project's process protections (instances \"alarms\", mirrored by Studio as external_process_protections), the ALM.ANY_* aggregates read the whole AlarmManager, and REQ.ALM.* acknowledge, silence, reset and test through it (runtime/epw_os/core/alarm_signals.py).",
   "categories": [
     {
       "id": "SYS.STATE",
@@ -796,6 +796,149 @@
           "safety_relevant": false,
           "runtime": "served",
           "instances": "zones"
+        }
+      ]
+    },
+    {
+      "id": "ALM",
+      "name": "Alarmy procesowe",
+      "_comment": "Zabezpieczenia procesowe liczy sam sterownik (próg na punkcie analogowym - nie tor zabezpieczeniowy, Z3 nie dotyczy): zadziałanie = alarm PROCESS_<id> w AlarmManagerze. Bity zbiorcze ALM.ANY_* patrzą na cały AlarmManager (także alarmy komunikacji kart), zgodnie z rejestrem ('agregacja AlarmManager').",
+      "signals": [
+        {
+          "id": "ALM.ANY_ACTIVE",
+          "description": "Dowolny alarm aktywny",
+          "label": "ALARM",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.ANY_UNACK",
+          "description": "Dowolny alarm niepotwierdzony (aktywny albo w pamięci)",
+          "label": "NIEPOTW.",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.ANY_CRITICAL",
+          "description": "Dowolny alarm krytyczny aktywny (priorytet 4)",
+          "label": "KRYT.",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.ANY_WARNING",
+          "description": "Dowolne ostrzeżenie aktywne (priorytet 1-2)",
+          "label": "OSTRZ.",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.NEW_ALARM",
+          "description": "Nowy alarm: aktywny i jeszcze niepotwierdzony",
+          "label": "NOWY",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.HORN_REQUIRED",
+          "description": "Wymagana sygnalizacja dźwiękowa: niepotwierdzony alarm o priorytecie 3-4, horn niewyciszony od ostatniego nowego alarmu",
+          "label": "HORN",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.SYSTEM_FAULT",
+          "description": "Awaria systemu alarmów procesowych: moduł nie działa albo zabezpieczenie patrzy na nieistniejący/nienumeryczny punkt",
+          "label": "AWARIA ALM",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "ALM.<alarm_id>.ACTIVE",
+          "description": "Alarm procesowy aktywny (warunek trwa)",
+          "label": "AKT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "alarms"
+        },
+        {
+          "id": "ALM.<alarm_id>.ACKNOWLEDGED",
+          "description": "Alarm procesowy aktywny i potwierdzony",
+          "label": "POTW",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "alarms"
+        },
+        {
+          "id": "ALM.<alarm_id>.LATCHED",
+          "description": "Alarm procesowy zatrzaśnięty: warunek ustąpił, czeka na potwierdzenie",
+          "label": "ZATRZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served",
+          "instances": "alarms"
+        }
+      ]
+    },
+    {
+      "id": "REQ.ALM",
+      "name": "Żądania - alarmy",
+      "_comment": "Każde żądanie wykonane albo odrzucone z powodem w dzienniku audytowym (ALARM_REQUEST, ALARM_REQUEST_REFUSED). ACK_ALL/SILENCE_HORN/RESET - Operator, TEST - Engineer.",
+      "signals": [
+        {
+          "id": "REQ.ALM.ACK_ALL",
+          "description": "Potwierdź wszystkie alarmy",
+          "label": "POTW. WSZ.",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.ALM.SILENCE_HORN",
+          "description": "Wycisz horn do następnego nowego alarmu",
+          "label": "WYCISZ",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.ALM.RESET",
+          "description": "Reset zatrzasków: potwierdza alarmy, których warunek już ustąpił; wycisza horn",
+          "label": "RESET ALM",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.ALM.TEST",
+          "description": "Test systemu alarmowego: alarm testowy ALM_TEST na 3 s, bez pamięci po teście",
+          "label": "TEST ALM",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
         }
       ]
     },

@@ -823,13 +823,15 @@ class EPWCore:
         own handlers and the alarm half: each one reads the core at every
         scan (nothing captured), so a manager replaced at runtime is
         simply read anew."""
+        from epw_os.core.alarm_signals import AlarmSignals
         from epw_os.core.comm_signals import CommSignals
         from epw_os.core.device_signals import DeviceSignals
         from epw_os.core.point_role_signals import PointRoleSignals
         from epw_os.core.runtime_state_signals import RuntimeStateSignals
         # PointRoleSignals before DeviceSignals: a role the project gave a
         # DI contact wins over the device block for that one bit (etap 4).
-        return [RuntimeStateSignals(self), CommSignals(self), PointRoleSignals(self), DeviceSignals(self)]
+        return [RuntimeStateSignals(self), CommSignals(self), PointRoleSignals(self), DeviceSignals(self),
+                AlarmSignals(self)]
 
     def _refresh_synoptic_status(self):
         """RT.SYNOPTIC.* (core/synoptic_status.py): every screen of the
@@ -1475,7 +1477,8 @@ class EPWCore:
     def _start_process_protection(self):
         from epw_os.core.process_protection_manager import ProcessProtectionManager
         self.process_protection_manager = ProcessProtectionManager(
-            self.event_bus, self.tag_manager, self.project_manager, self.audit_logger)
+            self.event_bus, self.tag_manager, self.project_manager, self.audit_logger,
+            alarm_manager=self.alarm_manager)
         # No is_running-gated .start() call, unlike switching_counters/
         # intrusion above - this module has no background thread of its
         # own (only short-lived per-protection threading.Timer delay

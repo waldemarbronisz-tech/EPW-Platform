@@ -4,14 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.5.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.6.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 162 |
-| do zrobienia | 32 |
+| w katalogu i obsłużony | 176 |
+| do zrobienia | 18 |
 | poza katalogiem | 4 |
 | przyszłość | 2 |
 
@@ -199,16 +199,16 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `UPS.OVERLOAD` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `UPS.FAULT` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `UPS.MAINS_PRESENT` | UPS | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `ALM.ANY_ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.ANY_UNACK` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.ANY_CRITICAL` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.ANY_WARNING` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.NEW_ALARM` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.HORN_REQUIRED` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.SYSTEM_FAULT` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.<alarm_id>.ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.<alarm_id>.ACKNOWLEDGED` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `ALM.<alarm_id>.LATCHED` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `ALM.ANY_ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.ANY_UNACK` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.ANY_CRITICAL` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.ANY_WARNING` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.NEW_ALARM` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.HORN_REQUIRED` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.SYSTEM_FAULT` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.<alarm_id>.ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.<alarm_id>.ACKNOWLEDGED` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `ALM.<alarm_id>.LATCHED` | PROCESS ALARMS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.NORMAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.AUTO` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MANUAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -256,10 +256,10 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `REQ.MODE.MAINTENANCE` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.MODE.TEST` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.MODE.EMERGENCY` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
-| `REQ.ALM.ACK_ALL` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.ALM.SILENCE_HORN` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.ALM.RESET` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.ALM.TEST` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.ALM.ACK_ALL` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.ALM.SILENCE_HORN` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.ALM.RESET` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.ALM.TEST` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.PROT.RESET` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.PROT.RESET_LATCH` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.PROT.TEST` | REQ PROTECTION | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
