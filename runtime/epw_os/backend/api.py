@@ -69,6 +69,10 @@ class ProtectionTestRequest(BaseModel):
     id: str          # the process protection's id, or the apparatus id
 
 
+class ModeRequest(BaseModel):
+    mode: str        # core/operating_mode.py MODES
+
+
 class CommandRequest(BaseModel):
     device_tag: str
     command: str
@@ -384,6 +388,38 @@ def release_all_forces(core=Depends(get_core), level: str = Depends(_require_eng
         raise HTTPException(status_code=404, detail="Forcing is not available on this controller.")
     count = manager.release_all(actor=f"API:{level}", reason="released from Studio")
     return {"released": count, **_forces_body(manager)}
+
+
+# --- the operating mode (MODE.* / REQ.MODE.*, core/operating_mode.py) ----------------------
+
+@app.get("/api/v1/mode")
+def get_operating_mode(core=Depends(get_core)):
+    """The controller's operating mode, the modes it knows and the level
+    each one needs - the same table the panel and the logic use."""
+    from epw_os.core import operating_mode as modes
+    manager = getattr(core, "operating_mode", None)
+    return {"mode": manager.mode if manager is not None else None, "modes": list(modes.MODES),
+            "required_level": dict(modes.REQUIRED_LEVEL)}
+
+
+@app.post("/api/v1/mode")
+def set_operating_mode(body: ModeRequest, core=Depends(get_core), authorization: Optional[str] = Header(None)):
+    """Changes the operating mode. The level the token resolves to must
+    reach what the mode demands (Operator for NORMAL/AUTO/MANUAL/
+    EMERGENCY, Engineer for SERVICE/MAINTENANCE/TEST) - refusals are
+    audited, like every other refusal of this endpoint family."""
+    from epw_os.core import operating_mode as modes
+    manager = getattr(core, "operating_mode", None)
+    if manager is None:
+        raise HTTPException(status_code=404, detail="This controller has no operating mode manager.")
+    if body.mode not in modes.MODES:
+        raise HTTPException(status_code=400, detail={"error": "unknown_mode", "mode": body.mode,
+                                                     "modes": list(modes.MODES)})
+    level = _resolve_or_reject(core, authorization, modes.REQUIRED_LEVEL[body.mode], f"POST /api/v1/mode {body.mode}")
+    ok, reason = manager.set_mode(body.mode, actor=f"API:{level}", level=level)
+    if not ok:
+        raise HTTPException(status_code=403, detail={"error": "mode_refused", "reason": reason})
+    return {"mode": manager.mode}
 
 
 # --- protection tests (SPEC "Wymuszanie stanów - Powiązanie": the internal Omicron) --------

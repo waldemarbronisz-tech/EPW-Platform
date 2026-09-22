@@ -4,14 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.1.0**). Arkusz jest tylko czytany.
+(wersja katalogu **2.2.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| do zrobienia | 111 |
-| w katalogu i obsłużony | 38 |
+| w katalogu i obsłużony | 77 |
+| do zrobienia | 72 |
 | czeka na firmware | 24 |
 | czeka na sprzęt | 21 |
 | poza katalogiem | 4 |
@@ -81,30 +81,30 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | ID / wzorzec | grupa | kierunek | stan | uwaga |
 |---|---|---|---|---|
 | `SYS.READY` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SYS.RUNNING` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.STARTING` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.STOPPING` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.DEGRADED` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.FAIL` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CONFIG_OK` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CONFIG_FAULT` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SYS.RUNNING` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.STARTING` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.STOPPING` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.DEGRADED` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.FAIL` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CONFIG_OK` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CONFIG_FAULT` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SYS.TIME_SYNC_OK` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SYS.TIME_SYNC_FAULT` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SYS.TIME_SYNC_FAULT` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `SYS.FIRST_SCAN` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `SYS.HEARTBEAT` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CLOCK_100MS` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CLOCK_1S` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CLOCK_10S` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `SYS.CLOCK_1MIN` | SYS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.READY` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.RUNNING` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.FAIL` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.OVERRUN` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.PROJECT_OK` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.LOGIC.PROJECT_FAULT` | Logic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.SYNOPTIC.READY` | Synoptic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.SYNOPTIC.FAIL` | Synoptic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `RT.SYNOPTIC.BINDING_FAULT` | Synoptic Runtime | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `SYS.HEARTBEAT` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CLOCK_100MS` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CLOCK_1S` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CLOCK_10S` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `SYS.CLOCK_1MIN` | SYS | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.READY` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.RUNNING` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.FAIL` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.OVERRUN` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.PROJECT_OK` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.LOGIC.PROJECT_FAULT` | Logic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.SYNOPTIC.READY` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.SYNOPTIC.FAIL` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `RT.SYNOPTIC.BINDING_FAULT` | Synoptic Runtime | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `COMM.ALL_OK` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `COMM.ANY_DEVICE_OFFLINE` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `COMM.ANY_DEVICE_FAULT` | COMM | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
@@ -212,18 +212,18 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `ALM.<alarm_id>.ACTIVE` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `ALM.<alarm_id>.ACKNOWLEDGED` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `ALM.<alarm_id>.LATCHED` | PROCESS ALARMS | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.NORMAL` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.AUTO` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.MANUAL` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `MODE.NORMAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.AUTO` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.MANUAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.LOCAL` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `MODE.REMOTE` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.SERVICE` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.MAINTENANCE` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.TEST` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.TRAINING` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.SIMULATION` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.EMERGENCY` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `MODE.DEGRADED` | MODES | SYSTEM INPUT | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `MODE.SERVICE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.MAINTENANCE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.TEST` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.TRAINING` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.SIMULATION` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.EMERGENCY` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.DEGRADED` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `DIAG.ANY_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
 | `DIAG.IO_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
 | `DIAG.DRIVER_FAULT` | DIAGNOSTICS | SYSTEM INPUT | czeka na firmware | wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01 |
@@ -252,13 +252,13 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `REQ.SEC.ZONE.<zone_id>.STOP_WALK_TEST` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.SEC.ZONE.<zone_id>.INHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.SEC.ZONE.<zone_id>.UNINHIBIT` | REQ SECURITY | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.NORMAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.AUTO` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.MANUAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.SERVICE` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.MAINTENANCE` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.TEST` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
-| `REQ.MODE.EMERGENCY` | REQ MODES | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
+| `REQ.MODE.NORMAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.AUTO` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.MANUAL` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.SERVICE` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.MAINTENANCE` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.TEST` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
+| `REQ.MODE.EMERGENCY` | REQ MODES | SYSTEM OUTPUT / REQUEST | w katalogu i obsłużony |  |
 | `REQ.ALM.ACK_ALL` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.ALM.SILENCE_HORN` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |
 | `REQ.ALM.RESET` | REQ ALARMS | SYSTEM OUTPUT / REQUEST | do zrobienia | w zakresie katalogu, jeszcze nie dodany |

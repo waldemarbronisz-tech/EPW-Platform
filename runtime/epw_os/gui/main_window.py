@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
                  startup_issues=None, force_manager=None, forces_changed_signal=None,
+                 operating_mode=None,
                  logic_engine=None, logic_reload_callback=None, project_reload_callback=None,
                  controller_backup_core=None):
         super().__init__()
@@ -72,6 +73,11 @@ class MainWindow(QMainWindow):
         # także na panelu przy szafce"): the status bar shows every force
         # Studio holds, and an Engineer can drop them all from there.
         self.force_manager = force_manager
+        # MODE.* (core/operating_mode.py): shown on the status bar whenever
+        # the controller is outside NORMAL, changed from its context menu
+        # at the level the mode demands - the same table the logic's
+        # REQ.MODE.* requests are gated by.
+        self.operating_mode = operating_mode
         self._forces_changed_signal = forces_changed_signal
         self.tag_manager = tag_manager
         # Task "migracja adresacji" - see epw_os/core/apparatus.py's own
@@ -1394,6 +1400,44 @@ class MainWindow(QMainWindow):
         label.setToolTip(tr("statusbar.tooltip_forces", tags=listed))
         label.setVisible(True)
 
+    def _refresh_mode_indicator(self):
+        manager = self.operating_mode
+        if manager is None:
+            self.lbl_sb_mode.setVisible(False)
+            return
+        mode = manager.mode
+        self.lbl_sb_mode.setText(f" {tr('statusbar.mode', mode=tr('modes.' + mode.lower()))} ")
+        self.lbl_sb_mode.setToolTip(tr("statusbar.tooltip_mode"))
+        color = "#C00000" if mode == "EMERGENCY" else ("#8A5A00" if mode != "NORMAL" else "#404040")
+        self.lbl_sb_mode.setStyleSheet(f"color: {color}; font-weight: bold;")
+        self.lbl_sb_mode.setVisible(True)
+
+    def _mode_indicator_menu(self, pos):
+        """Every mode, greyed below the level it needs; choosing one asks
+        the manager, which audits the change and the refusal alike."""
+        from epw_os.core import operating_mode as modes
+        manager = self.operating_mode
+        if manager is None:
+            return
+        menu = QMenu(self)
+        actions = {}
+        for mode in modes.MODES:
+            action = menu.addAction(tr("statusbar.mode_set", mode=tr("modes." + mode.lower()),
+                                       level=modes.REQUIRED_LEVEL[mode]))
+            action.setCheckable(True)
+            action.setChecked(mode == manager.mode)
+            actions[action] = mode
+        chosen = menu.exec(self.lbl_sb_mode.mapToGlobal(pos))
+        mode = actions.get(chosen)
+        if mode is None or mode == manager.mode:
+            return
+        required = modes.REQUIRED_LEVEL[mode]
+        if not self.access_manager.has_access(required):
+            self.deny_access(required, f"Operating mode {mode}")
+            return
+        manager.set_mode(mode, actor=f"{self.access_manager.level} (panel)", level=self.access_manager.level)
+        self._refresh_mode_indicator()
+
     def _forces_indicator_menu(self, pos):
         if self.force_manager is None or not self.force_manager.snapshot():
             return
@@ -2281,6 +2325,10 @@ class MainWindow(QMainWindow):
         self.lbl_sb_forces.setVisible(False)
         self.lbl_sb_forces.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lbl_sb_forces.customContextMenuRequested.connect(self._forces_indicator_menu)
+        self.lbl_sb_mode = QLabel()
+        self.lbl_sb_mode.setVisible(False)
+        self.lbl_sb_mode.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lbl_sb_mode.customContextMenuRequested.connect(self._mode_indicator_menu)
         self.lbl_sb_intrusion = QLabel()
         self.lbl_sb_intrusion.setVisible(False)
         if self._presentation_started_signal is not None:
@@ -2307,6 +2355,11 @@ class MainWindow(QMainWindow):
         self.statusbar.addPermanentWidget(self.lbl_sb_presentation)
         self.statusbar.addPermanentWidget(self.lbl_sb_training)
         self.statusbar.addPermanentWidget(self.lbl_sb_forces)
+        self.statusbar.addPermanentWidget(self.lbl_sb_mode)
+        self._mode_timer = QTimer(self)
+        self._mode_timer.setInterval(1000)
+        self._mode_timer.timeout.connect(self._refresh_mode_indicator)
+        self._mode_timer.start()
         self.statusbar.addPermanentWidget(self.lbl_sb_intrusion)
         self.statusbar.addPermanentWidget(self.btn_sb_mode)
         self._refresh_training_mode_indicator()

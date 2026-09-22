@@ -1,7 +1,7 @@
 {
   "format": "EPW_SIGNAL_CATALOG",
   "schema_version": 1,
-  "catalog_version": "2.1.0",
+  "catalog_version": "2.2.0",
   "_comment": "Fixed platform contract, identical in every project — see ARCHITECTURE.md 'Przestrzenie nazw sygnałów'. Deliberately does NOT yet include EPM recorder, protection (zabezpieczenia), or telemechanics signals — those wait on that part of the platform contract being frozen. A new signal is a MINOR catalog_version bump; removing or renaming one is MAJOR (a project compiled against an older catalog_version than a signal's introduction should be handled by EPW-OS's own compatibility check, not this file). feat/security-signals (1.1.0): exposes the FIXED part of EPW-OS's alarm/intrusion subsystem (dozór, sabotaż) — state, alarms, sirens, and the commands logic may issue back to it. The dynamic part (per-line signals, SEC.L<n>.*) is deliberately NOT here: their count comes from the object's own EPW-OS configuration, not from hardware Logic Studio knows about, and needs a catalog-import mechanism analogous to the ELA/ADA device list import — a separate PR. Do not hand-add SEC.L<n>.* entries here. Prefix SEC. (not ALM., which is reserved for compiler-side alarm.definition conditions the logic itself computes and an operator acknowledges) is deliberate: ALM. and SEC. name two different kinds of thing — a logic-computed condition vs. a device subsystem's own state — and a name close to ALM./ALARM. in the signal picker's tree would invite exactly the kind of mix-up a fixed platform catalog exists to prevent. Should the alarm system later gain zone support, the SEC.STATE signals below keep their current, aggregate meaning (ARMED = any zone armed) and per-zone state would arrive as its own dimension, SEC.Z<n>.*, not by changing what these mean. feat/signal-register (1.2.0): every entry carries a `runtime` field - \"served\" when this platform's controller actually answers for it, \"planned\" when the name is agreed but nothing computes it yet. Studio's Signals panel shows it, and runtime/epw_os/tests checks it against the dispatch tables, so the catalogue cannot promise a signal EPW-OS does not implement. A signal must never be added as \"served\" without a real source behind it: logic would read it happily and it would never change. feat/signal-register (2.0.0): the alarm system's prefix is SEC., not SEC. (owner, 2026-09-21), following shared/docs/EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx. NOT a prefix swap: system-wide state moved under SEC.SYSTEM.*, and the five commands left the state namespace for REQ.SEC.*, which is where the register puts every signal the logic REQUESTS and a manager validates and then executes or refuses. A MAJOR bump, per this file's own rule, because names changed. shared/logic/signal_renames.py holds the old -> new table, records which names come from the register and which were named by its grammar where the register has no row, and is what the compiler reads to report an old name rather than silently converting it. feat/signal-register (2.1.0): an entry may carry `instances`, naming the project collection its <placeholder> ranges over (\"zones\", \"lines\"). The platform fixes that every zone has an ARMED and what it means; only HOW MANY zones there are belongs to the installation, so the pattern lives here and get_categories(project) turns it into SEC.ZONE.PARTER.ARMED. Every consumer already asks that function, so the picker, the Signals panel and the validator show the concrete signals with no change of their own. Only patterns EPW-OS actually answers per instance are here - the register's per-zone inhibit and bypass requests have nothing behind them on this controller and are left out rather than promised.",
   "categories": [
     {
@@ -79,6 +79,69 @@
           "source": "runtime",
           "safety_relevant": false,
           "runtime": "served"
+        },
+        {
+          "id": "SYS.STARTING",
+          "description": "Sterownik w sekwencji startu - projekt, sterowniki, logika jeszcze nie gotowe",
+          "label": "START",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.RUNNING",
+          "description": "Sterownik uruchomiony - sekwencja startu zakończona",
+          "label": "PRACA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.STOPPING",
+          "description": "Sterownik w sekwencji zatrzymania",
+          "label": "STOP",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.DEGRADED",
+          "description": "Praca w trybie ograniczonym - któryś podsystem zgłasza degradację",
+          "label": "DEGRAD",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.FAIL",
+          "description": "Awaria któregoś podsystemu sterownika",
+          "label": "AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CONFIG_OK",
+          "description": "Projekt (projekt.epw) wczytany bez błędu",
+          "label": "KONF OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CONFIG_FAULT",
+          "description": "Projekt odrzucony albo wycofany - sterownik pracuje na pustym projekcie",
+          "label": "KONF BŁ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
         }
       ]
     },
@@ -100,6 +163,15 @@
           "id": "SYS.TIME_SYNC_OK",
           "description": "Synchronizacja czasu poprawna",
           "label": "CZAS OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.TIME_SYNC_FAULT",
+          "description": "Brak synchronizacji czasu",
+          "label": "CZAS BŁ",
           "type": "BOOL",
           "source": "runtime",
           "safety_relevant": false,
@@ -193,6 +265,51 @@
           "id": "SYS.BLINK_FAST",
           "description": "Miganie szybkie (4 Hz)",
           "label": "MIG SZYBKIE",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.HEARTBEAT",
+          "description": "Bicie serca sterownika - 1 s włączone, 1 s wyłączone",
+          "label": "HB",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CLOCK_100MS",
+          "description": "Zegar 100 ms (fala prostokątna, wypełnienie 50%)",
+          "label": "CLK 100ms",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CLOCK_1S",
+          "description": "Zegar 1 s (fala prostokątna, wypełnienie 50%)",
+          "label": "CLK 1s",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CLOCK_10S",
+          "description": "Zegar 10 s (fala prostokątna, wypełnienie 50%)",
+          "label": "CLK 10s",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "SYS.CLOCK_1MIN",
+          "description": "Zegar 1 min (fala prostokątna, wypełnienie 50%)",
+          "label": "CLK 1min",
           "type": "BOOL",
           "source": "runtime",
           "safety_relevant": false,
@@ -679,6 +796,266 @@
           "safety_relevant": false,
           "runtime": "served",
           "instances": "zones"
+        }
+      ]
+    },
+    {
+      "id": "RT.LOGIC",
+      "name": "Runtime logiki",
+      "signals": [
+        {
+          "id": "RT.LOGIC.READY",
+          "description": "Program logiki wczytany i gotowy do skanowania",
+          "label": "LOG GOT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.LOGIC.RUNNING",
+          "description": "Skan logiki trwa",
+          "label": "LOG PRACA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.LOGIC.FAIL",
+          "description": "Logika skonfigurowana, ale program nie wczytał się - sterownik pracuje bez logiki użytkownika",
+          "label": "LOG AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.LOGIC.OVERRUN",
+          "description": "Ostatni skan przekroczył czas cyklu",
+          "label": "LOG OVR",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.LOGIC.PROJECT_OK",
+          "description": "Program logiki z projektu przyjęty bez błędu",
+          "label": "LOG PRJ OK",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.LOGIC.PROJECT_FAULT",
+          "description": "Program logiki z projektu odrzucony (schemat, suma kontrolna, nieznany blok)",
+          "label": "LOG PRJ BŁ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        }
+      ]
+    },
+    {
+      "id": "RT.SYNOPTIC",
+      "name": "Runtime ekranów",
+      "signals": [
+        {
+          "id": "RT.SYNOPTIC.READY",
+          "description": "Ekrany z projektu wczytane - panel ma co rysować",
+          "label": "EKR GOT",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.SYNOPTIC.FAIL",
+          "description": "Któryś ekran z projektu odrzucony przez czytnik",
+          "label": "EKR AWARIA",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "RT.SYNOPTIC.BINDING_FAULT",
+          "description": "Symbol na ekranie wskazuje aparat, którego projekt nie ma",
+          "label": "EKR WIĄZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        }
+      ]
+    },
+    {
+      "id": "MODE",
+      "name": "Tryby pracy",
+      "_comment": "Jeden tryb pracy naraz (NORMAL/AUTO/MANUAL/SERVICE/MAINTENANCE/TEST/EMERGENCY - core/operating_mode.py), obok niego fakty z własnych źródeł: TRAINING (tryb ćwiczebny), SIMULATION (TagManager), DEGRADED (HealthManager). LOCAL/REMOTE nie mają źródła na tym sterowniku i nie są w katalogu.",
+      "signals": [
+        {
+          "id": "MODE.NORMAL",
+          "description": "Tryb pracy: normalny",
+          "label": "NORMAL",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.AUTO",
+          "description": "Tryb pracy: automatyczny",
+          "label": "AUTO",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.MANUAL",
+          "description": "Tryb pracy: ręczny",
+          "label": "MANUAL",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.SERVICE",
+          "description": "Tryb pracy: serwisowy",
+          "label": "SERWIS",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.MAINTENANCE",
+          "description": "Tryb pracy: konserwacja",
+          "label": "KONSERW",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.TEST",
+          "description": "Tryb pracy: test",
+          "label": "TEST",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.EMERGENCY",
+          "description": "Tryb pracy: awaryjny",
+          "label": "AWARYJNY",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": true,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.TRAINING",
+          "description": "Tryb ćwiczebny aktywny - wyjścia odcięte od sprzętu",
+          "label": "ĆWICZ",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.SIMULATION",
+          "description": "Sterownik pracuje na symulowanych wejściach/wyjściach",
+          "label": "SYMUL",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "MODE.DEGRADED",
+          "description": "Praca w trybie ograniczonym (jak SYS.DEGRADED)",
+          "label": "DEGRAD",
+          "type": "BOOL",
+          "source": "runtime",
+          "safety_relevant": false,
+          "runtime": "served"
+        }
+      ]
+    },
+    {
+      "id": "REQ.MODE",
+      "name": "Żądania - tryby pracy",
+      "_comment": "Zmiana trybu z logiki wymaga tego samego poziomu dostępu co z panelu (core/operating_mode.py REQUIRED_LEVEL): NORMAL/AUTO/MANUAL/EMERGENCY - Operator, SERVICE/MAINTENANCE/TEST - Engineer. Odrzucenie trafia do dziennika audytowego.",
+      "signals": [
+        {
+          "id": "REQ.MODE.NORMAL",
+          "description": "Przełącz w tryb normalny",
+          "label": "→NORMAL",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.AUTO",
+          "description": "Przełącz w tryb automatyczny",
+          "label": "→AUTO",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.MANUAL",
+          "description": "Przełącz w tryb ręczny",
+          "label": "→MANUAL",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.SERVICE",
+          "description": "Przełącz w tryb serwisowy (Engineer)",
+          "label": "→SERWIS",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.MAINTENANCE",
+          "description": "Przełącz w tryb konserwacji (Engineer)",
+          "label": "→KONSERW",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.TEST",
+          "description": "Przełącz w tryb testu (Engineer)",
+          "label": "→TEST",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": false,
+          "runtime": "served"
+        },
+        {
+          "id": "REQ.MODE.EMERGENCY",
+          "description": "Ogłoś tryb awaryjny",
+          "label": "→AWARYJNY",
+          "type": "BOOL",
+          "source": "logic",
+          "safety_relevant": true,
+          "runtime": "served"
         }
       ]
     }

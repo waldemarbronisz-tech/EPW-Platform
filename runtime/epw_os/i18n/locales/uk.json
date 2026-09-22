@@ -56,7 +56,10 @@
     "time_sync": "Time Sync",
     "time_sync_synced": "SYNCED",
     "time_sync_not_synced": "NOT SYNCED",
-    "time_sync_unknown": "UNKNOWN"
+    "time_sync_unknown": "UNKNOWN",
+    "mode": "MODE: {mode}",
+    "tooltip_mode": "The controller's operating mode (MODE.*). Right-click to change it - at the level the mode demands.",
+    "mode_set": "{mode} ({level})"
   },
   "topbar": {
     "project": "Project",
@@ -407,5 +410,14 @@
       "lbl_noise": "Noise %",
       "lbl_harmonics": "Harmonics %"
     }
+  },
+  "modes": {
+    "normal": "NORMAL",
+    "auto": "AUTO",
+    "manual": "MANUAL",
+    "service": "SERVICE",
+    "maintenance": "MAINTENANCE",
+    "test": "TEST",
+    "emergency": "EMERGENCY"
   }
 }

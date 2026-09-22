@@ -107,7 +107,10 @@ def test_a_user_marker_is_not_reported_as_missing_from_the_catalogue(catalog_by_
 
 
 def test_something_in_scope_and_absent_is_honestly_called_unfinished(catalog_by_id):
-    row = {"ID / Wzorzec": "SYS.STARTING", "Grupa": "SYS"}
+    # MODE.LOCAL: in the register, in a group the catalogue covers, and
+    # deliberately absent - this controller has no notion of a control
+    # place, so the bit is not faked (rule Z1).
+    row = {"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}
 
     assert gen.classify(row, catalog_by_id, {})[0] == "do zrobienia"
 

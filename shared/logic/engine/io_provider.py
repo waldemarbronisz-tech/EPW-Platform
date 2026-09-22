@@ -13,6 +13,14 @@ PULSE_PERIODS_MS = {
     "SYS.PULSE_1S": 1000,
     "SYS.BLINK_SLOW": 1000,   # 1 Hz
     "SYS.BLINK_FAST": 250,    # 4 Hz
+    # The register's clocks (SYS group): square waves named by their
+    # PERIOD, and a heartbeat slower than any blink - one second on, one
+    # second off - for the "is anything alive" lamp.
+    "SYS.HEARTBEAT": 2000,
+    "SYS.CLOCK_100MS": 100,
+    "SYS.CLOCK_1S": 1000,
+    "SYS.CLOCK_10S": 10000,
+    "SYS.CLOCK_1MIN": 60000,
 }
 
 

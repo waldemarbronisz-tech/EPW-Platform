@@ -939,6 +939,17 @@ class ProjectManager:
         """Which screen of the project's `screens` the panel had open."""
         return self.config.get("last_synoptic_screen")
 
+    def get_operating_mode(self):
+        return self.config.get("operating_mode")
+
+    def set_operating_mode(self, mode) -> bool:
+        if self.config.get("operating_mode") == mode:
+            return True
+        self.config["operating_mode"] = mode
+        if not self.is_epw_project():
+            return True
+        return self.save_runtime_state()
+
     def set_last_synoptic_screen(self, screen_id) -> bool:
         if self.config.get("last_synoptic_screen") == screen_id:
             return True

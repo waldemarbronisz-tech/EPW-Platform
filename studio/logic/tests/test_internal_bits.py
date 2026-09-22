@@ -187,11 +187,16 @@ def test_catalog_loads_and_has_expected_categories():
     # a category exists whether or not this installation has zones to
     # expand it with; its `signals` list is simply empty then, which
     # test_dynamic_signals.py covers.
-    assert names == [
+    # The signal-register etaps append categories after these (SYS
+    # lifecycle stays in "Stan systemu"; RT, MODE, REQ.MODE, ... are new
+    # categories at the end) - the original ones keep their place.
+    original = [
         "Stan systemu", "Komunikacja", "Poziom dostępu", "Generatory czasu",
         "Stan dozoru", "Alarmy", "Sygnalizatory", "Strefy", "Linie dozorowe",
         "Żądania - alarmówka", "Żądania - strefy",
     ]
+    assert names[:len(original)] == original
+    assert "Tryby pracy" in names and "Żądania - tryby pracy" in names
 
 def test_catalog_contains_every_signal_from_the_spec():
     """Task "jedno źródło listy kart": get_all_signals() no longer
@@ -221,7 +226,7 @@ def test_catalog_contains_every_signal_from_the_spec():
         "REQ.SEC.ARM_ALL", "REQ.SEC.ARM_ALL_PARTIAL", "REQ.SEC.DISARM_ALL", "REQ.SEC.CLEAR_ALARM_MEMORY",
         "REQ.SEC.SILENCE",
     }
-    assert ids == expected
+    assert expected <= ids
 
 def test_catalog_safety_relevant_signals():
     from shared.logic import system_signals
@@ -229,10 +234,13 @@ def test_catalog_safety_relevant_signals():
     DeviceModel.set_ela_devices(project, ["ELA01"])
     DeviceModel.set_ada_devices(project, ["ADA01"])
     safety = {s["id"] for s in system_signals.get_all_signals(project) if s["safety_relevant"]}
-    assert safety == {
+    assert {
         "SYS.HEALTH", "SYS.FAULT", "ELA01.FAULT", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
         "SEC.SYSTEM.PANIC", "SEC.SYSTEM.TAMPER", "SEC.SYSTEM.FAULT", "REQ.SEC.DISARM_ALL",
-    }
+    } <= safety
+    # Nothing that merely reports a mode or a clock is safety-relevant.
+    assert not any(sid.startswith(("SYS.CLOCK", "SYS.PULSE", "SYS.BLINK")) for sid in safety)
+    assert "MODE.EMERGENCY" in safety and "MODE.NORMAL" not in safety
 
 def test_catalog_get_signal_unknown_returns_none():
     from shared.logic import system_signals
