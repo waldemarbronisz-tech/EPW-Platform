@@ -118,17 +118,34 @@ def _device_signals(project) -> list:
 _INSTANCE_ATTRIBUTES = {
     "zones": "external_zones",
     "lines": "external_lines",
+    # The project's cards (Studio mirrors them as one entry per channel
+    # KIND - {"id", "kind", "channels"} - so a card appears once per kind
+    # there and exactly once here).
+    "devices": "external_cards",
+    # The project's process protections (etap 5): ALM.<alarm_id>.* is one
+    # alarm per protection the controller computes itself.
+    "alarms": "external_process_protections",
 }
 
 _PLACEHOLDER = re.compile(r"<[^>]+>")
 
 
 def _instances(project, kind: str) -> list:
+    if kind == "protection_stages":
+        # ADA01's stage table is a platform contract, not a project
+        # collection: the same 22 stages in every installation.
+        from shared.logic.protection_stages import stage_instances
+        return stage_instances()
     attribute = _INSTANCE_ATTRIBUTES.get(kind)
     if project is None or attribute is None:
         return []
     values = getattr(project, attribute, None) or []
-    return [v for v in values if isinstance(v, dict) and v.get("id")]
+    seen, instances = set(), []
+    for value in values:
+        if isinstance(value, dict) and value.get("id") and value["id"] not in seen:
+            seen.add(value["id"])
+            instances.append(value)
+    return instances
 
 
 def _expand(signal: dict, project) -> list:

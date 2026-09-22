@@ -61,6 +61,10 @@ _LAYOUT = {
     # internal_bits.py) - this is where it survives. Written by the scan
     # periodically and on stop, never on every scan.
     "logic_retentive": (("logic_retentive",), dict),
+    # The operating mode (MODE.*, core/operating_mode.py): a controller
+    # left in MAINTENANCE for the night must not come back in NORMAL
+    # because somebody rebooted it.
+    "operating_mode": (("operating_mode",), lambda: None),
 }
 
 STATE_KEYS = tuple(_LAYOUT)

@@ -127,6 +127,16 @@ class EPWCore:
         # {"id", "key", "params", "text"} - key/params for tr(), text for
         # logs and alarms.
         self.startup_issues = []
+        # The register's SYS lifecycle (core/runtime_state_signals.py):
+        # STARTING until startup() completes, RUNNING, STOPPING from the
+        # first line of shutdown().
+        self.lifecycle = "STARTING"
+        # MODE.* (core/operating_mode.py) - built in startup(), after the
+        # runtime state it is restored from has been read.
+        self.operating_mode = None
+        # RT.SYNOPTIC.* - the screens verdict (core/synoptic_status.py),
+        # refreshed whenever the screens are (re)bound.
+        self.synoptic_status = {}
         # Alarm event history for the intrusion module (Task: "historia
         # zdarzen alarmowych") - same deferred-to-startup() reason as
         # intrusion_manager itself just above (needs load_project() to
@@ -382,6 +392,7 @@ class EPWCore:
         """
         log.info("EPWCore Startup Sequence Initiated.")
         from epw_os.core.health_manager import SubsystemState
+        self.lifecycle = "STARTING"
 
         # 0. Database first. *.db files are gitignored, so a fresh checkout
         # (or a clean CI runner) has no database at all until migrations
@@ -396,6 +407,10 @@ class EPWCore:
         self.project_manager.set_audit_sink(self.audit_logger, lambda: self.access_manager.level)
         self.project_manager.load_project()
         self._report_project_load()
+        from epw_os.core.operating_mode import OperatingModeManager
+        self.operating_mode = OperatingModeManager(
+            self.event_bus, self.audit_logger,
+            load=self.project_manager.get_operating_mode, save=self.project_manager.set_operating_mode)
 
         # Apparatus register (task "runtime czyta projekt.epw", 3.2) - the
         # project's "devices", plus the Main View symbol bindings: from the
@@ -419,6 +434,7 @@ class EPWCore:
             self.access_manager.set_users([])
         bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
                                 MAIN_VIEW_ROLE_DESIGNATIONS)
+        self._refresh_synoptic_status()
         # The simulated plant answers the project's own apparatuses (an
         # output written by the simulator driver closes/opens the CLOSED
         # contact a moment later), so the command loop and the screens
@@ -640,7 +656,9 @@ class EPWCore:
                 # is exactly right for logic that arms an alarm system
                 # this controller does not have.
                 security=SecuritySignalSource(lambda: self.intrusion_manager),
+                sources=self._signal_sources(),
             ),
+            audit_logger=self.audit_logger,
         ))
         # Where the program's retentive internal signals (MR./MWR.) live
         # between runs - the controller's own runtime state file.
@@ -786,6 +804,7 @@ class EPWCore:
         self.mqtt_manager.start()
 
         self.is_running = True
+        self.lifecycle = "RUNNING"
         self.health_manager.update_subsystem("API", SubsystemState.RUNNING)
         log.info("EPWCore Startup Sequence Complete.")
 
@@ -798,6 +817,32 @@ class EPWCore:
         self.startup_issues.append(issue)
         (log.error if priority >= 3 else log.warning)(text)
         self.alarm_manager.trigger_alarm(issue_id, text, source_tag="", priority=priority)
+
+    def _signal_sources(self) -> list:
+        """The register's groups served by this controller, beyond SYS's
+        own handlers and the alarm half: each one reads the core at every
+        scan (nothing captured), so a manager replaced at runtime is
+        simply read anew."""
+        from epw_os.core.alarm_signals import AlarmSignals
+        from epw_os.core.comm_signals import CommSignals
+        from epw_os.core.device_signals import DeviceSignals
+        from epw_os.core.point_role_signals import PointRoleSignals
+        from epw_os.core.runtime_state_signals import RuntimeStateSignals
+        # PointRoleSignals before DeviceSignals: a role the project gave a
+        # DI contact wins over the device block for that one bit (etap 4).
+        from epw_os.core.system_requests import SystemRequests
+        return [RuntimeStateSignals(self), CommSignals(self), PointRoleSignals(self), DeviceSignals(self),
+                AlarmSignals(self), SystemRequests(self)]
+
+    def _refresh_synoptic_status(self):
+        """RT.SYNOPTIC.* (core/synoptic_status.py): every screen of the
+        project run through the panel's own reader, the verdict kept as
+        facts for the logic and said out loud when it is bad."""
+        from epw_os.core.synoptic_status import evaluate_screens
+        self.synoptic_status = evaluate_screens(self.project_manager.get_embedded_screens(),
+                                                self.apparatus_registry.list_ids())
+        for problem in self.synoptic_status.get("problems", []):
+            log.warning(f"Screens: {problem}")
 
     def _report_project_load(self):
         pm = self.project_manager
@@ -1000,6 +1045,38 @@ class EPWCore:
             self.audit_logger.record("LOGIC_PROGRAM_RELOADED", actor or "SYSTEM", detail, success=success)
         return {"success": success, "reason": reason, "status": self.logic_engine.get_status()}
 
+    def reload_synoptic(self, actor: str = "", level: str = None) -> dict:
+        """Re-reads the screens from projekt.epw and rebinds what the
+        controller derives from them - the apparatus roles the Main View
+        names and RT.SYNOPTIC.* - without touching the logic or the
+        cards (REQ.SYSTEM.RELOAD_SYNOPTIC). The panel rebuilds its pages
+        from the same event a full project reload emits, because pages
+        are built from the screens and are not patchable in place.
+        Engineer level, audited. Returns {"success", "reason", "problems"}."""
+        from epw_os.core.apparatus import MAIN_VIEW_ROLE_DESIGNATIONS, bind_roles_from_screens
+        if level is not None and not self._is_engineer(level):
+            log.warning(f"Refused to reload the screens: level {level!r} is below Engineer.")
+            return {"success": False, "reason": "Access denied - Engineer level required.", "problems": []}
+        who = actor or "SYSTEM"
+        try:
+            self.project_manager.load_project()
+            bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
+                                    MAIN_VIEW_ROLE_DESIGNATIONS)
+            self._refresh_synoptic_status()
+        except Exception as e:  # noqa: BLE001 - reported, audited, never a scan crash
+            reason = f"{type(e).__name__}: {e}"
+            log.error(f"Screens NOT reloaded: {reason}")
+            if self.audit_logger is not None:
+                self.audit_logger.record("SYNOPTIC_RELOADED", who, f"the screens were NOT reloaded: {reason}",
+                                         success=False)
+            return {"success": False, "reason": reason, "problems": []}
+        problems = list(self.synoptic_status.get("problems", []))
+        if self.audit_logger is not None:
+            self.audit_logger.record("SYNOPTIC_RELOADED", who, "the screens were reloaded"
+                                     + (f" with {len(problems)} problem(s)" if problems else ""), success=True)
+        self.event_bus.emit("project_reloaded", True)
+        return {"success": True, "reason": "", "problems": problems}
+
     # --- reinstalling the project without a restart -------------------------
 
     def reload_project(self, actor: str = "", level: str = None) -> dict:
@@ -1102,6 +1179,7 @@ class EPWCore:
         self.apparatus_registry.set_apparatuses(apparatuses_from_records(self.project_manager.get_apparatuses()))
         bind_roles_from_screens(self.apparatus_registry, self.project_manager.get_embedded_screens(),
                                 MAIN_VIEW_ROLE_DESIGNATIONS)
+        self._refresh_synoptic_status()
         self.simulated_plant.set_mappings(plant_mappings_from_apparatuses(self.project_manager.get_apparatuses()))
 
         # Who may operate the alarm system. Their codes and remote
@@ -1432,7 +1510,8 @@ class EPWCore:
     def _start_process_protection(self):
         from epw_os.core.process_protection_manager import ProcessProtectionManager
         self.process_protection_manager = ProcessProtectionManager(
-            self.event_bus, self.tag_manager, self.project_manager, self.audit_logger)
+            self.event_bus, self.tag_manager, self.project_manager, self.audit_logger,
+            alarm_manager=self.alarm_manager)
         # No is_running-gated .start() call, unlike switching_counters/
         # intrusion above - this module has no background thread of its
         # own (only short-lived per-protection threading.Timer delay
@@ -1615,6 +1694,7 @@ class EPWCore:
         """
         log.info("EPWCore Shutdown Sequence Initiated.")
         self.is_running = False
+        self.lifecycle = "STOPPING"
 
         # Publishes a clean, retained "offline" and joins its worker
         # thread before anything else stops - see MqttManager.stop()'s

@@ -129,7 +129,10 @@
     "tooltip_intrusion_status": "Zbiorczy stan systemu alarmowego dla wszystkich stref. Zarządzaj ze strony System alarmowy.",
     "forces_active": "⚠ WYMUSZENIA: {count}",
     "tooltip_forces": "Studio wymusza stany: {tags}. Wymuszenia znikają po zdjęciu, po utracie łączności ze Studio i po restarcie.",
-    "release_all_forces": "Zdejmij wszystkie wymuszenia"
+    "release_all_forces": "Zdejmij wszystkie wymuszenia",
+    "mode": "TRYB: {mode}",
+    "tooltip_mode": "Tryb pracy sterownika (MODE.*). Prawy przycisk: zmiana trybu - wymaga poziomu, który dany tryb przewiduje.",
+    "mode_set": "{mode} ({level})"
   },
   "topbar": {
     "project": "Projekt",
@@ -1074,5 +1077,14 @@
   },
   "common": {
     "close": "Zamknij"
+  },
+  "modes": {
+    "normal": "NORMALNY",
+    "auto": "AUTOMATYCZNY",
+    "manual": "RĘCZNY",
+    "service": "SERWISOWY",
+    "maintenance": "KONSERWACJA",
+    "test": "TEST",
+    "emergency": "AWARYJNY"
   }
 }

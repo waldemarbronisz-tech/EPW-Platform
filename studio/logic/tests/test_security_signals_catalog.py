@@ -64,15 +64,17 @@ def test_catalog_sources_are_from_the_allowed_set():
 def test_catalog_version_is_valid_semver():
     assert re.match(r"^\d+\.\d+\.\d+$", system_signals.get_catalog_version())
 
-def test_sswin_cmd_signals_are_the_only_logic_sourced_ones_so_far():
-    """Documents the current, deliberately small set — catches an
-    accidental source flip on an unrelated signal as much as it checks
-    the CMD_* ones are what's expected."""
-    logic_sourced = {s["id"] for s in system_signals.get_all_signals() if s["source"] == "logic"}
-    assert logic_sourced == {
-        "REQ.SEC.ARM_ALL", "REQ.SEC.ARM_ALL_PARTIAL", "REQ.SEC.DISARM_ALL",
-        "REQ.SEC.CLEAR_ALARM_MEMORY", "REQ.SEC.SILENCE",
-    }
+def test_requests_are_the_only_logic_sourced_signals():
+    """The invariant behind the direction rule (register Z2): a signal
+    the logic may WRITE is a request - REQ.* - and every request is
+    such a signal. A source flipped on an unrelated signal, or a request
+    filed under source == "runtime", breaks one half or the other."""
+    signals = system_signals.get_all_signals()
+    logic_sourced = {s["id"] for s in signals if s["source"] == "logic"}
+    requests = {s["id"] for s in signals if s["id"].startswith("REQ.")}
+    assert logic_sourced == requests
+    assert {"REQ.SEC.ARM_ALL", "REQ.SEC.ARM_ALL_PARTIAL", "REQ.SEC.DISARM_ALL",
+            "REQ.SEC.CLEAR_ALARM_MEMORY", "REQ.SEC.SILENCE"} <= logic_sourced
 
 
 # ---- §4.2: write direction ---------------------------------------------------
@@ -383,7 +385,11 @@ def test_output_block_signal_picker_shows_only_logic_sourced_signals():
     dlg = SignalPickerDialog(p, value_type=None, sections=("system",), system_source_filter="logic")
     sys_root = dlg.tree.topLevelItem(0)
     cats = {sys_root.child(i).text(0) for i in range(sys_root.childCount())}
-    assert cats == {"Żądania - alarmówka"}
+    # Exactly the request categories - every one of them, nothing else.
+    request_categories = {c["name"] for c in system_signals.get_categories()
+                          if any(s["source"] == "logic" for s in c["signals"])}
+    assert cats == request_categories
+    assert "Żądania - alarmówka" in cats and "Stan dozoru" not in cats
 
 def test_input_block_signal_picker_shows_every_category():
     _app()

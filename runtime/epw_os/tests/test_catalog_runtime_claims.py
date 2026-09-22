@@ -21,8 +21,14 @@ and Studio must never import the runtime to find out.
 """
 import pytest
 
+from epw_os.core.alarm_signals import AlarmSignals
+from epw_os.core.comm_signals import CommSignals
+from epw_os.core.device_signals import DeviceSignals
 from epw_os.core.logic_runtime import SystemSignalSource
+from epw_os.core.point_role_signals import PointRoleSignals
+from epw_os.core.runtime_state_signals import RuntimeStateSignals
 from epw_os.core.security_signals import SecuritySignalSource
+from epw_os.core.system_requests import SystemRequests
 from shared.logic import system_signals
 from shared.logic.engine.io_provider import pulse_signal_value
 
@@ -36,7 +42,15 @@ def _controller_answers(signal_id: str) -> bool:
         return True
     # None manager on purpose: `serves` answers from the tables, not from
     # whether an intrusion module happens to be fitted right now.
-    return SecuritySignalSource(None).serves(signal_id)
+    if SecuritySignalSource(None).serves(signal_id):
+        return True
+    # The register's other groups (signal-register etaps): each source
+    # answers serves() from its own tables, with no controller behind it.
+    return any(source.serves(signal_id) for source in _REGISTER_SOURCES)
+
+
+_REGISTER_SOURCES = [RuntimeStateSignals(None), CommSignals(None), PointRoleSignals(None), DeviceSignals(None),
+                     AlarmSignals(None), SystemRequests(None)]
 
 
 CATALOG = system_signals.get_all_signals()
@@ -50,6 +64,9 @@ class _Installation:
     settings = {}
     external_zones = [{"id": "PARTER", "name": "Parter"}]
     external_lines = [{"id": "L1", "name": "Drzwi"}]
+    external_process_protections = [{"id": "PP1", "name": "Temperatura kotla"}]
+    external_cards = [{"id": "ELA1", "kind": "DI", "channels": 16}, {"id": "ELA1", "kind": "AI", "channels": 8},
+                      {"id": "ADA1", "kind": "DO", "channels": 16}]
 
 
 EXPANDED = [s for s in system_signals.get_all_signals(_Installation())
@@ -107,10 +124,11 @@ def test_a_writable_signal_the_controller_cannot_execute_is_never_served():
     """A source == "logic" command is only real if something executes it.
     Reading such a signal back is not the point - issuing it is."""
     security = SecuritySignalSource(None)
+    executors = [security] + [s for s in _REGISTER_SOURCES if hasattr(s, "execute")]
     for signal in CATALOG:
         if signal.get("source") != "logic" or signal.get("runtime") != "served":
             continue
-        assert security.serves(signal["id"]), (
+        assert any(source.serves(signal["id"]) for source in executors), (
             f"{signal['id']} is offered to the logic as a writable command and "
             f"marked served, but nothing on this controller executes it."
         )

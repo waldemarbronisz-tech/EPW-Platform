@@ -117,10 +117,9 @@ def _normalise(signal_id: str) -> str:
 # What is waiting on what. Keyed by the register's own GROUP column,
 # because that is the unit these decisions are actually made in.
 _PENDING = OrderedDict([
-    ("POWER", ("czeka na sprzęt",
-               "wymaga nadania roli punktowi w Studio (zasilanie) - osobne zadanie")),
-    ("UPS", ("czeka na sprzęt",
-             "wymaga nadania roli punktowi w Studio (UPS) - osobne zadanie")),
+    # POWER and UPS: served since etap 3 (EPM's register block) and etap 4
+    # (a DI point with a role) - a row of theirs missing from the catalogue
+    # is plainly "do zrobienia" now, not waiting on anything.
     ("DEVICE HEALTH", ("czeka na firmware",
                        "wymaga rejestrów diagnostycznych w firmware karty - mapa rejestrów ELA01")),
     ("DIAGNOSTICS", ("czeka na firmware",
@@ -133,6 +132,17 @@ _PENDING = OrderedDict([
 ])
 
 
+# Register positions with NO SOURCE on this platform (rule Z1: a bit with
+# nothing behind it is a facade, so it is not in the catalogue) - each with
+# the reason, for the owner's decision. Keyed by the normalised id.
+_NO_SOURCE = OrderedDict([
+    ("PROT.POWER_REVERSE", "brak funkcji 32 (moc zwrotna) w ADA01 i w panelu zabezpieczeń - do decyzji Waldka"),
+    ("MODE.LOCAL", "miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś "
+                   "źródła komend - wymaga decyzji, co LOCAL blokuje"),
+    ("MODE.REMOTE", "jak MODE.LOCAL - jedna decyzja dla obu"),
+])
+
+
 def classify(entry, catalog_by_id, renames):
     """(status, note) for one register row."""
     signal_id = entry["ID / Wzorzec"]
@@ -141,6 +151,8 @@ def classify(entry, catalog_by_id, renames):
         if catalog.get("runtime") == "served":
             return "w katalogu i obsłużony", ""
         return "w katalogu, bez źródła", "nazwa ustalona, nic jeszcze nie wylicza wartości"
+    if _normalise(signal_id) in _NO_SOURCE:
+        return "bez źródła", _NO_SOURCE[_normalise(signal_id)]
 
     group = (entry.get("Grupa") or "").upper()
     for key, (status, note) in _PENDING.items():
@@ -197,7 +209,7 @@ def build() -> str:
     w("  realnie wylicza jego wartość. Logika może go użyć.")
     w("- **w katalogu, bez źródła** — nazwa ustalona, ale nic jeszcze nie liczy")
     w("  wartości. Panel Sygnały pokazuje to wprost jako „brak źródła”.")
-    w("- **czeka na sprzęt** — potrzebny punkt z nadaną rolą w Studio (zasilanie, UPS).")
+    w("- **bez źródła** — nic na tej platformie nie zna wartości; powód w tabeli, decyzja Waldka.")
     w("- **czeka na firmware** — potrzebne rejestry diagnostyczne w firmware karty.")
     w("- **przyszłość** — koncepcja bez implementacji po żadnej stronie.")
     w("- **poza katalogiem** — sygnał należy do innej warstwy (markery użytkownika,")

@@ -246,6 +246,17 @@ class Point:
     # for - None = no warning. The panel may change it (written back like
     # every other setting); the counts themselves stay runtime state.
     warning_threshold: Optional[int] = None
+    # Signal register etap 4: a DI point can CARRY a register signal that
+    # arrives as a dry contact (a UPS status contact, an external
+    # protection relay's trip contact, a mains-present relay) - `role` is
+    # that signal's id from shared/logic/point_roles.py (the catalogue's
+    # PWR/UPS/PROT entries a contact can carry), None = no role. `contact`
+    # is the contact type: "NO" (closed = TRUE) or "NC" (open = TRUE), so
+    # a supervision bit reads TRUE for the healthy state whichever contact
+    # the relay offers. The controller exposes the bit under the role's
+    # own name; only DI points may carry one.
+    role: Optional[str] = None
+    contact: str = "NO"
 
 
 def effective_location(point: Point, card) -> str:

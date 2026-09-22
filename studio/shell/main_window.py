@@ -30,7 +30,7 @@ import os
 import re
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QElapsedTimer, QEventLoop, QSettings, QSize, QTimer
+from PySide6.QtCore import QCoreApplication, Qt, QElapsedTimer, QEventLoop, QSettings, QSize, QTimer
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QInputDialog, QMainWindow, QMenuBar, QMessageBox, QSplitter, QStyle,
@@ -48,6 +48,16 @@ from logic_studio import i18n as logic_i18n
 # Where the interface language is remembered between sessions. One key,
 # named here rather than spelled out at each use.
 LANGUAGE_SETTING = "ui/language"
+
+
+def saved_language(settings=None) -> str:
+    """The language Studio starts in: the saved choice, else the shell's
+    default. The same store StudioMainWindow uses when built without an
+    injected QSettings - read here too so studio/main.py can install Qt's
+    own translations before the window exists."""
+    store = settings if settings is not None else QSettings("BroniszLabs", "EPW Studio")
+    restored = store.value(LANGUAGE_SETTING)
+    return restored if restored in ("en", "pl") else get_language()
 from studio.shell.menus import (
     build_intrusion_users_toolbar,
     build_signals_toolbar,
@@ -1374,6 +1384,10 @@ class StudioMainWindow(QMainWindow):
         set_language(code)
         self.settings.setValue(LANGUAGE_SETTING, code)
         logic_i18n.set_language(code)
+        # Qt's own words (OK/Cancel, the file dialogs): the old translator
+        # goes, the new one comes - none for English (Qt's source language).
+        from logic_studio.qt_translation import install_qt_translations
+        install_qt_translations(QCoreApplication.instance(), code)
         self._reload_synoptic_language()
         self._retranslate()
 

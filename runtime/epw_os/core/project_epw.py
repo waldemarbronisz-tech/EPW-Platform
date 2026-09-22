@@ -113,6 +113,10 @@ def build_project_view(project) -> dict:
             "description": point.description,
             "location": pf.effective_location(point, card),
             "technical_note": point.technical_note,
+            # Signal register etap 4: the register signal this DI contact
+            # carries and its contact type (core/point_role_signals.py).
+            "role": point.role if kind == "DI" else None,
+            "contact": point.contact or "NO",
         })
     return {
         "format": pf.FORMAT_MARKER,
@@ -138,7 +142,7 @@ def build_project_view(project) -> dict:
             {"id": c.id, "kind": kind, "model": c.model, "channels": channels,
              "modbus_unit_id": c.modbus_unit_id, "location": c.location}
             for c in project.cards
-            for kind, channels in c.channel_kinds.items()
+            for kind, channels in (c.channel_kinds.items() if c.channel_kinds else [(None, 0)])
         ],
         "modbus_bus": asdict(project.modbus_bus),
         "point_registry": registry,

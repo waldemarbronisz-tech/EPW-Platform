@@ -72,8 +72,16 @@ class InternalSignalsTab(QWidget):
     whoever saves projects, exactly like any other department.
     """
 
-    _COLS = ("name", "id", "type", "retentive", "description", "category", "label", "used_by")
-    COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_DESCRIPTION, COL_CATEGORY, COL_LABEL, COL_USED = range(8)
+    # Owner's order (2026-09-22): what a signal IS first (name, id, type,
+    # retention), then where it is used, then how it is described; the
+    # description last, taking whatever width is left.
+    _COLS = ("name", "id", "type", "retentive", "used_by", "category", "label", "description")
+    COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_USED, COL_CATEGORY, COL_LABEL, COL_DESCRIPTION = range(8)
+    # Initial widths (px): together they must leave "Used in" whole in a
+    # 1280 x 720 window without a horizontal scrollbar - measured with
+    # tests/test_signals_panel.py's own width test.
+    COLUMN_WIDTHS = {COL_NAME: 140, COL_ID: 120, COL_TYPE: 70, COL_RETENTIVE: 70,
+                     COL_USED: 190, COL_CATEGORY: 110, COL_LABEL: 100}
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -94,12 +102,13 @@ class InternalSignalsTab(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"signals.col_{c}") for c in self._COLS])
         _prep_table(self.table)
-        _resizable(self.table, self.COL_NAME, 170)
-        _resizable(self.table, self.COL_ID, 150)
-        _resizable(self.table, self.COL_DESCRIPTION, 300)
-        _resizable(self.table, self.COL_CATEGORY, 140)
-        _resizable(self.table, self.COL_LABEL, 120)
-        _resizable(self.table, self.COL_USED, 180)
+        for column, width in self.COLUMN_WIDTHS.items():
+            _resizable(self.table, column, width)
+        # The description is last and stretches over the remaining width
+        # (Qt: a stretched last section is not user-resizable; every
+        # other column stays Interactive - draggable).
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setSectionResizeMode(self.COL_DESCRIPTION, QHeaderView.ResizeMode.Stretch)
         self.table.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self.table)
 

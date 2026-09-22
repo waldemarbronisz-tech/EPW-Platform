@@ -129,7 +129,10 @@
     "tooltip_intrusion_status": "Aggregate intrusion alarm system state across every zone. Manage from the Intrusion Alarm page.",
     "forces_active": "⚠ FORCES: {count}",
     "tooltip_forces": "Studio is forcing: {tags}. Forces go away when released, when the link to Studio is lost and on restart.",
-    "release_all_forces": "Release all forces"
+    "release_all_forces": "Release all forces",
+    "mode": "MODE: {mode}",
+    "tooltip_mode": "The controller's operating mode (MODE.*). Right-click to change it - at the level the mode demands.",
+    "mode_set": "{mode} ({level})"
   },
   "topbar": {
     "project": "Project",
@@ -1074,5 +1077,14 @@
   },
   "common": {
     "close": "Close"
+  },
+  "modes": {
+    "normal": "NORMAL",
+    "auto": "AUTO",
+    "manual": "MANUAL",
+    "service": "SERVICE",
+    "maintenance": "MAINTENANCE",
+    "test": "TEST",
+    "emergency": "EMERGENCY"
   }
 }

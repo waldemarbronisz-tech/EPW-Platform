@@ -234,6 +234,10 @@ def main():
     register_builtin_blocks()
 
     app = LogicStudioApp(sys.argv)
+    # Qt's own OK/Cancel/dialogs in the interface's language (qt_translation.py).
+    from logic_studio.i18n import get_language
+    from logic_studio.qt_translation import install_qt_translations
+    install_qt_translations(app, get_language())
 
     window = MainWindow()
     window.show()

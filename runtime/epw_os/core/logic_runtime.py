@@ -69,11 +69,21 @@ class SystemSignalSource:
     _ACCESS_LEVEL_VALUES = {"User": 0.0, "Operator": 1.0, "Engineer": 2.0}
 
     def __init__(self, health_manager=None, access_manager=None, training_mode=None,
-                 time_sync_monitor=None, security=None):
+                 time_sync_monitor=None, security=None, sources=()):
         self.health_manager = health_manager
         self.access_manager = access_manager
         self.training_mode = training_mode
         self.time_sync_monitor = time_sync_monitor
+        # The register's other groups, each its own source with serves()/
+        # read() and - for REQ.* - required_level()/execute(): SYS lifecycle,
+        # RT, MODE (core/runtime_state_signals.py), and the groups the
+        # later stages add. Asked in order; the first that serves a signal
+        # answers it.
+        self.sources = list(sources)
+        for source in self.sources:
+            attach = getattr(source, "attach", None)
+            if callable(attach):
+                attach(self)
         # The alarm half of the catalog (core/security_signals.py), which
         # maps the system-wide alarm-panel vocabulary onto this
         # controller's per-zone intrusion model. None -> every SEC
@@ -98,10 +108,25 @@ class SystemSignalSource:
             if value is not None:
                 return value
 
+        for source in self.sources:
+            if source.serves(signal_id):
+                value = source.read(signal_id)
+                return False if value is None else value
+
         handler = self._HANDLERS.get(signal_id)
         if handler is None:
             return False
         return handler(self)
+
+    def request_source(self, signal_id: str):
+        """Whoever executes a REQ.* signal: the alarm half, or one of the
+        attached sources. None when nothing on this controller does."""
+        if self.security is not None and self.security.serves(signal_id):
+            return self.security
+        for source in self.sources:
+            if source.serves(signal_id) and hasattr(source, "execute"):
+                return source
+        return None
 
     # --- individual signals -------------------------------------------------
 
@@ -171,7 +196,7 @@ class TagIOProvider(IOProvider):
     """
 
     def __init__(self, tag_manager, write_digital=None, write_analog=None,
-                 force_manager=None, system_signals=None, access_manager=None):
+                 force_manager=None, system_signals=None, access_manager=None, audit_logger=None):
         self.tag_manager = tag_manager
         self._write_digital = write_digital
         self._write_analog = write_analog
@@ -180,6 +205,10 @@ class TagIOProvider(IOProvider):
         # Who is logged in - consulted for a system-signal command whose
         # own block demands a minimum access level (see command_levels).
         self.access_manager = access_manager
+        # Rule Z2 of the register work: a request the logic issued and the
+        # controller refused must be visible - the audit log, not only a
+        # line in the debug log.
+        self.audit_logger = audit_logger
 
         # signal_id -> the "Minimalny poziom dostepu" its own
         # system.signal_out block declares ("Brak"/"User"/"Operator"/
@@ -301,21 +330,39 @@ class TagIOProvider(IOProvider):
         if not rising:
             return
 
-        security = getattr(self.system_signals, "security", None)
-        if security is None or not security.serves(signal_id):
+        finder = getattr(self.system_signals, "request_source", None)
+        source = finder(signal_id) if callable(finder) else None
+        if source is None:
             if signal_id not in self._unserved_writes:
                 self._unserved_writes.add(signal_id)
                 log.warning(f"Logic issued the system command {signal_id}, which this controller does not "
                             f"execute - it was not applied.")
+                self._audit_refusal(signal_id, "this controller does not execute it")
             return
 
+        # The gate is the stricter of what the block asked for and what
+        # the request itself demands (the same level the panel needs for
+        # the same action - rule Z2).
         required = self.command_levels.get(signal_id, "Brak")
+        source_level = getattr(source, "required_level", None)
+        demanded = source_level(signal_id) if callable(source_level) else None
+        if demanded and _level_rank(demanded) > _level_rank(required):
+            required = demanded
         if not self._has_command_access(required):
-            log.warning(f"Logic issued {signal_id}, but its block requires {required} access and the "
+            log.warning(f"Logic issued {signal_id}, but it requires {required} access and the "
                         f"controller is at a lower level - not applied.")
+            self._audit_refusal(signal_id, f"requires {required}, the controller is at "
+                                           f"{getattr(self.access_manager, 'level', None)}")
             return
 
-        security.execute(signal_id, actor="LOGIC")
+        if source is getattr(self.system_signals, "security", None):
+            source.execute(signal_id, actor="LOGIC")
+        else:
+            source.execute(signal_id, actor="LOGIC", level=getattr(self.access_manager, "level", None))
+
+    def _audit_refusal(self, signal_id: str, reason: str):
+        if self.audit_logger is not None:
+            self.audit_logger.record("LOGIC_REQUEST_REFUSED", "LOGIC", f"{signal_id}: {reason}", success=False)
 
     def _has_command_access(self, required: str) -> bool:
         """"Brak" (none) is the default for every non-safety command and
@@ -328,6 +375,14 @@ class TagIOProvider(IOProvider):
         if self.access_manager is None:
             return False
         return bool(self.access_manager.has_access(required))
+
+
+def _level_rank(level) -> int:
+    from epw_os.core.access_manager import AccessLevel
+    try:
+        return AccessLevel._ORDER.index(level)
+    except ValueError:
+        return -1
 
 
 def _as_float(value) -> float:

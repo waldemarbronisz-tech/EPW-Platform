@@ -827,9 +827,9 @@ class ProjectManager:
         return list(self.config.get("modules", []))
 
     def get_point_registry(self) -> list:
-        """[{address, kind, description, location, technical_note}] - the
-        location already resolved (a point without its own inherits its
-        card's)."""
+        """[{address, kind, description, location, technical_note, role,
+        contact}] - the location already resolved (a point without its own
+        inherits its card's); role/contact per core/point_role_signals.py."""
         return [dict(p) for p in self.config.get("point_registry", [])]
 
     def get_modbus_bus(self) -> dict:
@@ -938,6 +938,17 @@ class ProjectManager:
     def get_last_synoptic_screen(self):
         """Which screen of the project's `screens` the panel had open."""
         return self.config.get("last_synoptic_screen")
+
+    def get_operating_mode(self):
+        return self.config.get("operating_mode")
+
+    def set_operating_mode(self, mode) -> bool:
+        if self.config.get("operating_mode") == mode:
+            return True
+        self.config["operating_mode"] = mode
+        if not self.is_epw_project():
+            return True
+        return self.save_runtime_state()
 
     def set_last_synoptic_screen(self, screen_id) -> bool:
         if self.config.get("last_synoptic_screen") == screen_id:

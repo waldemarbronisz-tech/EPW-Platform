@@ -271,3 +271,58 @@ def test_search_finds_a_block_by_its_polish_name_and_by_its_english_one(app):
         assert not panel._matches("logic.and", "zawór")
     finally:
         panel.deleteLater()
+
+
+# --- Qt's own words: OK / Cancel and the dialogs -----------------------------
+
+def test_qts_own_buttons_follow_the_language(tmp_path, app):
+    """OK/Cancel/Yes/No are drawn and translated by Qt itself, from the
+    .qm files PySide6 ships - not from our locale. A Polish Studio with
+    an English "Cancel" under every dialog was exactly this translator
+    missing (logic_studio/qt_translation.py)."""
+    from PySide6.QtWidgets import QDialogButtonBox
+    from logic_studio.qt_translation import installed_qt_translators, remove_qt_translations
+
+    cancel, ok = QDialogButtonBox.StandardButton.Cancel, QDialogButtonBox.StandardButton.Ok
+    window = StudioMainWindow(settings=QSettings(str(tmp_path / "s.ini"), QSettings.IniFormat))
+    try:
+        window._set_language("pl")
+        assert len(installed_qt_translators()) == 2                   # qtbase_pl + qt_pl
+        box = QDialogButtonBox(ok | cancel)
+        assert box.button(cancel).text() == "Anuluj"
+        assert box.button(ok).text() == "OK"                          # Qt's Polish keeps "OK"
+
+        # The proof it is the translator: take it away and Qt is English again.
+        remove_qt_translations(app)
+        assert QDialogButtonBox(cancel).button(cancel).text() == "Cancel"
+
+        # English is Qt's source language - no translator at all, no "qtbase_en".
+        window._set_language("pl")
+        window._set_language("en")
+        assert installed_qt_translators() == []
+        assert QDialogButtonBox(cancel).button(cancel).text() == "Cancel"
+    finally:
+        remove_qt_translations(app)
+        window.hide()          # not close(): a closing window asks about unsaved work, modally
+
+
+def test_a_missing_qt_translation_file_is_a_warning_not_a_crash(app, caplog):
+    import logging
+    from logic_studio.qt_translation import install_qt_translations, installed_qt_translators, qt_translations_path
+
+    with caplog.at_level(logging.WARNING, logger="logic_studio.qt_translation"):
+        assert install_qt_translations(app, "xx") == []
+    assert installed_qt_translators() == []
+    assert any("qtbase_xx.qm" in r.getMessage() for r in caplog.records)
+    assert qt_translations_path() in caplog.records[0].getMessage()   # the path comes from Qt, not from us
+
+
+def test_the_saved_language_is_what_studio_starts_qt_in(tmp_path):
+    from studio.shell.main_window import saved_language
+
+    settings = QSettings(str(tmp_path / "s.ini"), QSettings.IniFormat)
+    assert saved_language(settings) == shell_i18n.get_language()
+    settings.setValue(LANGUAGE_SETTING, "pl")
+    assert saved_language(settings) == "pl"
+    settings.setValue(LANGUAGE_SETTING, "klingon")
+    assert saved_language(settings) == shell_i18n.get_language()

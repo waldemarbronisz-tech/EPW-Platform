@@ -388,3 +388,52 @@ def test_clearing_the_search_brings_everything_back(panel):
     tab.search_edit.setText("")
 
     assert sum(1 for r in range(total) if not tab.table.isRowHidden(r)) == total
+
+
+# --- the columns (owner's order and widths, 2026-09-22) ----------------------
+
+def test_the_columns_come_in_the_owners_order(panel):
+    tab = panel.internal_tab
+    assert tab._COLS == ("name", "id", "type", "retentive", "used_by", "category", "label", "description")
+    headers = [tab.table.horizontalHeaderItem(c).text() for c in range(tab.table.columnCount())]
+    assert headers == [shell_i18n.tr(f"signals.col_{c}") for c in tab._COLS]
+    assert tab.COL_DESCRIPTION == tab.table.columnCount() - 1
+    header = tab.table.horizontalHeader()
+    from PySide6.QtWidgets import QHeaderView
+    for column in range(tab.COL_DESCRIPTION):
+        assert header.sectionResizeMode(column) == QHeaderView.ResizeMode.Interactive   # still draggable
+    assert header.sectionResizeMode(tab.COL_DESCRIPTION) == QHeaderView.ResizeMode.Stretch
+    assert header.stretchLastSection()
+    assert tab.table.columnWidth(tab.COL_TYPE) == 70 and tab.table.columnWidth(tab.COL_RETENTIVE) == 70
+
+
+def test_used_in_is_whole_in_a_1280_by_720_window(window, app):
+    """Measured, not assumed: at the smallest window the department is
+    used in, every fixed column shows in full, the description gets the
+    rest and no horizontal scrollbar appears."""
+    window.resize(1280, 720)
+    window.show()
+    window._open_signals()
+    tab = window._signals_panel.internal_tab
+    project = _logic_project(window)
+    project.settings["internal_bits"] = [_bit("BLOKADA_ZS", description="Blokada załączenia od zabezpieczenia szyn")]
+    blocks = [_block(project, "virtual.input", "BLOKADA_ZS") for _ in range(3)]
+    for i, block in enumerate(blocks):
+        block.short_id = f"C{i + 1}"
+    tab.refresh()
+    app.processEvents()
+
+    table = tab.table
+    viewport = table.viewport().width()
+    widths = {tab._COLS[c]: table.columnWidth(c) for c in range(table.columnCount())}
+    fixed = sum(w for name, w in widths.items() if name != "description")
+    used_text = table.item(0, tab.COL_USED).text()
+    used_needed = table.fontMetrics().horizontalAdvance(used_text) + 12
+    print(f"\nviewport={viewport}px fixed={fixed}px description={widths['description']}px widths={widths} "
+          f"used_in='{used_text}' needs {used_needed}px")
+    assert viewport >= 900, "the department's table is narrower than expected at 1280 x 720"
+    assert fixed + 120 <= viewport, "the fixed columns leave no room for the description"
+    assert table.horizontalScrollBar().maximum() == 0, "a horizontal scrollbar appeared"
+    assert used_needed <= widths["used_by"], "the Used in column cuts its text"
+    assert widths["description"] >= 120
+    window.hide()
