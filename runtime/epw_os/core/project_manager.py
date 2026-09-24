@@ -942,6 +942,17 @@ class ProjectManager:
     def get_operating_mode(self):
         return self.config.get("operating_mode")
 
+    def get_control_place(self):
+        return self.config.get("control_place")
+
+    def set_control_place(self, place) -> bool:
+        if self.config.get("control_place") == place:
+            return True
+        self.config["control_place"] = place
+        if not self.is_epw_project():
+            return True
+        return self.save_runtime_state()
+
     def set_operating_mode(self, mode) -> bool:
         if self.config.get("operating_mode") == mode:
             return True

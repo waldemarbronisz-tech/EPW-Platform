@@ -427,7 +427,8 @@ class EPWCore:
         from epw_os.core.operating_mode import OperatingModeManager
         self.operating_mode = OperatingModeManager(
             self.event_bus, self.audit_logger,
-            load=self.project_manager.get_operating_mode, save=self.project_manager.set_operating_mode)
+            load=self.project_manager.get_operating_mode, save=self.project_manager.set_operating_mode,
+            load_place=self.project_manager.get_control_place, save_place=self.project_manager.set_control_place)
 
         # Apparatus register (task "runtime czyta projekt.epw", 3.2) - the
         # project's "devices", plus the Main View symbol bindings: from the
@@ -810,6 +811,7 @@ class EPWCore:
         from epw_os.core.remote_commands import RemoteCommandGateway
         self.remote_commands = RemoteCommandGateway(
             internal_bits=self.internal_bits,
+            operating_mode=lambda: self.operating_mode,
             access_manager=self.access_manager,
             intrusion_manager=self.intrusion_manager,
             command_manager=self.command_manager,
@@ -1242,6 +1244,7 @@ class EPWCore:
             from epw_os.core.remote_commands import RemoteCommandGateway
             self.remote_commands = RemoteCommandGateway(
                 internal_bits=self.internal_bits,
+                operating_mode=lambda: self.operating_mode,
                 access_manager=self.access_manager,
                 intrusion_manager=self.intrusion_manager,
                 command_manager=self.command_manager,

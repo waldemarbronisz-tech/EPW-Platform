@@ -136,9 +136,8 @@ _PENDING = OrderedDict([
 # nothing behind it is a facade, so it is not in the catalogue) - each with
 # the reason, for the owner's decision. Keyed by the normalised id.
 _NO_SOURCE = OrderedDict([
-    ("MODE.LOCAL", "miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś "
-                   "źródła komend - wymaga decyzji, co LOCAL blokuje"),
-    ("MODE.REMOTE", "jak MODE.LOCAL - jedna decyzja dla obu"),
+    # Empty since 2026-09-24 - every register position has a source or a
+    # named reason of another kind. Kept as the mechanism for the next one.
 ])
 
 

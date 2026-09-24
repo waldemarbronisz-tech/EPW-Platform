@@ -173,6 +173,18 @@ class RuntimeStateSignals:
         "RT.SYNOPTIC.READY": lambda self: bool(self._synoptic().get("ready")),
         "RT.SYNOPTIC.FAIL": lambda self: bool(self._synoptic().get("fail")),
         "RT.SYNOPTIC.BINDING_FAULT": lambda self: bool(self._synoptic().get("binding_fault")),
+        # The control place (owner 2026-09-24): LOCAL locks the engineering
+        # link and remote control, REMOTE lets them through.
+        "MODE.LOCAL": lambda self: getattr(self._operating_mode(), "control_place", None) == "LOCAL",
+        "MODE.REMOTE": lambda self: getattr(self._operating_mode(), "control_place", None) == "REMOTE",
+        # The control place (owner 2026-09-24): LOCAL locks the engineering
+        # link and remote control, REMOTE lets them through.
+        "MODE.LOCAL": lambda self: getattr(self._operating_mode(), "control_place", None) == "LOCAL",
+        "MODE.REMOTE": lambda self: getattr(self._operating_mode(), "control_place", None) == "REMOTE",
+        # The control place (owner 2026-09-24): LOCAL locks the engineering
+        # link and remote control, REMOTE lets them through.
+        "MODE.LOCAL": lambda self: getattr(self._operating_mode(), "control_place", None) == "LOCAL",
+        "MODE.REMOTE": lambda self: getattr(self._operating_mode(), "control_place", None) == "REMOTE",
         "MODE.TRAINING": _read_training,
         "MODE.SIMULATION": _read_simulation,
         "MODE.DEGRADED": lambda self: self._any_health(SubsystemState.DEGRADED),

@@ -18,8 +18,18 @@ night must not come back in NORMAL because somebody rebooted it.
 The three modes the register also names but this module does NOT hold:
 TRAINING (TrainingModeManager), SIMULATION (TagManager.mode) and
 DEGRADED (HealthManager) - they are read from their own sources by
-runtime_state_signals.py. LOCAL/REMOTE have no source on this
-controller and are reported as such, not faked.
+runtime_state_signals.py.
+
+THE CONTROL PLACE (owner's decision 2026-09-24): LOCAL / REMOTE is a
+second, independent axis - where control is allowed to come from, like
+the local/remote switch on a switchgear panel. In LOCAL the controller
+refuses every CHANGE arriving over the engineering link (Studio's REST:
+commands, forces, bits, mode, project install, restore) and over remote
+control (MQTT / Home Assistant / VPN); reads keep working and the panel
+itself is not affected. It is set from the panel only (Operator), never
+over the link it locks, and survives a restart like the mode does. The
+register reads it as MODE.LOCAL / MODE.REMOTE. Default REMOTE: a fresh
+controller accepts its first project over the link.
 """
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.logging import log
@@ -44,6 +54,24 @@ REQUIRED_LEVEL = {
 }
 
 
+LOCAL, REMOTE = "LOCAL", "REMOTE"
+CONTROL_PLACES = (LOCAL, REMOTE)
+DEFAULT_CONTROL_PLACE = REMOTE
+CONTROL_PLACE_LEVEL = AccessLevel.OPERATOR
+
+
+LOCAL, REMOTE = "LOCAL", "REMOTE"
+CONTROL_PLACES = (LOCAL, REMOTE)
+DEFAULT_CONTROL_PLACE = REMOTE
+CONTROL_PLACE_LEVEL = AccessLevel.OPERATOR
+
+
+LOCAL, REMOTE = "LOCAL", "REMOTE"
+CONTROL_PLACES = (LOCAL, REMOTE)
+DEFAULT_CONTROL_PLACE = REMOTE
+CONTROL_PLACE_LEVEL = AccessLevel.OPERATOR
+
+
 def _rank(level) -> int:
     try:
         return AccessLevel._ORDER.index(level)
@@ -52,12 +80,53 @@ def _rank(level) -> int:
 
 
 class OperatingModeManager:
-    def __init__(self, event_bus=None, audit_logger=None, load=None, save=None):
+    def __init__(self, event_bus=None, audit_logger=None, load=None, save=None,
+                 load_place=None, save_place=None):
         self.event_bus = event_bus
         self.audit_logger = audit_logger
         self._save = save
+        self._save_place = save_place
         stored = load() if callable(load) else None
         self._mode = stored if stored in MODES else DEFAULT_MODE
+        stored_place = load_place() if callable(load_place) else None
+        self._control_place = stored_place if stored_place in CONTROL_PLACES else DEFAULT_CONTROL_PLACE
+
+    # --- the control place ---------------------------------------------------------
+
+    @property
+    def control_place(self) -> str:
+        return self._control_place
+
+    def remote_allowed(self) -> bool:
+        """Whether a CHANGE may arrive over the engineering link or remote
+        control right now - False in LOCAL."""
+        return self._control_place == REMOTE
+
+    def set_control_place(self, place: str, actor: str, level: str = None) -> tuple:
+        """(True, "") when set (or already so); (False, reason) when
+        refused. Operator level from the panel; audited both ways."""
+        if place not in CONTROL_PLACES:
+            reason = f"unknown control place {place!r}"
+            self._audit("CONTROL_PLACE_REFUSED", actor, f"{place}: {reason}", success=False)
+            return False, reason
+        if level is not None and _rank(level) < _rank(CONTROL_PLACE_LEVEL):
+            reason = f"{place} requires {CONTROL_PLACE_LEVEL}, {actor} is {level}"
+            self._audit("CONTROL_PLACE_REFUSED", actor, f"{place}: {reason}", success=False)
+            log.warning(f"Control place {place} refused for {actor}: {reason}")
+            return False, reason
+        if place == self._control_place:
+            return True, ""
+        previous, self._control_place = self._control_place, place
+        if callable(self._save_place):
+            try:
+                self._save_place(place)
+            except Exception as e:  # noqa: BLE001 - a state file that cannot be written must not undo the switch
+                log.error(f"Control place {place} not persisted: {e}")
+        self._audit("CONTROL_PLACE_CHANGED", actor, f"{previous} -> {place}")
+        log.info(f"Control place {previous} -> {place} ({actor})")
+        if self.event_bus is not None:
+            self.event_bus.emit("control_place_changed", place, previous)
+        return True, ""
 
     @property
     def mode(self) -> str:

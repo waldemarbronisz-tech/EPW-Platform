@@ -244,7 +244,8 @@ def test_every_new_signal_is_in_the_catalogue_with_the_right_direction_and_serve
         assert ids[signal_id]["source"] == "runtime" and ids[signal_id]["runtime"] == "served", signal_id
     for mode in modes.MODES:
         assert ids[f"REQ.MODE.{mode}"]["source"] == "logic"
-    assert "MODE.LOCAL" not in ids and "MODE.REMOTE" not in ids     # no source here - not faked
+    for signal_id in ("MODE.LOCAL", "MODE.REMOTE"):                  # the control place, since 2026-09-24
+        assert ids[signal_id]["source"] == "runtime" and ids[signal_id]["runtime"] == "served"
     assert tuple(int(x) for x in system_signals.get_catalog_version().split(".")) >= (2, 2, 0)
 
     # Everything the catalogue says is served, the controller's source really answers.
@@ -261,9 +262,8 @@ def test_the_register_status_now_counts_these_rows_as_served():
     for row in ("SYS.RUNNING", "SYS.CLOCK_1MIN", "RT.LOGIC.OVERRUN", "RT.SYNOPTIC.BINDING_FAULT", "MODE.MAINTENANCE",
                 "REQ.MODE.EMERGENCY"):
         assert gen.classify({"ID / Wzorzec": row, "Grupa": "X"}, catalog, {})[0] == "w katalogu i obsłużony", row
-    # MODE.LOCAL has no source on this controller: since etap 6 the report
-    # says so with the reason, rather than calling it unfinished work.
-    assert gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog, {})[0] == "bez źródła"
+    # MODE.LOCAL got its source on 2026-09-24 (the control place).
+    assert gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog, {})[0] == "w katalogu i obsłużony"
 
 
 # --- the panel's side: REST, the same table -------------------------------------

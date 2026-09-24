@@ -1415,7 +1415,11 @@ class MainWindow(QMainWindow):
             self.lbl_sb_mode.setVisible(False)
             return
         mode = manager.mode
-        self.lbl_sb_mode.setText(f" {tr('statusbar.mode', mode=tr('modes.' + mode.lower()))} ")
+        place = getattr(manager, "control_place", None)
+        text = tr("statusbar.mode", mode=tr("modes." + mode.lower()))
+        if place:
+            text += "  " + tr("statusbar.control_place", place=tr("modes." + place.lower()))
+        self.lbl_sb_mode.setText(f" {text} ")
         self.lbl_sb_mode.setToolTip(tr("statusbar.tooltip_mode"))
         color = "#C00000" if mode == "EMERGENCY" else ("#8A5A00" if mode != "NORMAL" else "#404040")
         self.lbl_sb_mode.setStyleSheet(f"color: {color}; font-weight: bold;")
@@ -1436,7 +1440,25 @@ class MainWindow(QMainWindow):
             action.setCheckable(True)
             action.setChecked(mode == manager.mode)
             actions[action] = mode
+        places = {}
+        if hasattr(manager, "control_place"):
+            menu.addSeparator()
+            for place in modes.CONTROL_PLACES:
+                action = menu.addAction(tr("statusbar.control_place_set", place=tr("modes." + place.lower()),
+                                           level=modes.CONTROL_PLACE_LEVEL))
+                action.setCheckable(True)
+                action.setChecked(place == manager.control_place)
+                places[action] = place
         chosen = menu.exec(self.lbl_sb_mode.mapToGlobal(pos))
+        place = places.get(chosen)
+        if place is not None:
+            if not self.access_manager.has_access(modes.CONTROL_PLACE_LEVEL):
+                self.deny_access(modes.CONTROL_PLACE_LEVEL, f"Control place {place}")
+                return
+            manager.set_control_place(place, actor=f"{self.access_manager.level} (panel)",
+                                      level=self.access_manager.level)
+            self._refresh_mode_indicator()
+            return
         mode = actions.get(chosen)
         if mode is None or mode == manager.mode:
             return

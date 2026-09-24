@@ -65,6 +65,15 @@ _LAYOUT = {
     # left in MAINTENANCE for the night must not come back in NORMAL
     # because somebody rebooted it.
     "operating_mode": (("operating_mode",), lambda: None),
+    # The control place (LOCAL/REMOTE) - a lock on the engineering link
+    # and remote control that must survive a restart like the mode does.
+    "control_place": (("control_place",), lambda: None),
+    # The control place (LOCAL/REMOTE) - a lock on the engineering link
+    # and remote control that must survive a restart like the mode does.
+    "control_place": (("control_place",), lambda: None),
+    # The control place (LOCAL/REMOTE) - a lock on the engineering link
+    # and remote control that must survive a restart like the mode does.
+    "control_place": (("control_place",), lambda: None),
 }
 
 STATE_KEYS = tuple(_LAYOUT)

@@ -4,15 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **3.1.0**). Arkusz jest tylko czytany.
+(wersja katalogu **3.2.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 192 |
+| w katalogu i obsłużony | 194 |
 | poza katalogiem | 4 |
-| bez źródła | 2 |
 | przyszłość | 2 |
 
 ## Co znaczy każdy stan
@@ -213,8 +212,8 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `MODE.NORMAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.AUTO` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MANUAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `MODE.LOCAL` | MODES | SYSTEM INPUT | bez źródła | miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś źródła komend - wymaga decyzji, co LOCAL blokuje |
-| `MODE.REMOTE` | MODES | SYSTEM INPUT | bez źródła | jak MODE.LOCAL - jedna decyzja dla obu |
+| `MODE.LOCAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.REMOTE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.SERVICE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MAINTENANCE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.TEST` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
