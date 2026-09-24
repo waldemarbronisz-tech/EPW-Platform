@@ -196,3 +196,21 @@ def test_f1_from_either_editor_opens_the_one_help_on_the_editors_own_topic(app, 
         assert win._help_panel._current_key() == "points"          # the same request is not replayed
     finally:
         _close(win)
+
+
+def test_the_logic_editors_gate_pages_bring_their_examples_and_animation_into_studios_help(language):
+    """Owner 2026-09-25: examples of use and a short animation on every
+    gate page - in Studio's language, played by Studio's own viewer."""
+    from shared.help_animation import AnimatedHelpBrowser
+    from studio.shell.project_panels import HelpPanel
+    set_language("pl")
+    page = UnifiedHelp("pl").markdown("logic/block:logic.and")
+    assert "## Przykłady zastosowania" in page and "Tabela prawdy" in page
+    assert "![Animacja działania bloku](file:///" in page and ".gif)" in page
+    assert "help://logic/block:logic.and3" in page, "the examples' own links are namespaced like every other"
+    assert "help://logic/concept_gates" in page
+    assert "logic/concept_gates" in UnifiedHelp("pl").keys() and "logic/guide_typical_circuits" in UnifiedHelp("pl").keys()
+    set_language("en")
+    page = UnifiedHelp("en").markdown("logic/block:logic.and")
+    assert "## Examples of use" in page and "Truth table" in page and "Przykłady" not in page
+    assert issubclass(HelpPanel.__init__.__globals__["AnimatedHelpBrowser"], AnimatedHelpBrowser)

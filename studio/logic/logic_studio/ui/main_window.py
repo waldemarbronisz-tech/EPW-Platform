@@ -1436,6 +1436,7 @@ class MainWindow(QMainWindow):
         self._push_inputs_to_io()
         self.engine.step()
         self._pull_outputs_from_io()
+        self._mirror_engine_to_canvas()
         self.scene.refresh_live_states()
         # feat/signal-watch: one fresh sample per watched signal per scan —
         # same cadence as the DI/DO/AI/AO sync above, via the same
@@ -1447,6 +1448,29 @@ class MainWindow(QMainWindow):
             f"Scan: {self.engine.last_scan_duration_ms:.2f} ms "
             f"(max {self.engine.max_scan_duration_ms:.2f})"
         )
+
+    def _mirror_engine_to_canvas(self):
+        """The engine scans an ISOLATED copy of the project (compiler/
+        core.py: expand_project()'s clones, uuids preserved), so the
+        values it computes never reach the pins the canvas paints from -
+        WireItem/PortItem read the project's own pins. Copies every
+        live pin value and simulation_state (sim_value, count, quality)
+        back onto the project's blocks by uuid, so the wires and ports
+        show the scan the engineer just watched happen. Nothing flows the
+        other way: the project stays what the file holds."""
+        program = getattr(self.engine, "program", None)
+        if program is None:
+            return
+        pin_map = getattr(program, "pin_map", {}) or {}
+        block_map = getattr(program, "block_map", {}) or {}
+        for block in self.project.blocks:
+            live_block = block_map.get(block.uuid)
+            if live_block is not None and live_block is not block:
+                block.simulation_state.update(live_block.simulation_state)
+            for pin in block.inputs + block.outputs:
+                live = pin_map.get(pin.uuid)
+                if live is not None and live is not pin:
+                    pin.value = live.value
 
     def _on_sim_tick(self):
         from shared.logic.engine.execution import ExecutionState

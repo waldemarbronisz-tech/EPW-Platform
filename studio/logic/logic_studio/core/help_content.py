@@ -36,6 +36,31 @@ from logic_studio.core import shortcuts as shortcuts_module
 HELP_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "help")
 FALLBACK_LANGUAGE = "pl"
 
+# Owner 2026-09-25 ("przy bramkach logicznych przykłady zastosowania,
+# może jakieś krótkie gify z działaniem"): a generated block page may
+# carry two hand-written/rendered extras, looked up by type_id -
+#   <root>/<lang>/blocks/<type_id>.md   worked examples of use (per language)
+#   <root>/media/<type_id>.gif          a short animation of the block at
+#                                       work, drawn from the editor's own
+#                                       canvas by studio/logic/tools/
+#                                       render_help_animations.py
+# Neither is required; a block without them shows the catalogue page alone.
+BLOCK_EXAMPLES_DIR = "blocks"
+MEDIA_ROOT = os.path.join(HELP_ROOT, "media")
+
+
+def animation_path(type_id: str):
+    """The animation file of a block type, or None when there is none."""
+    path = os.path.join(MEDIA_ROOT, f"{type_id}.gif")
+    return path if os.path.isfile(path) else None
+
+
+def animation_url(type_id: str):
+    """The file:// URL a Markdown image link needs (the same on every OS)."""
+    from pathlib import Path
+    path = animation_path(type_id)
+    return Path(path).as_uri() if path else None
+
 _BLOCK_CATEGORY_CHAPTER_ID = "block_catalog"
 
 
@@ -102,6 +127,33 @@ class HelpContentStore:
             text = self._read_text(self._topic_path(FALLBACK_LANGUAGE, topic_id))
         return text
 
+    def _examples_path(self, lang, type_id):
+        return os.path.join(self.root, lang, BLOCK_EXAMPLES_DIR, f"{type_id}.md")
+
+    def block_examples_markdown(self, type_id: str) -> str:
+        """The hand-written examples of a block type in this language
+        (Polish when the language has none), "" when there are none."""
+        text = self._read_text(self._examples_path(self.language, type_id))
+        if text is None and self.language != FALLBACK_LANGUAGE:
+            text = self._read_text(self._examples_path(FALLBACK_LANGUAGE, type_id))
+        return (text or "").strip()
+
+    def block_page_markdown(self, entry: dict) -> str:
+        """The generated catalogue page plus its extras: the animation
+        right under the description (before the pin table), the examples
+        as the last section."""
+        from logic_studio.i18n import tr
+        markdown = block_catalog.block_entry_markdown(entry)
+        url = animation_url(entry["type_id"])
+        if url:
+            figure = f"![{tr('catalog.animation_alt')}]({url})\n\n*{tr('catalog.animation_caption')}*\n\n"
+            head, sep, tail = markdown.partition("\n## ")
+            markdown = head.rstrip("\n") + "\n\n" + figure + (sep + tail if sep else "")
+        examples = self.block_examples_markdown(entry["type_id"])
+        if examples:
+            markdown = markdown.rstrip("\n") + "\n\n## " + tr("catalog.examples") + "\n\n" + examples + "\n"
+        return markdown
+
     # ---- generated content (block catalog, §2/§4) --------------------------
 
     def _catalog(self) -> dict:
@@ -127,7 +179,11 @@ class HelpContentStore:
                            "_is_category": True})
             for entry in entries:
                 topics.append({"id": f"block:{entry['type_id']}", "title": entry["display_name"], "_category": category})
-        return {"id": _BLOCK_CATEGORY_CHAPTER_ID, "title": "Block catalog", "topics": topics}
+        from logic_studio.i18n import tr
+        # The chapter's own title follows the interface language like the
+        # generated pages do (Studio's one help already translated it on
+        # its side; the standalone window showed "Block catalog" in Polish).
+        return {"id": _BLOCK_CATEGORY_CHAPTER_ID, "title": tr("help.block_catalog"), "topics": topics}
 
     # ---- unified topic API --------------------------------------------------
 
@@ -159,7 +215,7 @@ class HelpContentStore:
             entry = block_catalog.describe_block_type(type_id)
             if entry is None:
                 return f"# {type_id}\n\n*(Unknown block type.)*"
-            return block_catalog.block_entry_markdown(entry)
+            return self.block_page_markdown(entry)
 
         if topic_id.startswith("category:"):
             from shared.logic import i18n as block_i18n

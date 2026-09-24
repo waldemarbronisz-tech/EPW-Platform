@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QTextBrowser,
 )
 
+from shared.help_animation import AnimatedHelpBrowser
 from logic_studio.i18n import tr
 from logic_studio.core.help_content import HelpContentStore
 from logic_studio import __version__
@@ -78,7 +79,7 @@ class HelpWindow(QWidget):
         self._build_search_tab()
         self._splitter.addWidget(self.tabs)
 
-        self.viewer = QTextBrowser()
+        self.viewer = AnimatedHelpBrowser()   # plays the block animations (shared/help_animation.py)
         self.viewer.setOpenExternalLinks(False)
         self.viewer.setOpenLinks(False)
         self.viewer.anchorClicked.connect(self._on_anchor_clicked)

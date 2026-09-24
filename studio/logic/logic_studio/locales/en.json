@@ -343,6 +343,9 @@
     "col_unit": "Unit",
     "aliases": "Search aliases",
     "safety_relevant": "safety relevant",
-    "no_description": "no description"
+    "no_description": "no description",
+    "examples": "Examples of use",
+    "animation_alt": "Animation of the block at work",
+    "animation_caption": "Animation: the diagram from the editor in simulation — green wires and ports are TRUE, black ones FALSE."
   }
 }
