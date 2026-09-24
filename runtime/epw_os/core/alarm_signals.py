@@ -8,8 +8,10 @@ the alarm's clearing are the AlarmManager's own lifecycle. This is not
 an electrical protection path, so rule Z3 does not apply - the
 threshold IS the controller's to compare.
 
-Per process protection of the project (the catalogue pattern
-ALM.<alarm_id>.*, expanded by Studio from the project's own list):
+Per alarm of the AlarmManager, by its own id (the catalogue pattern
+ALM.<alarm_id>.*, expanded by Studio from shared/logic/alarm_ids.py -
+DEVICE_COMM_<card>, PROT_SETTINGS_MISMATCH_<card>, PROCESS_<protection>,
+the fixed platform alarms; owner's decision 2026-09-24):
 
     ACTIVE        the condition holds now (alarm ACTIVE_UNACK or ACTIVE_ACK)
     ACKNOWLEDGED  the condition holds and someone acknowledged it (ACTIVE_ACK)
@@ -144,7 +146,7 @@ class AlarmSignals:
     def read(self, signal_id: str):
         instance = _instance(signal_id)
         if instance is not None:
-            alarm = self._alarm(process_alarm_id(instance[0]))
+            alarm = self._alarm(instance[0])
             if alarm is None:
                 return False
             if instance[1] == "ACTIVE":

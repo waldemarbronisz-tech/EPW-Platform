@@ -28,17 +28,24 @@ def test_a_process_protection_becomes_its_own_alarm_signals_in_logic_studio(tmp_
     panel.sync_cards_from_studio(studio_project)
 
     logic_project = panel.main_window().project
-    assert logic_project.external_process_protections == [{"id": "PP1", "name": "Temperatura kotla"}]
+    alarm_ids = [a["id"] for a in logic_project.external_alarms]
+    assert alarm_ids[:4] == ["EMERGENCY_STOP", "SYSTEM_HEALTH", "REMOTE_COMMAND_REFUSED", "ALM_TEST"]
+    assert "DEVICE_COMM_ELA1" in alarm_ids and "DEVICE_HEALTH_ELA1" in alarm_ids and "PROCESS_PP1" in alarm_ids
+    assert "PROT_SETTINGS_MISMATCH_ELA1" not in alarm_ids, "only an ADA card carries protection settings"
     ids = {s["id"]: s for s in system_signals.get_all_signals(logic_project)}
-    assert {"ALM.PP1.ACTIVE", "ALM.PP1.ACKNOWLEDGED", "ALM.PP1.LATCHED"} <= set(ids)
-    assert ids["ALM.PP1.ACTIVE"]["description"].endswith("- Temperatura kotla")
+    assert {"ALM.PROCESS_PP1.ACTIVE", "ALM.PROCESS_PP1.ACKNOWLEDGED", "ALM.PROCESS_PP1.LATCHED",
+            "ALM.DEVICE_COMM_ELA1.ACTIVE", "ALM.EMERGENCY_STOP.ACTIVE"} <= set(ids)
+    assert ids["ALM.PROCESS_PP1.ACTIVE"]["description"].endswith("- Temperatura kotla")
     assert "ALM.<alarm_id>.ACTIVE" not in ids
     assert "ALM.ANY_ACTIVE" in ids and "REQ.ALM.ACK_ALL" in ids
 
     # a second protection added later arrives after the next sync; a removed one leaves
     studio_project.process_protections.append(ProcessProtection(id="PP2", name="Cisnienie", analog_tag="ELA1.AI.2"))
     panel.sync_cards_from_studio(studio_project)
-    assert "ALM.PP2.LATCHED" in {s["id"] for s in system_signals.get_all_signals(logic_project)}
+    assert "ALM.PROCESS_PP2.LATCHED" in {s["id"] for s in system_signals.get_all_signals(logic_project)}
     studio_project.process_protections = []
+    studio_project.cards.append(Card(id="ADA1", model="ADA01", channel_kinds={"DO": 2}))
     panel.sync_cards_from_studio(studio_project)
-    assert not any(s["id"].startswith("ALM.PP") for s in system_signals.get_all_signals(logic_project))
+    ids = {s["id"] for s in system_signals.get_all_signals(logic_project)}
+    assert not any(i.startswith("ALM.PROCESS_") for i in ids)
+    assert "ALM.PROT_SETTINGS_MISMATCH_ADA1.ACTIVE" in ids and "ALM.DEVICE_COMM_ADA1.ACTIVE" in ids

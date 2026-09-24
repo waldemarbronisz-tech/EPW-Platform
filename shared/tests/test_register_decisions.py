@@ -68,3 +68,17 @@ def test_the_report_lists_the_accepted_platform_names_as_accepted():
         assert f"`{name}` — przyjęte 2026-09-24" in accepted_section, name
     catalog = {gen._normalise(s["id"]): s for s in system_signals.raw_signals()}
     assert gen.classify({"ID / Wzorzec": "PROT.POWER_REVERSE", "Grupa": "PROTECTION"}, catalog, {})[0] == "w katalogu i obsłużony"
+
+
+def test_the_alarm_instances_are_the_controllers_own_ids():
+    from shared.logic.alarm_ids import alarm_instances
+    cards = [{"id": "ELA1", "model": "ELA01"}, {"id": "ADA1", "model": "ADA01"}]
+    protections = [{"id": "PP1", "name": "Temperatura kotla"}]
+    ids = [a["id"] for a in alarm_instances(cards, protections)]
+    assert ids[:4] == ["EMERGENCY_STOP", "SYSTEM_HEALTH", "REMOTE_COMMAND_REFUSED", "ALM_TEST"]
+    assert ids[4:] == ["DEVICE_COMM_ELA1", "DEVICE_HEALTH_ELA1", "DEVICE_COMM_ADA1", "DEVICE_HEALTH_ADA1",
+                       "PROT_SETTINGS_MISMATCH_ADA1", "PROCESS_PP1"]
+    names = {a["id"]: a["name"] for a in alarm_instances(cards, protections)}
+    assert names["PROCESS_PP1"] == "Temperatura kotla" and "ADA1" in names["PROT_SETTINGS_MISMATCH_ADA1"]
+    assert len(ids) == len(set(ids))
+    assert [a["id"] for a in alarm_instances([], [])] == ids[:4]

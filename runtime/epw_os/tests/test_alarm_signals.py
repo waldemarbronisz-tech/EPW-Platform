@@ -70,23 +70,29 @@ def test_a_process_protection_that_trips_is_an_alarm_with_the_registers_lifecycl
     core = _core([_PP1])
     system = SystemSignalSource(sources=[AlarmSignals(core)])
     read = system.read
-    assert read("ALM.PP1.ACTIVE") is False and read("ALM.ANY_ACTIVE") is False and read("ALM.NEW_ALARM") is False
+    assert read("ALM.PROCESS_PP1.ACTIVE") is False and read("ALM.ANY_ACTIVE") is False and read("ALM.NEW_ALARM") is False
     core.tag_manager.publish_from_driver("ELA1.AI.1", 95.0)
     assert core.tag_manager.get_value("Process.PP1.Exceeded") is True
     alarm = next(a for a in core.alarm_manager.get_active_alarms() if a.id == process_alarm_id("PP1"))
     assert alarm.priority == 3 and "Temperatura kotla" in alarm.message and "95.0" in alarm.message
-    assert read("ALM.PP1.ACTIVE") is True and read("ALM.PP1.ACKNOWLEDGED") is False and read("ALM.PP1.LATCHED") is False
+    assert read("ALM.PROCESS_PP1.ACTIVE") is True and read("ALM.PROCESS_PP1.ACKNOWLEDGED") is False
+    assert read("ALM.PROCESS_PP1.LATCHED") is False
     assert read("ALM.ANY_ACTIVE") is True and read("ALM.ANY_UNACK") is True and read("ALM.NEW_ALARM") is True
     core.alarm_manager.acknowledge_alarm(process_alarm_id("PP1"), "Operator")
-    assert read("ALM.PP1.ACKNOWLEDGED") is True and read("ALM.NEW_ALARM") is False and read("ALM.ANY_UNACK") is False
+    assert read("ALM.PROCESS_PP1.ACKNOWLEDGED") is True and read("ALM.NEW_ALARM") is False and read("ALM.ANY_UNACK") is False
     # back inside the band (past the hysteresis): the condition is gone, the alarm is not a latch (it was acknowledged)
     core.tag_manager.publish_from_driver("ELA1.AI.1", 50.0)
-    assert read("ALM.PP1.ACTIVE") is False and read("ALM.PP1.LATCHED") is False and read("ALM.ANY_ACTIVE") is False
+    assert read("ALM.PROCESS_PP1.ACTIVE") is False and read("ALM.PROCESS_PP1.LATCHED") is False and read("ALM.ANY_ACTIVE") is False
     # a second trip nobody acknowledges, then the condition clears: the alarm memory = LATCHED
     core.tag_manager.publish_from_driver("ELA1.AI.1", 5.0)
     core.tag_manager.publish_from_driver("ELA1.AI.1", 50.0)
-    assert read("ALM.PP1.ACTIVE") is False and read("ALM.PP1.LATCHED") is True and read("ALM.ANY_UNACK") is True
+    assert read("ALM.PROCESS_PP1.ACTIVE") is False and read("ALM.PROCESS_PP1.LATCHED") is True and read("ALM.ANY_UNACK") is True
     assert read("ALM.NEW_ALARM") is False
+    # every other alarm of the manager reads by its own id, the same way
+    core.alarm_manager.trigger_alarm("DEVICE_COMM_ELA1", "ELA1 communication failure", priority=3)
+    assert read("ALM.DEVICE_COMM_ELA1.ACTIVE") is True and read("ALM.DEVICE_COMM_ELA1.ACKNOWLEDGED") is False
+    assert read("ALM.DEVICE_COMM_XYZ.ACTIVE") is False, "an alarm never raised reads FALSE, not an error"
+    assert read("ALM.NEW_ALARM") is True
 
 
 def test_the_aggregates_read_the_whole_alarm_manager_by_priority_and_the_horn_re_arms():
@@ -119,10 +125,10 @@ def test_ack_all_and_reset_do_different_things_and_both_are_audited():
     assert signals.execute("REQ.ALM.RESET", "LOGIC") is True
     assert core.audit_logger.entries[-1][0] == "ALARM_REQUEST" and "1 cleared alarm(s) reset" in core.audit_logger.entries[-1][2]
     assert core.alarm_manager._alarms["DEVICE_COMM_ELA1"].state == AlarmState.NORMAL
-    assert read("ALM.PP1.ACTIVE") is True and read("ALM.PP1.ACKNOWLEDGED") is False, "a persisting condition is not a latch"
+    assert read("ALM.PROCESS_PP1.ACTIVE") is True and read("ALM.PROCESS_PP1.ACKNOWLEDGED") is False, "a persisting condition is not a latch"
     assert signals.execute("REQ.ALM.ACK_ALL", "LOGIC") is True
     assert "1 alarm(s) acknowledged" in core.audit_logger.entries[-1][2]
-    assert read("ALM.PP1.ACKNOWLEDGED") is True and read("ALM.ANY_UNACK") is False
+    assert read("ALM.PROCESS_PP1.ACKNOWLEDGED") is True and read("ALM.ANY_UNACK") is False
     assert core.alarm_manager._alarms[process_alarm_id("PP1")].ack_user == "LOGIC"
     # no alarm manager at all: refused, with the reason in the audit log
     core.alarm_manager = None
@@ -174,13 +180,13 @@ def test_the_catalogue_expands_one_alarm_per_process_protection_and_the_controll
         external_zones = []
         external_lines = []
         external_cards = []
-        external_process_protections = [{"id": "PP1", "name": "Temperatura kotla"}, {"id": "PP7", "name": "Cisnienie"}]
+        external_alarms = [{"id": "PROCESS_PP1", "name": "Temperatura kotla"}, {"id": "DEVICE_COMM_ELA1", "name": "Komunikacja z ELA1"}]
 
     ids = {s["id"]: s for s in system_signals.get_all_signals(_Project())}
-    assert "ALM.PP1.ACTIVE" in ids and "ALM.PP7.LATCHED" in ids and "ALM.<alarm_id>.ACTIVE" not in ids
-    assert ids["ALM.PP1.ACTIVE"]["description"].endswith("- Temperatura kotla")
+    assert "ALM.PROCESS_PP1.ACTIVE" in ids and "ALM.DEVICE_COMM_ELA1.LATCHED" in ids and "ALM.<alarm_id>.ACTIVE" not in ids
+    assert ids["ALM.PROCESS_PP1.ACTIVE"]["description"].endswith("- Temperatura kotla")
     signals = AlarmSignals(_core([_PP1]))
-    for sid in ("ALM.PP1.ACTIVE", "ALM.PP7.ACKNOWLEDGED", "ALM.ANY_ACTIVE", "REQ.ALM.ACK_ALL"):
+    for sid in ("ALM.PROCESS_PP1.ACTIVE", "ALM.DEVICE_COMM_ELA1.ACKNOWLEDGED", "ALM.ANY_ACTIVE", "REQ.ALM.ACK_ALL"):
         assert signals.serves(sid), sid
-    assert not signals.serves("ALM.PP1.NOPE") and not signals.serves("ALM.NOPE")
-    assert signals.read("ALM.PP7.ACTIVE") is False, "a protection the project has but nothing tripped"
+    assert not signals.serves("ALM.PROCESS_PP1.NOPE") and not signals.serves("ALM.NOPE")
+    assert signals.read("ALM.DEVICE_COMM_ELA1.ACTIVE") is False, "an alarm the project has but nothing raised"

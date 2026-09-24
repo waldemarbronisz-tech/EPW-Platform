@@ -87,9 +87,9 @@ _INSTANCE_ATTRIBUTES = {
     # KIND - {"id", "kind", "channels"} - so a card appears once per kind
     # there and exactly once here).
     "devices": "external_cards",
-    # The project's process protections (etap 5): ALM.<alarm_id>.* is one
-    # alarm per protection the controller computes itself.
-    "alarms": "external_process_protections",
+    # The controller's alarms by id (owner 2026-09-24): ALM.<alarm_id>.* is
+    # one instance per AlarmManager alarm - shared/logic/alarm_ids.py.
+    "alarms": "external_alarms",
 }
 
 _PLACEHOLDER = re.compile(r"<[^>]+>")

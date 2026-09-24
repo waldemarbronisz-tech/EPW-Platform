@@ -4,7 +4,7 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **3.0.0**). Arkusz jest tylko czytany.
+(wersja katalogu **3.1.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
