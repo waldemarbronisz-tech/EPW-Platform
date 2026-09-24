@@ -100,6 +100,7 @@ from PySide6.QtWidgets import (
 
 from shared.addressing import format_address, parse_address, try_parse_address
 from shared.logic import point_roles
+from shared.help_animation import AnimatedHelpBrowser
 from shared.logic.internal_bits import direction_of, internal_bit_id, panel_level_of
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
@@ -5050,7 +5051,7 @@ class HelpPanel(QWidget):
         left.setFixedWidth(300)
         splitter.addWidget(left)
 
-        self.viewer = QTextBrowser()
+        self.viewer = AnimatedHelpBrowser()   # the logic editor's block animations play here too
         self.viewer.setOpenExternalLinks(False)
         # help://key cross-references between topics, resolved here -
         # this help is offline and has no business reaching the network

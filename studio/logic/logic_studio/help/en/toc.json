@@ -4,67 +4,301 @@
       "id": "intro",
       "title": "Introduction",
       "topics": [
-        {"id": "welcome", "title": "Welcome to EPW Logic Studio"}
+        {
+          "id": "welcome",
+          "title": "Welcome to EPW Logic Studio"
+        }
       ]
     },
     {
       "id": "concepts",
       "title": "Concepts",
       "topics": [
-        {"id": "concept_labels", "title": "Labels, markers and device bits"},
-        {"id": "concept_stubs", "title": "Input stub, free wire end, label"},
-        {"id": "concept_scan_cycle", "title": "The scan cycle and the one-scan delay"},
-        {"id": "concept_analog_quality", "title": "Analog signal quality"},
-        {"id": "concept_macros", "title": "Macro blocks and parameters"},
-        {"id": "concept_disabled_blocks", "title": "Disabled blocks and forces"}
+        {
+          "id": "concept_labels",
+          "title": "Labels, markers and device bits"
+        },
+        {
+          "id": "concept_stubs",
+          "title": "Input stub, free wire end, label"
+        },
+        {
+          "id": "concept_scan_cycle",
+          "title": "The scan cycle and the one-scan delay"
+        },
+        {
+          "id": "concept_analog_quality",
+          "title": "Analog signal quality"
+        },
+        {
+          "id": "concept_macros",
+          "title": "Macro blocks and parameters"
+        },
+        {
+          "id": "concept_disabled_blocks",
+          "title": "Disabled blocks and forces"
+        },
+        {
+          "id": "concept_gates",
+          "title": "Logic gates: how to read them and what they are for"
+        },
+        {
+          "id": "concept_timers",
+          "title": "Timers TON, TOF, TP"
+        },
+        {
+          "id": "concept_memory_edges",
+          "title": "Latches and edge detection"
+        },
+        {
+          "id": "concept_counters",
+          "title": "Counters CTU, CTD, CTUD"
+        }
       ]
     },
     {
       "id": "guides",
       "title": "Guides",
       "topics": [
-        {"id": "guide_first_diagram", "title": "A first diagram: input, gate, output"},
-        {"id": "guide_move_signal", "title": "Moving a signal elsewhere on the diagram"},
-        {"id": "guide_simulation", "title": "Running a simulation and checking what the logic does"},
-        {"id": "guide_compile_export", "title": "Compiling and exporting the logic to EPW-OS"},
-        {"id": "guide_macros", "title": "Creating a macro and using it in several bays"}
+        {
+          "id": "guide_first_diagram",
+          "title": "A first diagram: input, gate, output"
+        },
+        {
+          "id": "guide_move_signal",
+          "title": "Moving a signal elsewhere on the diagram"
+        },
+        {
+          "id": "guide_simulation",
+          "title": "Running a simulation and checking what the logic does"
+        },
+        {
+          "id": "guide_compile_export",
+          "title": "Compiling and exporting the logic to EPW-OS"
+        },
+        {
+          "id": "guide_macros",
+          "title": "Creating a macro and using it in several bays"
+        },
+        {
+          "id": "guide_typical_circuits",
+          "title": "Typical control circuits - ready block combinations"
+        }
       ]
     },
     {
       "id": "shortcuts_chapter",
       "title": "Keyboard shortcuts",
       "topics": [
-        {"id": "shortcuts", "title": "Keyboard shortcuts"}
+        {
+          "id": "shortcuts",
+          "title": "Keyboard shortcuts"
+        }
       ]
     },
     {
       "id": "about_chapter",
       "title": "About",
       "topics": [
-        {"id": "about", "title": "About"}
+        {
+          "id": "about",
+          "title": "About"
+        }
       ]
     }
   ],
   "index": [
-    {"term": "label", "topic": "concept_labels"},
-    {"term": "marker", "topic": "concept_labels"},
-    {"term": "device bit", "topic": "concept_labels"},
-    {"term": "stub", "topic": "concept_stubs"},
-    {"term": "free wire end", "topic": "concept_stubs"},
-    {"term": "scan cycle", "topic": "concept_scan_cycle"},
-    {"term": "one-scan delay", "topic": "concept_scan_cycle"},
-    {"term": "z-1", "topic": "concept_scan_cycle"},
-    {"term": "signal quality", "topic": "concept_analog_quality"},
-    {"term": "quality", "topic": "concept_analog_quality"},
-    {"term": "stuck tolerance", "topic": "concept_analog_quality"},
-    {"term": "macro block", "topic": "concept_macros"},
-    {"term": "macro parameter", "topic": "concept_macros"},
-    {"term": "boundary pins", "topic": "concept_macros"},
-    {"term": "disabled block", "topic": "concept_disabled_blocks"},
-    {"term": "force", "topic": "concept_disabled_blocks"},
-    {"term": "forcing", "topic": "concept_disabled_blocks"},
-    {"term": "simulation", "topic": "guide_simulation"},
-    {"term": "compile", "topic": "guide_compile_export"},
-    {"term": "export", "topic": "guide_compile_export"}
+    {
+      "term": "label",
+      "topic": "concept_labels"
+    },
+    {
+      "term": "marker",
+      "topic": "concept_labels"
+    },
+    {
+      "term": "device bit",
+      "topic": "concept_labels"
+    },
+    {
+      "term": "stub",
+      "topic": "concept_stubs"
+    },
+    {
+      "term": "free wire end",
+      "topic": "concept_stubs"
+    },
+    {
+      "term": "scan cycle",
+      "topic": "concept_scan_cycle"
+    },
+    {
+      "term": "one-scan delay",
+      "topic": "concept_scan_cycle"
+    },
+    {
+      "term": "z-1",
+      "topic": "concept_scan_cycle"
+    },
+    {
+      "term": "signal quality",
+      "topic": "concept_analog_quality"
+    },
+    {
+      "term": "quality",
+      "topic": "concept_analog_quality"
+    },
+    {
+      "term": "stuck tolerance",
+      "topic": "concept_analog_quality"
+    },
+    {
+      "term": "macro block",
+      "topic": "concept_macros"
+    },
+    {
+      "term": "macro parameter",
+      "topic": "concept_macros"
+    },
+    {
+      "term": "boundary pins",
+      "topic": "concept_macros"
+    },
+    {
+      "term": "disabled block",
+      "topic": "concept_disabled_blocks"
+    },
+    {
+      "term": "force",
+      "topic": "concept_disabled_blocks"
+    },
+    {
+      "term": "forcing",
+      "topic": "concept_disabled_blocks"
+    },
+    {
+      "term": "simulation",
+      "topic": "guide_simulation"
+    },
+    {
+      "term": "compile",
+      "topic": "guide_compile_export"
+    },
+    {
+      "term": "export",
+      "topic": "guide_compile_export"
+    },
+    {
+      "term": "gate",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "truth table",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "AND",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "OR",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "XOR",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "negation",
+      "topic": "concept_gates"
+    },
+    {
+      "term": "timer",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "TON",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "TOF",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "TP",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "on-delay",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "off-delay",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "pulse",
+      "topic": "concept_timers"
+    },
+    {
+      "term": "latch",
+      "topic": "concept_memory_edges"
+    },
+    {
+      "term": "SR",
+      "topic": "concept_memory_edges"
+    },
+    {
+      "term": "RS",
+      "topic": "concept_memory_edges"
+    },
+    {
+      "term": "edge",
+      "topic": "concept_memory_edges"
+    },
+    {
+      "term": "R_TRIG",
+      "topic": "concept_memory_edges"
+    },
+    {
+      "term": "holding",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "counter",
+      "topic": "concept_counters"
+    },
+    {
+      "term": "CTU",
+      "topic": "concept_counters"
+    },
+    {
+      "term": "CTUD",
+      "topic": "concept_counters"
+    },
+    {
+      "term": "start/stop",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "permission",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "interlock",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "run-on",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "flashing",
+      "topic": "guide_typical_circuits"
+    },
+    {
+      "term": "animation",
+      "topic": "welcome"
+    }
   ]
 }

@@ -79,9 +79,10 @@ def test_hide_toggle_hides_and_restores_the_tree(qsettings):
 def test_contents_tree_has_a_block_catalog_chapter_with_categories(qsettings):
     _app()
     win = HelpWindow(settings=qsettings)
+    from logic_studio.i18n import tr
     top_titles = [win.tree.topLevelItem(i).text(0) for i in range(win.tree.topLevelItemCount())]
-    assert "Block catalog" in top_titles
-    catalog_item = win.tree.topLevelItem(top_titles.index("Block catalog"))
+    assert tr("help.block_catalog") in top_titles          # "Block catalog" / "Katalog bloków", the interface language
+    catalog_item = win.tree.topLevelItem(top_titles.index(tr("help.block_catalog")))
     assert catalog_item.childCount() > 0
     # a category node's own children are individual block types
     first_category = catalog_item.child(0)
