@@ -215,9 +215,11 @@ def test_nav_pages_keyed_by_stable_page_id(make_window):
     window = _window(make_window)
     # "synoptic" is gone as a page id of its own: the Main View IS the
     # embedded screen now (nav_model.py), so one slot, not two.
+    # Internal bits IN/OUT (PR #23) added the always-on "internal_bits"
+    # page under Control (gui/pages/page_internal_bits.py).
     expected_nav = {"main_view", "power_quality", "digital_inputs", "analog_inputs",
-                     "control_outputs", "protection_electrical", "protection_process", "events", "alarms",
-                     "system_topology", "audit_log", "trends", "bus_diagnostics",
+                     "control_outputs", "internal_bits", "protection_electrical", "protection_process", "events",
+                     "alarms", "system_topology", "audit_log", "trends", "bus_diagnostics",
                      "intrusion_overview", "intrusion_history", "intrusion_config", "engineer_mode"}
     assert set(window._page_index) == expected_nav, set(window._page_index)
 
