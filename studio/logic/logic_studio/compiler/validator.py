@@ -189,7 +189,19 @@ class Validator:
                 if sig_id:
                     from shared.logic import system_signals
                     if system_signals.get_signal(sig_id, self.project) is None:
-                        warnings.append(f"[{self._block_ref(block)}] Unrecognised system signal: '{sig_id}' (not in the catalog).")
+                        # A retired name gets its replacement named, as an
+                        # ERROR: the old per-device diagnostics and the
+                        # SSWIN.* family were renamed, not deleted, and a
+                        # block still reading them would read nothing.
+                        from shared.logic.signal_renames import legacy_device_signal, new_name
+                        replacement = new_name(sig_id) or legacy_device_signal(sig_id)
+                        if replacement:
+                            errors.append(
+                                f"[{self._block_ref(block)}] Signal '{sig_id}' no longer exists - it is now called "
+                                f"'{replacement}'. Nothing was converted automatically: point the block at the new name."
+                            )
+                        else:
+                            warnings.append(f"[{self._block_ref(block)}] Unrecognised system signal: '{sig_id}' (not in the catalog).")
             elif block.type_id == "const.real":
                 # feat/const-property-validation: ConstantBase.evaluate()
                 # (blocks/constants.py) only catches ValueError around
@@ -372,8 +384,8 @@ class Validator:
             # message. Falling through to "exists in neither place" would
             # be true and useless - the engineer would go looking for a
             # signal that was renamed, not deleted.
-            from shared.logic.signal_renames import new_name as _renamed_to
-            replacement = _renamed_to(name)
+            from shared.logic.signal_renames import legacy_device_signal, new_name as _renamed_to
+            replacement = _renamed_to(name) or legacy_device_signal(name)
             if replacement:
                 errors.append(
                     f"[{self._block_ref(block)}] Signal '{name}' no longer exists - "

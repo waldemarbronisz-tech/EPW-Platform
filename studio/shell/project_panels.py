@@ -424,6 +424,10 @@ ELECTRICAL_PROTECTION_CATALOG = [
     ("Power/Supply", "UPS Supply Loss", "UPS V", "V", [
         ("Stage 1", 200.0, 5.0, 500, "Warning"),
     ]),
+    # Owner's decision 2026-09-24: function 32 (the register's PROT.POWER_REVERSE).
+    ("Power/Supply", "32 Reverse Power", "Power", "kW", [
+        ("Stage 1", 5.0, 0.5, 2000, "Trip"),
+    ]),
 ]
 
 

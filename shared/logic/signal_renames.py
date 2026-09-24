@@ -93,6 +93,41 @@ RENAMES = {
 
 RETIRED_PREFIX = _OLD
 
+# The older per-device diagnostics the catalogue used to generate for
+# every card - <dev>.ONLINE, <dev>.FAULT, <dev>.SAFE_PATH_OK - are gone
+# (owner's decision 2026-09-24: "stare nazwy nie używane wywalamy"). The
+# register's COMM.<device_id>.* and DEV.<device_id>.* say the same things.
+_LEGACY_DEVICE_SUFFIXES = {
+    "ONLINE": "COMM.{dev}.ONLINE",
+    "FAULT": "COMM.{dev}.FAULT",
+    "SAFE_PATH_OK": "DEV.{dev}.READY",
+}
+
+# Platform names that have no row in the register, reviewed and ACCEPTED
+# by the owner (with the date) - the status report lists them as
+# accepted, not as candidates waiting for anything.
+ACCEPTED_PLATFORM_NAMES = {
+    "PROT.<stage_id>.LATCHED": "2026-09-24",
+    "PROT.SETTINGS_MISMATCH": "2026-09-24",
+    "PROT.TEST_ACTIVE": "2026-09-24",
+    "PROT.TEST_OK": "2026-09-24",
+    "PROT.THERMAL_OVERLOAD": "2026-09-24",
+    "PROT.CONTROL_VOLTAGE_LOSS": "2026-09-24",
+    "PROT.TECHNICAL_SUPPLY_LOSS": "2026-09-24",
+    "PROT.UPS_SUPPLY_LOSS": "2026-09-24",
+}
+
+
+def legacy_device_signal(old_id: str):
+    """The register name that replaced an older per-device diagnostic
+    (<dev>.ONLINE -> COMM.<dev>.ONLINE), or None if `old_id` was never
+    one of those. A dotted name with exactly one dot and a known suffix
+    is what the retired generator produced."""
+    parts = (old_id or "").split(".")
+    if len(parts) != 2 or not parts[0] or parts[1] not in _LEGACY_DEVICE_SUFFIXES:
+        return None
+    return _LEGACY_DEVICE_SUFFIXES[parts[1]].format(dev=parts[0])
+
 
 def new_name(old_id: str):
     """The current name for a retired id, or None if it was never one."""

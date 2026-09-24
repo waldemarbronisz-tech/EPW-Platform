@@ -454,9 +454,9 @@ class SystemSignalsTab(QWidget):
         self.refresh()
 
     def _logic_project(self):
-        """Only to pick up this project's own per-device diagnostics
-        (<ELA01>.ONLINE and friends), which the catalog generates from
-        the device list. Absent editor means the fixed part alone."""
+        """Only to expand the catalogue's per-instance patterns (COMM.<card>,
+        SEC.ZONE.<zone>, ALM.<alarm> ...) from this project's own
+        collections. Absent editor means the fixed part alone."""
         panel = getattr(self._studio_window, "_logic_panel", None)
         return getattr(panel.main_window(), "project", None) if panel is not None else None
 

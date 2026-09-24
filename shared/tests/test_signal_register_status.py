@@ -96,12 +96,13 @@ def test_power_and_ups_rows_are_served_not_waiting_on_hardware(catalog_by_id):
     assert gen.classify({"ID / Wzorzec": "UPS.NOT_A_REAL_BIT", "Grupa": "UPS"}, catalog_by_id, {})[0] == "do zrobienia"
 
 
-def test_a_position_without_a_source_says_so_with_its_reason(catalog_by_id):
-    status, note = gen.classify({"ID / Wzorzec": "PROT.POWER_REVERSE", "Grupa": "PROTECTION"}, catalog_by_id, {})
-    assert status == "bez źródła" and "funkcji 32" in note
-    status, note = gen.classify({"ID / Wzorzec": "MODE.LOCAL", "Grupa": "MODES"}, catalog_by_id, {})
-    assert status == "bez źródła" and "LOCAL" in note
+def test_a_position_without_a_source_says_so_with_its_reason(catalog_by_id, monkeypatch):
+    monkeypatch.setitem(gen._NO_SOURCE, "PROT.NOT_ON_THIS_PLATFORM", "no device measures it - the owner decides")
+    status, note = gen.classify({"ID / Wzorzec": "PROT.NOT_ON_THIS_PLATFORM", "Grupa": "PROTECTION"}, catalog_by_id, {})
+    assert status == "bez źródła" and "owner decides" in note
     assert gen.classify({"ID / Wzorzec": "MODE.NORMAL", "Grupa": "MODES"}, catalog_by_id, {})[0] == "w katalogu i obsłużony"
+    # once served, a name leaves the no-source list (PROT.POWER_REVERSE, 2026-09-24)
+    assert gen.classify({"ID / Wzorzec": "PROT.POWER_REVERSE", "Grupa": "PROTECTION"}, catalog_by_id, {})[0] == "w katalogu i obsłużony"
 
 
 def test_nothing_is_left_as_merely_to_do(register, catalog_by_id):

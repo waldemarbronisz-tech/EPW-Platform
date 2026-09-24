@@ -43,20 +43,27 @@ STAGES = [
     ("TOC_STAGE1", "51", "51 Time Overcurrent", "Stage 1", ("PROT.OVERCURRENT",)),
     ("TOC_STAGE2", "51", "51 Time Overcurrent", "Stage 2", ("PROT.OVERCURRENT",)),
     ("NEGSEQ_STAGE1", "46", "46 Negative Sequence Current", "Stage 1", ("PROT.UNBALANCE",)),
-    ("THERMAL_STAGE1", "49", "49 Thermal Overload", "Stage 1", ()),
-    ("THERMAL_STAGE2", "49", "49 Thermal Overload", "Stage 2", ()),
+    ("THERMAL_STAGE1", "49", "49 Thermal Overload", "Stage 1", ("PROT.THERMAL_OVERLOAD",)),
+    ("THERMAL_STAGE2", "49", "49 Thermal Overload", "Stage 2", ("PROT.THERMAL_OVERLOAD",)),
     ("IEF_STAGE1", "50N", "50N Earth Fault Instantaneous", "Stage 1", ("PROT.EARTH_FAULT",)),
     ("TEF_STAGE1", "51N", "51N Earth Fault Time", "Stage 1", ("PROT.EARTH_FAULT",)),
-    ("CTRLV_STAGE1", "-", "Control Voltage Loss", "Stage 1", ()),
-    ("TECHV_STAGE1", "-", "Technical Supply Loss", "Stage 1", ()),
-    ("UPSV_STAGE1", "-", "UPS Supply Loss", "Stage 1", ()),
+    ("CTRLV_STAGE1", "-", "Control Voltage Loss", "Stage 1", ("PROT.CONTROL_VOLTAGE_LOSS",)),
+    ("TECHV_STAGE1", "-", "Technical Supply Loss", "Stage 1", ("PROT.TECHNICAL_SUPPLY_LOSS",)),
+    ("UPSV_STAGE1", "-", "UPS Supply Loss", "Stage 1", ("PROT.UPS_SUPPLY_LOSS",)),
+    # Owner's decision 2026-09-24: function 32 added (the register had
+    # PROT.POWER_REVERSE with nothing behind it). Appended, so the
+    # existing stage indexes - and register addresses - do not move.
+    ("RPWR_STAGE1", "32", "32 Reverse Power", "Stage 1", ("PROT.POWER_REVERSE",)),
 ]
 
 STAGE_IDS = tuple(s[0] for s in STAGES)
 STAGE_INDEX = {s[0]: i for i, s in enumerate(STAGES)}
 SUMMARY_SIGNALS = ("PROT.UNDERVOLTAGE", "PROT.OVERVOLTAGE", "PROT.OVERCURRENT", "PROT.PHASE_LOSS",
                    "PROT.PHASE_SEQUENCE_FAULT", "PROT.UNBALANCE", "PROT.UNDERFREQUENCY", "PROT.OVERFREQUENCY",
-                   "PROT.EARTH_FAULT", "PROT.NEUTRAL_FAULT")
+                   "PROT.EARTH_FAULT", "PROT.NEUTRAL_FAULT",
+                   # Owner's decision 2026-09-24: the functions the register had no summary bit for.
+                   "PROT.THERMAL_OVERLOAD", "PROT.CONTROL_VOLTAGE_LOSS", "PROT.TECHNICAL_SUPPLY_LOSS",
+                   "PROT.UPS_SUPPLY_LOSS", "PROT.POWER_REVERSE")
 
 
 def stage_instances() -> list:
