@@ -1285,6 +1285,11 @@ class StudioMainWindow(QMainWindow):
 
     def _check_project(self):
         from studio.shell.project_panels import ValidationReportDialog, validate_project
+        if getattr(self, "_logic_panel", None) is not None:
+            try:
+                self._project.logic = self._logic_panel.document()   # the registry as edited right now
+            except Exception:  # noqa: BLE001 - an editor that will not serialise is reported by its own dialog
+                pass
         issues = validate_project(self._project)
         dialog = ValidationReportDialog(issues, self._navigate_to_validation_issue, parent=self)
         dialog.show()

@@ -5,6 +5,22 @@ from epw_os.core.command_model import CommandDefinition, CommandRecord
 from epw_os.core.tag_manager import TagType
 from epw_os.core.logging import log
 
+def _permission_reason(target: str, bit_id: str, description: str, why: str) -> str:
+    """"ZAMKNIJ KOT_KMG1 odrzucone: brak zezwolenia M.KMG1_ZEZW (Blokada od
+    Q1 otwartego)" - in the panel's language, with why the bit gives no
+    permission when it is not simply FALSE."""
+    try:
+        from epw_os.i18n import tr
+    except Exception:  # noqa: BLE001 - the reason must exist even without the panel's translations
+        def tr(key, default=None, **params):
+            return (default or key).format(**params)
+    text = tr("commands.permission_refused", "CLOSE {target} refused: no permission {bit} ({description})",
+              target=target, bit=bit_id, description=description or bit_id)
+    if why and why != "false":
+        text += " - " + tr(f"commands.permission_why_{why}", why)
+    return text
+
+
 class CommandState:
     REQUESTED = "REQUESTED"
     VALIDATED = "VALIDATED"
@@ -24,6 +40,10 @@ class CommandManager:
         self.driver_manager = driver_manager
         self.project_manager = project_manager
         self.force_manager = None       # set by EPWCore; a forced output refuses commands (force_manager.py)
+        # Internal bits IN/OUT: which OUT bit is an apparatus's permission to
+        # switch on - a callable target -> (bit id, description) or None, set
+        # by EPWCore from the apparatus registry and the program's registry.
+        self.permission_bits = None
         self._pending_commands: Dict[str, CommandRecord] = {}
         self._timeout_handles = {}
 
@@ -219,6 +239,15 @@ class CommandManager:
             record.reason = ", ".join(reasons)
             self.event_bus.emit("command_status", cmd_id, CommandState.BLOCKED, record.reason)
             return record
+
+        # 3b. The apparatus's permission bit (internal bits IN/OUT): a
+        # hard refusal with a reason, for switching ON only.
+        refusal = self._permission_refusal(target, action)
+        if refusal:
+            record.state = CommandState.BLOCKED
+            record.reason = refusal
+            self.event_bus.emit("command_status", cmd_id, CommandState.BLOCKED, record.reason)
+            return record
             
         record.state = CommandState.VALIDATED
         self.event_bus.emit("command_status", cmd_id, CommandState.VALIDATED, "Command validated")
@@ -314,6 +343,35 @@ class CommandManager:
             
         return record
 
+    # --- the permission bit (internal bits IN/OUT, owner's decisions 2026-09-22) ---
+    #
+    # request -> CommandManager -> the logic's permission -> ACCEPTED or
+    # REJECTED with a reason. Three conditions, without which this would
+    # be dangerous:
+    #   (a) the permission blocks ONLY switching ON (the CLOSE action);
+    #       OPEN can never be blocked by a logic bit - switching off must
+    #       always be possible;
+    #   (b) logic stopped, bit unknown, controller before its first scan
+    #       -> permission FALSE: no logic means no switching on, never
+    #       "no interlock";
+    #   (c) this is the software command path only - ADA01's protection
+    #       path to the coil is never touched by any logic bit.
+    PERMISSION_GATED_ACTIONS = ("CLOSE",)
+
+    def _permission_refusal(self, target: str, action: str):
+        """The reason a command is refused by its permission bit, or None."""
+        if action not in self.PERMISSION_GATED_ACTIONS or not callable(self.permission_bits):
+            return None
+        found = self.permission_bits(target)
+        if not found:
+            return None
+        bit_id, description = found
+        check = getattr(self.logic_engine, "permission", None)
+        granted, why = check(bit_id) if callable(check) else (False, "no_program")
+        if granted:
+            return None
+        return _permission_reason(target, bit_id, description, why)
+
     def _legacy_request_command(self, device_tag: str, command: str, user: str = "Operator", validate_only: bool = False) -> Tuple[bool, List[str]]:
         # Map to EX mapping if we have it, else fallback for GUI
         key = f"{device_tag}.{command}"
@@ -321,7 +379,11 @@ class CommandManager:
             if validate_only:
                 safe, kr = self.safety_kernel.validate_command_safety(device_tag, command)
                 if not safe: return False, [kr]
-                return self.logic_engine.validate_command(device_tag, command)
+                permitted, reasons = self.logic_engine.validate_command(device_tag, command)
+                if not permitted:
+                    return False, reasons
+                refusal = self._permission_refusal(device_tag, command)
+                return (False, [refusal]) if refusal else (True, [])
             rec = self.request_command_ex(device_tag, command, user=user)
             if rec.state in [CommandState.BLOCKED, CommandState.FAILED]:
                 return False, [rec.reason]
@@ -334,6 +396,9 @@ class CommandManager:
             return False, [f"Platform Safety: {kernel_reason}"]
 
         permitted, reasons = self.logic_engine.validate_command(device_tag, command)
+        refusal = self._permission_refusal(device_tag, command) if permitted else None
+        if refusal:
+            permitted, reasons = False, [refusal]
         if permitted:
             if validate_only: return True, []
             self.event_bus.emit("command_status", cmd_id, CommandState.DISPATCHED, "Command dispatched")

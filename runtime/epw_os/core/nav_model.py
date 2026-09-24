@@ -81,6 +81,9 @@ NAV_STRUCTURE = [
         ("digital_inputs", "nav.digital_inputs", None),
         ("analog_inputs", "nav.analog_inputs", "analog_inputs"),
         ("control_outputs", "nav.control_outputs", None),
+        # Internal bits IN/OUT: the logic program's own bits, live, with
+        # SET/CLEAR for the IN bits the project lets the panel write.
+        ("internal_bits", "nav.internal_bits", None),
     ]),
     ("intrusion_group", "nav.intrusion", False, [
         ("intrusion_overview", "nav.intrusion_overview", "intrusion"),

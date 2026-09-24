@@ -27,6 +27,8 @@ and nothing in this file pretends otherwise.
 """
 import sys
 import threading
+
+from epw_os.core.tag_manager import TagType
 from pathlib import Path
 
 # The block library and the execution engine are the CONTRACT with Logic
@@ -233,6 +235,8 @@ class TagIOProvider(IOProvider):
         # System signals this controller does not serve yet, reported once
         # each rather than on every scan (see write_system_signal).
         self._unserved_writes = set()
+        self._bit_entries = {}          # bit id -> normalized registry entry (internal bits IN/OUT)
+        self._bit_entries = {}          # bit id -> normalized registry entry (internal bits IN/OUT)
 
         # ExecutionEngine.step() keeps these two current on whatever
         # IOProvider it has (see its step(), step 4) - held here so
@@ -285,14 +289,74 @@ class TagIOProvider(IOProvider):
         return bool(self.force_manager.is_forced(address))
 
     # --- internal signals ---------------------------------------------------
+    #
+    # Internal bits IN/OUT (owner's decisions 2026-09-22): the program's
+    # registry is published as TAGS - M.<name> (MR./MW./MWR.) - so the
+    # panel can show a bit, a button or a force can set an IN bit, MQTT
+    # can see it and an apparatus can name an OUT bit as its permission.
+    # An OUT bit lives in the scan's own memory and is mirrored onto its
+    # tag at the end of every scan; an IN bit IS its tag - the scan reads
+    # whatever the panel, a force or a permitted remote writer last put
+    # there (core/internal_bit_gate.py is the one door for those writes).
+
+    def configure_internal_bits(self, entries):
+        """The loaded program's registry -> tags. Called by LogicEngine on
+        every load; a bit the new program no longer declares loses its
+        tag, a new one gets its tag at the type's own default."""
+        from shared.logic.internal_bits import internal_bit_id, normalize_entry
+        wanted = {}
+        for entry in entries or []:
+            if isinstance(entry, dict) and entry.get("name"):
+                normalized = normalize_entry(entry)
+                wanted[internal_bit_id(normalized)] = normalized
+        with self._lock:
+            previous = dict(self._bit_entries)
+            self._bit_entries = wanted
+        for bit_id in set(previous) - set(wanted):
+            self.tag_manager.remove_tag(bit_id)
+        for bit_id, entry in wanted.items():
+            real = entry.get("type") == "REAL"
+            default = 0.0 if real else False
+            self.tag_manager.add_tag(bit_id, default, TagType.REAL if real else TagType.BOOL,
+                                     description=entry.get("description", ""), source="LOGIC")
+            self.tag_manager.set_description(bit_id, entry.get("description", ""))
+            with self._lock:
+                if entry["direction"] == "OUT":
+                    self.tag_manager.publish_from_runtime(bit_id, self._internal.get(bit_id, default))
+
+    def internal_bit_entries(self) -> dict:
+        """{bit id: normalized registry entry} of the loaded program."""
+        with self._lock:
+            return dict(self._bit_entries)
+
+    def internal_bit_direction(self, name: str):
+        with self._lock:
+            entry = self._bit_entries.get(name)
+        return None if entry is None else entry.get("direction")
 
     def read_internal(self, name: str, default=False):
+        with self._lock:
+            entry = self._bit_entries.get(name)
+        if entry is not None and entry.get("direction") == "IN":
+            value = self.tag_manager.get_value(name)
+            return default if value is None else value
         with self._lock:
             return self._internal.get(name, default)
 
     def write_internal(self, name: str, value):
         with self._lock:
+            entry = self._bit_entries.get(name)
+            if entry is not None and entry.get("direction") == "IN":
+                # The compiler refuses a writing block on an IN bit; a
+                # program that got here anyway is reported once, not obeyed.
+                if name not in self._unserved_writes:
+                    self._unserved_writes.add(name)
+                    log.warning(f"The program writes {name}, an IN bit that only the panel or a permitted "
+                                f"remote writer may set - the write was ignored.")
+                return
             self._internal[name] = value
+        if entry is not None:
+            self.tag_manager.publish_from_runtime(name, value)
 
     def internal_snapshot(self) -> dict:
         with self._lock:
@@ -306,6 +370,10 @@ class TagIOProvider(IOProvider):
         own default, as it always has."""
         with self._lock:
             self._internal.update(values or {})
+            entries = dict(self._bit_entries)
+        for name, value in (values or {}).items():
+            if name in entries:
+                self.tag_manager.update_tag(name, value)
 
     # --- system signals -----------------------------------------------------
 

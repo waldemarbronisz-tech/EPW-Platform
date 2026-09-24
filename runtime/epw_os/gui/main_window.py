@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
                  language_changed_callback=None, feature_config=None, feature_config_changed_callback=None,
                  mqtt_manager=None, mqtt_status_changed_signal=None, apparatus_registry=None,
                  startup_issues=None, force_manager=None, forces_changed_signal=None,
-                 operating_mode=None,
+                 operating_mode=None, internal_bits=None,
                  logic_engine=None, logic_reload_callback=None, project_reload_callback=None,
                  controller_backup_core=None):
         super().__init__()
@@ -78,6 +78,9 @@ class MainWindow(QMainWindow):
         # at the level the mode demands - the same table the logic's
         # REQ.MODE.* requests are gated by.
         self.operating_mode = operating_mode
+        # Internal bits IN/OUT: the gate every panel write of an IN bit
+        # goes through (core/internal_bit_gate.py).
+        self.internal_bits = internal_bits
         self._forces_changed_signal = forces_changed_signal
         self.tag_manager = tag_manager
         # Task "migracja adresacji" - see epw_os/core/apparatus.py's own
@@ -468,6 +471,12 @@ class MainWindow(QMainWindow):
         self.page_do = PageControlOutputs(self.tag_manager, self.access_manager, service_notes=self.service_notes,
                                           descriptions_editable=self.structure_editable)
         _add_page("control_outputs", self.page_do)
+
+        # ALWAYS ON. Internal bits IN/OUT: the program's own bits, live,
+        # with SET/CLEAR for the IN bits the project lets the panel write.
+        from epw_os.gui.pages.page_internal_bits import PageInternalBits
+        self.page_internal_bits = PageInternalBits(self.tag_manager, self.access_manager, self.internal_bits)
+        _add_page("internal_bits", self.page_internal_bits)
 
         # Task (page-split): SYSTEM ALARMOWY is now 3 pages, not 1 - see
         # nav_model.py's own module docstring. All three read the SAME

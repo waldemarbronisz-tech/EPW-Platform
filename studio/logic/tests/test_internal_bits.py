@@ -836,7 +836,8 @@ def test_project_settings_dialog_loads_existing_signals():
     assert dialog.signals_table.item(0, 0).text() == "X"
     assert dialog.signals_table.cellWidget(0, 1).currentText() == "BOOL"
     assert dialog.signals_table.cellWidget(0, 2).isChecked() is True
-    assert dialog.signals_table.item(0, 3).text() == "Blokady"
+    assert dialog.signals_table.cellWidget(0, 3).currentText() == "OUT"   # internal bits IN/OUT: the direction
+    assert dialog.signals_table.item(0, 4).text() == "Blokady"
 
 def test_project_settings_dialog_usage_column():
     _app()
@@ -854,7 +855,7 @@ def test_project_settings_dialog_usage_column():
     p.add_block(vi)
 
     dialog = ProjectSettingsDialog(p)
-    assert dialog.signals_table.item(0, 6).text() == "2"
+    assert dialog.signals_table.item(0, 7).text() == "2"
 
 def _refuse_any_blocking_messagebox(monkeypatch):
     """A test calling _on_accept() must never depend on a human clicking a
@@ -885,7 +886,8 @@ def test_project_settings_dialog_add_signal_and_apply(monkeypatch):
     dialog.apply_to_project()
 
     assert p.settings["internal_bits"] == [
-        {"name": "NOWY", "type": "REAL", "retentive": False, "category": "", "label": "", "description": ""}
+        {"name": "NOWY", "type": "REAL", "retentive": False, "direction": "OUT",   # internal bits IN/OUT: OUT by default
+         "category": "", "label": "", "description": ""}
     ]
 
 def test_project_settings_dialog_rename_propagates_to_blocks(monkeypatch):

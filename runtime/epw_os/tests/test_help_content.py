@@ -186,6 +186,7 @@ _PAGE_ID_TO_HELP_TOPIC = {
     "digital_inputs": "dio_purpose",
     "analog_inputs": "ap_what",
     "control_outputs": "dio_purpose",
+    "internal_bits": "dio_internal_bits",
     "intrusion_overview": "intr_what",
     "intrusion_history": "intr_history",
     "intrusion_config": "intr_zones_lines",

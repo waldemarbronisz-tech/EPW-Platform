@@ -144,7 +144,7 @@ def test_disabling_analog_inputs_leaves_control_group_with_two_children():
     tree = build_nav_tree(cfg)
     node = next(n for n in tree if n.id == "control_group")
     assert node.kind == "group"
-    assert [c.page_id for c in node.children] == ["digital_inputs", "control_outputs"]
+    assert [c.page_id for c in node.children] == ["digital_inputs", "control_outputs", "internal_bits"]
 
 
 def test_always_on_pages_are_never_dropped_by_any_config():
@@ -156,7 +156,8 @@ def test_always_on_pages_are_never_dropped_by_any_config():
             page_ids.add(node.page_id)
         else:
             page_ids.update(c.page_id for c in node.children)
-    assert page_ids == {"main_view", "digital_inputs", "control_outputs", "events", "alarms", "audit_log"}
+    assert page_ids == {"main_view", "digital_inputs", "control_outputs", "internal_bits", "events", "alarms",
+                        "audit_log"}
 
 
 def test_engineer_mode_requires_protection_settings():
@@ -202,11 +203,12 @@ def test_first_page_id_of_a_leaf_is_itself():
 def test_nav_structure_matches_the_task_s_own_page_list():
     """Task: "Sprawdz te liste wzgledem rzeczywistego stanu kodu" - the
     DOWOD-required confirmation that nothing else was added or removed.
-    17 now: the separate "synoptic" page merged into Main View, which
-    renders that very screen."""
-    assert len(all_page_ids()) == 17
+    17 after the separate "synoptic" page merged into Main View, which
+    renders that very screen; 18 with the logic's internal bits page
+    (internal bits IN/OUT, 2026-09-22)."""
+    assert len(all_page_ids()) == 18
     assert set(all_page_ids()) == {
-        "main_view", "digital_inputs", "analog_inputs", "control_outputs",
+        "main_view", "digital_inputs", "analog_inputs", "control_outputs", "internal_bits",
         "intrusion_overview", "intrusion_history", "intrusion_config",
         "power_quality", "trends", "events", "alarms", "audit_log",
         "system_topology", "bus_diagnostics", "engineer_mode",

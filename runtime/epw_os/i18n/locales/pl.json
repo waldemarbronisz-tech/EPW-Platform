@@ -56,6 +56,7 @@
     "digital_inputs": "WEJŚCIA CYFROWE",
     "analog_inputs": "WEJŚCIA ANALOGOWE",
     "control_outputs": "WYJŚCIA STERUJĄCE",
+    "internal_bits": "BITY WEWNĘTRZNE",
     "protection_settings": "NASTAWY ZABEZPIECZEŃ",
     "events": "ZDARZENIA",
     "system_topology": "TOPOLOGIA SYSTEMU",
@@ -930,6 +931,31 @@
       "night_no": "wyłączona",
       "mode_night": "NOCNY",
       "mode_full": "PEŁNY"
+    },
+    "internal_bits": {
+      "title": "BITY WEWNĘTRZNE LOGIKI",
+      "intro": "Bity z rejestru programu logiki, na żywo. Bit WE (wejściowy) ustawia panel, wymuszenie ze Studia albo — gdy projekt na to pozwala — REST/MQTT; logika go tylko czyta. Bit WY (wyjściowy) pisze wyłącznie logika.",
+      "col_id": "Identyfikator",
+      "col_direction": "Kierunek",
+      "col_description": "Opis",
+      "col_value": "Wartość",
+      "col_writers": "Kto pisze",
+      "col_set": "Ustaw",
+      "direction_in": "WE",
+      "direction_out": "WY",
+      "writers_logic": "tylko logika",
+      "writer_panel": "panel ({level})",
+      "writer_force": "wymuszenie",
+      "writer_remote": "REST/MQTT",
+      "btn_set": "USTAW",
+      "btn_clear": "KASUJ",
+      "btn_value": "Wartość...",
+      "set_value_title": "Wartość {bit}",
+      "value": "Wartość:",
+      "no_access": "Ten bit wymaga wyższego poziomu dostępu.",
+      "refused_title": "Zapis odrzucony",
+      "refused_text": "Zapis {bit} odrzucony.\nPowód: {reason}",
+      "none": "Załadowany program logiki nie deklaruje bitów wewnętrznych."
     }
   },
   "feature_config": {
@@ -1086,5 +1112,13 @@
     "maintenance": "KONSERWACJA",
     "test": "TEST",
     "emergency": "AWARYJNY"
+  },
+  "commands": {
+    "permission_refused": "ZAMKNIJ {target} odrzucone: brak zezwolenia {bit} ({description})",
+    "permission_why_no_program": "brak programu logiki",
+    "permission_why_logic_stopped": "logika zatrzymana",
+    "permission_why_before_first_scan": "sterownik przed pierwszym skanem",
+    "permission_why_unknown_bit": "program nie deklaruje tego bitu",
+    "permission_why_not_an_out_bit": "to nie jest bit wyjściowy logiki"
   }
 }

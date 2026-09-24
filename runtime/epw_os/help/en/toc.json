@@ -95,6 +95,10 @@
         {
           "id": "dio_service_notes",
           "title": "Service History (Notes)"
+        },
+        {
+          "id": "dio_internal_bits",
+          "title": "Logic Internal Bits"
         }
       ]
     },

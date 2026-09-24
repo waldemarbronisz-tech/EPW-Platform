@@ -389,6 +389,7 @@ def main():
                                    startup_issues=core.startup_issues,
                                    force_manager=core.force_manager, forces_changed_signal=bridge.forces_changed,
                                    operating_mode=core.operating_mode,
+                                   internal_bits=core.internal_bits,
                                    logic_engine=core.logic_engine,
                                    logic_reload_callback=core.reload_logic,
                                    project_reload_callback=core.reload_project,

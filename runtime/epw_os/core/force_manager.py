@@ -50,7 +50,12 @@ PROTECTED_KIND_WORDS = ("BREAKER", "PROTECT", "TRIP", "WYLACZNIK", "WYŁĄCZNIK"
 
 class ForceManager:
     def __init__(self, event_bus, tag_manager, driver_manager=None, audit_logger=None, apparatus_registry=None,
-                 driver_for_tag=None, heartbeat_timeout_s: float = HEARTBEAT_TIMEOUT_S):
+                 driver_for_tag=None, heartbeat_timeout_s: float = HEARTBEAT_TIMEOUT_S, internal_bit_direction=None):
+        # Internal bits IN/OUT: a callable tag -> "IN" | "OUT" | None (the
+        # loaded program's registry, EPWCore wires it). A force is always
+        # allowed on an IN bit, on these very rules; never on an OUT bit,
+        # which only the logic writes.
+        self._internal_bit_direction = internal_bit_direction
         self.event_bus = event_bus
         self.tag_manager = tag_manager
         self.driver_manager = driver_manager
@@ -70,6 +75,11 @@ class ForceManager:
         """Why `tag_name` may not be forced, or None when it may."""
         parsed = try_parse_address(tag_name)
         if parsed is None:
+            direction = self._internal_bit_direction(tag_name) if callable(self._internal_bit_direction) else None
+            if direction == "IN":
+                return None
+            if direction == "OUT":
+                return f"{tag_name} is an OUT bit - written only by the logic, never forced"
             return "not a point of the project (system, safety and status tags are never forced)"
         if self.apparatus_registry is not None:
             for apparatus_id in self.apparatus_registry.list_ids():
@@ -87,7 +97,11 @@ class ForceManager:
     @staticmethod
     def kind_of(tag_name: str) -> Optional[str]:
         parsed = try_parse_address(tag_name)
-        return parsed[1] if parsed else None
+        if parsed:
+            return parsed[1]
+        if tag_name.split(".", 1)[0] in ("M", "MR", "MW", "MWR"):
+            return "BIT"           # an internal bit (internal bits IN/OUT)
+        return None
 
     # --- forcing ------------------------------------------------------------------------
 

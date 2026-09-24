@@ -100,6 +100,7 @@ from PySide6.QtWidgets import (
 
 from shared.addressing import format_address, parse_address, try_parse_address
 from shared.logic import point_roles
+from shared.logic.internal_bits import direction_of, internal_bit_id
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
@@ -619,6 +620,7 @@ def device_to_synoptic_dict(device: Device) -> dict:
         "behavior": device.behavior,
         "kind": device.kind or _DEFAULT_DEVICE_KIND.get(device.behavior, "generic"),
         "publishToHa": False,
+        "permissionBit": getattr(device, "permission_bit", "") or "",
     }
     if device.behavior == "SWITCHED":
         fb = {"mode": "NONE"}
@@ -691,7 +693,8 @@ def device_from_synoptic_dict(data: dict) -> Device:
     elif behavior == "SELECTOR":
         feedback = [p.get("feedback") for p in (data.get("positions") or []) if isinstance(p, dict) and p.get("feedback")]
     return Device(id=data["id"], behavior=behavior, kind=data.get("kind", ""), feedback=feedback, command=command,
-                  supervision=supervision, safe_state=safe_state, command_style=command_style, pulse_ms=pulse_ms)
+                  supervision=supervision, safe_state=safe_state, command_style=command_style, pulse_ms=pulse_ms,
+                  permission_bit=str(data.get("permissionBit") or ""))
 
 
 # -- point ownership (SPEC_PROJEKT_EPW.md "Aparat zużywa punkty") ---------
@@ -728,6 +731,42 @@ def point_owner_map(project) -> dict:
 # A-Z/0-9, _LOCATION_CODE_RE) or "" (the explicit-blank override), so it
 # can be a QComboBox item's userData without ever colliding with one.
 _INHERIT_LOCATION_SENTINEL = "__inherit__"
+_INTERNAL_BITS_FILTER = "__internal_bits__"
+
+
+def internal_bit_registry(project) -> list:
+    """The logic's internal-bit registry as the Studio project holds it -
+    the embedded logic document's settings (what the file carries), for
+    a check that has only the project in hand."""
+    logic = getattr(project, "logic", None) or {}
+    settings = logic.get("settings") if isinstance(logic, dict) else None
+    entries = settings.get("internal_bits") if isinstance(settings, dict) else None
+    return [e for e in (entries or []) if isinstance(e, dict) and e.get("name")]
+
+
+def internal_bit_entries(studio_window) -> list:
+    """The registry as the embedded Logic Studio holds it right now (the
+    Signals department edits that object), falling back to the project
+    file's copy when the editor is not built."""
+    panel = getattr(studio_window, "_logic_panel", None)
+    if panel is not None:
+        try:
+            project = getattr(panel.main_window(), "project", None)
+        except Exception:  # noqa: BLE001 - an editor that will not answer is not this panel's problem
+            project = None
+        if project is not None:
+            return [e for e in project.settings.get("internal_bits", []) if isinstance(e, dict) and e.get("name")]
+    return internal_bit_registry(getattr(studio_window, "_project", None))
+
+
+def permission_bit_candidates(studio_window) -> list:
+    """[{id, description}] - the OUT BOOL bits an apparatus may name as
+    its permission."""
+    out = []
+    for entry in internal_bit_entries(studio_window):
+        if entry.get("type", "BOOL") == "BOOL" and direction_of(entry) == "OUT":
+            out.append({"id": internal_bit_id(entry), "description": entry.get("description", "")})
+    return out
 
 
 class ProjectInfoPanel(QWidget):
@@ -1416,6 +1455,7 @@ class PointRegistryPanel(QWidget):
         self.card_filter.blockSignals(True)
         self.card_filter.clear()
         self.card_filter.addItem(tr("points.filter_all"), None)
+        self.card_filter.addItem(tr("points.filter_internal"), _INTERNAL_BITS_FILTER)
         for card in project.cards:
             # A card can have more than one kind now (task follow-up,
             # user report: "karta ELA1 ma DI oraz AI") - every kind it
@@ -1442,12 +1482,19 @@ class PointRegistryPanel(QWidget):
         filtered_card = card_by_id.get(active_filter) if active_filter else None
         filtered_kinds = set(filtered_card.channel_kinds) if filtered_card is not None else None
         hide_analog_cols = bool(filtered_kinds) and not (filtered_kinds & _ANALOG_KINDS)
+        # The logic's bits have no analog range, counter, role or apparatus:
+        # their own filter shows only what applies to them.
+        bits_only = active_filter == _INTERNAL_BITS_FILTER
         for col in range(4, 11):
-            self.table.setColumnHidden(col, hide_analog_cols)
+            self.table.setColumnHidden(col, hide_analog_cols or bits_only)
+        for col in (11, self._ROLE_COL, self._CONTACT_COL, self._DEVICE_COL):
+            self.table.setColumnHidden(col, bits_only)
 
         self.table.setRowCount(0)
         points = sorted(project.points, key=lambda p: _address_sort_key(p.address))
         for point in points:
+            if active_filter == _INTERNAL_BITS_FILTER:
+                break
             addr_card, addr_kind, _channel = parse_address(point.address)
             if active_filter and addr_card != active_filter:
                 continue
@@ -1455,7 +1502,34 @@ class PointRegistryPanel(QWidget):
                 point, addr_kind, location_codes, owners.get(point.address),
                 card_by_id.get(addr_card),
             )
+        # Internal bits IN/OUT: the logic's bits are points of their own
+        # kind - visible here with their live value, never editable here
+        # (their registry is the Signals department).
+        if active_filter in (None, _INTERNAL_BITS_FILTER):
+            for entry in internal_bit_entries(self._studio_window):
+                self._append_internal_bit_row(entry)
         self._loading = False
+
+    def _append_internal_bit_row(self, entry: dict):
+        from shared.logic.internal_bits import direction_of, internal_bit_id
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        bit_id = internal_bit_id(entry)
+        for col in range(len(self._COLS)):
+            text = ""
+            if col == 0:
+                text = bit_id
+            elif col == 1:
+                text = entry.get("description", "")
+            elif col == 3:
+                text = tr("points.internal_bit_note", direction=tr(f"signals.direction_{direction_of(entry).lower()}"))
+            item = QTableWidgetItem(text)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            item.setBackground(_GREY_READONLY_BG)
+            if col == 0:
+                item.setToolTip(tr("points.internal_bit_tooltip"))
+            self.table.setItem(row, col, item)
+        self._paint_live_cell(row, bit_id)
 
     def _append_point_row(self, point: Point, card_kind: str, location_codes, owner_id, card=None):
         row = self.table.rowCount()
@@ -1907,7 +1981,12 @@ class DevicesPanel(QWidget):
     is Studio's own registry, built the same incremental way Points
     was (a plain, generic version first)."""
 
-    _COLS = ["id", "behavior", "kind", "feedback", "command", "command_style", "pulse_ms"]
+    # Internal bits IN/OUT (owner's decision 2026-09-22): "permission" is
+    # the OUT bit of the logic whose TRUE lets the controller switch the
+    # apparatus ON; while it is not TRUE, CLOSE is refused with a reason
+    # naming the bit. OPEN is never blocked by it.
+    _COLS = ["id", "behavior", "kind", "feedback", "command", "command_style", "pulse_ms", "permission"]
+    COL_PERMISSION = 7
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1921,6 +2000,7 @@ class DevicesPanel(QWidget):
         self.table = QTableWidget(0, len(self._COLS))
         self.table.setHorizontalHeaderLabels([tr(f"devices.col_{c}") for c in self._COLS])
         _make_column_resizable(self.table, 5, 200)
+        _make_column_resizable(self.table, self.COL_PERMISSION, 240)
         _prep_table(self.table)
         _make_column_resizable(self.table, 2, 260)
         layout.addWidget(self.table)
@@ -1976,12 +2056,34 @@ class DevicesPanel(QWidget):
         pulse_spin.setValue(int(device.pulse_ms or 0))
         pulse_spin.valueChanged.connect(lambda _v, r=row: self._on_pulse_ms_changed(r))
         self.table.setCellWidget(row, 6, pulse_spin)
+
+        permission = QComboBox()
+        permission.addItem(tr("devices.permission_none"), "")
+        for bit in permission_bit_candidates(self._studio_window):
+            permission.addItem(f"{bit['id']} — {bit.get('description', '')}" if bit.get("description") else bit["id"],
+                               bit["id"])
+        if device.permission_bit and permission.findData(device.permission_bit) < 0:
+            permission.addItem(tr("devices.permission_unknown", bit=device.permission_bit), device.permission_bit)
+        permission.setCurrentIndex(max(0, permission.findData(device.permission_bit or "")))
+        permission.setToolTip(tr("devices.permission_tooltip"))
+        permission.currentIndexChanged.connect(lambda _i, r=row: self._on_permission_changed(r))
+        self.table.setCellWidget(row, self.COL_PERMISSION, permission)
         self._sync_command_widgets(row, device)
 
     def _sync_command_widgets(self, row, device: Device):
         is_switched = device.behavior == "SWITCHED"
         self.table.cellWidget(row, 5).setEnabled(is_switched)
         self.table.cellWidget(row, 6).setEnabled(is_switched and device.command_style in _PULSED_STYLES)
+        self.table.cellWidget(row, self.COL_PERMISSION).setEnabled(is_switched)
+
+    def _on_permission_changed(self, row):
+        if self._loading:
+            return
+        project = self._studio_window._project
+        device = project.devices[row]
+        device.permission_bit = self.table.cellWidget(row, self.COL_PERMISSION).currentData() or ""
+        project.touch()
+        self._studio_window._on_project_changed()
 
     def _on_command_style_changed(self, row):
         if self._loading:
@@ -5296,6 +5398,32 @@ def validate_project(project) -> list:
                 "warning", tr("validation.msg_point_role_double_source", role=role, address=addresses[0],
                               cards=", ".join(devices)),
                 "points", "select_address", addresses[0],
+            ))
+
+    # 10) Internal bits IN/OUT - an apparatus's permission bit must be a
+    # BOOL bit of the logic's registry with direction OUT (the logic
+    # writes it); anything else would be a permission nothing computes,
+    # which the controller then treats as "never" (condition b).
+    registry = {internal_bit_id(e): e for e in internal_bit_registry(project)}
+    for device in project.devices:
+        bit_id = getattr(device, "permission_bit", "") or ""
+        if not bit_id:
+            continue
+        entry = registry.get(bit_id)
+        if entry is None:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_device_permission_unknown", device=device.id, bit=bit_id),
+                "devices", "select_device", device.id,
+            ))
+        elif direction_of(entry) != "OUT" or entry.get("type", "BOOL") != "BOOL":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_device_permission_not_out_bool", device=device.id, bit=bit_id),
+                "devices", "select_device", device.id,
+            ))
+        elif device.behavior != "SWITCHED":
+            issues.append(ValidationIssue(
+                "warning", tr("validation.msg_device_permission_not_switched", device=device.id, bit=bit_id),
+                "devices", "select_device", device.id,
             ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"
