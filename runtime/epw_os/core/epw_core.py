@@ -199,6 +199,7 @@ class EPWCore:
         self.internal_bits = InternalBitGate(self)
         self.command_manager.permission_bits = self._permission_bit_for
         self.force_manager._internal_bit_direction = self.internal_bits.direction_of
+        self.force_manager._internal_bit_force_allowed = self.internal_bits.force_allowed
         self.command_manager.force_manager = self.force_manager
         # The "internal Omicron" (SPEC): forced state, measured response, a report.
         from epw_os.core.protection_test import ProtectionTestRunner
@@ -292,6 +293,13 @@ class EPWCore:
         (CommandManager.permission_bits)."""
         apparatus = self.apparatus_registry.get(target)
         bit_id = getattr(apparatus, "permission_bit", "") if apparatus is not None else ""
+        if not bit_id:
+            # A DO point commanded on its own (the per-channel CLOSE/OPEN
+            # definitions) carries its own permission bit (owner 2026-09-24).
+            for point in self.project_manager.get_point_registry():
+                if point.get("address") == target and point.get("permission_bit"):
+                    bit_id = point["permission_bit"]
+                    break
         if not bit_id:
             return None
         entry = self.internal_bits.entry(bit_id) or {}

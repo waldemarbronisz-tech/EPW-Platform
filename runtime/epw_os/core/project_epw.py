@@ -117,6 +117,7 @@ def build_project_view(project) -> dict:
             # carries and its contact type (core/point_role_signals.py).
             "role": point.role if kind == "DI" else None,
             "contact": point.contact or "NO",
+            "permission_bit": (getattr(point, "permission_bit", "") or "") if kind == "DO" else "",
         })
     return {
         "format": pf.FORMAT_MARKER,

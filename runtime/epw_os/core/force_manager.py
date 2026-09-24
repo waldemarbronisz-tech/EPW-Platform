@@ -56,6 +56,7 @@ class ForceManager:
         # allowed on an IN bit, on these very rules; never on an OUT bit,
         # which only the logic writes.
         self._internal_bit_direction = internal_bit_direction
+        self._internal_bit_force_allowed = None     # callable tag -> bool, wired by EPWCore (internal_bit_gate.force_allowed)
         self.event_bus = event_bus
         self.tag_manager = tag_manager
         self.driver_manager = driver_manager
@@ -79,7 +80,13 @@ class ForceManager:
             if direction == "IN":
                 return None
             if direction == "OUT":
-                return f"{tag_name} is an OUT bit - written only by the logic, never forced"
+                # Owner 2026-09-24: an OUT bit may be forced where the
+                # project's registry entry allows it ("Wymuszanie"),
+                # since a force there overrides what the logic computed.
+                rule = self._internal_bit_force_allowed
+                if callable(rule) and rule(tag_name):
+                    return None
+                return f"{tag_name} is an OUT bit and the project does not allow forcing it (Wymuszanie in Studio)"
             return "not a point of the project (system, safety and status tags are never forced)"
         if self.apparatus_registry is not None:
             for apparatus_id in self.apparatus_registry.list_ids():

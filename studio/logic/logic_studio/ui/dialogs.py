@@ -24,13 +24,35 @@ class ProjectSettingsDialog(QDialog):
     truth for what analog points exist, so they are edited here directly.
     """
 
-    COLUMNS = ["Address", "Name", "Unit", "Min", "Max", "Direction"]
+    # Column KEYS - the headers themselves come from the interface
+    # language (i18n "settings.col_*"), owner 2026-09-24: "Nagłówki -
+    # robimy sprzątanie".
+    COLUMN_KEYS = ["address", "name", "unit", "min", "max", "direction"]
 
     # feat/internal-bits §7.1
-    SIGNAL_COLUMNS = ["Name", "Type", "Retentive", "Direction", "Category", "Label", "Description", "Uses"]
+    SIGNAL_COLUMN_KEYS = ["sig_name", "sig_type", "sig_retentive", "sig_direction", "sig_category", "sig_label",
+                          "sig_description", "sig_uses"]
 
     # feat/io-labels-and-ids §2.1
-    IO_LABEL_COLUMNS = ["Address", "Label", "Uses"]
+    IO_LABEL_COLUMN_KEYS = ["io_address", "io_label", "io_uses"]
+
+    @classmethod
+    def _headers(cls, keys):
+        return [tr(f"settings.col_{key}") for key in keys]
+
+    # Kept as properties for the code (and tests) that read the lists by
+    # their old names: the same headers, in the current language.
+    @property
+    def COLUMNS(self):
+        return self._headers(self.COLUMN_KEYS)
+
+    @property
+    def SIGNAL_COLUMNS(self):
+        return self._headers(self.SIGNAL_COLUMN_KEYS)
+
+    @property
+    def IO_LABEL_COLUMNS(self):
+        return self._headers(self.IO_LABEL_COLUMN_KEYS)
 
     def __init__(self, project, parent=None):
         super().__init__(parent)

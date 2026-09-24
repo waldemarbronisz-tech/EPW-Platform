@@ -1391,13 +1391,15 @@ class PointRegistryPanel(QWidget):
         "warning_threshold",   # DI only: the switching counter's warning threshold (a setting)
         "role",                # DI only: the register signal this contact carries (signal register etap 4)
         "contact",             # DI only, with a role: NO (closed = TRUE) or NC (open = TRUE)
+        "permission",          # DO only: the logic's OUT bit that permits switching it on (internal bits IN/OUT)
         "device",
         "live",                # the controller's value while "Na żywo" is on; red while forced
     ]
     _ROLE_COL = 12
     _CONTACT_COL = 13
-    _DEVICE_COL = 14
-    _LIVE_COL = 15
+    _PERMISSION_COL = 14
+    _DEVICE_COL = 15
+    _LIVE_COL = 16
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1439,6 +1441,7 @@ class PointRegistryPanel(QWidget):
         self.table.setColumnWidth(3, 160)
         self.table.setColumnWidth(self._ROLE_COL, 230)
         self.table.setColumnWidth(self._CONTACT_COL, 150)
+        self.table.setColumnWidth(self._PERMISSION_COL, 230)
         # SPEC "Studio - sterownik": live values next to the points, and
         # the force table (Engineer, force mode on) from the row's menu.
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1491,7 +1494,7 @@ class PointRegistryPanel(QWidget):
         bits_only = active_filter == _INTERNAL_BITS_FILTER
         for col in range(4, 11):
             self.table.setColumnHidden(col, hide_analog_cols or bits_only)
-        for col in (11, self._ROLE_COL, self._CONTACT_COL, self._DEVICE_COL):
+        for col in (11, self._ROLE_COL, self._CONTACT_COL, self._PERMISSION_COL, self._DEVICE_COL):
             self.table.setColumnHidden(col, bits_only)
 
         self.table.setRowCount(0)
@@ -1636,6 +1639,28 @@ class PointRegistryPanel(QWidget):
                 blank.setFlags(blank.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 blank.setBackground(_GREY_READONLY_BG)
                 self.table.setItem(row, col, blank)
+
+        # Internal bits IN/OUT (owner 2026-09-24): a DO point commanded on
+        # its own names the logic's OUT bit that permits switching it on -
+        # the same hard gate as an apparatus's "Zezwolenie".
+        if card_kind == "DO":
+            permission = QComboBox()
+            permission.addItem(tr("devices.permission_none"), "")
+            for bit in permission_bit_candidates(self._studio_window):
+                permission.addItem(f"{bit['id']} — {bit.get('description', '')}" if bit.get("description") else bit["id"],
+                                   bit["id"])
+            current = getattr(point, "permission_bit", "") or ""
+            if current and permission.findData(current) < 0:
+                permission.addItem(tr("devices.permission_unknown", bit=current), current)
+            permission.setCurrentIndex(max(0, permission.findData(current)))
+            permission.setToolTip(tr("points.permission_tooltip"))
+            permission.currentIndexChanged.connect(lambda _i, r=row: self._on_point_permission_changed(r))
+            self.table.setCellWidget(row, self._PERMISSION_COL, permission)
+        else:
+            blank = QTableWidgetItem("")
+            blank.setFlags(blank.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            blank.setBackground(_GREY_READONLY_BG)
+            self.table.setItem(row, self._PERMISSION_COL, blank)
 
         # "Aparat" - read-only, computed from every device's feedback/
         # command lists (point_owner_map()) - SPEC's own "Aparat zużywa
@@ -1891,6 +1916,17 @@ class PointRegistryPanel(QWidget):
         if point is None or combo is None:
             return
         point.contact = combo.currentData() or point_roles.CONTACT_NO
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_point_permission_changed(self, row):
+        if self._loading:
+            return
+        point = self._point_at(row)
+        combo = self.table.cellWidget(row, self._PERMISSION_COL)
+        if point is None or combo is None:
+            return
+        point.permission_bit = combo.currentData() or ""
         self._studio_window._project.touch()
         self._studio_window._on_project_changed()
 
@@ -5428,6 +5464,28 @@ def validate_project(project) -> list:
             issues.append(ValidationIssue(
                 "warning", tr("validation.msg_device_permission_not_switched", device=device.id, bit=bit_id),
                 "devices", "select_device", device.id,
+            ))
+    # ... and a DO point's own permission bit (owner 2026-09-24), checked the same way.
+    for point in project.points:
+        bit_id = getattr(point, "permission_bit", "") or ""
+        if not bit_id:
+            continue
+        _card_id, kind = _address_card_and_kind(point.address)
+        entry = registry.get(bit_id)
+        if kind != "DO":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_not_do", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
+            ))
+        elif entry is None:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_unknown", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
+            ))
+        elif direction_of(entry) != "OUT" or entry.get("type", "BOOL") != "BOOL":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_not_out_bool", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
             ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"

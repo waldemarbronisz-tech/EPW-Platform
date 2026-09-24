@@ -236,7 +236,6 @@ class TagIOProvider(IOProvider):
         # each rather than on every scan (see write_system_signal).
         self._unserved_writes = set()
         self._bit_entries = {}          # bit id -> normalized registry entry (internal bits IN/OUT)
-        self._bit_entries = {}          # bit id -> normalized registry entry (internal bits IN/OUT)
 
         # ExecutionEngine.step() keeps these two current on whatever
         # IOProvider it has (see its step(), step 4) - held here so

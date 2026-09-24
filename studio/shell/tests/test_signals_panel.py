@@ -395,8 +395,9 @@ def test_clearing_the_search_brings_everything_back(panel):
 def test_the_columns_come_in_the_owners_order(panel):
     tab = panel.internal_tab
     # Internal bits IN/OUT added direction and the two writer columns
-    # right after what a signal IS, before where it is used.
-    assert tab._COLS == ("name", "id", "type", "retentive", "direction", "panel", "remote",
+    # right after what a signal IS, before where it is used; the force
+    # permission (owner 2026-09-24) sits with the other writers.
+    assert tab._COLS == ("name", "id", "type", "retentive", "direction", "panel", "remote", "force",
                          "used_by", "category", "label", "description")
     headers = [tab.table.horizontalHeaderItem(c).text() for c in range(tab.table.columnCount())]
     assert headers == [shell_i18n.tr(f"signals.col_{c}") for c in tab._COLS]
