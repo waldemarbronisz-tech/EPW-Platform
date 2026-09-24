@@ -73,10 +73,11 @@ describe('32. the total number of visible symbols reflects the library exactly a
   // exists to catch an ACCIDENTAL change to the library, so a
   // deliberate one updates the number and says why, exactly as the
   // 51 -> 50 hide before it did.
-  // feat/text-formatting added the SCADA text box: 62 -> 63.
-  it('63 visible symbols total - the 50 fix/tank-language-and-media commit 3 left, the 12 BUILDING plan symbols, and the SCADA text box', () => {
+  // feat/text-formatting added the SCADA text box: 62 -> 63; the push
+  // button (owner 2026-09-24, "Przycisk robimy") 63 -> 64.
+  it('64 visible symbols total - the 50 fix/tank-language-and-media commit 3 left, the 12 BUILDING plan symbols, the SCADA text box and the push button', () => {
     const total = Object.values(getSymbolsByCategory()).flat().length;
-    expect(total).toBe(63);
+    expect(total).toBe(64);
   });
 });
 

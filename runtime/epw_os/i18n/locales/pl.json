@@ -454,7 +454,9 @@
       "state_unknown": "Stan aparatu {device} nie jest znany (brak potwierdzenia), więc nie można wybrać kierunku polecenia.",
       "screen_label": "Ekran:",
       "command_rejected_title": "Polecenie odrzucone",
-      "command_rejected_text": "Polecenie zablokowane przez silnik logiki.\nPowód: {reason}"
+      "command_rejected_text": "Polecenie zablokowane przez silnik logiki.\nPowód: {reason}",
+      "button_refused_title": "Przycisk odrzucony",
+      "button_refused_text": "Zapis bitu {bit} z przycisku odrzucony.\nPowód: {reason}"
     },
     "system_topology": {
       "info_title": "INFORMACJE O URZĄDZENIU",

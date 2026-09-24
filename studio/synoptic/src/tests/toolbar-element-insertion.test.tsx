@@ -107,9 +107,9 @@ describe('Toolbox (Object Library) - every visible symbol in the registry is act
     expect(screen.getAllByText('📂').length).toBe(LIBRARY_DOMAIN_ORDER.length);
   });
 
-  it('every SCADA-category symbol expected to be visible right now is listed (Label Frame, Indicator Diode, Meter (SCADA), Boundary Point, Text box) - and no more, no less', () => {
+  it('every SCADA-category symbol expected to be visible right now is listed (Label Frame, Indicator Diode, Meter (SCADA), Boundary Point, Text box, Push Button) - and no more, no less', () => {
     const scadaItems = getSymbolsByCategory().SCADA || [];
-    expect(scadaItems.map(d => d.label).sort()).toEqual(['Boundary Point', 'Indicator Diode', 'Label Frame', 'Meter (SCADA)', 'Text box']);
+    expect(scadaItems.map(d => d.label).sort()).toEqual(['Boundary Point', 'Indicator Diode', 'Label Frame', 'Meter (SCADA)', 'Push Button', 'Text box']);
     render(<Toolbox />);
     for (const def of scadaItems) {
       expect(entry(def.type), def.type).not.toBeNull();

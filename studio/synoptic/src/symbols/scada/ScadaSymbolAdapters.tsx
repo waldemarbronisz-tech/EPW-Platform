@@ -18,6 +18,8 @@ import { MotorSymbol, MOTOR_STATES } from './MotorSymbol';
 import type { MotorState } from './MotorSymbol';
 import { PilotLampSymbol, PILOT_LAMP_STATES } from './PilotLampSymbol';
 import type { PilotLampState } from './PilotLampSymbol';
+import { PushButtonSymbol, PUSH_BUTTON_STATES } from './PushButtonSymbol';
+import type { PushButtonState } from './PushButtonSymbol';
 import { SocketSymbol, SOCKET_STATES } from './SocketSymbol';
 import type { SocketState } from './SocketSymbol';
 import { IndicatorDiodeSymbol, INDICATOR_DIODE_STATES } from './IndicatorDiodeSymbol';
@@ -58,6 +60,10 @@ export const ScadaMotorAdapter: React.FC<SymbolProps> = ({ state }) => (
 
 export const ScadaPilotLampAdapter: React.FC<SymbolProps> = ({ state }) => (
   <PilotLampSymbol state={resolveState<PilotLampState>(state, PILOT_LAMP_STATES, 'OFF')} />
+);
+
+export const ScadaPushButtonAdapter: React.FC<SymbolProps> = ({ obj, state }) => (
+  <PushButtonSymbol state={resolveState<PushButtonState>(state, PUSH_BUTTON_STATES, 'RELEASED')} label={obj.text} />
 );
 
 export const ScadaSocketAdapter: React.FC<SymbolProps> = ({ state }) => (

@@ -12,7 +12,35 @@
 
 import type { StateCreator } from 'zustand';
 import type { AppState } from './appState';
-import { deviceAsserted } from './liveSlice';
+import type { SynopticObject } from './types';
+import { deviceAsserted, tagAsserted } from './liveSlice';
+import { DEFAULT_PULSE_MS } from '../symbols/scada/PushButtonSymbol';
+
+export function isPushButton(obj: SynopticObject): boolean {
+  return obj.type === 'scada.push_button';
+}
+
+/** The bit a push button writes (bindings.command.tag), or '' when none is set. */
+export function pushButtonBit(obj: SynopticObject): string {
+  return (obj.bindings?.command?.tag || '').trim();
+}
+
+/**
+ * What one click of a push button sends: TOGGLE writes the opposite of
+ * the bit's live value (an unreadable bit counts as FALSE, so the first
+ * click sets it); PULSE writes TRUE and, `pulse_ms` later, FALSE - the
+ * runtime page does exactly the same (page_synoptic.py). A button with
+ * no bit sends nothing.
+ */
+export function pushButtonCommands(obj: SynopticObject, values: Record<string, unknown>): QueuedCommand[] {
+  const bit = pushButtonBit(obj);
+  if (!bit) return [];
+  if (obj.editor?.button_mode === 'PULSE') {
+    const pulse = Number(obj.editor?.pulse_ms) > 0 ? Number(obj.editor?.pulse_ms) : DEFAULT_PULSE_MS;
+    return [{ bit, value: true }, { bit, value: false, delay_ms: pulse }];
+  }
+  return [{ bit, value: !(tagAsserted(values[bit]) ?? false) }];
+}
 
 export interface PanelPreviewState {
   /** The screen on show. */
@@ -23,10 +51,10 @@ export interface PanelPreviewState {
   wasPreviewMode: boolean;
 }
 
-export interface QueuedCommand {
-  deviceId: string;
-  action: 'CLOSE' | 'OPEN';
-}
+/** An apparatus command (POST /api/v1/commands) or a push button's bit write (POST /api/v1/bits/<bit>). */
+export type QueuedCommand =
+  | { deviceId: string; action: 'CLOSE' | 'OPEN' }
+  | { bit: string; value: boolean; delay_ms?: number };
 
 export type PreviewSlice = Pick<AppState,
   | 'panelPreview' | 'mainScreenId' | 'pendingCommands' | 'helpRequest'
@@ -79,6 +107,12 @@ export const createPreviewSlice: StateCreator<AppState, [], [], PreviewSlice> = 
   commandAt: (objectId) => {
     const s = get();
     const obj = s.objects.find(o => o.id === objectId);
+    if (obj && isPushButton(obj)) {
+      const commands = pushButtonCommands(obj, s.liveValues || {});
+      if (!commands.length) return null;
+      set({ pendingCommands: [...s.pendingCommands, ...commands] });
+      return commands[0];
+    }
     const device = obj?.deviceId ? s.devices.find(d => d.id === obj.deviceId) : undefined;
     if (!device || device.behavior !== 'SWITCHED') return null;
     // The opposite of what the controller reports; an unreadable feedback

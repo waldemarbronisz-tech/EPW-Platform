@@ -84,6 +84,10 @@ export interface SynopticObject {
     lighting_exponent?: number;
     /** This fitting's own height above the WORKING PLANE [m], not above the floor. */
     lighting_height?: number;
+    /** scada.push_button: how it writes its bit (bindings.command.tag) - TOGGLE (default) or PULSE. */
+    button_mode?: 'TOGGLE' | 'PULSE';
+    /** scada.push_button in PULSE mode: how long the bit stays TRUE [ms]. */
+    pulse_ms?: number;
   };
 
   // Runtime Bindings

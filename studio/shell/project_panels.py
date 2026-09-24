@@ -100,7 +100,7 @@ from PySide6.QtWidgets import (
 
 from shared.addressing import format_address, parse_address, try_parse_address
 from shared.logic import point_roles
-from shared.logic.internal_bits import direction_of, internal_bit_id
+from shared.logic.internal_bits import direction_of, internal_bit_id, panel_level_of
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
@@ -761,6 +761,45 @@ def internal_bit_entries(studio_window) -> list:
         if project is not None:
             return [e for e in project.settings.get("internal_bits", []) if isinstance(e, dict) and e.get("name")]
     return internal_bit_registry(getattr(studio_window, "_project", None))
+
+
+PUSH_BUTTON_TYPE = "scada.push_button"
+
+
+def push_button_bit(obj: dict) -> str:
+    """The bit a screen's push button writes (bindings.command.tag), "" when none."""
+    bindings = obj.get("bindings") if isinstance(obj, dict) else None
+    command = bindings.get("command") if isinstance(bindings, dict) else None
+    return str((command or {}).get("tag") or "").strip() if isinstance(command, dict) else ""
+
+
+def screen_push_buttons(project) -> list:
+    """[(screen name, object dict)] for every push button on every screen
+    of the project's embedded synoptic document: the active screen's
+    objects sit at the top level, the others under screenContents."""
+    document = getattr(project, "screens", None) or {}
+    if not isinstance(document, dict):
+        return []
+    names = {}
+    for entry in document.get("screens") or []:
+        if isinstance(entry, dict) and entry.get("id"):
+            names[entry["id"]] = str(entry.get("name") or entry["id"])
+    active = str(document.get("activeScreenId") or "")
+    found = []
+
+    def collect(screen_name, objects):
+        for obj in objects or []:
+            if isinstance(obj, dict) and obj.get("type") == PUSH_BUTTON_TYPE:
+                found.append((screen_name, obj))
+
+    project_name = (document.get("project") or {}).get("name") if isinstance(document.get("project"), dict) else ""
+    collect(names.get(active) or project_name or active or "?", document.get("objects"))
+    contents = document.get("screenContents")
+    if isinstance(contents, dict):
+        for screen_id, content in contents.items():
+            if screen_id != active and isinstance(content, dict):
+                collect(names.get(screen_id) or screen_id, content.get("objects"))
+    return found
 
 
 def permission_bit_candidates(studio_window) -> list:
@@ -5486,6 +5525,37 @@ def validate_project(project) -> list:
             issues.append(ValidationIssue(
                 "error", tr("validation.msg_point_permission_not_out_bool", address=point.address, bit=bit_id),
                 "points", "select_address", point.address,
+            ))
+
+    # 12) A push button on a screen (owner 2026-09-24) writes an IN bit
+    # of the logic's registry from the panel - so the bit must exist, be
+    # BOOL, be IN, and let the panel write it; anything else is a
+    # button that does nothing, which the designer should hear about
+    # here rather than at the panel.
+    for screen_name, obj in screen_push_buttons(project):
+        bit_id = push_button_bit(obj)
+        label = obj.get("text") or obj.get("id") or "?"
+        if not bit_id:
+            issues.append(ValidationIssue(
+                "warning", tr("validation.msg_button_no_bit", screen=screen_name, button=label),
+                "screens", "", "",
+            ))
+            continue
+        entry = registry.get(bit_id)
+        if entry is None:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_unknown_bit", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
+            ))
+        elif direction_of(entry) != "IN" or entry.get("type", "BOOL") != "BOOL":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_not_in_bool", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
+            ))
+        elif not panel_level_of(entry):
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_panel_forbidden", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
             ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"

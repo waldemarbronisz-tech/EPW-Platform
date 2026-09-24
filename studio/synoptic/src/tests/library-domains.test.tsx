@@ -35,12 +35,12 @@ afterEach(cleanup);
 describe('one criterion: the installation domain', () => {
   it('assigns every symbol the library shows to exactly one domain, and nothing it does not show', () => {
     expect(Object.keys(SYMBOL_DOMAIN).sort()).toEqual(visibleTypes);
-    expect(visibleTypes.length).toBe(63);
+    expect(visibleTypes.length).toBe(64);
   });
 
   it('has no group smaller than four, with these counts', () => {
     const counts = Object.fromEntries(groupLibrary(allLibraryEntries()).map(g => [g.domain, g.entries.length]));
-    expect(counts).toEqual({ BUILDING: 11, LIGHTING: 9, ELECTRICAL: 10, WATER: 24, HVAC: 4, AUTOMATION: 9 });
+    expect(counts).toEqual({ BUILDING: 11, LIGHTING: 9, ELECTRICAL: 10, WATER: 24, HVAC: 4, AUTOMATION: 10 });
     expect(Math.min(...Object.values(counts))).toBeGreaterThanOrEqual(4);
     expect(Object.keys(counts)).toEqual(LIBRARY_DOMAIN_ORDER);
   });

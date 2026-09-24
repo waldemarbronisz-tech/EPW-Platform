@@ -1,9 +1,9 @@
 {
  "format": "EPW_SYMBOL_GEOMETRY",
  "schema_version": 1,
- "generated_at": "2026-09-18T12:14:09.078Z",
+ "generated_at": "2026-09-24T10:47:18.261Z",
  "generated_by": "studio/synoptic/tools/geometry_export/export.mjs",
- "symbol_count": 98,
+ "symbol_count": 99,
  "symbols": {
   "electrical.circuit_breaker": {
    "label": "Circuit Breaker",
@@ -50797,6 +50797,182 @@
         "strokeWidth": 5,
         "lineCap": "butt",
         "lineJoin": "miter"
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "notes": []
+  },
+  "scada.push_button": {
+   "label": "Push Button",
+   "category": "SCADA",
+   "reference_width": 150,
+   "reference_height": 150,
+   "allowed_states": [
+    "RELEASED",
+    "PRESSED"
+   ],
+   "default_state": "RELEASED",
+   "is_line": false,
+   "is_surface": false,
+   "resize_redraws": false,
+   "designation_prefix": null,
+   "terminals": [],
+   "connection_points": [],
+   "component": "ScadaPushButtonAdapter",
+   "animation": null,
+   "states": {
+    "RELEASED": [
+     {
+      "primitive": "group",
+      "children": [
+       {
+        "primitive": "rect",
+        "x": 15,
+        "y": 15,
+        "width": 120,
+        "height": 120,
+        "cornerRadius": 10,
+        "fill": "#C6C6C6",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 36,
+        "fill": "#F2F2F2",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 30,
+        "fill": "#F2F2F2",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "text",
+        "x": 15,
+        "y": 104,
+        "width": 120,
+        "align": "center",
+        "text": {
+         "$template": "{{text}}",
+         "$default": ""
+        },
+        "fontSize": 13,
+        "fontFamily": "Tahoma, Verdana, \"DejaVu Sans\", sans-serif",
+        "fontStyle": "bold",
+        "fill": "#000000"
+       }
+      ]
+     }
+    ],
+    "PRESSED": [
+     {
+      "primitive": "group",
+      "children": [
+       {
+        "primitive": "rect",
+        "x": 15,
+        "y": 15,
+        "width": 120,
+        "height": 120,
+        "cornerRadius": 10,
+        "fill": "#C6C6C6",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 36,
+        "fill": "#585858",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 27,
+        "fill": "#00A800",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "text",
+        "x": 15,
+        "y": 104,
+        "width": 120,
+        "align": "center",
+        "text": {
+         "$template": "{{text}}",
+         "$default": ""
+        },
+        "fontSize": 13,
+        "fontFamily": "Tahoma, Verdana, \"DejaVu Sans\", sans-serif",
+        "fontStyle": "bold",
+        "fill": "#000000"
+       }
+      ]
+     }
+    ],
+    "NORMAL": [
+     {
+      "primitive": "group",
+      "children": [
+       {
+        "primitive": "rect",
+        "x": 15,
+        "y": 15,
+        "width": 120,
+        "height": 120,
+        "cornerRadius": 10,
+        "fill": "#C6C6C6",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 36,
+        "fill": "#F2F2F2",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "circle",
+        "x": 75,
+        "y": 62,
+        "radius": 30,
+        "fill": "#F2F2F2",
+        "stroke": "#000000",
+        "strokeWidth": 5
+       },
+       {
+        "primitive": "text",
+        "x": 15,
+        "y": 104,
+        "width": 120,
+        "align": "center",
+        "text": {
+         "$template": "{{text}}",
+         "$default": ""
+        },
+        "fontSize": 13,
+        "fontFamily": "Tahoma, Verdana, \"DejaVu Sans\", sans-serif",
+        "fontStyle": "bold",
+        "fill": "#000000"
        }
       ]
      }

@@ -21,6 +21,7 @@ import { clampSetpointWidth, SETPOINT_MIN_WIDTH, SETPOINT_MAX_WIDTH, SETPOINT_DE
 import type { SetpointRow } from '../elements/SetpointElement';
 import { getSetpointCapableDevices } from '../elements/SetpointResolver';
 import { INDICATOR_DIODE_STATES } from '../symbols/scada/IndicatorDiodeSymbol';
+import { DEFAULT_PULSE_MS } from '../symbols/scada/PushButtonSymbol';
 import { FONT_SIZE_BASE, FONT_SIZE_SMALL } from '../theme/ScadaTheme';
 import type { SynopticConnection, SynopticObject } from '../store';
 import { describeObject } from '../utils/ObjectDisplay';
@@ -1244,6 +1245,40 @@ export const PropertyInspector: React.FC = () => {
           </div>
         )}
 
+        {/* Owner 2026-09-24: the push button writes one of the logic's IN
+            bits; its bit, mode and pulse are its whole configuration, so
+            they get their own group and the generic Bindings section
+            (state/value/alarm tags it never reads) stays hidden for it. */}
+        {selectedObj.type === 'scada.push_button' && (
+          <div className="property-group">
+            <div className="property-group-title">{tr('push_button.title')}</div>
+            <div className="property-row">
+              <label>{tr('push_button.bit')}</label>
+              <input type="text" name="bindings.command.tag" placeholder="M.NAZWA" title={tr('push_button.bit_hint')}
+                value={selectedObj.bindings?.command?.tag || ''} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()} />
+            </div>
+            <div className="property-row">
+              <label>{tr('push_button.mode')}</label>
+              <select name="editor.button_mode" value={selectedObj.editor?.button_mode || 'TOGGLE'} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()}>
+                <option value="TOGGLE">{tr('push_button.toggle')}</option>
+                <option value="PULSE">{tr('push_button.pulse')}</option>
+              </select>
+            </div>
+            {selectedObj.editor?.button_mode === 'PULSE' && (
+              <div className="property-row">
+                <label>{tr('push_button.pulse_ms')}</label>
+                <input type="number" name="editor.pulse_ms" min={20} step={10}
+                  value={selectedObj.editor?.pulse_ms || DEFAULT_PULSE_MS} onChange={handleChange} onBlur={() => useStore.getState().saveHistory()} />
+              </div>
+            )}
+            {!(selectedObj.bindings?.command?.tag || '').trim() && (
+              <div className="property-row">
+                <span style={{ fontSize: FONT_SIZE_SMALL, opacity: 0.8 }}>{tr('push_button.no_bit')}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="property-group">
           <div className="property-group-title">Editor Preview</div>
           <div className="property-row">
@@ -1287,7 +1322,7 @@ export const PropertyInspector: React.FC = () => {
             selectedMeter/selectedSignalPanel branches above) never had a
             Bindings section to begin with - same reasoning, same fix,
             nothing further to remove there. */}
-        {selectedObj.type !== 'scada.meter' && (
+        {selectedObj.type !== 'scada.meter' && selectedObj.type !== 'scada.push_button' && (
           <div className="property-group">
             <div className="property-group-title">Bindings</div>
             <div className="property-row">

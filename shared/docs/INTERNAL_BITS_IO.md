@@ -118,3 +118,24 @@ Ustawia się tylko z panelu (menu trybu, poziom Operator), zapisane w
 jest żądaniem logiki. Kod: `runtime/epw_os/core/operating_mode.py`,
 `backend/api.py` (`_refuse_if_local`), `core/remote_commands.py`
 (`_remote_allowed`). Testy: `runtime/epw_os/tests/test_control_place.py`.
+
+### Przycisk na synoptyce — „Przycisk robimy: robota synoptyki, ale w logice też chcę bity”
+
+Symbol **Przycisk** (`scada.push_button`, folder „Automatyka” biblioteki
+edytora) pisze z panelu jeden **bit WE** logiki: Właściwości → Przycisk →
+Bit (`M.NAZWA`), Tryb **przełączanie** (każde kliknięcie odwraca bit) albo
+**impuls** (TRUE, po `pulse_ms` FALSE; domyślnie 500 ms). Nasadka pokazuje
+wartość bitu (zielona = TRUE). Logika czyta ten bit jak każdy bit WE —
+blokiem „Wejście bitowe”; po stronie logiki nic nowego nie trzeba.
+
+Sterownik (`gui/synoptic/page_synoptic.py`, `press_button`): każdy zapis
+idzie przez `InternalBitGate` — poziom z rejestru bitu, audyt
+`INTERNAL_BIT_WRITTEN/_REFUSED`, bit wymuszony odmawia; odmowa pokazuje
+powód. Bez okna potwierdzenia — przycisk sam jest potwierdzeniem.
+Podgląd panelu w Studiu (na żywo): kliknięcie trafia do
+`POST /api/v1/bits/<bit>` (bit musi mieć „Zdalnie”), impuls kończy timer.
+„Sprawdź projekt” (punkt 12): przycisk bez bitu = ostrzeżenie; bit spoza
+rejestru, bit nie-WE/nie-BOOL, bit bez zapisu z panelu = błąd. Testy:
+`runtime/epw_os/tests/test_synoptic_push_button.py`,
+`studio/shell/tests/test_push_button_studio.py`,
+`studio/synoptic/src/tests/push-button.test.ts`.

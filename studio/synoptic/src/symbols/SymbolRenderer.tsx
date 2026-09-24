@@ -61,6 +61,7 @@ import {
   ScadaLabelFrameAdapter,
   ScadaMotorAdapter,
   ScadaPilotLampAdapter,
+  ScadaPushButtonAdapter,
   ScadaSocketAdapter,
   ScadaIndicatorDiodeAdapter,
   ScadaMeterAdapter,
@@ -138,7 +139,8 @@ export interface SymbolProps {
 export function symbolUsesTextField(type: string): boolean {
   if (type.startsWith('graphics.')) return true;
   if (type.startsWith('measurements.')) return true;
-  return type === 'scada.label_frame' || type === 'scada.boundary_point' || type === 'scada.text_box';
+  // the push button's label under its cap is its `text` too (PushButtonSymbol)
+  return type === 'scada.label_frame' || type === 'scada.boundary_point' || type === 'scada.text_box' || type === 'scada.push_button';
 }
 
 export const GenericSymbol: React.FC<SymbolProps> = ({ obj }) => {
@@ -341,6 +343,8 @@ export const SymbolRenderer: React.FC<{ obj: SynopticObject }> = ({ obj }) => {
       return <ScadaMotorAdapter obj={obj} state={state} />;
     case 'scada.pilot_lamp':
       return <ScadaPilotLampAdapter obj={obj} state={state} />;
+    case 'scada.push_button':
+      return <ScadaPushButtonAdapter obj={obj} state={state} />;
     case 'scada.socket':
       return <ScadaSocketAdapter obj={obj} state={state} />;
     case 'scada.indicator_diode':

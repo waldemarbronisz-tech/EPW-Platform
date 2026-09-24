@@ -654,6 +654,10 @@
     "msg_device_permission_unknown": "Apparatus {device} names permission '{bit}', which the logic's internal-bit registry does not have - the controller treats that as no permission (it will never switch on).",
     "msg_device_permission_not_out_bool": "Apparatus {device}: permission '{bit}' must be a BOOL bit with direction OUT (written by the logic).",
     "msg_device_permission_not_switched": "Apparatus {device} names permission '{bit}' but is not a SWITCHED apparatus - the permission blocks nothing.",
+    "msg_button_no_bit": "Screen {screen}: push button '{button}' has no bit - it does nothing on the panel (Properties -> Push button -> Bit).",
+    "msg_button_unknown_bit": "Screen {screen}: push button '{button}' writes bit '{bit}', which the logic's internal bit registry does not have.",
+    "msg_button_not_in_bool": "Screen {screen}: push button '{button}' writes '{bit}', but a button may only write a BOOL bit with direction IN.",
+    "msg_button_panel_forbidden": "Screen {screen}: push button '{button}' writes '{bit}', but the registry does not let the panel write that bit (the Panel column in the Signals department).",
     "msg_point_permission_not_do": "Point {address} names permission '{bit}', but only a digital output (DO) can carry a permission.",
     "msg_point_permission_unknown": "Point {address} names permission '{bit}', which the logic's internal-bit registry does not have - the controller treats that as no permission.",
     "msg_point_permission_not_out_bool": "Point {address}: permission '{bit}' must be a BOOL bit with direction OUT (written by the logic).",
@@ -809,7 +813,9 @@
     "release_failed": "Could not release the forces: {reason}",
     "preview_not_ready": "The screen editor is still loading - try again in a moment.",
     "command_sent": "Sent {device}.{action} to the controller.",
-    "command_failed": "The controller refused {device}.{action}: {reason}"
+    "command_failed": "The controller refused {device}.{action}: {reason}",
+    "bit_sent": "Push button: wrote {bit} = {value} on the controller.",
+    "bit_failed": "The controller refused the push button's write of {bit}: {reason}"
   },
   "object_links": {
     "intro": "One controller's value available on another as a Link.<Id>.In<n> tag - over MQTT: the source publishes its tags, the target subscribes in MQTT Integration (Studio writes the incoming mappings here and never touches manual ones). The Link.* tag works in the target's logic and screens; it is never a command.",

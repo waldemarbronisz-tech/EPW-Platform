@@ -25,8 +25,39 @@ draws the symbol's default state.
 """
 from epw_os.core.logging import log
 
-ASSERTED_STATES = ("CLOSED", "ON", "RUNNING", "RUN", "ENERGIZED", "ACTIVE", "HEATING", "LIVE", "HIGH", "ALARM")
-RELEASED_STATES = ("OPEN", "OFF", "STOP", "DEENERGIZED", "NORMAL", "DEAD", "LOW", "INACTIVE")
+ASSERTED_STATES = ("CLOSED", "ON", "RUNNING", "RUN", "ENERGIZED", "ACTIVE", "HEATING", "LIVE", "HIGH", "ALARM",
+                   "PRESSED")
+RELEASED_STATES = ("OPEN", "OFF", "STOP", "DEENERGIZED", "NORMAL", "DEAD", "LOW", "INACTIVE", "RELEASED")
+
+# The push button (scada.push_button, owner 2026-09-24): a screen object
+# with no apparatus that WRITES one of the logic's IN bits on a click.
+PUSH_BUTTON_TYPE = "scada.push_button"
+BUTTON_MODE_TOGGLE = "TOGGLE"
+BUTTON_MODE_PULSE = "PULSE"
+DEFAULT_PULSE_MS = 500
+
+
+def push_button_bit(obj: dict) -> str:
+    """The bit a push button writes - bindings.command.tag - or ""."""
+    if not isinstance(obj, dict) or obj.get("type") != PUSH_BUTTON_TYPE:
+        return ""
+    bindings = obj.get("bindings") or {}
+    command = bindings.get("command") if isinstance(bindings, dict) else None
+    return str((command or {}).get("tag") or "").strip() if isinstance(command, dict) else ""
+
+
+def push_button_mode(obj: dict) -> tuple:
+    """(mode, pulse_ms) as the editor saved them - TOGGLE by default,
+    PULSE with a positive pulse_ms (DEFAULT_PULSE_MS when unset)."""
+    editor = (obj or {}).get("editor") or {}
+    mode = str(editor.get("button_mode") or BUTTON_MODE_TOGGLE).upper()
+    if mode != BUTTON_MODE_PULSE:
+        return BUTTON_MODE_TOGGLE, 0
+    try:
+        pulse = int(editor.get("pulse_ms") or 0)
+    except (TypeError, ValueError):
+        pulse = 0
+    return BUTTON_MODE_PULSE, pulse if pulse > 0 else DEFAULT_PULSE_MS
 # Symbols whose energized contact means "flow": open, not closed.
 FLOW_TYPE_MARKERS = ("valve", "damper", "drain", "gate")
 GOOD_QUALITIES = ("GOOD", "UNCERTAIN")
@@ -103,15 +134,18 @@ class ObjectPresentation:
     the per-instance template fields, whether it is commandable and
     what its command target is."""
 
-    __slots__ = ("state", "fields", "apparatus", "commandable", "bound", "live")
+    __slots__ = ("state", "fields", "apparatus", "commandable", "bound", "live", "bit")
 
-    def __init__(self, state, fields, apparatus=None, commandable=False, bound=False, live=False):
+    def __init__(self, state, fields, apparatus=None, commandable=False, bound=False, live=False, bit=""):
         self.state = state
         self.fields = fields
         self.apparatus = apparatus
         self.commandable = commandable
         self.bound = bound
         self.live = live
+        # A push button's bit (M.<name>) - "" for everything else. Its
+        # click writes that bit instead of commanding an apparatus.
+        self.bit = bit
 
 
 def present_object(obj: dict, geometry, apparatus_registry, tag_reader: TagReader,
@@ -139,6 +173,15 @@ def present_object(obj: dict, geometry, apparatus_registry, tag_reader: TagReade
         "unit": (obj.get("editor") or {}).get("unit") or "",
     }
     device_id = obj.get("deviceId")
+    bit = push_button_bit(obj)
+    if bit:
+        # The cap follows the bit it writes; an unreadable bit (the
+        # program does not declare it, no logic loaded) shows RELEASED
+        # and the click is still offered - the gate then says why not.
+        value, quality = tag_reader.read(bit)
+        live = value is not None and quality in GOOD_QUALITIES
+        state = pick_state(symbol_type, allowed, bool(value) if live else False, default_state)
+        return ObjectPresentation(state, fields, commandable=True, bound=True, live=live, bit=bit)
     apparatus = apparatus_registry.get(device_id) if (apparatus_registry is not None and device_id) else None
     if apparatus is None:
         preview = (obj.get("editor") or {}).get("preview_state")

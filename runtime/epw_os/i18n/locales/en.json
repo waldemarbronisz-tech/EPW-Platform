@@ -454,7 +454,9 @@
       "state_unknown": "The state of {device} is not known (no feedback yet), so the command direction cannot be chosen.",
       "screen_label": "Screen:",
       "command_rejected_title": "Command Rejected",
-      "command_rejected_text": "Command blocked by Logic Engine.\nReason: {reason}"
+      "command_rejected_text": "Command blocked by Logic Engine.\nReason: {reason}",
+      "button_refused_title": "Push button refused",
+      "button_refused_text": "The push button's write of {bit} was refused.\nReason: {reason}"
     },
     "system_topology": {
       "info_title": "DEVICE INFORMATION",

@@ -1281,6 +1281,7 @@ class StudioMainWindow(QMainWindow):
         "lines": ("_lines_panel", "_open_lines"),
         "process_protection": ("_process_protection_panel", "_open_process_protection"),
         "modules": ("_modules_panel", "_open_modules"),
+        "screens": ("_synoptic_panel", "_open_screens"),
     }
 
     def _check_project(self):
@@ -1674,9 +1675,19 @@ class StudioMainWindow(QMainWindow):
     def relay_commands(self, commands) -> int:
         """POST /api/v1/commands for every command clicked in the preview -
         the controller's own path, every interlock and safety check
-        included; a refusal shows in the status bar."""
+        included; a refusal shows in the status bar. A push button's
+        write (owner 2026-09-24) goes to POST /api/v1/bits/<bit> - the
+        gate's own path (the bit must allow remote writes) - and a PULSE's
+        clearing write is sent after its delay, from a timer."""
         sent = 0
         for command in commands or []:
+            if command.get("bit"):
+                delay = int(command.get("delay_ms") or 0)
+                if delay > 0:
+                    QTimer.singleShot(delay, lambda c=dict(command, delay_ms=0): self.relay_commands([c]))
+                    continue
+                sent += self._relay_bit_write(command["bit"], bool(command.get("value")))
+                continue
             ok, data = self._controller_link.request_json(
                 "/api/v1/commands", {"device_tag": command["deviceId"], "command": command["action"]})
             if ok and isinstance(data, dict) and data.get("success", True):
@@ -1693,6 +1704,21 @@ class StudioMainWindow(QMainWindow):
                 self.statusBar().showMessage(tr("live.command_failed", device=command["deviceId"],
                                                action=command["action"], reason=reason), 6000)
         return sent
+
+    def _relay_bit_write(self, bit_id: str, value: bool) -> int:
+        ok, data = self._controller_link.request_json(f"/api/v1/bits/{bit_id}", {"value": value})
+        if ok and isinstance(data, dict) and data.get("ok", True):
+            self.statusBar().showMessage(tr("live.bit_sent", bit=bit_id, value="TRUE" if value else "FALSE"), 3000)
+            return 1
+        detail = self._controller_link.last_error_detail
+        if isinstance(detail, dict):
+            reason = detail.get("reason") or detail.get("error") or json.dumps(detail, ensure_ascii=False)
+        elif isinstance(detail, str):
+            reason = detail
+        else:
+            reason = data
+        self.statusBar().showMessage(tr("live.bit_failed", bit=bit_id, reason=reason), 6000)
+        return 0
 
     def _open_screens(self):
         if not self._ensure_synoptic_panel():

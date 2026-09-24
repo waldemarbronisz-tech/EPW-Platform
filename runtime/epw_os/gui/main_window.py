@@ -452,7 +452,8 @@ class MainWindow(QMainWindow):
         self.page_synoptic = PageSynoptic(self.tag_manager, project_manager=self.project_manager,
                                           apparatus_registry=self.apparatus_registry,
                                           access_manager=self.access_manager,
-                                          command_manager=self.command_manager)
+                                          command_manager=self.command_manager,
+                                          internal_bits=self.internal_bits)
         _add_page("main_view", self.page_synoptic)
 
         # ALWAYS ON.
