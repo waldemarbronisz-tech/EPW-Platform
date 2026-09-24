@@ -14,7 +14,7 @@ def test_always_on_and_togglable_are_disjoint():
 
 def test_task_s_own_always_on_list():
     assert set(ALWAYS_ON_FEATURES) == {
-        "main_view", "digital_inputs", "control_outputs", "alarms", "events", "audit_log",
+        "main_view", "digital_inputs", "control_outputs", "internal_bits", "alarms", "events", "audit_log",
     }
 
 

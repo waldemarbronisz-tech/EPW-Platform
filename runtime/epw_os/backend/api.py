@@ -64,6 +64,10 @@ class ForceRequest(BaseModel):
     value: object
 
 
+class BitWriteRequest(BaseModel):
+    value: object
+
+
 class ProtectionTestRequest(BaseModel):
     kind: str        # "process" | "apparatus"
     id: str          # the process protection's id, or the apparatus id
@@ -358,6 +362,27 @@ def set_force(body: ForceRequest, core=Depends(get_core), level: str = Depends(_
     if not ok:
         raise HTTPException(status_code=403, detail={"error": "force_refused", "reason": reason})
     return {"forced": True, "tag": body.tag, "value": body.value, **_forces_body(manager)}
+
+
+@app.post("/api/v1/bits/{bit_id}")
+def write_internal_bit(bit_id: str, body: BitWriteRequest, core=Depends(get_core),
+                       authorization: Optional[str] = Header(None)):
+    """Sets an internal IN bit from outside the logic (internal bits
+    IN/OUT). The gate decides: the bit must be IN, the project must
+    allow remote writes to it, and the token's level must reach what the
+    bit demands. Every write and refusal is audited by the gate."""
+    gate = getattr(core, "internal_bits", None)
+    if gate is None:
+        raise HTTPException(status_code=404, detail="Internal bits are not available on this controller.")
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    level = core.api_auth.resolve_level(token)
+    ok, reason = gate.write(bit_id, body.value, actor=level or "no token", source="REST", level=level)
+    if not ok:
+        raise HTTPException(status_code=403, detail={"error": "bit_write_refused", "reason": reason})
+    tag = core.tag_manager.get_tag(bit_id)
+    return {"written": True, "bit": bit_id, "value": tag.value if tag is not None else body.value}
 
 
 @app.post("/api/v1/forces/heartbeat")

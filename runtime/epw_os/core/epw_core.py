@@ -192,6 +192,13 @@ class EPWCore:
         self.force_manager = ForceManager(self.event_bus, self.tag_manager, self.driver_manager, self.audit_logger,
                                           self.apparatus_registry, driver_for_tag=self._driver_id_for_tag)
         self.command_manager = CommandManager(self.tag_manager, self.logic_engine, self.safety_kernel, self.event_bus)
+        # Internal bits IN/OUT: the one door for writes from outside the
+        # logic, and the apparatus -> permission bit lookup the command
+        # manager asks before switching anything on.
+        from epw_os.core.internal_bit_gate import InternalBitGate
+        self.internal_bits = InternalBitGate(self)
+        self.command_manager.permission_bits = self._permission_bit_for
+        self.force_manager._internal_bit_direction = self.internal_bits.direction_of
         self.command_manager.force_manager = self.force_manager
         # The "internal Omicron" (SPEC): forced state, measured response, a report.
         from epw_os.core.protection_test import ProtectionTestRunner
@@ -279,6 +286,16 @@ class EPWCore:
             from epw_os.drivers.modbus_driver import DRIVER_ID
             return DRIVER_ID
         return (entry or {}).get("driver", "SIM_DRIVER")
+
+    def _permission_bit_for(self, target: str):
+        """(bit id, description) of the apparatus's permission bit, or None
+        (CommandManager.permission_bits)."""
+        apparatus = self.apparatus_registry.get(target)
+        bit_id = getattr(apparatus, "permission_bit", "") if apparatus is not None else ""
+        if not bit_id:
+            return None
+        entry = self.internal_bits.entry(bit_id) or {}
+        return bit_id, entry.get("description") or ""
 
     def _driver_id_for_tag(self, tag_name) -> str:
         from epw_os.core.addressing import try_parse_address
@@ -792,6 +809,7 @@ class EPWCore:
         # table - a force is a tool for somebody standing at the cabinet.
         from epw_os.core.remote_commands import RemoteCommandGateway
         self.remote_commands = RemoteCommandGateway(
+            internal_bits=self.internal_bits,
             access_manager=self.access_manager,
             intrusion_manager=self.intrusion_manager,
             command_manager=self.command_manager,
@@ -1223,6 +1241,7 @@ class EPWCore:
         if getattr(self, "remote_commands", None) is not None:
             from epw_os.core.remote_commands import RemoteCommandGateway
             self.remote_commands = RemoteCommandGateway(
+                internal_bits=self.internal_bits,
                 access_manager=self.access_manager,
                 intrusion_manager=self.intrusion_manager,
                 command_manager=self.command_manager,

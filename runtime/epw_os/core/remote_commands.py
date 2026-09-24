@@ -82,7 +82,11 @@ class RemoteCommandGateway:
 
     def __init__(self, access_manager=None, intrusion_manager=None, command_manager=None,
                  project_manager=None, process_protection_manager=None, alarm_manager=None,
-                 audit_logger=None, publish_result=None, clock=time.time):
+                 audit_logger=None, publish_result=None, clock=time.time, internal_bits=None):
+        # Internal bits IN/OUT: the one door for a write from outside the
+        # logic (core/internal_bit_gate.py) - per bit, only where the
+        # project allows a remote writer.
+        self.internal_bits = internal_bits
         self.access_manager = access_manager
         self.intrusion_manager = intrusion_manager
         self.command_manager = command_manager
@@ -304,6 +308,23 @@ class RemoteCommandGateway:
             return self._refuse(f"{target} {what}: {'; '.join(reasons) or 'refused'}", command_id, user=user)
         return self._accept(command_id, user, f"{target} {what}", target=target)
 
+    def _cmd_bit(self, body, user, command_id) -> dict:
+        """Sets an internal IN bit ({"action": "bit", "target": "M.X",
+        "values": {"value": true}}) through the same gate the panel
+        uses: the bit must be IN, the project must allow remote writes to
+        it, and the person's own level must reach what the bit demands."""
+        if self.internal_bits is None:
+            return self._refuse("this controller has no internal bits", command_id, user=user)
+        target = str(body.get("target") or "").strip()
+        values = body.get("values") if isinstance(body.get("values"), dict) else {}
+        if not target or "value" not in values:
+            return self._refuse("a bit write needs target and values.value", command_id, user=user)
+        ok, reason = self.internal_bits.write(target, values["value"], actor=user["name"], source="MQTT",
+                                              level=user.get("level"))
+        if not ok:
+            return self._refuse(f"{target}: {reason}", command_id, user=user)
+        return self._accept(command_id, user, f"{target} = {values['value']!r}", target=target)
+
     @staticmethod
     def _values(body, allowed) -> dict:
         """The setting values, read from their own `values` object rather
@@ -367,4 +388,5 @@ _ACTIONS = {
     "intrusion": RemoteCommandGateway._cmd_intrusion,
     "apparatus": RemoteCommandGateway._cmd_apparatus,
     "setting": RemoteCommandGateway._cmd_setting,
+    "bit": RemoteCommandGateway._cmd_bit,
 }

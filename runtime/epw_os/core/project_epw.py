@@ -162,7 +162,8 @@ def build_project_view(project) -> dict:
                                        for p in project.points if point_kind(p.address) == "DI"],
         "apparatuses": [{"id": d.id, "behavior": d.behavior, "kind": d.kind,
                          "feedback": list(d.feedback), "command": list(d.command),
-                         "command_style": d.command_style, "pulse_ms": d.pulse_ms} for d in project.devices],
+                         "command_style": d.command_style, "pulse_ms": d.pulse_ms,
+                         "permission_bit": getattr(d, "permission_bit", "") or ""} for d in project.devices],
         "intrusion_zones": [asdict(z) for z in project.zones],
         "intrusion_lines": [asdict(l) for l in project.lines],
         # Who may operate the alarm system (shared/project_format.py's

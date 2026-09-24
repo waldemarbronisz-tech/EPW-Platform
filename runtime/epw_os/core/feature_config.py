@@ -31,6 +31,7 @@ ALWAYS_ON_FEATURES = (
     "main_view",
     "digital_inputs",
     "control_outputs",
+    "internal_bits",      # the logic's own bits, live - internal bits IN/OUT (2026-09-22)
     "alarms",
     "events",
     "audit_log",

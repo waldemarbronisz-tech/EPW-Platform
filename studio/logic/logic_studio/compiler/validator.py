@@ -404,6 +404,7 @@ class Validator:
 
         # §4.1: more than one writer for the same signal -> ERROR, exactly
         # like output.do above — must name every writing block.
+        from shared.logic.internal_bits import is_input_bit
         for entry in self.project.settings.get("internal_bits", []):
             lname = entry.get("name", "").lower()
             writer_names = writers.get(lname, [])
@@ -411,6 +412,14 @@ class Validator:
                 errors.append(
                     f"Internal signal '{internal_bit_id(entry)}' has more than one writing block: "
                     + ", ".join(writer_names) + "."
+                )
+            # Internal bits IN/OUT: an IN bit is written from outside the
+            # logic (the panel, a force, a permitted remote writer) and
+            # the logic only reads it - a writing block on it is an error.
+            if writer_names and is_input_bit(entry):
+                errors.append(
+                    f"Internal signal '{internal_bit_id(entry)}' is an IN bit (written from outside the logic) - "
+                    f"a block must not write it: " + ", ".join(writer_names) + "."
                 )
 
         for signal_id, writer_names in system_writers.values():

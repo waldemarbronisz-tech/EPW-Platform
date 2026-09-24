@@ -53,6 +53,79 @@ def internal_bit_id(entry: dict) -> str:
     return f"{prefix}.{name}"
 
 
+# --- direction and writers (internal bits IN/OUT, owner's decisions 2026-09-22) ---
+#
+# Direction is from the LOGIC's point of view: IN = written by something
+# outside the logic (the panel, a Studio force, REST/MQTT when allowed),
+# the logic only reads it; OUT = written only by the logic, the rest of
+# the system consumes it. A bit the logic both writes and reads (a wire
+# between sheets) is an OUT nobody else reads - there is no third kind.
+# An entry saved before this existed has no "direction" and is OUT.
+#
+# Who may write an IN bit is declared PER BIT:
+#   panel_level  the panel's access level that may set it ("User",
+#                "Operator", "Engineer"), or "" = the panel may not.
+#                Default Operator.
+#   remote_write REST / MQTT / Home Assistant may set it. Default False:
+#                HA is a window, not a brain - a write from outside only
+#                where the designer allowed it.
+# A Studio force is always allowed on an IN bit, on the force rules
+# (Engineer, audit, expiry), never on an OUT bit.
+DIRECTION_IN = "IN"
+DIRECTION_OUT = "OUT"
+DIRECTIONS = (DIRECTION_IN, DIRECTION_OUT)
+DEFAULT_DIRECTION = DIRECTION_OUT
+PANEL_LEVELS = ("", "User", "Operator", "Engineer")
+DEFAULT_PANEL_LEVEL = "Operator"
+
+
+def direction_of(entry: dict) -> str:
+    value = str((entry or {}).get("direction") or DEFAULT_DIRECTION).upper()
+    return value if value in DIRECTIONS else DEFAULT_DIRECTION
+
+
+def is_input_bit(entry: dict) -> bool:
+    return direction_of(entry) == DIRECTION_IN
+
+
+def panel_level_of(entry: dict) -> str:
+    """The panel level that may write the bit; "" when the panel may not
+    (or the bit is OUT, which nobody outside the logic writes)."""
+    if not is_input_bit(entry):
+        return ""
+    if "panel_level" not in (entry or {}):
+        return DEFAULT_PANEL_LEVEL
+    level = str(entry.get("panel_level") or "")
+    return level if level in PANEL_LEVELS else DEFAULT_PANEL_LEVEL
+
+
+def remote_writable(entry: dict) -> bool:
+    return is_input_bit(entry) and bool((entry or {}).get("remote_write", False))
+
+
+def normalize_entry(entry: dict) -> dict:
+    """A copy with the direction and writer fields made explicit - what
+    the exporter, the controller and the panels all read."""
+    out = dict(entry or {})
+    out["direction"] = direction_of(out)
+    out["panel_level"] = panel_level_of(out)
+    out["remote_write"] = remote_writable(out)
+    return out
+
+
+def validate_direction_fields(entry: dict) -> list:
+    """Errors for a malformed direction / panel level (format only)."""
+    errors = []
+    name = entry.get("name", "")
+    direction = entry.get("direction")
+    if direction is not None and str(direction).upper() not in DIRECTIONS:
+        errors.append(f"{name!r}: invalid direction {direction!r} (must be IN or OUT).")
+    level = entry.get("panel_level")
+    if level is not None and str(level) not in PANEL_LEVELS:
+        errors.append(f"{name!r}: invalid panel level {level!r} (must be empty, User, Operator or Engineer).")
+    return errors
+
+
 # The four block types whose "Bit" property names a registry entry.
 # Here rather than in either editor, because "which blocks use a marker"
 # has to mean the same thing in both of them.
@@ -133,5 +206,6 @@ def validate_internal_bits_registry(entries: list) -> list:
 
         if entry.get("type") not in VALID_TYPES:
             errors.append(f"{name!r}: invalid type {entry.get('type')!r} (must be BOOL or REAL).")
+        errors.extend(validate_direction_fields(entry))
 
     return errors

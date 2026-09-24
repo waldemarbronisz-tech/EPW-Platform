@@ -81,6 +81,8 @@ class LogicEngine:
         self._program = None
         self._engine = None
         self._io = None
+        self._internal_bit_entries = []     # the loaded program's registry (internal bits IN/OUT)
+        self._internal_bit_entries = []     # the loaded program's registry (internal bits IN/OUT)
         self._driven_outputs = frozenset()
 
         self._scan_thread = None
@@ -119,6 +121,10 @@ class LogicEngine:
         start() refuses to scan: a scan with no way to read an input or
         drive an output would be a program running blind."""
         self._io = io_provider
+        if self._program is not None:
+            self._publish_internal_bits()
+        if self._program is not None:
+            self._publish_internal_bits()
 
     def attach_retentive_store(self, load, save):
         """Where retentive internal signals (MR./MWR.) live between runs -
@@ -189,11 +195,67 @@ class LogicEngine:
         self._driven_outputs = self._collect_driven_outputs(self._program)
         self._command_levels = self._collect_command_levels(self._program)
         self._retentive_ids = self._collect_retentive_ids(data)
+        self._internal_bit_entries = [e for e in (data.get("internal_bits") or []) if isinstance(e, dict)]
+        self._publish_internal_bits()
         self.last_error = ""
         log.info(f"Logic program loaded: {len(self._program.execution_order)} blocks in the scan, "
                  f"cycle time {self._program.cycle_time_ms} ms, "
                  f"{len(self._driven_outputs)} output(s) driven by logic.")
         return True
+
+    def _publish_internal_bits(self):
+        """The program's registry as tags (TagIOProvider.configure_internal_bits)."""
+        configure = getattr(self._io, "configure_internal_bits", None)
+        if callable(configure):
+            configure(self._internal_bit_entries)
+
+    def permission(self, bit_id: str) -> tuple:
+        """(granted, why) for an apparatus permission bit - internal bits
+        IN/OUT, condition (b): no logic is no permission. Granted only
+        while the scan runs, after its first scan, for an OUT bit the
+        program declares, when that bit reads TRUE. `why` names the
+        reason when not granted: "no_program", "logic_stopped",
+        "before_first_scan", "unknown_bit", "not_an_out_bit", "false"."""
+        if self._program is None or self._io is None:
+            return False, "no_program"
+        if not self.is_running:
+            return False, "logic_stopped"
+        if self._first_scan:
+            return False, "before_first_scan"
+        entries = getattr(self._io, "internal_bit_entries", None)
+        entry = (entries() if callable(entries) else {}).get(bit_id)
+        if entry is None:
+            return False, "unknown_bit"
+        if entry.get("direction") != "OUT":
+            return False, "not_an_out_bit"
+        return (True, "") if bool(self._io.read_internal(bit_id, False)) else (False, "false")
+
+    def _publish_internal_bits(self):
+        """The program's registry as tags (TagIOProvider.configure_internal_bits)."""
+        configure = getattr(self._io, "configure_internal_bits", None)
+        if callable(configure):
+            configure(self._internal_bit_entries)
+
+    def permission(self, bit_id: str) -> tuple:
+        """(granted, why) for an apparatus permission bit - internal bits
+        IN/OUT, condition (b): no logic is no permission. Granted only
+        while the scan runs, after its first scan, for an OUT bit the
+        program declares, when that bit reads TRUE. `why` names the
+        reason when not granted: "no_program", "logic_stopped",
+        "before_first_scan", "unknown_bit", "not_an_out_bit", "false"."""
+        if self._program is None or self._io is None:
+            return False, "no_program"
+        if not self.is_running:
+            return False, "logic_stopped"
+        if self._first_scan:
+            return False, "before_first_scan"
+        entries = getattr(self._io, "internal_bit_entries", None)
+        entry = (entries() if callable(entries) else {}).get(bit_id)
+        if entry is None:
+            return False, "unknown_bit"
+        if entry.get("direction") != "OUT":
+            return False, "not_an_out_bit"
+        return (True, "") if bool(self._io.read_internal(bit_id, False)) else (False, "false")
 
     @staticmethod
     def _collect_driven_outputs(program) -> frozenset:

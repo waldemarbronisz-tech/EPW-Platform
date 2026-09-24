@@ -56,6 +56,7 @@
     "digital_inputs": "DIGITAL INPUTS",
     "analog_inputs": "ANALOG INPUTS",
     "control_outputs": "CONTROL OUTPUTS",
+    "internal_bits": "INTERNAL BITS",
     "protection_settings": "PROTECTION SETTINGS",
     "events": "EVENTS",
     "system_topology": "SYSTEM TOPOLOGY",
@@ -930,6 +931,31 @@
       "night_no": "excluded",
       "mode_night": "NIGHT",
       "mode_full": "FULL"
+    },
+    "internal_bits": {
+      "title": "LOGIC INTERNAL BITS",
+      "intro": "The bits of the logic program's registry, live. An IN bit is set by the panel, by a Studio force or - where the project allows it - by REST/MQTT; the logic only reads it. An OUT bit is written by the logic alone.",
+      "col_id": "Identifier",
+      "col_direction": "Direction",
+      "col_description": "Description",
+      "col_value": "Value",
+      "col_writers": "Written by",
+      "col_set": "Set",
+      "direction_in": "IN",
+      "direction_out": "OUT",
+      "writers_logic": "the logic only",
+      "writer_panel": "panel ({level})",
+      "writer_force": "force",
+      "writer_remote": "REST/MQTT",
+      "btn_set": "SET",
+      "btn_clear": "CLEAR",
+      "btn_value": "Value...",
+      "set_value_title": "Value of {bit}",
+      "value": "Value:",
+      "no_access": "This bit needs a higher access level.",
+      "refused_title": "Write refused",
+      "refused_text": "Write of {bit} refused.\nReason: {reason}",
+      "none": "The loaded logic program declares no internal bits."
     }
   },
   "feature_config": {
@@ -1086,5 +1112,13 @@
     "maintenance": "MAINTENANCE",
     "test": "TEST",
     "emergency": "EMERGENCY"
+  },
+  "commands": {
+    "permission_refused": "CLOSE {target} refused: no permission {bit} ({description})",
+    "permission_why_no_program": "no logic program",
+    "permission_why_logic_stopped": "the logic is stopped",
+    "permission_why_before_first_scan": "the controller is before its first scan",
+    "permission_why_unknown_bit": "the program does not declare this bit",
+    "permission_why_not_an_out_bit": "not an OUT bit of the logic"
   }
 }

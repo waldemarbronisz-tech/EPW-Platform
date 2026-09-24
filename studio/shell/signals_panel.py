@@ -75,13 +75,20 @@ class InternalSignalsTab(QWidget):
     # Owner's order (2026-09-22): what a signal IS first (name, id, type,
     # retention), then where it is used, then how it is described; the
     # description last, taking whatever width is left.
-    _COLS = ("name", "id", "type", "retentive", "used_by", "category", "label", "description")
-    COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_USED, COL_CATEGORY, COL_LABEL, COL_DESCRIPTION = range(8)
+    # Internal bits IN/OUT (owner's decisions 2026-09-22): after what a
+    # signal IS comes its DIRECTION (IN = written from outside the logic,
+    # OUT = written by the logic only) and, for an IN bit, who may write
+    # it - the panel at which level, and whether REST/MQTT may at all.
+    _COLS = ("name", "id", "type", "retentive", "direction", "panel", "remote",
+             "used_by", "category", "label", "description")
+    (COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_DIRECTION, COL_PANEL, COL_REMOTE,
+     COL_USED, COL_CATEGORY, COL_LABEL, COL_DESCRIPTION) = range(11)
     # Initial widths (px): together they must leave "Used in" whole in a
     # 1280 x 720 window without a horizontal scrollbar - measured with
-    # tests/test_signals_panel.py's own width test.
-    COLUMN_WIDTHS = {COL_NAME: 140, COL_ID: 120, COL_TYPE: 70, COL_RETENTIVE: 70,
-                     COL_USED: 190, COL_CATEGORY: 110, COL_LABEL: 100}
+    # tests/test_signals_panel.py's own width test (viewport 942 px there:
+    # the fixed columns may take 822 at most).
+    COLUMN_WIDTHS = {COL_NAME: 110, COL_ID: 96, COL_TYPE: 70, COL_RETENTIVE: 70, COL_DIRECTION: 60,
+                     COL_PANEL: 80, COL_REMOTE: 46, COL_USED: 150, COL_CATEGORY: 70, COL_LABEL: 50}
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -213,6 +220,7 @@ class InternalSignalsTab(QWidget):
                 retentive.toggled.connect(
                     lambda checked, r=row: self._set_field(r, "retentive", bool(checked)))
                 self.table.setCellWidget(row, self.COL_RETENTIVE, retentive)
+                self._add_direction_widgets(row, entry)
 
                 self.table.setItem(row, self.COL_DESCRIPTION, QTableWidgetItem(entry.get("description", "")))
                 self.table.setItem(row, self.COL_CATEGORY, QTableWidgetItem(entry.get("category", "")))
@@ -222,6 +230,39 @@ class InternalSignalsTab(QWidget):
                 self.table.setItem(row, self.COL_USED, _read_only(self._used_text(used)))
         finally:
             self._loading = False
+
+    def _add_direction_widgets(self, row: int, entry: dict):
+        """Direction, the panel's writing level and the remote-write
+        switch - the last two only make sense for an IN bit and are
+        disabled for an OUT one (which nobody outside the logic writes)."""
+        from shared.logic.internal_bits import (DIRECTION_IN, DIRECTION_OUT, direction_of, is_input_bit,
+                                                panel_level_of, remote_writable)
+        direction = QComboBox()
+        direction.addItem(tr("signals.direction_in"), DIRECTION_IN)
+        direction.addItem(tr("signals.direction_out"), DIRECTION_OUT)
+        direction.setCurrentIndex(max(0, direction.findData(direction_of(entry))))
+        direction.setToolTip(tr("signals.direction_tooltip"))
+        direction.currentIndexChanged.connect(
+            lambda _i, r=row, c=direction: self._set_field(r, "direction", c.currentData()))
+        self.table.setCellWidget(row, self.COL_DIRECTION, direction)
+
+        panel = QComboBox()
+        panel.addItem(tr("signals.panel_none"), "")
+        for level in ("User", "Operator", "Engineer"):
+            panel.addItem(tr(f"signals.level_{level.lower()}"), level)
+        panel.setCurrentIndex(max(0, panel.findData(panel_level_of(entry))))
+        panel.setToolTip(tr("signals.panel_tooltip"))
+        panel.setEnabled(is_input_bit(entry))
+        panel.currentIndexChanged.connect(
+            lambda _i, r=row, c=panel: self._set_field(r, "panel_level", c.currentData()))
+        self.table.setCellWidget(row, self.COL_PANEL, panel)
+
+        remote = QCheckBox()
+        remote.setChecked(remote_writable(entry))
+        remote.setToolTip(tr("signals.remote_tooltip"))
+        remote.setEnabled(is_input_bit(entry))
+        remote.toggled.connect(lambda checked, r=row: self._set_field(r, "remote_write", bool(checked)))
+        self.table.setCellWidget(row, self.COL_REMOTE, remote)
 
     @staticmethod
     def _used_text(used) -> str:
@@ -256,8 +297,11 @@ class InternalSignalsTab(QWidget):
         if not (0 <= row < len(entries)) or entries[row].get(key) == value:
             return
         entries[row][key] = value
+        if key == "direction" and value == "IN" and "panel_level" not in entries[row]:
+            from shared.logic.internal_bits import DEFAULT_PANEL_LEVEL
+            entries[row]["panel_level"] = DEFAULT_PANEL_LEVEL     # the owner's default: the panel may, at Operator
         self._mark_changed()
-        self.refresh()   # the derived id column changes with both of these
+        self.refresh()   # the derived id column and the writer widgets change with these
 
     def _rename(self, row: int, new_name: str):
         """A rename is the one edit that reaches outside the registry:

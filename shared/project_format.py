@@ -304,6 +304,14 @@ class Device:
     # File keys: "commandStyle"/"pulseMs" (camelCase, like safeState).
     command_style: str = "MAINTAINED"
     pulse_ms: int = 0
+    # Internal bits IN/OUT (owner's decision 2026-09-22): the logic's
+    # PERMISSION for switching this apparatus ON - the id of an OUT bit
+    # (M.<name>) the logic writes. While it is not TRUE the controller
+    # REFUSES the close/switch-on command with a reason that names the
+    # bit and its description; open/switch-off is never blocked by it,
+    # and no logic at all (stopped, before its first scan) means no
+    # permission. "" = no permission bit. File key "permissionBit".
+    permission_bit: str = ""
 
 
 @dataclass
@@ -671,6 +679,7 @@ def _to_json_dict(project: Project) -> dict:
                 "safeState": dict(d.safe_state),  # contract's own field name, camelCase
                 "commandStyle": d.command_style,
                 "pulseMs": d.pulse_ms,
+                "permissionBit": d.permission_bit,
             }
             for d in project.devices
         ]
@@ -1108,7 +1117,7 @@ def _parse(path) -> tuple:
         points=_records(data, "points", "points", Point, warnings, id_field="address"),
         devices=_records(data, "devices", "devices", Device, warnings, id_field="id",
                          json_names={"safe_state": "safeState", "command_style": "commandStyle",
-                                     "pulse_ms": "pulseMs"}),
+                                     "pulse_ms": "pulseMs", "permission_bit": "permissionBit"}),
     )
 
     intrusion = _section(data, "intrusion", "intrusion", dict, warnings)

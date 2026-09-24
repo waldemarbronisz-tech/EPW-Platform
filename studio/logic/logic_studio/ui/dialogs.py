@@ -27,7 +27,7 @@ class ProjectSettingsDialog(QDialog):
     COLUMNS = ["Address", "Name", "Unit", "Min", "Max", "Direction"]
 
     # feat/internal-bits §7.1
-    SIGNAL_COLUMNS = ["Name", "Type", "Retentive", "Category", "Label", "Description", "Uses"]
+    SIGNAL_COLUMNS = ["Name", "Type", "Retentive", "Direction", "Category", "Label", "Description", "Uses"]
 
     # feat/io-labels-and-ids §2.1
     IO_LABEL_COLUMNS = ["Address", "Label", "Uses"]
@@ -363,13 +363,22 @@ class ProjectSettingsDialog(QDialog):
         retentive_check.setChecked(bool(entry.get("retentive", False)))
         self.signals_table.setCellWidget(row, 2, retentive_check)
 
-        self.signals_table.setItem(row, 3, QTableWidgetItem(str(entry.get("category", ""))))
-        self.signals_table.setItem(row, 4, QTableWidgetItem(str(entry.get("label", ""))))
-        self.signals_table.setItem(row, 5, QTableWidgetItem(str(entry.get("description", ""))))
+        # Internal bits IN/OUT: the direction, from the logic's point of
+        # view. The writer fields (panel level, remote) belong to Studio's
+        # Signals department and are carried through untouched.
+        from shared.logic.internal_bits import DIRECTIONS, direction_of
+        direction_combo = QComboBox()
+        direction_combo.addItems(list(DIRECTIONS))
+        direction_combo.setCurrentText(direction_of(entry))
+        self.signals_table.setCellWidget(row, 3, direction_combo)
+
+        self.signals_table.setItem(row, 4, QTableWidgetItem(str(entry.get("category", ""))))
+        self.signals_table.setItem(row, 5, QTableWidgetItem(str(entry.get("label", ""))))
+        self.signals_table.setItem(row, 6, QTableWidgetItem(str(entry.get("description", ""))))
 
         usage_item = QTableWidgetItem(str(len(self._usage_blocks(entry.get("name", "")))))
         usage_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # §7.2: read-only, informational
-        self.signals_table.setItem(row, 6, usage_item)
+        self.signals_table.setItem(row, 7, usage_item)
 
     def _remove_selected_signal_rows(self):
         rows = sorted({idx.row() for idx in self.signals_table.selectedIndexes()}, reverse=True)
@@ -396,17 +405,25 @@ class ProjectSettingsDialog(QDialog):
             type_ = type_combo.currentText() if type_combo else "BOOL"
             retentive_check = self.signals_table.cellWidget(row, 2)
             retentive = retentive_check.isChecked() if retentive_check else False
-            category = self._signal_cell_text(row, 3)
-            label = self._signal_cell_text(row, 4)
-            description = self._signal_cell_text(row, 5)
-
-            entries.append({
-                "name": name, "type": type_, "retentive": retentive,
-                "category": category, "label": label, "description": description,
-            })
+            direction_combo = self.signals_table.cellWidget(row, 3)
+            direction = direction_combo.currentText() if direction_combo else "OUT"
+            category = self._signal_cell_text(row, 4)
+            label = self._signal_cell_text(row, 5)
+            description = self._signal_cell_text(row, 6)
 
             name_item = self.signals_table.item(row, 0)
             original = name_item.data(ORIGINAL_ENTRY_ROLE) if name_item else None
+            # Everything this dialog does not edit (the panel level and the
+            # remote switch Studio's Signals department sets) travels
+            # through unchanged - a dialog that rebuilt the entry from its
+            # own columns alone would silently drop them.
+            entry = dict(original or {})
+            entry.update({
+                "name": name, "type": type_, "retentive": retentive, "direction": direction,
+                "category": category, "label": label, "description": description,
+            })
+            entries.append(entry)
+
             if original:
                 if original.get("name", "") != name and original.get("name", ""):
                     renames[original["name"]] = name

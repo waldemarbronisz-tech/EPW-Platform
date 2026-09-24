@@ -73,6 +73,14 @@ class Apparatus:
     #                in the requested state. Feedback is mandatory.
     command_style: str = "MAINTAINED"
     pulse_ms: int = 0
+    # Internal bits IN/OUT: the OUT bit (M.<name>) whose TRUE is the
+    # logic's permission to switch this apparatus ON - see
+    # CommandManager._permission_refusal(). "" = none.
+    permission_bit: str = ""
+    # Internal bits IN/OUT: the OUT bit (M.<name>) whose TRUE is the
+    # logic's permission to switch this apparatus ON - see
+    # CommandManager._permission_refusal(). "" = none.
+    permission_bit: str = ""
 
 
 COMMAND_STYLES = ("MAINTAINED", "PULSE", "PULSE_TOGGLE")
@@ -212,7 +220,8 @@ def apparatuses_from_records(records):
     return [
         Apparatus(id=r["id"], feedback=list(r.get("feedback", [])), command=list(r.get("command", [])),
                   behavior=r.get("behavior", ""), kind=r.get("kind", ""),
-                  command_style=r.get("command_style") or "MAINTAINED", pulse_ms=int(r.get("pulse_ms") or 0))
+                  command_style=r.get("command_style") or "MAINTAINED", pulse_ms=int(r.get("pulse_ms") or 0),
+                  permission_bit=str(r.get("permission_bit") or ""))
         for r in records
     ]
 
