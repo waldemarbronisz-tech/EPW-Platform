@@ -103,6 +103,17 @@ def remote_writable(entry: dict) -> bool:
     return is_input_bit(entry) and bool((entry or {}).get("remote_write", False))
 
 
+def force_allowed(entry: dict) -> bool:
+    """Whether a Studio force may pin this bit. An IN bit: always (the
+    owner's rule). An OUT bit: only where the designer said so
+    (`force_allowed`, owner 2026-09-24: "wymuszamy bity - ma być
+    zezwolenie") - a force on an OUT bit overrides what the logic
+    computed, and that is a decision to make per bit, not by default."""
+    if is_input_bit(entry):
+        return True
+    return bool((entry or {}).get("force_allowed", False))
+
+
 def normalize_entry(entry: dict) -> dict:
     """A copy with the direction and writer fields made explicit - what
     the exporter, the controller and the panels all read."""
@@ -110,6 +121,7 @@ def normalize_entry(entry: dict) -> dict:
     out["direction"] = direction_of(out)
     out["panel_level"] = panel_level_of(out)
     out["remote_write"] = remote_writable(out)
+    out["force_allowed"] = force_allowed(out)
     return out
 
 

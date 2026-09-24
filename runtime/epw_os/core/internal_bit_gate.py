@@ -61,6 +61,12 @@ class InternalBitGate:
         entry = self.entry(bit_id)
         return None if entry is None else entry.get("direction", DIRECTION_OUT)
 
+    def force_allowed(self, bit_id: str) -> bool:
+        """Whether a Studio force may pin the bit (shared/logic/internal_bits.force_allowed)."""
+        from shared.logic.internal_bits import force_allowed
+        entry = self.entry(bit_id)
+        return entry is not None and force_allowed(entry)
+
     def writable_from_panel(self, bit_id: str, level=None) -> bool:
         entry = self.entry(bit_id)
         if entry is None or entry.get("direction") != DIRECTION_IN:

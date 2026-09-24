@@ -199,6 +199,7 @@ class EPWCore:
         self.internal_bits = InternalBitGate(self)
         self.command_manager.permission_bits = self._permission_bit_for
         self.force_manager._internal_bit_direction = self.internal_bits.direction_of
+        self.force_manager._internal_bit_force_allowed = self.internal_bits.force_allowed
         self.command_manager.force_manager = self.force_manager
         # The "internal Omicron" (SPEC): forced state, measured response, a report.
         from epw_os.core.protection_test import ProtectionTestRunner
@@ -292,6 +293,13 @@ class EPWCore:
         (CommandManager.permission_bits)."""
         apparatus = self.apparatus_registry.get(target)
         bit_id = getattr(apparatus, "permission_bit", "") if apparatus is not None else ""
+        if not bit_id:
+            # A DO point commanded on its own (the per-channel CLOSE/OPEN
+            # definitions) carries its own permission bit (owner 2026-09-24).
+            for point in self.project_manager.get_point_registry():
+                if point.get("address") == target and point.get("permission_bit"):
+                    bit_id = point["permission_bit"]
+                    break
         if not bit_id:
             return None
         entry = self.internal_bits.entry(bit_id) or {}
@@ -427,7 +435,8 @@ class EPWCore:
         from epw_os.core.operating_mode import OperatingModeManager
         self.operating_mode = OperatingModeManager(
             self.event_bus, self.audit_logger,
-            load=self.project_manager.get_operating_mode, save=self.project_manager.set_operating_mode)
+            load=self.project_manager.get_operating_mode, save=self.project_manager.set_operating_mode,
+            load_place=self.project_manager.get_control_place, save_place=self.project_manager.set_control_place)
 
         # Apparatus register (task "runtime czyta projekt.epw", 3.2) - the
         # project's "devices", plus the Main View symbol bindings: from the
@@ -810,6 +819,7 @@ class EPWCore:
         from epw_os.core.remote_commands import RemoteCommandGateway
         self.remote_commands = RemoteCommandGateway(
             internal_bits=self.internal_bits,
+            operating_mode=lambda: self.operating_mode,
             access_manager=self.access_manager,
             intrusion_manager=self.intrusion_manager,
             command_manager=self.command_manager,
@@ -1242,6 +1252,7 @@ class EPWCore:
             from epw_os.core.remote_commands import RemoteCommandGateway
             self.remote_commands = RemoteCommandGateway(
                 internal_bits=self.internal_bits,
+                operating_mode=lambda: self.operating_mode,
                 access_manager=self.access_manager,
                 intrusion_manager=self.intrusion_manager,
                 command_manager=self.command_manager,

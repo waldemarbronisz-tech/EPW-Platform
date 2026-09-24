@@ -132,8 +132,10 @@
     "tooltip_forces": "Studio wymusza stany: {tags}. Wymuszenia znikają po zdjęciu, po utracie łączności ze Studio i po restarcie.",
     "release_all_forces": "Zdejmij wszystkie wymuszenia",
     "mode": "TRYB: {mode}",
-    "tooltip_mode": "Tryb pracy sterownika (MODE.*). Prawy przycisk: zmiana trybu - wymaga poziomu, który dany tryb przewiduje.",
-    "mode_set": "{mode} ({level})"
+    "tooltip_mode": "Tryb pracy sterownika (MODE.*) i miejsce sterowania. STEROWANIE LOKALNE odrzuca zmiany przez łącze inżynierskie (Studio/REST) i sterowanie zdalne (MQTT/VPN); odczyt działa. Prawy przycisk: zmiana trybu albo miejsca sterowania - wymaga poziomu, który dana pozycja przewiduje.",
+    "mode_set": "{mode} ({level})",
+    "control_place": "STEROWANIE: {place}",
+    "control_place_set": "Sterowanie {place} ({level})"
   },
   "topbar": {
     "project": "Projekt",
@@ -452,7 +454,9 @@
       "state_unknown": "Stan aparatu {device} nie jest znany (brak potwierdzenia), więc nie można wybrać kierunku polecenia.",
       "screen_label": "Ekran:",
       "command_rejected_title": "Polecenie odrzucone",
-      "command_rejected_text": "Polecenie zablokowane przez silnik logiki.\nPowód: {reason}"
+      "command_rejected_text": "Polecenie zablokowane przez silnik logiki.\nPowód: {reason}",
+      "button_refused_title": "Przycisk odrzucony",
+      "button_refused_text": "Zapis bitu {bit} z przycisku odrzucony.\nPowód: {reason}"
     },
     "system_topology": {
       "info_title": "INFORMACJE O URZĄDZENIU",
@@ -1111,7 +1115,9 @@
     "service": "SERWISOWY",
     "maintenance": "KONSERWACJA",
     "test": "TEST",
-    "emergency": "AWARYJNY"
+    "emergency": "AWARYJNY",
+    "local": "LOKALNE",
+    "remote": "ZDALNE"
   },
   "commands": {
     "permission_refused": "ZAMKNIJ {target} odrzucone: brak zezwolenia {bit} ({description})",

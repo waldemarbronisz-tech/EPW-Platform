@@ -18,7 +18,7 @@ import { getSymbolDefinition } from '../symbols/SymbolRegistry';
 /** The two-state pairs a symbol's allowed states may use; the first that fits decides how a live "asserted" reads. */
 const STATE_PAIRS: [string, string][] = [
   ['ON', 'OFF'], ['CLOSED', 'OPEN'], ['LIVE', 'DEAD'], ['ACTIVE', 'INACTIVE'], ['RUNNING', 'STOPPED'],
-  ['OPEN', 'CLOSED'],
+  ['PRESSED', 'RELEASED'], ['OPEN', 'CLOSED'],
 ];
 
 /** Truthy the way a controller tag is: true/1/"1"/"true"/"on". */
@@ -97,7 +97,11 @@ export function liveStatesFor(
   const out: Record<string, string> = {};
   for (const obj of objects) {
     const device = obj.deviceId ? byId.get(obj.deviceId) : undefined;
-    const asserted = device ? deviceAsserted(device, values) : (obj.tag ? tagAsserted(values[obj.tag]) : null);
+    // A push button shows the bit it writes (bindings.command.tag); its plain `tag` is not that bit.
+    const buttonBit = obj.type === 'scada.push_button' ? (obj.bindings?.command?.tag || '').trim() : '';
+    const asserted = device ? deviceAsserted(device, values)
+      : buttonBit ? tagAsserted(values[buttonBit])
+      : (obj.tag ? tagAsserted(values[obj.tag]) : null);
     if (asserted === null) continue;
     const state = liveStateFor(obj.type, asserted);
     if (state) out[obj.id] = state;

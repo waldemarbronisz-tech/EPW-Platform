@@ -100,6 +100,11 @@ class ProtectionManager:
         self.add_prot("Power/Supply", "UPS Supply Loss", "UPS V", "V", [
             ProtectionStage("Stage 1", setting=200.0, hysteresis=5.0, delay_ms=500, action="Warning")
         ])
+        # Owner's decision 2026-09-24: function 32 (the register's
+        # PROT.POWER_REVERSE) - power flowing back into the supply.
+        self.add_prot("Power/Supply", "32 Reverse Power", "Power", "kW", [
+            ProtectionStage("Stage 1", setting=5.0, hysteresis=0.5, delay_ms=2000, action="Trip")
+        ])
 
         # Task (page-split): the old "Environmental"/"Communication"/
         # "System" categories that used to live here are REMOVED, not

@@ -132,8 +132,10 @@
     "tooltip_forces": "Studio is forcing: {tags}. Forces go away when released, when the link to Studio is lost and on restart.",
     "release_all_forces": "Release all forces",
     "mode": "MODE: {mode}",
-    "tooltip_mode": "The controller's operating mode (MODE.*). Right-click to change it - at the level the mode demands.",
-    "mode_set": "{mode} ({level})"
+    "tooltip_mode": "The controller's operating mode (MODE.*) and control place. LOCAL control refuses changes over the engineering link (Studio/REST) and remote control (MQTT/VPN); reads keep working. Right-click to change the mode or the control place - at the level that item demands.",
+    "mode_set": "{mode} ({level})",
+    "control_place": "CONTROL: {place}",
+    "control_place_set": "Control {place} ({level})"
   },
   "topbar": {
     "project": "Project",
@@ -452,7 +454,9 @@
       "state_unknown": "The state of {device} is not known (no feedback yet), so the command direction cannot be chosen.",
       "screen_label": "Screen:",
       "command_rejected_title": "Command Rejected",
-      "command_rejected_text": "Command blocked by Logic Engine.\nReason: {reason}"
+      "command_rejected_text": "Command blocked by Logic Engine.\nReason: {reason}",
+      "button_refused_title": "Push button refused",
+      "button_refused_text": "The push button's write of {bit} was refused.\nReason: {reason}"
     },
     "system_topology": {
       "info_title": "DEVICE INFORMATION",
@@ -1111,7 +1115,9 @@
     "service": "SERVICE",
     "maintenance": "MAINTENANCE",
     "test": "TEST",
-    "emergency": "EMERGENCY"
+    "emergency": "EMERGENCY",
+    "local": "LOCAL",
+    "remote": "REMOTE"
   },
   "commands": {
     "permission_refused": "CLOSE {target} refused: no permission {bit} ({description})",

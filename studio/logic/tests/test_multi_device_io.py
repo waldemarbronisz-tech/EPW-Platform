@@ -312,66 +312,49 @@ def test_removing_a_used_device_prompts_for_confirmation(qsettings, monkeypatch)
 
 # ---- System-signal catalog, per device (ARCHITECTURE.md §9.2) ------------
 # core/system_signals_catalog.json used to hardcode ELA01/ADA01's own
-# ONLINE/FAULT/SAFE_PATH_OK entries — a project defining a second device got
-# no corresponding diagnostic signals. Generated instead from the project's
-# own ela_devices/ada_devices list (system_signals.py::_device_signals()).
+# ONLINE/FAULT/SAFE_PATH_OK entries, later generated per device. Owner's
+# decision 2026-09-24: those names are GONE - the register's
+# COMM.<device_id>.* patterns expand from the project's own device list
+# instead, and a block still naming an old one is told the new name.
 
 def test_no_project_generates_no_device_signals():
-    """Task "jedno źródło listy kart": project=None (or a project with
-    no ELA/ADA devices) must generate NO per-device diagnostic signals -
-    there is no device to generate one for, and no reason to keep
-    pretending "ELA01"/"ADA01" exist."""
+    """project=None (or a project with no ELA/ADA devices) must generate
+    NO per-device diagnostic signals - there is no device to generate one
+    for, and no reason to keep pretending "ELA01"/"ADA01" exist."""
     from shared.logic import system_signals
 
-    for sig_id in ("ELA01.ONLINE", "ELA01.FAULT", "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK"):
+    for sig_id in ("COMM.ELA01.ONLINE", "COMM.ADA01.FAULT", "ELA01.ONLINE", "ADA01.SAFE_PATH_OK"):
         assert system_signals.get_signal(sig_id) is None, sig_id
 
 
-def test_project_with_devices_generates_their_signals():
-    """Companion to the above - a project that DOES define ELA01/ADA01
-    (its own real configuration, not a silent default) still gets
-    exactly the same diagnostic content the old static catalog had."""
+def test_the_older_per_device_names_are_gone_and_point_at_their_register_names():
     from shared.logic import system_signals
+    from shared.logic.signal_renames import legacy_device_signal
 
     p = Project()
     DeviceModel.set_ela_devices(p, ["ELA01"])
     DeviceModel.set_ada_devices(p, ["ADA01"])
-    expected = {
-        "ELA01.ONLINE": ("Module ELA01 is communicating correctly", "ELA OK", False),
-        "ELA01.FAULT": ("Module ELA01 fault", "ELA FLT", True),
-        "ADA01.ONLINE": ("Module ADA01 is communicating correctly", "ADA OK", False),
-        "ADA01.FAULT": ("Module ADA01 fault", "ADA FLT", True),
-        "ADA01.SAFE_PATH_OK": ("Hardware shutdown path healthy", "PATH OK", True),
-    }
-    for sig_id, (desc, label, safety) in expected.items():
-        entry = system_signals.get_signal(sig_id, p)
-        assert entry is not None, sig_id
-        assert entry["description"] == desc
-        assert entry["label"] == label
-        assert entry["type"] == "BOOL"
-        assert entry["safety_relevant"] is safety
+    for old in ("ELA01.ONLINE", "ELA01.FAULT", "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK"):
+        assert system_signals.get_signal(old, p) is None, old
+    assert legacy_device_signal("ELA01.ONLINE") == "COMM.ELA01.ONLINE"
+    assert legacy_device_signal("ADA01.FAULT") == "COMM.ADA01.FAULT"
+    assert legacy_device_signal("ADA01.SAFE_PATH_OK") == "DEV.ADA01.READY"
+    assert legacy_device_signal("SYS.READY") is None and legacy_device_signal("COMM.ELA01.ONLINE") is None
 
-def test_second_device_gets_its_own_diagnostic_signals():
+
+def test_second_device_gets_its_own_register_signals():
     from shared.logic import system_signals
 
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
     p.settings["ada_devices"] = ["ADA01", "ADA02"]
 
-    assert system_signals.get_signal("ELA02.ONLINE") is None  # not visible without the project
-    entry = system_signals.get_signal("ELA02.ONLINE", p)
-    assert entry is not None
-    assert entry["description"] == "Module ELA02 is communicating correctly"
-    assert entry["safety_relevant"] is False
-
-    fault = system_signals.get_signal("ELA02.FAULT", p)
-    assert fault["description"] == "Module ELA02 fault"
-    assert fault["safety_relevant"] is True
-
-    safe_path = system_signals.get_signal("ADA02.SAFE_PATH_OK", p)
-    assert safe_path is not None
-    assert safe_path["label"] == "PATH OK"
-    assert safe_path["safety_relevant"] is True
+    assert system_signals.get_signal("COMM.ELA02.ONLINE") is None  # not visible without the project
+    entry = system_signals.get_signal("COMM.ELA02.ONLINE", p)
+    assert entry is not None and entry["instance_id"] == "ELA02"
+    assert system_signals.get_signal("COMM.ELA02.FAULT", p)["safety_relevant"] is True
+    assert system_signals.get_signal("COMM.ADA02.TIMEOUT", p) is not None
+    assert system_signals.get_signal("DEV.ADA02.READY", p) is not None
 
 def test_get_categories_places_device_signals_under_komunikacja():
     from shared.logic import system_signals
@@ -379,17 +362,32 @@ def test_get_categories_places_device_signals_under_komunikacja():
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
 
-    comms = next(c for c in system_signals.get_categories(p) if c["id"] == "SYS.COMMS")
+    comms = next(c for c in system_signals.get_categories(p) if c["id"] == "COMM")
     ids = [s["id"] for s in comms["signals"]]
-    assert "SYS.COMMS_OK" in ids  # non-device-specific signal untouched
-    assert "ELA02.ONLINE" in ids
-    assert "ELA02.FAULT" in ids
+    assert "COMM.ALL_OK" in ids  # non-device-specific signal untouched
+    assert "COMM.ELA02.ONLINE" in ids
+    assert "COMM.ELA02.FAULT" in ids
 
     # The cached static catalog itself must never be mutated by this.
-    default_comms = next(c for c in system_signals.get_categories() if c["id"] == "SYS.COMMS")
-    assert "ELA02.ONLINE" not in [s["id"] for s in default_comms["signals"]]
+    default_comms = next(c for c in system_signals.get_categories() if c["id"] == "COMM")
+    assert "COMM.ELA02.ONLINE" not in [s["id"] for s in default_comms["signals"]]
 
 def test_validator_recognizes_second_device_signal_instead_of_warning(qsettings=None):
+    _app()
+    p = Project()
+    p.settings["ela_devices"] = ["ELA01", "ELA02"]
+    sig_block = BlockRegistry.create_block("system.signal")
+    sig_block.properties["Sygnał"] = "COMM.ELA02.ONLINE"
+    p.add_block(sig_block)
+
+    from logic_studio.compiler.validator import Validator
+    errors, warnings = [], []
+    Validator(p).run(errors, warnings)
+
+    assert not any("Nierozpoznany sygnał systemowy" in w for w in warnings)
+
+
+def test_validator_names_the_register_signal_for_an_old_per_device_name():
     _app()
     p = Project()
     p.settings["ela_devices"] = ["ELA01", "ELA02"]
@@ -401,7 +399,7 @@ def test_validator_recognizes_second_device_signal_instead_of_warning(qsettings=
     errors, warnings = [], []
     Validator(p).run(errors, warnings)
 
-    assert not any("Nierozpoznany sygnał systemowy" in w for w in warnings)
+    assert any("ELA02.ONLINE" in e and "COMM.ELA02.ONLINE" in e for e in errors), errors
 
 def test_signal_picker_lists_second_device_signal(qsettings):
     _app()
@@ -419,8 +417,9 @@ def test_signal_picker_lists_second_device_signal(qsettings):
     for i in range(dialog.tree.topLevelItemCount()):
         _walk(dialog.tree.topLevelItem(i))
 
-    assert "ADA02.ONLINE" in ids
-    assert "ADA02.SAFE_PATH_OK" in ids
+    assert "COMM.ADA02.ONLINE" in ids
+    assert "DEV.ADA02.READY" in ids
+    assert "ADA02.SAFE_PATH_OK" not in ids
 
 
 # ---- the bridged card list must survive COMPILATION too ---------------------

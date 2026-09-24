@@ -127,17 +127,14 @@ def test_the_bus_fault_names_its_transport_and_a_dead_driver():
     assert _read(no_bus, "COMM.BUS_FAULT") is False
 
 
-def test_the_older_per_device_diagnostics_are_answered_from_the_same_facts():
+def test_the_older_per_device_names_are_no_longer_served():
+    """Owner's decision 2026-09-24: <dev>.ONLINE / FAULT / SAFE_PATH_OK are
+    gone from the catalogue and from this source - COMM.<dev>.* says it."""
     core = _core()
     signals = CommSignals(core)
-    assert signals.serves("ELA1.ONLINE") and signals.serves("ADA1.SAFE_PATH_OK") and not signals.serves("XYZ.ONLINE")
-    assert _read(core, "ELA1.ONLINE") is False
-    core.device_manager.update_comm("ELA1")
-    assert _read(core, "ELA1.ONLINE") is True and _read(core, "ELA1.FAULT") is False
-    core.tag_manager.add_tag("Safety.ADA1.Healthy", True, TagType.BOOL)
-    assert _read(core, "ADA1.SAFE_PATH_OK") is True
-    core.tag_manager.update_tag("Safety.ADA1.Healthy", False)
-    assert _read(core, "ADA1.SAFE_PATH_OK") is False
+    for old in ("ELA1.ONLINE", "ADA1.FAULT", "ADA1.SAFE_PATH_OK"):
+        assert not signals.serves(old) and signals.read(old) is None, old
+    assert signals.serves("COMM.ELA1.ONLINE") and signals.serves("COMM.ADA1.FAULT")
 
 
 def test_the_catalogue_expands_comm_patterns_once_per_card_and_classifies_them_served():

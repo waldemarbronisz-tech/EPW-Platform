@@ -104,6 +104,7 @@ def test_the_apparatus_registry_offers_only_out_bool_bits_as_a_permission(tmp_pa
 
 
 def test_check_project_refuses_a_permission_the_logic_does_not_compute():
+    shell_i18n.set_language("pl")   # the messages below are read in Polish
     project = new_project("Test")
     project.cards.append(Card(id="ELA1", model="ELA01", channel_kinds={"DI": 1, "AI": 1}))
     project.cards.append(Card(id="ADA1", model="ADA01", channel_kinds={"DO": 1}))

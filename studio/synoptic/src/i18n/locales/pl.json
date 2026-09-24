@@ -205,6 +205,7 @@
     "scada.text_box": "Pole tekstowe",
     "scada.motor": "Silnik (SCADA)",
     "scada.pilot_lamp": "Lampka kontrolna",
+    "scada.push_button": "Przycisk",
     "scada.socket": "Gniazdo (SCADA)",
     "scada.indicator_diode": "Dioda sygnalizacyjna",
     "scada.meter": "Miernik (SCADA)",
@@ -251,6 +252,16 @@
     "panel_preview": "Podgląd panelu",
     "panel_preview_open": "Pokaż jak na panelu (całe okno)",
     "panel_preview_hint": "Ekran widoku głównego wypełnia okno tak, jak pokaże go panel; kliknięcie aparatu steruje nim - sterownikiem przy włączonym „Na żywo”, symulacją w przeciwnym razie. Esc wraca."
+  },
+  "push_button": {
+    "title": "Przycisk",
+    "bit": "Bit (WE)",
+    "bit_hint": "Bit WE logiki, który ten przycisk pisze, po identyfikatorze (M.NAZWA) - lista jest w dziale Sygnały.",
+    "mode": "Tryb",
+    "toggle": "Przełączanie (każde kliknięcie odwraca bit)",
+    "pulse": "Impuls (TRUE, po czasie poniżej FALSE)",
+    "pulse_ms": "Impuls [ms]",
+    "no_bit": "Brak bitu - przycisk nic nie robi na panelu."
   },
   "preview": {
     "live": "NA ŻYWO - sterownik",

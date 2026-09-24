@@ -17,7 +17,7 @@ czytane FC4, rejestry komend pisane FC6. Karta bez danego bloku odpowiada
 wyjątkiem Modbus 2 (illegal address) — to nie błąd komunikacji; sterownik
 przestaje pytać o blok na 30 s.
 
-## Rejestry wejściowe (FC4) — blok PROT, adresy 100–131
+## Rejestry wejściowe (FC4) — blok PROT, adresy 100–132
 
 | adres | nazwa | znaczenie |
 |---:|---|---|
@@ -43,7 +43,7 @@ przestaje pytać o blok na 30 s.
 | 7 | TEST_OK | `PROT.TEST_OK` (ostatni autotest poprawny) |
 | 8 | ANY_LATCHED | dowolny stopień zatrzaśnięty |
 
-### Bity słowa stopnia (adresy 110–131)
+### Bity słowa stopnia (adresy 110–132)
 
 | bit | nazwa | sygnał rejestru |
 |---:|---|---|
@@ -76,16 +76,18 @@ wraca z urządzenia, a nie z pamięci sterownika.
 | 12 | `TOC_STAGE1` | 51 Time Overcurrent | Stage 1 | `PROT.OVERCURRENT` |
 | 13 | `TOC_STAGE2` | 51 Time Overcurrent | Stage 2 | `PROT.OVERCURRENT` |
 | 14 | `NEGSEQ_STAGE1` | 46 Negative Sequence Current | Stage 1 | `PROT.UNBALANCE` |
-| 15 | `THERMAL_STAGE1` | 49 Thermal Overload | Stage 1 | — (brak w rejestrze) |
-| 16 | `THERMAL_STAGE2` | 49 Thermal Overload | Stage 2 | — (brak w rejestrze) |
+| 15 | `THERMAL_STAGE1` | 49 Thermal Overload | Stage 1 | `PROT.THERMAL_OVERLOAD` |
+| 16 | `THERMAL_STAGE2` | 49 Thermal Overload | Stage 2 | `PROT.THERMAL_OVERLOAD` |
 | 17 | `IEF_STAGE1` | 50N Earth Fault Instantaneous | Stage 1 | `PROT.EARTH_FAULT` |
 | 18 | `TEF_STAGE1` | 51N Earth Fault Time | Stage 1 | `PROT.EARTH_FAULT` |
-| 19 | `CTRLV_STAGE1` | Control Voltage Loss | Stage 1 | — (brak w rejestrze) |
-| 20 | `TECHV_STAGE1` | Technical Supply Loss | Stage 1 | — (brak w rejestrze) |
-| 21 | `UPSV_STAGE1` | UPS Supply Loss | Stage 1 | — (brak w rejestrze) |
+| 19 | `CTRLV_STAGE1` | Control Voltage Loss | Stage 1 | `PROT.CONTROL_VOLTAGE_LOSS` |
+| 20 | `TECHV_STAGE1` | Technical Supply Loss | Stage 1 | `PROT.TECHNICAL_SUPPLY_LOSS` |
+| 21 | `UPSV_STAGE1` | UPS Supply Loss | Stage 1 | `PROT.UPS_SUPPLY_LOSS` |
+| 22 | `RPWR_STAGE1` | 32 Reverse Power | Stage 1 | `PROT.POWER_REVERSE` |
 
-Funkcja 32 (moc zwrotna, `PROT.POWER_REVERSE` w rejestrze) nie ma stopnia
-ani w ADA01, ani w panelu — nie jest wystawiana (decyzja do Waldka).
+Decyzja właściciela (2026-09-24): funkcja 32 (moc zwrotna) dostała stopień
+`RPWR_STAGE1` (indeks 22, adres 132), a stopnie 49 i zaniki zasilań — bity
+zbiorcze nazwane gramatyką rejestru (przyjęte tego samego dnia).
 
 ## Rejestry komend (FC6) — adresy 200–202
 

@@ -100,7 +100,7 @@ from PySide6.QtWidgets import (
 
 from shared.addressing import format_address, parse_address, try_parse_address
 from shared.logic import point_roles
-from shared.logic.internal_bits import direction_of, internal_bit_id
+from shared.logic.internal_bits import direction_of, internal_bit_id, panel_level_of
 from studio.shell.i18n import tr
 from studio.shell.project_format import (
     effective_location,
@@ -423,6 +423,10 @@ ELECTRICAL_PROTECTION_CATALOG = [
     ]),
     ("Power/Supply", "UPS Supply Loss", "UPS V", "V", [
         ("Stage 1", 200.0, 5.0, 500, "Warning"),
+    ]),
+    # Owner's decision 2026-09-24: function 32 (the register's PROT.POWER_REVERSE).
+    ("Power/Supply", "32 Reverse Power", "Power", "kW", [
+        ("Stage 1", 5.0, 0.5, 2000, "Trip"),
     ]),
 ]
 
@@ -757,6 +761,45 @@ def internal_bit_entries(studio_window) -> list:
         if project is not None:
             return [e for e in project.settings.get("internal_bits", []) if isinstance(e, dict) and e.get("name")]
     return internal_bit_registry(getattr(studio_window, "_project", None))
+
+
+PUSH_BUTTON_TYPE = "scada.push_button"
+
+
+def push_button_bit(obj: dict) -> str:
+    """The bit a screen's push button writes (bindings.command.tag), "" when none."""
+    bindings = obj.get("bindings") if isinstance(obj, dict) else None
+    command = bindings.get("command") if isinstance(bindings, dict) else None
+    return str((command or {}).get("tag") or "").strip() if isinstance(command, dict) else ""
+
+
+def screen_push_buttons(project) -> list:
+    """[(screen name, object dict)] for every push button on every screen
+    of the project's embedded synoptic document: the active screen's
+    objects sit at the top level, the others under screenContents."""
+    document = getattr(project, "screens", None) or {}
+    if not isinstance(document, dict):
+        return []
+    names = {}
+    for entry in document.get("screens") or []:
+        if isinstance(entry, dict) and entry.get("id"):
+            names[entry["id"]] = str(entry.get("name") or entry["id"])
+    active = str(document.get("activeScreenId") or "")
+    found = []
+
+    def collect(screen_name, objects):
+        for obj in objects or []:
+            if isinstance(obj, dict) and obj.get("type") == PUSH_BUTTON_TYPE:
+                found.append((screen_name, obj))
+
+    project_name = (document.get("project") or {}).get("name") if isinstance(document.get("project"), dict) else ""
+    collect(names.get(active) or project_name or active or "?", document.get("objects"))
+    contents = document.get("screenContents")
+    if isinstance(contents, dict):
+        for screen_id, content in contents.items():
+            if screen_id != active and isinstance(content, dict):
+                collect(names.get(screen_id) or screen_id, content.get("objects"))
+    return found
 
 
 def permission_bit_candidates(studio_window) -> list:
@@ -1387,13 +1430,15 @@ class PointRegistryPanel(QWidget):
         "warning_threshold",   # DI only: the switching counter's warning threshold (a setting)
         "role",                # DI only: the register signal this contact carries (signal register etap 4)
         "contact",             # DI only, with a role: NO (closed = TRUE) or NC (open = TRUE)
+        "permission",          # DO only: the logic's OUT bit that permits switching it on (internal bits IN/OUT)
         "device",
         "live",                # the controller's value while "Na żywo" is on; red while forced
     ]
     _ROLE_COL = 12
     _CONTACT_COL = 13
-    _DEVICE_COL = 14
-    _LIVE_COL = 15
+    _PERMISSION_COL = 14
+    _DEVICE_COL = 15
+    _LIVE_COL = 16
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -1435,6 +1480,7 @@ class PointRegistryPanel(QWidget):
         self.table.setColumnWidth(3, 160)
         self.table.setColumnWidth(self._ROLE_COL, 230)
         self.table.setColumnWidth(self._CONTACT_COL, 150)
+        self.table.setColumnWidth(self._PERMISSION_COL, 230)
         # SPEC "Studio - sterownik": live values next to the points, and
         # the force table (Engineer, force mode on) from the row's menu.
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1487,7 +1533,7 @@ class PointRegistryPanel(QWidget):
         bits_only = active_filter == _INTERNAL_BITS_FILTER
         for col in range(4, 11):
             self.table.setColumnHidden(col, hide_analog_cols or bits_only)
-        for col in (11, self._ROLE_COL, self._CONTACT_COL, self._DEVICE_COL):
+        for col in (11, self._ROLE_COL, self._CONTACT_COL, self._PERMISSION_COL, self._DEVICE_COL):
             self.table.setColumnHidden(col, bits_only)
 
         self.table.setRowCount(0)
@@ -1632,6 +1678,28 @@ class PointRegistryPanel(QWidget):
                 blank.setFlags(blank.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 blank.setBackground(_GREY_READONLY_BG)
                 self.table.setItem(row, col, blank)
+
+        # Internal bits IN/OUT (owner 2026-09-24): a DO point commanded on
+        # its own names the logic's OUT bit that permits switching it on -
+        # the same hard gate as an apparatus's "Zezwolenie".
+        if card_kind == "DO":
+            permission = QComboBox()
+            permission.addItem(tr("devices.permission_none"), "")
+            for bit in permission_bit_candidates(self._studio_window):
+                permission.addItem(f"{bit['id']} — {bit.get('description', '')}" if bit.get("description") else bit["id"],
+                                   bit["id"])
+            current = getattr(point, "permission_bit", "") or ""
+            if current and permission.findData(current) < 0:
+                permission.addItem(tr("devices.permission_unknown", bit=current), current)
+            permission.setCurrentIndex(max(0, permission.findData(current)))
+            permission.setToolTip(tr("points.permission_tooltip"))
+            permission.currentIndexChanged.connect(lambda _i, r=row: self._on_point_permission_changed(r))
+            self.table.setCellWidget(row, self._PERMISSION_COL, permission)
+        else:
+            blank = QTableWidgetItem("")
+            blank.setFlags(blank.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            blank.setBackground(_GREY_READONLY_BG)
+            self.table.setItem(row, self._PERMISSION_COL, blank)
 
         # "Aparat" - read-only, computed from every device's feedback/
         # command lists (point_owner_map()) - SPEC's own "Aparat zużywa
@@ -1887,6 +1955,17 @@ class PointRegistryPanel(QWidget):
         if point is None or combo is None:
             return
         point.contact = combo.currentData() or point_roles.CONTACT_NO
+        self._studio_window._project.touch()
+        self._studio_window._on_project_changed()
+
+    def _on_point_permission_changed(self, row):
+        if self._loading:
+            return
+        point = self._point_at(row)
+        combo = self.table.cellWidget(row, self._PERMISSION_COL)
+        if point is None or combo is None:
+            return
+        point.permission_bit = combo.currentData() or ""
         self._studio_window._project.touch()
         self._studio_window._on_project_changed()
 
@@ -5424,6 +5503,59 @@ def validate_project(project) -> list:
             issues.append(ValidationIssue(
                 "warning", tr("validation.msg_device_permission_not_switched", device=device.id, bit=bit_id),
                 "devices", "select_device", device.id,
+            ))
+    # ... and a DO point's own permission bit (owner 2026-09-24), checked the same way.
+    for point in project.points:
+        bit_id = getattr(point, "permission_bit", "") or ""
+        if not bit_id:
+            continue
+        _card_id, kind = _address_card_and_kind(point.address)
+        entry = registry.get(bit_id)
+        if kind != "DO":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_not_do", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
+            ))
+        elif entry is None:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_unknown", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
+            ))
+        elif direction_of(entry) != "OUT" or entry.get("type", "BOOL") != "BOOL":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_point_permission_not_out_bool", address=point.address, bit=bit_id),
+                "points", "select_address", point.address,
+            ))
+
+    # 12) A push button on a screen (owner 2026-09-24) writes an IN bit
+    # of the logic's registry from the panel - so the bit must exist, be
+    # BOOL, be IN, and let the panel write it; anything else is a
+    # button that does nothing, which the designer should hear about
+    # here rather than at the panel.
+    for screen_name, obj in screen_push_buttons(project):
+        bit_id = push_button_bit(obj)
+        label = obj.get("text") or obj.get("id") or "?"
+        if not bit_id:
+            issues.append(ValidationIssue(
+                "warning", tr("validation.msg_button_no_bit", screen=screen_name, button=label),
+                "screens", "", "",
+            ))
+            continue
+        entry = registry.get(bit_id)
+        if entry is None:
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_unknown_bit", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
+            ))
+        elif direction_of(entry) != "IN" or entry.get("type", "BOOL") != "BOOL":
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_not_in_bool", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
+            ))
+        elif not panel_level_of(entry):
+            issues.append(ValidationIssue(
+                "error", tr("validation.msg_button_panel_forbidden", screen=screen_name, button=label, bit=bit_id),
+                "screens", "", "",
             ))
 
     # 7) "moduł ma dane, ale nie jest w składzie urządzenia"

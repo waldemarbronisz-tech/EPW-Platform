@@ -60,7 +60,7 @@ class _ExpandedProjectView:
         # naming a signal that exists nowhere.
         self.external_zones = getattr(source, "external_zones", None)
         self.external_lines = getattr(source, "external_lines", None)
-        self.external_process_protections = getattr(source, "external_process_protections", None)
+        self.external_alarms = getattr(source, "external_alarms", None)
         # feat/wire-labels §2.5/§5: Validator's free-end/label checks and
         # (from §5 onward) the label-node-merging step all need the
         # live project's Wire records too — passed through UNCHANGED

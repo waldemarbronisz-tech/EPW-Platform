@@ -257,6 +257,11 @@ class Point:
     # own name; only DI points may carry one.
     role: Optional[str] = None
     contact: str = "NO"
+    # Internal bits IN/OUT (owner 2026-09-24: "niech mają zezwolenie"): a
+    # DO point that is commanded on its own (no apparatus over it) can
+    # name the logic's OUT bit whose TRUE permits switching it ON - the
+    # same hard gate an apparatus's permission_bit is. "" = none.
+    permission_bit: str = ""
 
 
 def effective_location(point: Point, card) -> str:

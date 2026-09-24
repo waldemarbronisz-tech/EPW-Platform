@@ -118,7 +118,35 @@ def _require_engineer(core=Depends(get_core), authorization: Optional[str] = Hea
     return _resolve_or_reject(core, authorization, AccessLevel.ENGINEER, "project install/download")
 
 
-def _resolve_or_reject(core, authorization, required_level, what: str) -> str:
+def _require_engineer_readonly(core=Depends(get_core), authorization: Optional[str] = Header(None)) -> str:
+    """Engineer token, but nothing changes on the controller (a force
+    heartbeat keeps what is held; inspecting a backup applies nothing) -
+    allowed in LOCAL control too."""
+    return _resolve_or_reject(core, authorization, AccessLevel.ENGINEER, "engineer read", changes_state=False)
+
+
+def _refuse_if_local(core, what: str):
+    """The control place (core/operating_mode.py, owner's decision
+    2026-09-24): in LOCAL, no CHANGE may arrive over this link - the
+    operator at the panel has locked it. Reads are untouched. 423 Locked,
+    audited, so a Studio that was refused sees why."""
+    manager = getattr(core, "operating_mode", None)
+    allowed = manager.remote_allowed() if manager is not None and hasattr(manager, "remote_allowed") else True
+    if allowed:
+        return
+    if core.audit_logger is not None:
+        core.audit_logger.record("REMOTE_REFUSED_LOCAL", "API", f"{what}: the controller is in LOCAL control",
+                                 success=False)
+    raise HTTPException(status_code=423, detail={
+        "error": "local_control",
+        "reason": "The controller is in LOCAL control - changes over the engineering link are refused until the "
+                  "operator at the panel switches to REMOTE.",
+    })
+
+
+def _resolve_or_reject(core, authorization, required_level, what: str, changes_state: bool = True) -> str:
+    if changes_state:
+        _refuse_if_local(core, what)
     token = None
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
@@ -371,6 +399,7 @@ def write_internal_bit(bit_id: str, body: BitWriteRequest, core=Depends(get_core
     IN/OUT). The gate decides: the bit must be IN, the project must
     allow remote writes to it, and the token's level must reach what the
     bit demands. Every write and refusal is audited by the gate."""
+    _refuse_if_local(core, f"POST /api/v1/bits/{bit_id}")
     gate = getattr(core, "internal_bits", None)
     if gate is None:
         raise HTTPException(status_code=404, detail="Internal bits are not available on this controller.")
@@ -386,7 +415,7 @@ def write_internal_bit(bit_id: str, body: BitWriteRequest, core=Depends(get_core
 
 
 @app.post("/api/v1/forces/heartbeat")
-def force_heartbeat(core=Depends(get_core), level: str = Depends(_require_engineer)):
+def force_heartbeat(core=Depends(get_core), level: str = Depends(_require_engineer_readonly)):
     """Studio calls this while it holds forces; silence for longer than
     heartbeat_timeout_s releases them all (a closed laptop, a lost
     link)."""
@@ -416,6 +445,15 @@ def release_all_forces(core=Depends(get_core), level: str = Depends(_require_eng
 
 
 # --- the operating mode (MODE.* / REQ.MODE.*, core/operating_mode.py) ----------------------
+
+@app.get("/api/v1/control-place")
+def get_control_place(core=Depends(get_core)):
+    """LOCAL or REMOTE - whether this link may change anything right now.
+    Set from the panel only; this endpoint is read-only by design."""
+    manager = getattr(core, "operating_mode", None)
+    place = getattr(manager, "control_place", None)
+    return {"control_place": place, "remote_allowed": bool(manager and manager.remote_allowed())}
+
 
 @app.get("/api/v1/mode")
 def get_operating_mode(core=Depends(get_core)):
@@ -516,7 +554,7 @@ def get_controller_backup(core=Depends(get_core), level: str = Depends(_require_
 
 @app.post("/api/v1/controller/backup/inspect")
 async def inspect_controller_backup(request: Request, core=Depends(get_core),
-                                     level: str = Depends(_require_engineer)):
+                                     level: str = Depends(_require_engineer_readonly)):
     """What is in a bundle, without applying it. A restore overwrites a
     running controller, so it has to be possible to look first."""
     from epw_os.core import controller_backup

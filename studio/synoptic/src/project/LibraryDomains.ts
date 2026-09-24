@@ -104,6 +104,7 @@ export const SYMBOL_DOMAIN: Record<string, LibraryDomain> = {
 
   // Control & the SCADA screen - indicators, readouts and descriptions.
   'scada.indicator_diode': 'AUTOMATION',
+  'scada.push_button': 'AUTOMATION',
   'scada.meter': 'AUTOMATION',
   'scada.boundary_point': 'AUTOMATION',
   'scada.text_box': 'AUTOMATION',

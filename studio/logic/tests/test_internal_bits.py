@@ -210,8 +210,8 @@ def test_catalog_contains_every_signal_from_the_spec():
     expected = {
         "SYS.READY", "SYS.HEALTH", "SYS.FAULT", "SYS.SCAN_OVERRUN", "SYS.FIRST_SCAN",
         "SYS.TRAINING_MODE", "SYS.SCAN_TIME", "SYS.CYCLE_COUNT",
-        "SYS.COMMS_OK", "SYS.TIME_SYNC_OK", "ELA01.ONLINE", "ELA01.FAULT",
-        "ADA01.ONLINE", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
+        "SYS.COMMS_OK", "SYS.TIME_SYNC_OK", "COMM.ELA01.ONLINE", "COMM.ELA01.FAULT",
+        "COMM.ADA01.ONLINE", "COMM.ADA01.FAULT", "DEV.ADA01.READY",
         "SYS.ACCESS_LEVEL", "SYS.ACCESS_USER", "SYS.ACCESS_OPERATOR", "SYS.ACCESS_ENGINEER",
         "SYS.PULSE_100MS", "SYS.PULSE_500MS", "SYS.PULSE_1S", "SYS.BLINK_SLOW", "SYS.BLINK_FAST",
         # feat/security-signals — SEC.STATE
@@ -235,7 +235,7 @@ def test_catalog_safety_relevant_signals():
     DeviceModel.set_ada_devices(project, ["ADA01"])
     safety = {s["id"] for s in system_signals.get_all_signals(project) if s["safety_relevant"]}
     assert {
-        "SYS.HEALTH", "SYS.FAULT", "ELA01.FAULT", "ADA01.FAULT", "ADA01.SAFE_PATH_OK",
+        "SYS.HEALTH", "SYS.FAULT", "COMM.ELA01.FAULT", "COMM.ADA01.FAULT",
         "SEC.SYSTEM.PANIC", "SEC.SYSTEM.TAMPER", "SEC.SYSTEM.FAULT", "REQ.SEC.DISARM_ALL",
     } <= safety
     # Nothing that merely reports a mode or a clock is safety-relevant.

@@ -72,3 +72,70 @@ Trzy warunki (każdy ma test w `runtime/epw_os/tests/test_internal_bits_io.py`):
 „Sprawdź projekt”: zezwolenie musi być bitem BOOL o kierunku WY z
 rejestru (inaczej błąd — sterownik potraktowałby to jako „nigdy”);
 zezwolenie na aparacie innym niż SWITCHED to ostrzeżenie.
+
+## Decyzje właściciela z 2026-09-24
+
+### Wymuszanie bitu WY — „wymuszamy bity, ma być zezwolenie”
+
+Bit WE wymusza się jak dotąd (zawsze, zasady wymuszeń). Bit WY wymusza
+się **tylko tam, gdzie projektant pozwolił**: pole wpisu `force_allowed`
+(domyślnie `false`), w Studiu kolumna **Wymuszanie** działu Sygnały (na
+bicie WE zaznaczona i nieaktywna — to dane, nie wybór). Wymuszony bit WY
+trzyma wartość wymuszenia mimo skanu; po zdjęciu wymuszenia logika pisze
+go znów. Odmowa (`FORCE_REFUSED`) nazywa kolumnę:
+`M.X is an OUT bit and the project does not allow forcing it (Wymuszanie in Studio)`.
+Reguła: `shared/logic/internal_bits.force_allowed(entry)`; sterownik:
+`InternalBitGate.force_allowed(bit_id)` → `ForceManager.protected_reason`.
+Testy: `runtime/epw_os/tests/test_permissions_2026_09_24.py`,
+`studio/shell/tests/test_permissions_2026_09_24.py`.
+
+### Zezwolenie na wyjściu DO bez aparatu — „niech mają zezwolenie”
+
+Punkt DO sterowany sam (komendy `ADRES.CLOSE`/`ADRES.OPEN` bez aparatu)
+ma własne pole `permission_bit` (Rejestr punktów, kolumna **Zezwolenie**,
+tylko w wierszach DO; lista = bity WY BOOL rejestru). Ta sama bramka
+twarda co dla aparatu, te same warunki (a)/(b)/(c), ten sam format
+powodu:
+
+```
+ZAMKNIJ ADA1.DO.1 odrzucone: brak zezwolenia M.KMG1_ZEZW (Blokada od Q1 otwartego)
+```
+
+Sterownik: `EPWCore._permission_bit_for(target)` — najpierw aparat,
+potem rekord punktu DO z rejestru (`project_epw.py`, klucz
+`permission_bit`). „Sprawdź projekt”: zezwolenie na punkcie innym niż
+DO, bit spoza rejestru, bit nie-WY albo nie-BOOL → błąd.
+
+### Miejsce sterowania — MODE.LOCAL / MODE.REMOTE
+
+Osobny temat od trybu pracy (NORMAL/MANUAL/…): **LOKALNE** blokuje każdą
+zmianę przychodzącą łączem inżynierskim (REST Studia → `423 Locked`,
+audyt `REMOTE_REFUSED_LOCAL`) i zdalnym sterowaniem (MQTT → odmowa z
+odpowiedzią). Odczyty i heartbeat wymuszeń działają w obu miejscach.
+Ustawia się tylko z panelu (menu trybu, poziom Operator), zapisane w
+`runtime_state` (`control_place`), domyślnie **ZDALNE**. Rejestr czyta
+`MODE.LOCAL`/`MODE.REMOTE`; żadnego `REQ.MODE.*` — miejsce sterowania nie
+jest żądaniem logiki. Kod: `runtime/epw_os/core/operating_mode.py`,
+`backend/api.py` (`_refuse_if_local`), `core/remote_commands.py`
+(`_remote_allowed`). Testy: `runtime/epw_os/tests/test_control_place.py`.
+
+### Przycisk na synoptyce — „Przycisk robimy: robota synoptyki, ale w logice też chcę bity”
+
+Symbol **Przycisk** (`scada.push_button`, folder „Automatyka” biblioteki
+edytora) pisze z panelu jeden **bit WE** logiki: Właściwości → Przycisk →
+Bit (`M.NAZWA`), Tryb **przełączanie** (każde kliknięcie odwraca bit) albo
+**impuls** (TRUE, po `pulse_ms` FALSE; domyślnie 500 ms). Nasadka pokazuje
+wartość bitu (zielona = TRUE). Logika czyta ten bit jak każdy bit WE —
+blokiem „Wejście bitowe”; po stronie logiki nic nowego nie trzeba.
+
+Sterownik (`gui/synoptic/page_synoptic.py`, `press_button`): każdy zapis
+idzie przez `InternalBitGate` — poziom z rejestru bitu, audyt
+`INTERNAL_BIT_WRITTEN/_REFUSED`, bit wymuszony odmawia; odmowa pokazuje
+powód. Bez okna potwierdzenia — przycisk sam jest potwierdzeniem.
+Podgląd panelu w Studiu (na żywo): kliknięcie trafia do
+`POST /api/v1/bits/<bit>` (bit musi mieć „Zdalnie”), impuls kończy timer.
+„Sprawdź projekt” (punkt 12): przycisk bez bitu = ostrzeżenie; bit spoza
+rejestru, bit nie-WE/nie-BOOL, bit bez zapisu z panelu = błąd. Testy:
+`runtime/epw_os/tests/test_synoptic_push_button.py`,
+`studio/shell/tests/test_push_button_studio.py`,
+`studio/synoptic/src/tests/push-button.test.ts`.

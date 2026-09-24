@@ -82,7 +82,11 @@ class RemoteCommandGateway:
 
     def __init__(self, access_manager=None, intrusion_manager=None, command_manager=None,
                  project_manager=None, process_protection_manager=None, alarm_manager=None,
-                 audit_logger=None, publish_result=None, clock=time.time, internal_bits=None):
+                 audit_logger=None, publish_result=None, clock=time.time, internal_bits=None,
+                 operating_mode=None):
+        # The control place (owner 2026-09-24): in LOCAL every remote
+        # command is refused - a manager or a callable returning one.
+        self.operating_mode = operating_mode
         # Internal bits IN/OUT: the one door for a write from outside the
         # logic (core/internal_bit_gate.py) - per bit, only where the
         # project allows a remote writer.
@@ -145,12 +149,20 @@ class RemoteCommandGateway:
         if user is None:
             return self._refuse("unknown user or bad token", command_id, {"topic": topic}, security=True)
 
+        if not self._remote_allowed():
+            return self._refuse("the controller is in LOCAL control - remote commands are not accepted",
+                                command_id, {"topic": topic}, user=user)
         action = str(body.get("action") or "").strip()
         handler = _ACTIONS.get(action)
         if handler is None:
             return self._refuse(f"unknown action {action!r}", command_id, {"user": user["name"]})
 
         return handler(self, body, user, command_id)
+
+    def _remote_allowed(self) -> bool:
+        source = self.operating_mode
+        manager = source() if callable(source) else source
+        return manager is None or not hasattr(manager, "remote_allowed") or bool(manager.remote_allowed())
 
     # --- identity -------------------------------------------------------------
 

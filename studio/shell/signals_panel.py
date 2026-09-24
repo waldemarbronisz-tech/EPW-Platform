@@ -79,16 +79,16 @@ class InternalSignalsTab(QWidget):
     # signal IS comes its DIRECTION (IN = written from outside the logic,
     # OUT = written by the logic only) and, for an IN bit, who may write
     # it - the panel at which level, and whether REST/MQTT may at all.
-    _COLS = ("name", "id", "type", "retentive", "direction", "panel", "remote",
+    _COLS = ("name", "id", "type", "retentive", "direction", "panel", "remote", "force",
              "used_by", "category", "label", "description")
-    (COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_DIRECTION, COL_PANEL, COL_REMOTE,
-     COL_USED, COL_CATEGORY, COL_LABEL, COL_DESCRIPTION) = range(11)
+    (COL_NAME, COL_ID, COL_TYPE, COL_RETENTIVE, COL_DIRECTION, COL_PANEL, COL_REMOTE, COL_FORCE,
+     COL_USED, COL_CATEGORY, COL_LABEL, COL_DESCRIPTION) = range(12)
     # Initial widths (px): together they must leave "Used in" whole in a
     # 1280 x 720 window without a horizontal scrollbar - measured with
     # tests/test_signals_panel.py's own width test (viewport 942 px there:
     # the fixed columns may take 822 at most).
-    COLUMN_WIDTHS = {COL_NAME: 110, COL_ID: 96, COL_TYPE: 70, COL_RETENTIVE: 70, COL_DIRECTION: 60,
-                     COL_PANEL: 80, COL_REMOTE: 46, COL_USED: 150, COL_CATEGORY: 70, COL_LABEL: 50}
+    COLUMN_WIDTHS = {COL_NAME: 104, COL_ID: 92, COL_TYPE: 70, COL_RETENTIVE: 70, COL_DIRECTION: 60,
+                     COL_PANEL: 76, COL_REMOTE: 46, COL_FORCE: 46, COL_USED: 140, COL_CATEGORY: 60, COL_LABEL: 44}
 
     def __init__(self, studio_window, parent=None):
         super().__init__(parent)
@@ -263,6 +263,17 @@ class InternalSignalsTab(QWidget):
         remote.setEnabled(is_input_bit(entry))
         remote.toggled.connect(lambda checked, r=row: self._set_field(r, "remote_write", bool(checked)))
         self.table.setCellWidget(row, self.COL_REMOTE, remote)
+
+        # Forcing (owner 2026-09-24): always on an IN bit, on an OUT bit
+        # only where the designer allows it - a force there overrides
+        # what the logic computed.
+        from shared.logic.internal_bits import force_allowed
+        force = QCheckBox()
+        force.setChecked(force_allowed(entry))
+        force.setEnabled(not is_input_bit(entry))
+        force.setToolTip(tr("signals.force_tooltip"))
+        force.toggled.connect(lambda checked, r=row: self._set_field(r, "force_allowed", bool(checked)))
+        self.table.setCellWidget(row, self.COL_FORCE, force)
 
     @staticmethod
     def _used_text(used) -> str:
@@ -454,9 +465,9 @@ class SystemSignalsTab(QWidget):
         self.refresh()
 
     def _logic_project(self):
-        """Only to pick up this project's own per-device diagnostics
-        (<ELA01>.ONLINE and friends), which the catalog generates from
-        the device list. Absent editor means the fixed part alone."""
+        """Only to expand the catalogue's per-instance patterns (COMM.<card>,
+        SEC.ZONE.<zone>, ALM.<alarm> ...) from this project's own
+        collections. Absent editor means the fixed part alone."""
         panel = getattr(self._studio_window, "_logic_panel", None)
         return getattr(panel.main_window(), "project", None) if panel is not None else None
 

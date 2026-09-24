@@ -64,7 +64,7 @@ class _Installation:
     settings = {}
     external_zones = [{"id": "PARTER", "name": "Parter"}]
     external_lines = [{"id": "L1", "name": "Drzwi"}]
-    external_process_protections = [{"id": "PP1", "name": "Temperatura kotla"}]
+    external_alarms = [{"id": "PROCESS_PP1", "name": "Temperatura kotla"}, {"id": "DEVICE_COMM_ELA1", "name": "ELA1"}]
     external_cards = [{"id": "ELA1", "kind": "DI", "channels": 16}, {"id": "ELA1", "kind": "AI", "channels": 8},
                       {"id": "ADA1", "kind": "DO", "channels": 16}]
 

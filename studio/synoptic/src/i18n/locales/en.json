@@ -205,6 +205,7 @@
     "scada.text_box": "Text box",
     "scada.motor": "Motor (SCADA)",
     "scada.pilot_lamp": "Pilot Lamp",
+    "scada.push_button": "Push Button",
     "scada.socket": "Socket (SCADA)",
     "scada.indicator_diode": "Indicator Diode",
     "scada.meter": "Meter (SCADA)",
@@ -251,6 +252,16 @@
     "panel_preview": "Panel preview",
     "panel_preview_open": "Show as on the panel (full window)",
     "panel_preview_hint": "The main view screen fills the window as the panel shows it; clicking an apparatus operates it - the controller when live is on, the simulation otherwise. Esc returns."
+  },
+  "push_button": {
+    "title": "Push button",
+    "bit": "Bit (IN)",
+    "bit_hint": "The logic's IN bit this button writes, by its identifier (M.NAME) - the Signals department lists them.",
+    "mode": "Mode",
+    "toggle": "Toggle (each click flips the bit)",
+    "pulse": "Pulse (TRUE, then FALSE after the time below)",
+    "pulse_ms": "Pulse [ms]",
+    "no_bit": "No bit - the button does nothing on the panel."
   },
   "preview": {
     "live": "LIVE - the controller",

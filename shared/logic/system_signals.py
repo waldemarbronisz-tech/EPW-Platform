@@ -42,16 +42,6 @@ _COMMS_CATEGORY_ID = "SYS.COMMS"
 # static ELA01/ADA01 entries used to say — this is a mechanical change of
 # WHERE they're produced, not a change of what they say for the default
 # single-device case.
-_ELA_DEVICE_SIGNAL_TEMPLATES = [
-    ("ONLINE", "Module {dev} is communicating correctly", "ELA OK", False),
-    ("FAULT", "Module {dev} fault", "ELA FLT", True),
-]
-_ADA_DEVICE_SIGNAL_TEMPLATES = [
-    ("ONLINE", "Module {dev} is communicating correctly", "ADA OK", False),
-    ("FAULT", "Module {dev} fault", "ADA FLT", True),
-    ("SAFE_PATH_OK", "Hardware shutdown path healthy", "PATH OK", True),
-]
-
 _catalog = None
 
 
@@ -67,46 +57,21 @@ def get_catalog_version() -> str:
     return _load()["catalog_version"]
 
 
-def _device_signals(project) -> list:
-    """Per-device "Komunikacja" signals for every ELA/ADA device `project`
-    defines (project=None -> no devices at all, see below)."""
-    # feat/logic-execution: DeviceModel is Logic Studio's, and this module
-    # is imported by EPW-OS (which has no editor on its path) every time a
-    # system.signal block resolves its own type. Behavior is unchanged:
-    # DeviceModel.get_ela_devices(None)/get_ada_devices(None) already
-    # return [] for project=None (a project is the ONLY source of a device
-    # list) - so with no project there was never anything to import it for.
-    if project is None:
+def _standalone_cards(project) -> list:
+    """The device list of a Logic Studio project that is NOT embedded in
+    Studio (no external_cards mirrored in): its own ela_devices /
+    ada_devices settings, in the shape the COMM.<device_id>.* pattern
+    expands from. The controller never has a project here, and the
+    editor import is guarded for it all the same."""
+    if project is None or getattr(project, "external_cards", None) is not None:
         return []
     try:
         from logic_studio.core.device_model import DeviceModel
     except ImportError:
-        # feat/signal-register 3.3: EPW-OS has no editor on its path. It
-        # never passed a project here before, so this line was never
-        # reached from the controller - but the per-instance patterns
-        # give the runtime a real reason to ask the catalogue about a
-        # project, and an ImportError mid-scan would be a poor way to
-        # find that out. The device diagnostics come from the EDITOR's
-        # device list, which the controller does not have, so none is
-        # exactly the right answer here rather than a failure.
         return []
-
-    signals = []
-    for dev in DeviceModel.get_ela_devices(project):
-        for suffix, desc_tpl, label, safety in _ELA_DEVICE_SIGNAL_TEMPLATES:
-            signals.append({
-                "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime",
-                "safety_relevant": safety, "runtime": "served",
-            })
-    for dev in DeviceModel.get_ada_devices(project):
-        for suffix, desc_tpl, label, safety in _ADA_DEVICE_SIGNAL_TEMPLATES:
-            signals.append({
-                "id": f"{dev}.{suffix}", "description": desc_tpl.format(dev=dev),
-                "label": label, "type": "BOOL", "source": "runtime",
-                "safety_relevant": safety, "runtime": "served",
-            })
-    return signals
+    cards = [{"id": dev, "kind": "DI"} for dev in DeviceModel.get_ela_devices(project)]
+    cards += [{"id": dev, "kind": "DO"} for dev in DeviceModel.get_ada_devices(project)]
+    return cards
 
 
 # Which project collection an `instances` pattern ranges over, and where
@@ -122,9 +87,9 @@ _INSTANCE_ATTRIBUTES = {
     # KIND - {"id", "kind", "channels"} - so a card appears once per kind
     # there and exactly once here).
     "devices": "external_cards",
-    # The project's process protections (etap 5): ALM.<alarm_id>.* is one
-    # alarm per protection the controller computes itself.
-    "alarms": "external_process_protections",
+    # The controller's alarms by id (owner 2026-09-24): ALM.<alarm_id>.* is
+    # one instance per AlarmManager alarm - shared/logic/alarm_ids.py.
+    "alarms": "external_alarms",
 }
 
 _PLACEHOLDER = re.compile(r"<[^>]+>")
@@ -140,6 +105,11 @@ def _instances(project, kind: str) -> list:
     if project is None or attribute is None:
         return []
     values = getattr(project, attribute, None) or []
+    if kind == "devices" and not values:
+        # Owner's decision 2026-09-24: the older per-device names
+        # (<dev>.ONLINE/FAULT/SAFE_PATH_OK) are gone; a standalone Logic
+        # project's own device list feeds COMM.<device_id>.* instead.
+        values = _standalone_cards(project)
     seen, instances = set(), []
     for value in values:
         if isinstance(value, dict) and value.get("id") and value["id"] not in seen:
@@ -191,8 +161,6 @@ def get_categories(project=None) -> list:
         signals = []
         for signal in cat["signals"]:
             signals.extend(_expand(signal, project))
-        if cat["id"] == _COMMS_CATEGORY_ID:
-            signals = signals + _device_signals(project)
         cat["signals"] = signals
         categories.append(cat)
     return categories

@@ -190,24 +190,25 @@ class LogicPanel(QWidget):
         # what an engineer recognises in the picker.
         new_zones = [{"id": z.id, "name": z.name} for z in studio_project.zones if z.id]
         new_lines = [{"id": l.id, "name": l.name} for l in studio_project.lines if l.id]
-        # Signal register etap 5: the process protections, for the
-        # catalog's ALM.<alarm_id>.* patterns (one alarm per protection
-        # the controller computes) - the same route as the zones.
-        new_protections = [{"id": pp.id, "name": pp.name}
-                           for pp in getattr(studio_project, "process_protections", []) if pp.id]
+        # The controller's alarms by id (owner 2026-09-24: one ALM.<alarm_id>
+        # per real AlarmManager alarm - shared/logic/alarm_ids.py), built
+        # from the cards and the process protections, the same route as
+        # the zones.
+        from shared.logic.alarm_ids import alarm_instances
+        new_alarms = alarm_instances(studio_project.cards, getattr(studio_project, "process_protections", []))
 
         project = self._main_window.project
         if (project.external_cards == new_cards
                 and project.external_analog_points == new_analog_points
                 and getattr(project, "external_zones", None) == new_zones
                 and getattr(project, "external_lines", None) == new_lines
-                and getattr(project, "external_process_protections", None) == new_protections):
+                and getattr(project, "external_alarms", None) == new_alarms):
             return
         project.external_cards = new_cards
         project.external_analog_points = new_analog_points
         project.external_zones = new_zones
         project.external_lines = new_lines
-        project.external_process_protections = new_protections
+        project.external_alarms = new_alarms
         self._main_window._refresh_project_dependent_panels()
 
     def canvas_background(self) -> str:

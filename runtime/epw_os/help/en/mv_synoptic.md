@@ -14,3 +14,15 @@ Each device is drawn in a color showing its current state
 The "HOUSE"/"WORKSHOP" labels and device descriptions come from the
 same descriptions set in Control Outputs — a description change there
 will show up here the next time the program is opened.
+
+## Push buttons
+
+A screen may carry **push buttons** (the "Push Button" symbol in the
+editor). A button does not command an apparatus — it writes one of the
+logic's **IN internal bits** (e.g. `M.START`), which the logic reads with
+its "Bit input" block. The cap shows the bit's value: green = TRUE. The
+designer picks the mode: **toggle** (each click flips the bit) or
+**pulse** (TRUE, then FALSE after the set time). The write follows the
+same rules as the [Internal bits](help://dio_internal_bits) page: the
+access level from the bit's registry entry, an audit entry, and a bit
+forced from Studio cannot be switched — a refusal shows the reason.

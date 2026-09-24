@@ -18,27 +18,36 @@ command path: Operator access, a confirmation popup, then
 CommandManager.request_command(<apparatus id>, CLOSE|OPEN) - the
 apparatus's own command definitions (apparatus.py's
 apparatus_command_definitions()) decide what that does on the outputs.
+
+A click on a push button (scada.push_button, owner 2026-09-24: "Przycisk
+robimy - robota synoptyki, ale w logice też chcę bity") writes one of the
+logic's IN bits through the one door every outside write takes,
+InternalBitGate (the bit's own panel level, audit, a forced bit
+refuses): TOGGLE flips it, PULSE sets it and clears it pulse_ms later.
+No confirmation popup - a push button IS the confirmation.
 """
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QWidget
 
 from epw_os.core.access_manager import AccessLevel
 from epw_os.core.logging import log
 from epw_os.core.screen_set import has_screen, initial_screen_id, screen_document, screen_list
-from epw_os.gui.synoptic.screen_state import command_for_toggle
+from epw_os.gui.synoptic.screen_state import BUTTON_MODE_PULSE, command_for_toggle, push_button_mode
 from epw_os.gui.synoptic.screen_widget import SynopticScreenWidget
 from epw_os.i18n import tr
 
 
 class PageSynoptic(QWidget):
     def __init__(self, tag_manager, project_manager=None, apparatus_registry=None, access_manager=None,
-                 command_manager=None, parent=None):
+                 command_manager=None, parent=None, internal_bits=None):
         super().__init__(parent)
         self.tag_manager = tag_manager
         self.project_manager = project_manager
         self.apparatus_registry = apparatus_registry
         self.access_manager = access_manager
         self.command_manager = command_manager
+        self.internal_bits = internal_bits          # InternalBitGate - the push buttons write through it
+        self._pulse_timers = {}                     # bit id -> QTimer clearing a PULSE
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -142,12 +151,17 @@ class PageSynoptic(QWidget):
         self.status_label.setVisible(bool(messages))
 
     def shutdown(self):
+        for timer in self._pulse_timers.values():
+            timer.stop()
         self.screen.shutdown()
 
     # -- commands ----------------------------------------------------------------------
 
     def _on_object_clicked(self, obj, presentation, global_pos):
         if presentation is None or not presentation.commandable:
+            return
+        if presentation.bit:
+            self.press_button(obj, presentation.bit)
             return
         apparatus = presentation.apparatus
         main_window = self.window()
@@ -165,6 +179,48 @@ class PageSynoptic(QWidget):
         if not self.confirm_command(apparatus, action, global_pos):
             return
         self.send_command(apparatus.id, action)
+
+    # -- push buttons ------------------------------------------------------------------
+
+    def press_button(self, obj, bit_id: str) -> bool:
+        """One click of a push button: TOGGLE writes the opposite of the
+        bit's value (an unreadable bit counts as FALSE, so the first
+        click sets it); PULSE writes TRUE and, pulse_ms later, FALSE.
+        Every write goes through InternalBitGate - the level the bit's
+        registry entry asks for, the audit trail, the refusal while a
+        force holds it - and a refusal is shown with the gate's reason."""
+        gate = self.internal_bits or getattr(self.window(), "internal_bits", None)
+        if gate is None:
+            log.error("Synoptic page: no internal-bit gate - push button not written.")
+            return False
+        mode, pulse_ms = push_button_mode(obj)
+        if mode == BUTTON_MODE_PULSE:
+            if not self._write_bit(gate, bit_id, True):
+                return False
+            timer = self._pulse_timers.get(bit_id)
+            if timer is None:
+                timer = QTimer(self)
+                timer.setSingleShot(True)
+                timer.timeout.connect(lambda b=bit_id: self._end_pulse(b))
+                self._pulse_timers[bit_id] = timer
+            timer.start(pulse_ms)
+            return True
+        current = self.tag_manager.get_value(bit_id) if self.tag_manager is not None else None
+        return self._write_bit(gate, bit_id, not bool(current))
+
+    def _end_pulse(self, bit_id: str):
+        gate = self.internal_bits or getattr(self.window(), "internal_bits", None)
+        if gate is not None:
+            self._write_bit(gate, bit_id, False, quiet=True)
+
+    def _write_bit(self, gate, bit_id: str, value: bool, quiet: bool = False) -> bool:
+        access = self.access_manager or getattr(self.window(), "access_manager", None)
+        actor = getattr(access, "level", None) or "Operator"
+        ok, reason = gate.write(bit_id, value, actor=actor, source="PANEL")
+        if not ok and not quiet:
+            QMessageBox.warning(self, tr("pages.synoptic.button_refused_title"),
+                                tr("pages.synoptic.button_refused_text", bit=bit_id, reason=reason))
+        return bool(ok)
 
     def confirm_command(self, apparatus, action: str, global_pos=None) -> bool:
         """The same ConfirmationPopup the Main View uses; a subclass or a

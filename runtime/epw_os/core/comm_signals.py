@@ -27,10 +27,10 @@ re-checks its watchdogs when SOME device reports a good poll; when every
 device goes silent nothing would ever flip, so a read here runs the
 check itself, throttled.
 
-The catalogue's older per-device diagnostics <dev>.ONLINE / <dev>.FAULT
-/ <dev>.SAFE_PATH_OK (category "Komunikacja", from before the register)
-are served here too, from the same facts: they were claimed served and
-nothing answered them.
+The catalogue's older per-device diagnostics (<dev>.ONLINE / <dev>.FAULT
+/ <dev>.SAFE_PATH_OK, from before the register) were served here for a
+while; the owner retired them on 2026-09-24 - COMM.<dev>.* and DEV.<dev>.*
+say the same, and the compiler points a program at the new name.
 """
 import time
 
@@ -43,7 +43,6 @@ WATCHDOG_CHECK_INTERVAL_S = 0.25
 _DEVICE_SUFFIXES = ("ONLINE", "OFFLINE", "FAULT", "TIMEOUT", "DEGRADED")
 _SYSTEM = ("COMM.ALL_OK", "COMM.ANY_DEVICE_OFFLINE", "COMM.ANY_DEVICE_FAULT", "COMM.BUS_FAULT",
            "COMM.RS485_FAULT", "COMM.ETHERNET_FAULT", "COMM.LINK_DEGRADED")
-_LEGACY_SUFFIXES = ("ONLINE", "FAULT", "SAFE_PATH_OK")
 
 
 def _split(signal_id: str):
@@ -138,14 +137,6 @@ class CommSignals:
         now = time.time() if now is None else now
         return any(now - err.timestamp <= DEGRADED_WINDOW_S for err in stat.recent_errors)
 
-    def _safe_path_ok(self, device_id: str) -> bool:
-        tags = self._get("tag_manager")
-        if tags is None:
-            return False
-        return bool(tags.get_value(f"Safety.{device_id}.Healthy"))
-
-    # --- the bus --------------------------------------------------------------------------
-
     def _bus_transport(self) -> str:
         driver = self._get("modbus_driver")
         bus = getattr(driver, "_bus", None) or {}
@@ -178,13 +169,6 @@ class CommSignals:
     def serves(self, signal_id: str) -> bool:
         if signal_id in _SYSTEM or _split(signal_id) is not None:
             return True
-        parts = signal_id.split(".")
-        if len(parts) == 2 and parts[0] and parts[1] in _LEGACY_SUFFIXES:
-            # <dev>.ONLINE/FAULT/SAFE_PATH_OK: the catalogue generates them
-            # for the project's cards; with no project to check against
-            # (the claims test, a bare source) the shape alone decides.
-            ids = self._project_device_ids()
-            return ids is None or parts[0] in ids
         return False
 
     def read(self, signal_id: str):
@@ -218,13 +202,4 @@ class CommSignals:
             if signal_id == "COMM.RS485_FAULT":
                 return bus_fault and self._bus_transport() != "TCP"
             return bus_fault and self._bus_transport() == "TCP"
-        parts = signal_id.split(".")
-        if len(parts) == 2:
-            device_id, suffix = parts
-            if suffix == "ONLINE":
-                return self._online(device_id)
-            if suffix == "FAULT":
-                return self._fault(device_id)
-            if suffix == "SAFE_PATH_OK":
-                return self._safe_path_ok(device_id)
         return None

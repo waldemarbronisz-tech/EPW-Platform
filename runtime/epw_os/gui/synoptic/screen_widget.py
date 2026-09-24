@@ -40,7 +40,7 @@ from epw_os.gui.synoptic.painter import (PrimitivePainter, animation_rotation, b
                                          parse_color)
 from epw_os.gui.synoptic.rooms import closed_rooms, floor_color, room_labels, shade
 from epw_os.gui.synoptic.walls3d import draw_walls, drawn_height
-from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value,
+from epw_os.gui.synoptic.screen_state import (GOOD_QUALITIES, ObjectPresentation, TagReader, format_value, push_button_bit,
                                               present_object)
 
 # The editor's ScadaTheme.ts, verbatim.
@@ -324,7 +324,7 @@ class SynopticScreenWidget(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             obj = self.object_at(event.position())
-            if obj is not None and obj.get("deviceId"):
+            if obj is not None and (obj.get("deviceId") or push_button_bit(obj)):
                 self.object_clicked.emit(obj, self.presentation_for(obj), event.globalPosition().toPoint())
         super().mouseReleaseEvent(event)
 

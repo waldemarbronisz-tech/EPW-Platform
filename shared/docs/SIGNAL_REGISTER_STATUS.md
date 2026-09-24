@@ -4,15 +4,14 @@
 `python shared/docs/generate_signal_register_status.py` z korzenia repo.
 Źródłem jest `EPW_Rejestr_Bitow_Wewnetrznych_V2.xlsx` (arkusz
 `01_REJESTR_BITOW`), porównywany z `shared/logic/system_signals_catalog.json`
-(wersja katalogu **2.7.0**). Arkusz jest tylko czytany.
+(wersja katalogu **3.2.0**). Arkusz jest tylko czytany.
 
 Pozycji w rejestrze: **200**.
 
 | stan | pozycji |
 |---|---:|
-| w katalogu i obsłużony | 191 |
+| w katalogu i obsłużony | 194 |
 | poza katalogiem | 4 |
-| bez źródła | 3 |
 | przyszłość | 2 |
 
 ## Co znaczy każdy stan
@@ -174,7 +173,7 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `PROT.OVERFREQUENCY` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.EARTH_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.NEUTRAL_FAULT` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `PROT.POWER_REVERSE` | PROTECTION | SYSTEM INPUT | bez źródła | brak funkcji 32 (moc zwrotna) w ADA01 i w panelu zabezpieczeń - do decyzji Waldka |
+| `PROT.POWER_REVERSE` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.<stage_id>.ENABLED` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.<stage_id>.START` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `PROT.<stage_id>.TRIP` | PROTECTION | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -213,8 +212,8 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `MODE.NORMAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.AUTO` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MANUAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
-| `MODE.LOCAL` | MODES | SYSTEM INPUT | bez źródła | miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś źródła komend - wymaga decyzji, co LOCAL blokuje |
-| `MODE.REMOTE` | MODES | SYSTEM INPUT | bez źródła | jak MODE.LOCAL - jedna decyzja dla obu |
+| `MODE.LOCAL` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
+| `MODE.REMOTE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.SERVICE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.MAINTENANCE` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
 | `MODE.TEST` | MODES | SYSTEM INPUT | w katalogu i obsłużony |  |
@@ -279,15 +278,26 @@ rejestru wiedziała, które nazwy powstały tutaj.
 | `ELA<nn>.DI<nn>` | PHYSICAL I/O | PHYSICAL INPUT | poza katalogiem | adres fizyczny, opisany gramatyką adresów (shared/addressing.py) |
 | `ADA<nn>.DO<nn>` | PHYSICAL I/O | PHYSICAL OUTPUT | poza katalogiem | adres fizyczny, opisany gramatyką adresów (shared/addressing.py) |
 
-## W katalogu, poza rejestrem (31)
+## W katalogu, poza rejestrem — przyjęte przez właściciela (8)
+
+Nazwy nadane gramatyką rejestru tam, gdzie arkusz nie miał wiersza;
+właściciel je przyjął (data przy każdej) — do dopisania do arkusza,
+nie do decyzji.
+
+- `PROT.<stage_id>.LATCHED` — przyjęte 2026-09-24
+- `PROT.CONTROL_VOLTAGE_LOSS` — przyjęte 2026-09-24
+- `PROT.SETTINGS_MISMATCH` — przyjęte 2026-09-24
+- `PROT.TECHNICAL_SUPPLY_LOSS` — przyjęte 2026-09-24
+- `PROT.TEST_ACTIVE` — przyjęte 2026-09-24
+- `PROT.TEST_OK` — przyjęte 2026-09-24
+- `PROT.THERMAL_OVERLOAD` — przyjęte 2026-09-24
+- `PROT.UPS_SUPPLY_LOSS` — przyjęte 2026-09-24
+
+## W katalogu, poza rejestrem (27)
 
 Sygnały, które platforma udostępnia, a których rejestr nie opisuje —
 kandydaci do dopisania do arkusza.
 
-- `PROT.<stage_id>.LATCHED`
-- `PROT.SETTINGS_MISMATCH`
-- `PROT.TEST_ACTIVE`
-- `PROT.TEST_OK`
 - `REQ.SEC.ARM_ALL_PARTIAL`
 - `SEC.SYSTEM.ACTIVE_COUNT`
 - `SEC.SYSTEM.ALARM_LATCHED`

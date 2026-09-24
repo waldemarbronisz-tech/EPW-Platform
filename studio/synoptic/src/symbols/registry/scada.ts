@@ -118,6 +118,20 @@ export const scadaSymbols: Record<string, SymbolDefinition> = {
     // electrical.indicator_lamp stayed visible instead.
     hiddenFromLibrary: true
   },
+  // Owner 2026-09-24 ("Przycisk robimy"): a panel push button that
+  // writes one of the logic's IN bits (bindings.command.tag, the bit's
+  // M.<name>), toggling or pulsing it (editor.button_mode); the cap
+  // follows the bit's live value. Visible in the library - it is the
+  // one SCADA symbol an operator presses.
+  'scada.push_button': {
+    type: 'scada.push_button',
+    label: 'Push Button',
+    category: 'SCADA',
+    defaultWidth: 150,
+    defaultHeight: 150,
+    allowedStates: ['RELEASED', 'PRESSED'],
+    defaultState: 'RELEASED'
+  },
   'scada.socket': {
     type: 'scada.socket',
     label: 'Socket (SCADA)',

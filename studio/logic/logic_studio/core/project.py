@@ -494,9 +494,9 @@ class Project:
         # has an alarm system mirrored in or it has none.
         self.external_zones = []
         self.external_lines = []
-        # Signal register etap 5: the project's process protections, for
+        # The controller's alarms by id (shared/logic/alarm_ids.py), for
         # ALM.<alarm_id>.* - same route, same reasoning as the zones.
-        self.external_process_protections = []
+        self.external_alarms = []
 
     # ---- feat/undo-diff-storage: each stack's memory is proportional to
     # the SIZE OF EACH EDIT, not to the size of the whole project — see

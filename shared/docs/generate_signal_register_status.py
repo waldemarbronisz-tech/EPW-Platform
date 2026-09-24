@@ -136,10 +136,8 @@ _PENDING = OrderedDict([
 # nothing behind it is a facade, so it is not in the catalogue) - each with
 # the reason, for the owner's decision. Keyed by the normalised id.
 _NO_SOURCE = OrderedDict([
-    ("PROT.POWER_REVERSE", "brak funkcji 32 (moc zwrotna) w ADA01 i w panelu zabezpieczeń - do decyzji Waldka"),
-    ("MODE.LOCAL", "miejsce sterowania (lokalne/zdalne) to inna oś niż tryb pracy; sterownik nie rozróżnia dziś "
-                   "źródła komend - wymaga decyzji, co LOCAL blokuje"),
-    ("MODE.REMOTE", "jak MODE.LOCAL - jedna decyzja dla obu"),
+    # Empty since 2026-09-24 - every register position has a source or a
+    # named reason of another kind. Kept as the mechanism for the next one.
 ])
 
 
@@ -255,14 +253,27 @@ def build() -> str:
             entry.get("Kierunek", ""), status, note))
     w("")
 
+    from shared.logic.signal_renames import ACCEPTED_PLATFORM_NAMES
+    accepted = {_normalise(k): v for k, v in ACCEPTED_PLATFORM_NAMES.items()}
     extra = sorted(s["id"] for s in catalog
                    if _normalise(s["id"]) not in {_normalise(e["ID / Wzorzec"]) for e in entries})
-    w("## W katalogu, poza rejestrem (%d)" % len(extra))
+    approved = [s for s in extra if _normalise(s) in accepted]
+    pending = [s for s in extra if _normalise(s) not in accepted]
+    w("## W katalogu, poza rejestrem — przyjęte przez właściciela (%d)" % len(approved))
+    w("")
+    w("Nazwy nadane gramatyką rejestru tam, gdzie arkusz nie miał wiersza;")
+    w("właściciel je przyjął (data przy każdej) — do dopisania do arkusza,")
+    w("nie do decyzji.")
+    w("")
+    for signal_id in approved:
+        w("- `%s` — przyjęte %s" % (signal_id, accepted[_normalise(signal_id)]))
+    w("")
+    w("## W katalogu, poza rejestrem (%d)" % len(pending))
     w("")
     w("Sygnały, które platforma udostępnia, a których rejestr nie opisuje —")
     w("kandydaci do dopisania do arkusza.")
     w("")
-    for signal_id in extra:
+    for signal_id in pending:
         w("- `%s`" % signal_id)
     w("")
     return "\n".join(out) + "\n"

@@ -588,7 +588,8 @@ class SynopticPanel(QWidget):
 
     def take_pending_commands(self, callback):
         """The commands clicked in a LIVE panel preview, drained: `callback`
-        receives a list of {"deviceId", "action"} (empty when none)."""
+        receives a list of {"deviceId", "action"} (an apparatus) and
+        {"bit", "value", "delay_ms"?} (a push button) - empty when none."""
         if self._pages.currentIndex() != _PAGE_VIEW:
             callback([])
             return
@@ -600,7 +601,8 @@ class SynopticPanel(QWidget):
                 commands = json.loads(result) if result else []
             except ValueError:
                 commands = []
-            callback([c for c in commands if isinstance(c, dict) and c.get("deviceId") and c.get("action")])
+            callback([c for c in commands if isinstance(c, dict)
+                      and ((c.get("deviceId") and c.get("action")) or (c.get("bit") and "value" in c))])
 
         self._view.page().runJavaScript(js, _handle)
 

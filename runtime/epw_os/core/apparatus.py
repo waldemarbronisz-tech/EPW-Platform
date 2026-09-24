@@ -77,10 +77,6 @@ class Apparatus:
     # logic's permission to switch this apparatus ON - see
     # CommandManager._permission_refusal(). "" = none.
     permission_bit: str = ""
-    # Internal bits IN/OUT: the OUT bit (M.<name>) whose TRUE is the
-    # logic's permission to switch this apparatus ON - see
-    # CommandManager._permission_refusal(). "" = none.
-    permission_bit: str = ""
 
 
 COMMAND_STYLES = ("MAINTAINED", "PULSE", "PULSE_TOGGLE")
